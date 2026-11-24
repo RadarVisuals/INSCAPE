@@ -6,13 +6,14 @@ import AccountAvatar from '../../ui/AccountAvatar.jsx';
 import { VisitorPortrait } from './VisitorProfile.jsx';
 import './profileStrip.css';
 
-export default function ProfileStrip({ address, account, model, accountStrip, onPanel, onDisconnect, onConnect, onProfile }) {
+export default function ProfileStrip({ address, account, model, accountStrip, onPanel, onDisconnect, onProfile }) {
   const id = useId(), trigger = useRef(null), drawer = useRef(null), back = useRef(null);
   const [open, setOpen] = useState(false), [view, setView] = useState('details');
   const [qr, setQr] = useState(null), [message, setMessage] = useState('');
   const [amount, setAmount] = useState(''), [sending, setSending] = useState(false);
-  const pending = useRef(false);
+  const pending = useRef(false), addressField = useRef(null);
   const own = account?.address?.toLowerCase() === address.toLowerCase();
+  const canTip = Boolean(account?.address && !own);
   const matching = model?.address?.toLowerCase() === address.toLowerCase() ? model : null;
   const identity = useProfileIdentity(!matching && (open || !account?.name) ? address : null);
   const official = matching?.officialProfile || identity;
@@ -50,7 +51,8 @@ export default function ProfileStrip({ address, account, model, accountStrip, on
     }).catch(() => { if (live) setMessage('Could not load QR code.'); });
     return () => { live = false; };
   }, [view, address]);
-  useEffect(() => { if (view !== 'details') back.current?.focus(); }, [view]);
+  useEffect(() => { if (view === 'address') { addressField.current?.focus(); addressField.current?.select(); }
+    else if (view !== 'details') back.current?.focus(); }, [view]);
   const change = next => { setMessage(''); setView(next); };
   const returnToDetails = () => {
     const previous = view; change('details');
@@ -58,11 +60,11 @@ export default function ProfileStrip({ address, account, model, accountStrip, on
   };
   const copy = async () => {
     try { await navigator.clipboard.writeText(address); setMessage('Address copied.'); }
-    catch { setMessage('Clipboard unavailable. Open Universal Profile for the full address.'); }
+    catch { change('address'); setMessage('Select and copy this address.'); }
   };
   const tip = async event => {
     event.preventDefault();
-    if (pending.current) return;
+    if (!canTip || pending.current) return;
     pending.current = true; setSending(true); setMessage('');
     try {
       const { requestProfileTip } = await import('./requestProfileTip.js');
@@ -83,24 +85,25 @@ export default function ProfileStrip({ address, account, model, accountStrip, on
         {accountStrip && <strong>{name}</strong>}
         <div className="strip-identity-row">
           <div><small>UP address</small><code title={address}>{shortAddress}</code></div>
-          <button type="button" onClick={copy} aria-label="Copy address" title="Copy address">{message === 'Address copied.' ? <Check size={15} /> : <Copy size={15} />}</button>
+          <button type="button" onClick={copy} data-view="address" aria-label="Copy address" title="Copy address">{message === 'Address copied.' ? <Check size={15} /> : <Copy size={15} />}</button>
           <button type="button" data-view="qr" onClick={() => change('qr')} aria-label="QR code" title="QR code"><QrCode size={16} /></button>
         </div>
         <div className="strip-actions">
-          {onProfile && <button type="button" onClick={() => { close(); onProfile(); }}><UserRound size={15} />View profile</button>}
+          {onProfile && <button type="button" onClick={() => { close(); onProfile(); }}><UserRound size={15} />{accountStrip ? 'My profile' : 'View profile'}</button>}
           <a href={profileUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} />{own ? 'Universal Profile' : 'Follow on UP'}</a>
-          {!own && <button type="button" data-view="tip" onClick={() => change('tip')}><Gift size={15} />Tip LYX</button>}
+          {canTip && <button type="button" data-view="tip" onClick={() => change('tip')}><Gift size={15} />Tip LYX</button>}
           {accountStrip && <><button disabled={!onPanel} onClick={() => { close(); onPanel('settings', trigger.current); }}><Settings size={15} />Settings</button>
             <button disabled={!onDisconnect} onClick={() => { close(); onDisconnect(); }}><LogOut size={15} />Disconnect</button></>}
         </div>
         {links?.length > 0 && <details className="strip-links"><summary>Links</summary><nav aria-label="Official profile links">{links.map(link =>
           <a key={link.id} href={link.url} target="_blank" rel="noreferrer">{link.label}<ArrowUpRight size={12} /></a>)}</nav></details>}
       </> : <>
-        <header><button ref={back} type="button" onClick={returnToDetails}><ArrowLeft size={14} /> Back</button><strong>{view === 'qr' ? 'Address QR' : 'Tip ' + name}</strong></header>
+        <header><button ref={back} type="button" onClick={returnToDetails}><ArrowLeft size={14} /> Back</button><strong>{view === 'qr' ? 'Address QR' : view === 'address' ? 'UP address' : 'Tip ' + name}</strong></header>
         {view === 'qr' ? <div className="strip-qr">{qr ? <img src={qr} alt={'QR code for ' + name + '’s UP address'} /> : <span>Loading QR…</span>}<code title={address}>{shortAddress}</code></div>
-          : <form onSubmit={tip}><code>{address}</code><label>Amount in LYX<input required inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} /></label>
-            {account ? <button disabled={sending}>{sending ? 'Waiting for wallet…' : 'Review in wallet'}</button>
-              : <button type="button" disabled={!onConnect} onClick={() => { close(); onConnect(); }}>Sign in to tip</button>}</form>}
+          : view === 'address' ? <input ref={addressField} readOnly aria-label="Full UP address" value={address} />
+          : canTip && <form onSubmit={tip}><code>{address}</code><label>Amount in LYX<input required inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} /></label>
+            <button disabled={sending}>{sending ? 'Waiting for wallet…' : 'Review in wallet'}</button>
+          </form>}
       </>}
       {message && <p role="status">{message}</p>}
     </section>

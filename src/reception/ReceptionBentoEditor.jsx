@@ -286,7 +286,7 @@ function BentoEditor({ context, hostRef, clusterDrag, gridSnap = true, gridSpaci
         </div>;
       })}
       {view.interactionTool === 'select' && !context.editingCellId && !dragging && !previewing && <div className="reception-bento-frame-handles" style={project(area, BENTO_RESIZE_OUTSET)}>
-        <span className="reception-bento-dimensions" aria-label="Bento dimensions">{Math.round(area.width)} Ãƒâ€” {Math.round(area.height)} px</span>
+        <span className="reception-bento-dimensions" aria-label="Bento dimensions">{Math.round(area.width)} &times; {Math.round(area.height)} px</span>
         {['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].map(edge => <button key={edge} type="button" className="reception-bento-frame-handle" data-edge={edge}
           aria-label={'Resize Bento ' + { n: 'top', ne: 'top right', e: 'right', se: 'bottom right', s: 'bottom', sw: 'bottom left', w: 'left', nw: 'top left' }[edge]}
           title="Drag to resize Bento" onPointerDown={event => start(event, null, edge)}

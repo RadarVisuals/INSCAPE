@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveIdentityCard } from '../profileIdentity/domain/identityCard.js';
 import { createEmptySystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
-import { systemWorkflowGridFingerprint } from './domain/systemWorkflowGrid.js';
-import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringSession.js';
 import { createWorkbenchSession } from './workbenchSession.js';
 import {
   SYSTEM_WORKFLOW_RECORD_STATUS,
@@ -76,7 +74,6 @@ function identityDetails(draft) {
 
 test('Identity artwork saves its chosen image without changing Grids, and rejects stale or failed writes', () => {
   const storage = memoryStorage(); const store = createStore(storage);
-  const session = createSystemWorkflowAuthoringSession({ store });
   const original = store.getDraft();
   const saveAvatar = ({ expectedAvatar, avatar }) => createWorkbenchSession({ store }).setIdentityConfiguration({
     expectedDetails: { ...identityDetails(store.getDraft()), avatar: expectedAvatar },
@@ -103,15 +100,15 @@ test('a second editor cannot overwrite an already saved external change', () => 
   const storage = memoryStorage();
   const first = createStore(storage); const second = createStore(storage);
   const earlier = second.getDraft();
-  const newer = first.getDraft(); newer.grids[0].subtitle = 'saved in first tab';
+  const newer = first.getDraft(); newer.identityPresentation.alias = 'saved in first tab';
   assert.equal(first.commitCompletedOperation(newer, { expectedGeneration: 0 }), true);
   const saved = storage.records.get(systemWorkflowDraftKey(PROFILE_A));
-  earlier.grids[0].subtitle = 'stale second tab';
+  earlier.identityPresentation.alias = 'stale second tab';
   assert.equal(second.commitCompletedOperation(earlier, { expectedGeneration: 0 }), false);
   assert.equal(second.getGeneration(), 0);
   assert.equal(storage.records.get(systemWorkflowDraftKey(PROFILE_A)), saved);
   second.reload();
-  const refreshed = second.getDraft(); refreshed.grids[0].subtitle = 'continued after reload';
+  const refreshed = second.getDraft(); refreshed.identityPresentation.alias = 'continued after reload';
   assert.equal(second.commitCompletedOperation(refreshed, { expectedGeneration: second.getGeneration() }), true);
 });
 
@@ -177,7 +174,6 @@ test('corrupt canonical records block authoring and require exact explicit recov
   }), true);
   assert.equal(storage.records.has(key), false);
   assert.equal(store.getRecordState().status, SYSTEM_WORKFLOW_RECORD_STATUS.ABSENT);
-  assert.equal(store.getDraft().grids[0].id, 'grid:home-a');
   assert.equal(storage.activity.writes, 0);
 });
 
@@ -196,7 +192,7 @@ test('read and write failures fail closed without changing the accepted generati
   const generation = store.getGeneration();
   const before = store.getDraft();
   const candidate = structuredClone(before);
-  candidate.grids[0].subtitle = 'candidate';
+  candidate.identityPresentation.alias = 'candidate';
   storage.failures.write = true;
   assert.equal(store.commitCompletedOperation(candidate, { expectedGeneration: generation }), false);
   assert.equal(store.getGeneration(), generation);
@@ -208,66 +204,24 @@ test('getDraft is detached and profile records remain isolated', () => {
   const storage = memoryStorage();
   const store = createStore(storage);
   const detached = store.getDraft();
-  detached.grids[0].title = 'MUTATED';
-  detached.grids.push(detached.grids[0]);
-  assert.equal(store.getDraft().grids[0].title, 'HOME');
-  assert.equal(store.getDraft().grids.length, 2);
+  detached.identityPresentation.alias = 'MUTATED';
+  assert.equal(store.getDraft().identityPresentation.alias, '');
 
   const draftA = store.getDraft();
-  draftA.grids[0].subtitle = 'profile-a';
+  draftA.identityPresentation.alias = 'profile-a';
   assert.equal(store.commitCompletedOperation(draftA, {
     expectedGeneration: store.getGeneration(),
   }), true);
   assert.equal(store.setProfileAddress(PROFILE_B), true);
   assert.equal(store.getDraft().profileAddress, PROFILE_B);
-  assert.equal(store.getDraft().grids[0].subtitle, '');
+  assert.equal(store.getDraft().identityPresentation.alias, '');
   assert.equal(store.setProfileAddress(PROFILE_A), true);
-  assert.equal(store.getDraft().grids[0].subtitle, 'profile-a');
-});
-
-test('session commits exactly once per completed operation and persists no-op or stale Grid edits never', () => {
-  const storage = memoryStorage();
-  const store = createStore(storage);
-  const session = createSystemWorkflowAuthoringSession({ store });
-  const home = session.getState().draft.grids[0];
-  const fingerprint = systemWorkflowGridFingerprint(home);
-  assert.equal(session.renameGrid({
-    expectedGridFingerprint: fingerprint,
-    gridId: home.id,
-    name: home.title,
-  }), false);
-  assert.equal(session.setGridVisibility({
-    expectedGridFingerprint: fingerprint,
-    gridId: home.id,
-    visibility: home.visibility,
-  }), false);
-  assert.equal(storage.activity.writes, 0);
-
-  assert.equal(session.renameGrid({
-    expectedGridFingerprint: fingerprint,
-    gridId: home.id,
-    name: 'ARCHIVE',
-  }), true);
-  assert.equal(storage.activity.writes, 1);
-  assert.equal(session.getState().draft.grids[0].title, 'ARCHIVE');
-  assert.throws(() => session.setGridVisibility({
-    expectedGridFingerprint: fingerprint,
-    gridId: home.id,
-    visibility: 'PRIVATE',
-  }), { code: 'SYSTEM_WORKFLOW_GRID_STALE' });
-  assert.equal(storage.activity.writes, 1);
-
-  assert.equal(session.createGrid({ generateId: () => 'second' }), true);
-  assert.equal(storage.activity.writes, 2);
-  assert.deepEqual(session.getState().draft.grids.map(({ id }) => id), [
-    'grid:home-a', 'grid:second', 'grid:world-cover',
-  ]);
+  assert.equal(store.getDraft().identityPresentation.alias, 'profile-a');
 });
 
 test('Identity details persist separately, reject stale edits and preserve the draft on storage failure', () => {
   const storage = memoryStorage();
   const store = createStore(storage);
-  const session = createSystemWorkflowAuthoringSession({ store });
   const initial = store.getDraft();
   const { alias, bio, tags } = initial.identityPresentation;
   const expectedDetails = { alias, bio, tags, avatar: store.getDraft().identityPresentation.avatar };
@@ -289,7 +243,6 @@ test('Identity details persist separately, reject stale edits and preserve the d
 
 test('Identity card saves are isolated, durable and reject stale or failed writes', () => {
   const storage = memoryStorage(); const store = createStore(storage);
-  const session = createSystemWorkflowAuthoringSession({ store });
   const before = store.getDraft(); const expectedCard = resolveIdentityCard(before.identityPresentation);
   const card = { ...expectedCard, background: { type: 'clouds', color: '#123456', speed: 0 }, fields: [
     { id: 'field:role', label: 'Role', type: 'list', value: ['Artist', 'Writer'] },
@@ -309,7 +262,6 @@ test('Identity card saves are isolated, durable and reject stale or failed write
 
 test('explicitly saving the default Identity background makes it durable without rewriting old drafts on read', () => {
   const storage = memoryStorage(); const store = createStore(storage);
-  const session = createSystemWorkflowAuthoringSession({ store });
   const expectedCard = resolveIdentityCard(store.getDraft().identityPresentation);
   assert.equal(Object.hasOwn(store.getDraft().identityPresentation, 'card'), false);
   assert.equal(storage.activity.writes, 0);
@@ -321,7 +273,6 @@ test('explicitly saving the default Identity background makes it durable without
 
 test('Identity editor commits details, artwork and card atomically and rejects stale or failed saves', () => {
   const storage = memoryStorage(); const store = createStore(storage);
-  const session = createSystemWorkflowAuthoringSession({ store });
   const before = store.getDraft();
   const { alias, bio, tags } = before.identityPresentation;
   const expectedDetails = { alias, bio, tags, avatar: store.getDraft().identityPresentation.avatar };
@@ -344,9 +295,4 @@ test('Identity editor commits details, artwork and card atomically and rejects s
   assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: details, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
   assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: { ...details, avatar: expectedDetails.avatar },
     expectedCard: card, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
-});
-
-test('removed broad updatePlacement authority is not exposed by the session', () => {
-  const session = createSystemWorkflowAuthoringSession({ store: createStore(memoryStorage()) });
-  assert.equal(Object.hasOwn(session, 'updatePlacement'), false);
 });

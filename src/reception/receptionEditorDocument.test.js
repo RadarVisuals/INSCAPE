@@ -146,7 +146,7 @@ test('conversion preserves source records, crop, layers, rounded cells and mobil
   assert.deepEqual(value.artworkLayers, [value.cells[0].id, ...value.cells[0].members]);
   assert.equal(value.cells[0].mobile.referenceWidth, 390);
   assert.deepEqual(value.shapes.find(item => item.id === 'shape:overlay'), old.shapes[0]);
-  assert.equal(value.workbench.display.open, false);
+  assert.equal(Object.hasOwn(value.workbench, 'display'), false);
 });
 
 test('builtin profile content retains its semantic identity when converted', () => {

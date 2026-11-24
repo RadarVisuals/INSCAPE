@@ -8,7 +8,7 @@ import '../ownerSystemWorkflow/workflowTactile.css';
 import '../ownerSystemWorkflow/workflowFlat.css';
 import './workspaceHeader.css';
 
-export const profileTabs = ['Profile', 'Gallery', 'Writing', 'Exhibition'];
+export const profileTabs = ['Profile', 'Gallery', 'Writing'];
 
 export function HeaderThemeButton() {
   const { mode, error } = useInterfaceTheme();
@@ -26,15 +26,8 @@ export function StudioHeaderTools({ onStudio, studioMenu, children }) {
   </div>;
 }
 
-export function DiscoverLink({ onDiscover, children, ...props }) {
-  return <a {...props} href="?discover" onClick={event => {
-    if (!onDiscover || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault(); onDiscover(event.currentTarget);
-  }}>{children}</a>;
-}
-
 export function WorkspaceBrand({ trigger, current, destinations, groups, editorActions = [], onPanel, onSearch, blocked,
-  onOpen, onError, onDiscover }) {
+  onOpen, onError }) {
   const [menu, setMenu] = useState(null);
   useEffect(() => {
     if (!menu) return;
@@ -44,7 +37,7 @@ export function WorkspaceBrand({ trigger, current, destinations, groups, editorA
   }, [menu, trigger]);
   const logo = <svg className="workspace-wordmark" viewBox="0 0 480 154" aria-hidden="true">
     <use href="/assets/brand/inscape-wordmark-new.svg#inscape-wordmark" /></svg>;
-  if (!destinations) return <DiscoverLink className="workspace-brand" aria-label="Inscape — Discover" onDiscover={onDiscover}>{logo}</DiscoverLink>;
+  if (!destinations) return <a className="workspace-brand" href="/" aria-label="Inscape home">{logo}</a>;
   const open = focusLast => {
     onOpen?.();
     const rect = trigger.current.getBoundingClientRect();
@@ -61,7 +54,7 @@ export function WorkspaceBrand({ trigger, current, destinations, groups, editorA
   for (const [label, entries] of Object.entries(groups || {})) registerGroup(label, entries);
   const commands = [
     ...(groups ? [{ id: 'search', label: 'Search commands...', disabled: !onSearch, run: onSearch }] : []),
-    ...[...profileTabs, 'Studio', ...(destinations.Curation ? ['Curation'] : []), 'Discover'].map((label, index) => ({ id: 'destination:' + label, label,
+    ...[...profileTabs, 'Studio', ...(destinations.Curation ? ['Curation'] : [])].map((label, index) => ({ id: 'destination:' + label, label,
       checkable: true, selected: label === current, disabled: !destinations[label] || blocked,
       section: index === 0 ? 'Workspace' : undefined, run: destinations[label] })),
     ...Object.keys(groups || {}).map((label, index) => ({ id: label, label, section: index === 0 ? 'Editor' : undefined })),

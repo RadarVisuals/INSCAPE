@@ -2,17 +2,17 @@ import { useCallback, useEffect, useRef } from 'react';
 import { workbenchPanVelocity } from './workbenchInertia.js';
 
 export const isWorkbenchBackground = (target, host) => target === host
-  || Boolean(target?.matches?.('.system-workflow__workbench, .system-workflow__display-instance, [data-workbench-pan-surface]'));
+  || Boolean(target?.matches?.('.system-workflow__workbench, [data-workbench-pan-surface]'));
 
 // Space-drag and the Hand tool share one camera gesture. Navigation owns the camera;
 // this gesture retains its cancellation offset and bounded release samples.
 export function isWorkbenchHandSurface(target, host) {
   if (!host?.contains(target) || target?.closest?.('input, textarea, select, a, summary, [contenteditable="true"], [role="textbox"], [role="slider"], [role="menu"], [role="dialog"], [role="toolbar"], [data-workbench-toolbar], .workbench-view-controls, [data-workbench-group-tools], [data-workbench-selection-tools], [data-immersive], iframe')) return false;
   const button = target.closest?.('button');
-  if (button && !button.matches('.image-module__canvas, [data-workbench-selectable], .system-workflow__resize-handle, .workbench-selection__handle')) return false;
+  if (button && !button.matches('.image-module__canvas, [data-workbench-selectable], .workbench-selection__handle')) return false;
   if (target.closest?.('.system-workflow__detached-window-titlebar, .system-workflow__detached-window-resize')) return true;
   if (target.closest?.('[data-shared-display-tools], [data-context-tools], [data-shared-text-tools], [data-system-workflow-panel]')) return false;
-  return isWorkbenchBackground(target, host) || Boolean(target.closest?.('[data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .workbench-selection, [data-workbench-pan-surface]'));
+  return isWorkbenchBackground(target, host) || Boolean(target.closest?.('[data-workbench-view-id], [data-workbench-module], .workbench-selection, [data-workbench-pan-surface]'));
 }
 
 // Keyboard focus can remain on a toolbar after the pointer returns to the

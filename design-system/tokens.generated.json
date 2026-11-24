@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 113,
-    "definitions": 895,
-    "names": 466
+    "files": 103,
+    "definitions": 868,
+    "names": 462
   },
   "sources": [
     {
@@ -811,7 +811,7 @@
     {
       "path": "src/imageModule/imageModule.css",
       "role": "Local",
-      "sha256": "d99cecee41a1caa9dc8943f2a61c2b87c65ac71aaa2880664c2ad9d19f745ec5",
+      "sha256": "ead926df17cb7d357e233df1e84f3b46c80756cfe31b9bccb60a5904ddd0eacd",
       "definitions": [],
       "references": [
         "--editor-accent",
@@ -3117,234 +3117,6 @@
       ]
     },
     {
-      "path": "src/lattice/rendering/latticeProductionTableRenderer.css",
-      "role": "Local",
-      "sha256": "4ea131095fb828a2ca1fdc22d7d504cf0f68411170c555d35f26572ca0fa3613",
-      "definitions": [
-        {
-          "name": "--lattice-production-surface",
-          "value": "#0b0c0c",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(216 213 204 / 0.085)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(9 10 10 / 0.88)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(216 213 204 / 0.84)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(216 213 204 / 0.56)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 6,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#383a3a",
-          "scope": [
-            ".lattice-production-table[data-surface=\"graphite\"]"
-          ],
-          "line": 27,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(232 231 226 / 0.115)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"graphite\"]"
-          ],
-          "line": 27,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#7b7b7b",
-          "scope": [
-            ".lattice-production-table[data-surface=\"slate\"]"
-          ],
-          "line": 28,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(243 242 237 / 0.14)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"slate\"]"
-          ],
-          "line": 28,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#b2b2b2",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(255 255 255 / 0.22)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(21 24 24 / 0.88)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(21 24 24 / 0.58)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(213 212 207 / 0.91)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#c9c6bd",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(18 20 20 / 0.11)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(24 26 26 / 0.9)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(24 26 26 / 0.58)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(215 211 202 / 0.92)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#d8d4ca",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(34 31 27 / 0.095)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(31 29 26 / 0.9)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(31 29 26 / 0.58)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(232 228 218 / 0.93)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        }
-      ],
-      "references": [
-        "--lattice-production-label-ink",
-        "--lattice-production-label-muted",
-        "--lattice-production-surface"
-      ]
-    },
-    {
       "path": "src/lattice/rendering/latticeProfileRail.css",
       "role": "Local",
       "sha256": "010cd0d03031845ce42647d8281af51362f511d629a3ed345b929a64f7a434ec",
@@ -3409,102 +3181,6 @@
       "sha256": "6a59d76d366727dcb7b9757e6202a22b35dc41935e31f2ce0a8adc1d3056b610",
       "definitions": [],
       "references": []
-    },
-    {
-      "path": "src/miniApps/bridge.css",
-      "role": "Local",
-      "sha256": "3a48031cc17e71e4e146edd84f6aa0e9575a43ae0b6a83ff8cd3deb12dc3b638",
-      "definitions": [],
-      "references": []
-    },
-    {
-      "path": "src/miniApps/miniApps.css",
-      "role": "Local",
-      "sha256": "7a194f1b926812eaea4be67af63f7c2fe6f3f95ba9d80c44c804c24e1ae13d86",
-      "definitions": [
-        {
-          "name": "--tactile-face",
-          "value": "var(--editor-panel)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 17,
-          "references": [
-            "--editor-panel"
-          ]
-        },
-        {
-          "name": "--tactile-header",
-          "value": "var(--editor-panel)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 18,
-          "references": [
-            "--editor-panel"
-          ]
-        },
-        {
-          "name": "--tactile-edge",
-          "value": "var(--editor-line)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 19,
-          "references": [
-            "--editor-line"
-          ]
-        },
-        {
-          "name": "--tactile-ink",
-          "value": "var(--editor-ink)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 20,
-          "references": [
-            "--editor-ink"
-          ]
-        },
-        {
-          "name": "--tactile-accent",
-          "value": "var(--editor-accent)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 21,
-          "references": [
-            "--editor-accent"
-          ]
-        },
-        {
-          "name": "--detached-window-gutter",
-          "value": "0px",
-          "scope": [
-            ".mini-app-workbench .mini-app-artwork-window"
-          ],
-          "line": 31,
-          "references": []
-        }
-      ],
-      "references": [
-        "--editor-accent",
-        "--editor-ink",
-        "--editor-line",
-        "--editor-panel",
-        "--mini-app-shortcut-bottom",
-        "--mini-app-z",
-        "--tactile-divider",
-        "--workbench-content-scale",
-        "--workflow-board-radius",
-        "--workflow-border",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-type-micro"
-      ]
     },
     {
       "path": "src/profileDocument/components/profileOverview.css",
@@ -3597,24 +3273,14 @@
     {
       "path": "src/profileDocument/components/publishedCompositions.css",
       "role": "Local",
-      "sha256": "bafd163af3d08729579c2ba3fc9d8339fd7dab0843cf0117b9ea54774ada3424",
+      "sha256": "7aa818d7b901affb10ef287875c40fb5aaaa0c33126c79daf2a0dbe17bdb6e59",
       "definitions": [],
       "references": [
         "--font-interface",
         "--interface-environment",
         "--spread-heading",
         "--spread-height",
-        "--spread-line",
         "--spread-muted"
-      ]
-    },
-    {
-      "path": "src/profileDocument/components/publishedDisplay.css",
-      "role": "Local",
-      "sha256": "6369824379488362aeac4a10e0d3d8ce3672a7d778bae07990c592759f46615d",
-      "definitions": [],
-      "references": [
-        "--visitor-grid-swipe-x"
       ]
     },
     {
@@ -3692,7 +3358,7 @@
     {
       "path": "src/profileDocument/components/visitorGridWorld.css",
       "role": "Local",
-      "sha256": "5f992aaa357692c0b3882226a91b0b32b72b16fe96848bb7744ba8a6922d372c",
+      "sha256": "7da3f2e76fa58005d650f702e60b2479dc808b370d835126a05db07595d99170",
       "definitions": [
         {
           "name": "--visitor-grid-surface",
@@ -3800,7 +3466,7 @@
             "@media (max-width: 640px)",
             ".visitor-grid-world[data-workbench]:has(> .visitor-grid-world__dock .visitor-grid-world__actions)"
           ],
-          "line": 54,
+          "line": 44,
           "references": []
         },
         {
@@ -3810,7 +3476,7 @@
             "@media (max-width: 640px)",
             ".visitor-grid-world[data-workbench]:has(> .visitor-grid-world__dock .visitor-grid-world__actions)"
           ],
-          "line": 54,
+          "line": 44,
           "references": []
         },
         {
@@ -3819,7 +3485,7 @@
           "scope": [
             ".visitor-grid-world[data-public-header]"
           ],
-          "line": 64,
+          "line": 51,
           "references": [
             "--workspace-header-height"
           ]
@@ -3840,7 +3506,7 @@
     {
       "path": "src/profileDocument/components/visitorProfile.css",
       "role": "Local",
-      "sha256": "09812a6b4fab80a0fb68c367f498e8a85dae0418bb7d1dbc3aa501ecec945646",
+      "sha256": "7e7433dde7fd19c2d67aff9ab015c4939fdb99908421e60732fa8f67eae5e295",
       "definitions": [
         {
           "name": "--field-tint",
@@ -4652,7 +4318,7 @@
           "scope": [
             ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 179,
+          "line": 175,
           "references": []
         },
         {
@@ -4661,7 +4327,7 @@
           "scope": [
             ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 179,
+          "line": 175,
           "references": [
             "--inner-rim"
           ]
@@ -5340,7 +5006,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/displayArtworkSurface.css",
       "role": "Local",
-      "sha256": "6831eec4a39a4b9684b4353ea6cc99924db0a66966a2c18fea6833c394722bc9",
+      "sha256": "3dc71ae31c4da4e9b66f73ca6f928e89c2f909782f48cd5267d93af0962ab716",
       "definitions": [],
       "references": [
         "--display-media-height",
@@ -5351,46 +5017,9 @@
       ]
     },
     {
-      "path": "src/public/ownerSystemWorkflow/displayCanvasControls.css",
-      "role": "Local",
-      "sha256": "a9795357ce97dd18b1d9320250279ad7d59fc6c4802777f6ca53c0c8d8383147",
-      "definitions": [],
-      "references": [
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-type-micro"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayInspection.css",
-      "role": "Local",
-      "sha256": "661c36914a76d86a813eae19d29ef4b8a004308fced91b7f8ae81aec083a60ef",
-      "definitions": [],
-      "references": [
-        "--inspection-lift-progress",
-        "--inspection-return-top",
-        "--workbench-right-dock-width",
-        "--workflow-muted"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayInspectionCues.css",
-      "role": "Local",
-      "sha256": "eb794b2d7a90058b67c15439de7051d91d4c9d4bb9c5aac2352d4a3ad7914147",
-      "definitions": [],
-      "references": [
-        "--workbench-content-scale",
-        "--workflow-board-radius",
-        "--workflow-border-strong",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control"
-      ]
-    },
-    {
       "path": "src/public/ownerSystemWorkflow/displayInstruments.css",
       "role": "Local",
-      "sha256": "4fd3a12105aff3cb8d7eb2353458ae38e3736815dd9d60885e04d7bfbeef44c1",
+      "sha256": "6a719a92da544008eafd474c3952ca36129fdd033dc79ff24df31f16072638b3",
       "definitions": [
         {
           "name": "--detached-window-width",
@@ -5398,7 +5027,7 @@
           "scope": [
             ".system-workflow__instrument-window"
           ],
-          "line": 40,
+          "line": 38,
           "references": []
         }
       ],
@@ -5414,40 +5043,9 @@
       ]
     },
     {
-      "path": "src/public/ownerSystemWorkflow/displayModuleLift.css",
-      "role": "Local",
-      "sha256": "70d2a1d4c67b8b92a6fdf8a7b2e091aefdb34f3c9b35aba4497c57c4ef6b5afe",
-      "definitions": [],
-      "references": [
-        "--workbench-control-scale"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displaySize.css",
-      "role": "Local",
-      "sha256": "576ac64d0472beb2c2e3a11abf57e5a7077f012f97cc37557fa55185498d83c9",
-      "definitions": [],
-      "references": [
-        "--workflow-border",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-type-panel-body",
-        "--workflow-type-panel-heading"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayText.css",
-      "role": "Local",
-      "sha256": "8491b803ec59f292f8a7045ed01e89fb6840575b3f3705d81fb83f031c19c1fe",
-      "definitions": [],
-      "references": []
-    },
-    {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "5c5e3e884daa0f13758741be313064213cddf8216182cdd918f5be77b119ca2c",
+      "sha256": "c1c64c52c395565775da8b9af99ff667b479f5330c51f5a96116c6bf88871069",
       "definitions": [
         {
           "name": "--editor-workspace-radius",
@@ -6283,12 +5881,10 @@
     {
       "path": "src/public/ownerSystemWorkflow/moduleSurface.css",
       "role": "Local",
-      "sha256": "7f06a15ae63a5875fb509885010e0f71595bed657bfe9204efb48eb86ea36237",
+      "sha256": "e4132ee5476d0e7a660f8d1f46d8f2c72043a4acf82fd500b6add7e5cf638d5c",
       "definitions": [],
       "references": [
-        "--module-corners",
         "--module-grain",
-        "--module-shadow",
         "--workbench-content-scale",
         "--workflow-border",
         "--workflow-border-strong",
@@ -6318,7 +5914,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/ownerSystemWorkflow.css",
       "role": "Workflow",
-      "sha256": "f8ccbb708b255e916eddffca7b769d110e914b34be0b73a532bce768514134e4",
+      "sha256": "ae8ad2ff6ad062f24ae0470ad12a7db3d38508c87c4de7055949f2e0890e65d9",
       "definitions": [
         {
           "name": "--study-surface",
@@ -6326,7 +5922,7 @@
           "scope": [
             ".system-workflow"
           ],
-          "line": 8,
+          "line": 7,
           "references": [
             "--interface-environment"
           ]
@@ -6337,7 +5933,7 @@
           "scope": [
             ".system-workflow"
           ],
-          "line": 9,
+          "line": 8,
           "references": [
             "--interface-ink"
           ]
@@ -6348,7 +5944,7 @@
           "scope": [
             ".system-workflow"
           ],
-          "line": 10,
+          "line": 9,
           "references": [
             "--interface-line"
           ]
@@ -6359,42 +5955,9 @@
           "scope": [
             ".system-workflow[data-editor-menu]:not([data-overview])"
           ],
-          "line": 22,
+          "line": 21,
           "references": [
             "--editor-surround"
-          ]
-        },
-        {
-          "name": "--workflow-board-frame-gap",
-          "value": "var(--workflow-window-chrome-gutter)",
-          "scope": [
-            ".system-workflow__presentation-board"
-          ],
-          "line": 85,
-          "references": [
-            "--workflow-window-chrome-gutter"
-          ]
-        },
-        {
-          "name": "--workflow-board-radius",
-          "value": "var(--workflow-window-chrome-radius)",
-          "scope": [
-            ".system-workflow__presentation-board"
-          ],
-          "line": 86,
-          "references": [
-            "--workflow-window-chrome-radius"
-          ]
-        },
-        {
-          "name": "--workflow-board-frame-surface",
-          "value": "var(--workflow-selection)",
-          "scope": [
-            ".system-workflow__presentation-board"
-          ],
-          "line": 87,
-          "references": [
-            "--workflow-selection"
           ]
         },
         {
@@ -6403,7 +5966,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 479,
+          "line": 176,
           "references": [
             "--lattice-menu-ink"
           ]
@@ -6414,7 +5977,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 479,
+          "line": 176,
           "references": [
             "--lattice-menu-ink",
             "--lattice-menu-panel"
@@ -6426,7 +5989,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 479,
+          "line": 176,
           "references": []
         },
         {
@@ -6435,7 +5998,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 542,
+          "line": 233,
           "references": []
         },
         {
@@ -6444,7 +6007,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 543,
+          "line": 234,
           "references": [
             "--workflow-window-chrome-radius"
           ]
@@ -6455,7 +6018,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 544,
+          "line": 235,
           "references": [
             "--workflow-window-chrome-gutter"
           ]
@@ -6466,7 +6029,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 545,
+          "line": 236,
           "references": [
             "--workflow-rail-height"
           ]
@@ -6477,7 +6040,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 546,
+          "line": 237,
           "references": []
         },
         {
@@ -6486,7 +6049,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 547,
+          "line": 238,
           "references": []
         },
         {
@@ -6495,7 +6058,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 548,
+          "line": 239,
           "references": [
             "--workflow-window-chrome-shadow-inset"
           ]
@@ -6506,7 +6069,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 549,
+          "line": 240,
           "references": [
             "--workflow-window-chrome-shadow-height"
           ]
@@ -6517,7 +6080,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"] .system-workflow__detached-window-surface"
           ],
-          "line": 611,
+          "line": 302,
           "references": []
         },
         {
@@ -6526,7 +6089,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"] .system-workflow__detached-window-surface"
           ],
-          "line": 612,
+          "line": 303,
           "references": []
         },
         {
@@ -6535,7 +6098,7 @@
           "scope": [
             ".system-workflow[data-layout=\"narrow\"]"
           ],
-          "line": 636,
+          "line": 327,
           "references": []
         }
       ],
@@ -6573,21 +6136,17 @@
         "--workbench-toolbar-offset",
         "--workflow-active-vertical",
         "--workflow-board-frame-gap",
-        "--workflow-board-frame-surface",
         "--workflow-board-inverse-scale",
         "--workflow-board-radius",
         "--workflow-border",
         "--workflow-border-strong",
         "--workflow-dock-height",
         "--workflow-ease",
-        "--workflow-grid-swipe-x",
         "--workflow-hover",
-        "--workflow-identity-strip-height",
         "--workflow-ink",
         "--workflow-menu-row-height",
         "--workflow-menu-type",
         "--workflow-menu-z",
-        "--workflow-metadata-width",
         "--workflow-motion-in",
         "--workflow-motion-out",
         "--workflow-muted",
@@ -6597,15 +6156,9 @@
         "--workflow-selection",
         "--workflow-shadow-panel",
         "--workflow-shadow-workspace",
-        "--workflow-shortcut-height",
-        "--workflow-shortcut-icon-size",
-        "--workflow-shortcut-label-size",
-        "--workflow-shortcut-width",
         "--workflow-type-control",
         "--workflow-type-label",
         "--workflow-type-micro",
-        "--workflow-type-panel-rail",
-        "--workflow-type-technical",
         "--workflow-window-chrome-gutter",
         "--workflow-window-chrome-noise-opacity",
         "--workflow-window-chrome-noise-size",
@@ -6768,7 +6321,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasContent.css",
       "role": "Local",
-      "sha256": "8c8c5ce8cdc5d62adc3c725ebb2b1ed10d38da549c610281c9010f7b578a3f6f",
+      "sha256": "705b73e6aa507040ffb8587f740b45e26d41e549a3770698fa62158a89a962ac",
       "definitions": [
         {
           "name": "--group-reading-order",
@@ -6810,7 +6363,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCreation.css",
       "role": "Local",
-      "sha256": "ca1e6055144c04d05bd4c79574d3cc4648a192901a06da76b015926439fac030",
+      "sha256": "a9dc91624e7a65afb2fca8ec8f2f98e7e8d6b49ccb7f2ebb9986d7398050987d",
       "definitions": [],
       "references": [
         "--workbench-toolbar-clearance",
@@ -6827,7 +6380,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchDestinationPanel.css",
       "role": "Destinations",
-      "sha256": "bdea771123726f9db6b52bfc95ece04de63f46ae1facfe9d5b81fd12d01aede2",
+      "sha256": "9b801fb4dbcf5928617a904e39b08c837821106f5d068eca209e84a4a8d98d3d",
       "definitions": [
         {
           "name": "--destination-inset",
@@ -6956,22 +6509,13 @@
           "references": []
         },
         {
-          "name": "--destination-width",
-          "value": "560px",
-          "scope": [
-            ".system-workflow__grid-switcher"
-          ],
-          "line": 59,
-          "references": []
-        },
-        {
           "name": "--destination-target",
           "value": "44px",
           "scope": [
             "@media (max-width: 520px), (pointer: coarse)",
             ".workbench-destination-panel.workbench-tool-panel"
           ],
-          "line": 86,
+          "line": 60,
           "references": []
         }
       ],
@@ -6984,7 +6528,6 @@
         "--destination-width",
         "--font-interface",
         "--font-technical",
-        "--icon-size-interface",
         "--tactile-disabled",
         "--tactile-edge",
         "--tactile-face",
@@ -7674,7 +7217,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "8f1d2049956fcc970be72e43c40b7ffff0f318293e10202ae424da04b658226f",
+      "sha256": "ae03cd09e601bba01c7231f6e64663136adafca03abb2c8ca3e22a9b93f91315",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -7757,7 +7300,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchWindowChrome.css",
       "role": "Window",
-      "sha256": "d3d016810dc447bab17befdb12400f0d8af47d463f62e7c7284f889a7f643c45",
+      "sha256": "845f8ebd9cab382313c86241ff4601199bd07819823a2a11be7e59db09fd7de0",
       "definitions": [
         {
           "name": "--tool-control-size",
@@ -8046,45 +7589,13 @@
           "name": "--workflow-window-chrome-shadow",
           "value": "calc(4px * var(--workbench-content-scale, 1)) calc(6px * var(--workbench-content-scale, 1)) calc(14px * var(--workbench-content-scale, 1)) rgb(17 19 19 / 14%)",
           "scope": [
-            ".system-workflow__presentation-board, .text-window"
+            ".text-window"
           ],
           "line": 127,
           "references": [
             "--workbench-content-scale",
             "--workbench-content-scale",
             "--workbench-content-scale"
-          ]
-        },
-        {
-          "name": "--workflow-board-radius",
-          "value": "calc(var(--workflow-window-chrome-radius) * var(--workbench-content-scale, 1))",
-          "scope": [
-            ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
-          ],
-          "line": 130,
-          "references": [
-            "--workflow-window-chrome-radius",
-            "--workbench-content-scale"
-          ]
-        },
-        {
-          "name": "--workflow-board-frame-gap",
-          "value": "0px",
-          "scope": [
-            ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
-          ],
-          "line": 131,
-          "references": []
-        },
-        {
-          "name": "--workflow-board-frame-surface",
-          "value": "var(--workflow-panel)",
-          "scope": [
-            ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
-          ],
-          "line": 132,
-          "references": [
-            "--workflow-panel"
           ]
         }
       ],
@@ -8103,15 +7614,11 @@
         "--toolbar-screen-x",
         "--workbench-content-scale",
         "--workbench-control-scale",
+        "--workbench-controls-gap",
         "--workbench-left-dock-width",
         "--workbench-right-dock-width",
-        "--workflow-board-radius",
-        "--workflow-border",
-        "--workflow-hover",
         "--workflow-ink",
         "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-window-chrome-radius",
         "--workflow-window-chrome-shadow",
         "--workflow-window-control-active-shadow",
         "--workflow-window-control-fill",
@@ -9615,7 +9122,7 @@
     {
       "path": "src/public/workbenchOverview/canvasPresentation.css",
       "role": "Local",
-      "sha256": "5b1a842c08716fbf756509a9c775ae4cb02405dfdaca3a7be71abb70ad4b1eab",
+      "sha256": "80481341ce1cec7e5dfb57acf231049310ef2ff090e79a110d9abc5298ba3de8",
       "definitions": [
         {
           "name": "--tactile-ink",
@@ -9852,6 +9359,17 @@
       ]
     },
     {
+      "path": "src/public/workbenchOverview/compositionPreview.css",
+      "role": "Local",
+      "sha256": "a83284d7b7e4d642230b95018d32d795c8f10e15c25dd01cb38a13d021c63420",
+      "definitions": [],
+      "references": [
+        "--color-border",
+        "--color-text-primary",
+        "--interface-environment"
+      ]
+    },
+    {
       "path": "src/public/workbenchOverview/thumbnailCrop.css",
       "role": "Local",
       "sha256": "02f6feb8de334ac4242f8ae0731626274df9dab5887a52678f7faefaa8ee8fb6",
@@ -10048,7 +9566,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "a5f422c79135d2a539d08d58c6de08c182f3f04593166f9e99f5108d657b27f7",
+      "sha256": "4fb5d1e8013417c5ddd97b7860b8f7c3d989f7ae6d77c4eecd664661b8de61a0",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -10156,7 +9674,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 98,
+          "line": 95,
           "references": [
             "--interface-panel"
           ]
@@ -10168,7 +9686,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 98,
+          "line": 95,
           "references": []
         },
         {
@@ -10178,7 +9696,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 98,
+          "line": 95,
           "references": []
         },
         {
@@ -10187,7 +9705,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-selecting]"
           ],
-          "line": 106,
+          "line": 103,
           "references": []
         }
       ],
@@ -10442,7 +9960,7 @@
     {
       "path": "src/reception/editorCells.css",
       "role": "Local",
-      "sha256": "2700541c9dbe18b1c85c6bf417b1f7e4d81769a842e6e61b77249a68b1ff23ba",
+      "sha256": "03aac30b77b7eb709696b5e3395c97ed757ea1ba33a4e065f2e52926165557e2",
       "definitions": [],
       "references": [
         "--tactile-edge",
@@ -10455,7 +9973,7 @@
     {
       "path": "src/reception/reception.css",
       "role": "Reception",
-      "sha256": "921e9857c44434a9ae2b2b57c8d1b4c65c199fd45884e34ecf3a8ee1456eec83",
+      "sha256": "bd6c61532b80deb94cb47b28637a458986301612f58d4e2e6dd9bcc55c8c86e0",
       "definitions": [
         {
           "name": "--reception-page-padding",
@@ -10660,7 +10178,7 @@
     {
       "path": "src/reception/receptionDocument.css",
       "role": "Local",
-      "sha256": "50452b5934d7bc950183f7631cfd33c979f36353e2c3c41b6fbb679221b90a4b",
+      "sha256": "f572d42abc7d533f8dd868cf75fa3254621158a3d3c61917926ecb34deca87ae",
       "definitions": [
         {
           "name": "--text-stack-height",
@@ -10668,19 +10186,139 @@
           "scope": [
             ".reception-text-preview[data-stacked]"
           ],
-          "line": 15,
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".reception-cell-group[data-swiping] > .reception-document-cell"
+          ],
+          "line": 25,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
+          ],
+          "line": 33,
+          "references": []
+        },
+        {
+          "name": "--cell-slide-offset",
+          "value": "calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1)",
+          "scope": [
+            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
+          ],
+          "line": 34,
+          "references": [
+            "--layer-slide",
+            "--slide-position",
+            "--slide-count"
+          ]
+        },
+        {
+          "name": "--swipe-pan",
+          "value": "pan-x",
+          "scope": [
+            ".reception-cell-group[data-vertical-swipe]"
+          ],
+          "line": 42,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "right center",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "left center",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center bottom",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center top",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
           "references": []
         }
       ],
       "references": [
+        "--cell-slide-offset",
+        "--glow-edge",
+        "--glow-size",
         "--interface-environment",
         "--interface-window",
+        "--layer-slide",
         "--reception-frame-fill",
         "--reception-frame-fill-opacity",
         "--reception-frame-line",
         "--reception-frame-line-opacity",
         "--reception-page-background",
-        "--tactile-ink"
+        "--slide-count",
+        "--slide-position",
+        "--slide-x",
+        "--slide-y",
+        "--swipe-pan"
       ]
     },
     {
@@ -10693,7 +10331,7 @@
     {
       "path": "src/reception/receptionPreview.css",
       "role": "Local",
-      "sha256": "cfdcee5c80113ae73dfc3ca23fbe9bfcdafaaedda3dcd46f2cfc8568f2fddda9",
+      "sha256": "5ef4ca20bc636d8bbab6d8b112a66cbed7b95f1748f649d39737a3743f61f865",
       "definitions": [
         {
           "name": "--editor-accent",
@@ -10723,7 +10361,7 @@
           "scope": [
             ".reception-viewport-presets"
           ],
-          "line": 20,
+          "line": 18,
           "references": [
             "--editor-accent"
           ]
@@ -10734,7 +10372,7 @@
           "scope": [
             ".reception-viewport-presets"
           ],
-          "line": 20,
+          "line": 18,
           "references": [
             "--editor-on-accent"
           ]
@@ -10746,7 +10384,7 @@
             "@media (forced-colors: active)",
             ".reception-viewport-presets"
           ],
-          "line": 48,
+          "line": 32,
           "references": []
         },
         {
@@ -10756,14 +10394,13 @@
             "@media (forced-colors: active)",
             ".reception-viewport-presets"
           ],
-          "line": 48,
+          "line": 32,
           "references": []
         }
       ],
       "references": [
         "--editor-accent",
         "--editor-ink",
-        "--editor-line",
         "--editor-muted",
         "--editor-on-accent",
         "--editor-panel",
@@ -10772,8 +10409,6 @@
         "--interface-ink",
         "--tactile-accent",
         "--tactile-divider",
-        "--tactile-edge",
-        "--tactile-face",
         "--tactile-ink",
         "--tactile-muted",
         "--tactile-radius-control",
@@ -10901,51 +10536,9 @@
       ]
     },
     {
-      "path": "src/startveil/publicEntryPortal.css",
-      "role": "Discover",
-      "sha256": "69e81104bbc0d8dad472d9737368cd49aa553603b625b899f3723e18d82ff69b",
-      "definitions": [
-        {
-          "name": "--portal-target",
-          "value": "var(--control-height-sm)",
-          "scope": [
-            ".public-entry-portal"
-          ],
-          "line": 2,
-          "references": [
-            "--control-height-sm"
-          ]
-        },
-        {
-          "name": "--portal-target",
-          "value": "44px",
-          "scope": [
-            "@media (max-width: 520px), (pointer: coarse)",
-            ".public-entry-portal"
-          ],
-          "line": 84,
-          "references": []
-        }
-      ],
-      "references": [
-        "--control-height-sm",
-        "--control-radius",
-        "--font-interface",
-        "--font-technical",
-        "--interface-environment",
-        "--portal-target",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-hover",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well"
-      ]
-    },
-    {
       "path": "src/startveil/startveil.css",
       "role": "Local",
-      "sha256": "e34c6a7286eafc8b7e5b4a94c1ceb97ae78ebcbc5c3e4ffa2aa1e09e3b956d0e",
+      "sha256": "1a48526509f26d93e24b0ddaef58540ffcb8d6ee008f987c961f188fe511c1ed",
       "definitions": [
         {
           "name": "--up-modal-font-family",
@@ -11020,6 +10613,7 @@
         }
       ],
       "references": [
+        "--control-radius",
         "--interface-environment",
         "--interface-hover",
         "--interface-ink",
@@ -11065,7 +10659,7 @@
     {
       "path": "src/text/text.css",
       "role": "Local",
-      "sha256": "6ff5c904b15cf9cf11184f75a09bc74d3a1e87ed9bce0bdad3630763b6553bfb",
+      "sha256": "020b37bfc1b777cf166cae53fccc25b9e6cf043005398201753262901ddf8012",
       "definitions": [
         {
           "name": "--text-automatic-padding",
@@ -11073,7 +10667,7 @@
           "scope": [
             ".text-document, .text-editor-page"
           ],
-          "line": 49,
+          "line": 46,
           "references": []
         },
         {
@@ -11083,7 +10677,7 @@
             "@media (max-width: 600px)",
             ".text-document, .text-editor-page"
           ],
-          "line": 120,
+          "line": 116,
           "references": []
         },
         {
@@ -11092,7 +10686,7 @@
           "scope": [
             ".text-workbench .text-window[data-window-chrome]"
           ],
-          "line": 121,
+          "line": 117,
           "references": []
         },
         {
@@ -11101,11 +10695,13 @@
           "scope": [
             ".text-module-scroll[data-stacked]"
           ],
-          "line": 138,
+          "line": 127,
           "references": []
         }
       ],
       "references": [
+        "--controls-frame-height",
+        "--controls-frame-width",
         "--editor-accent",
         "--text-automatic-padding",
         "--text-caption-color",
@@ -11135,13 +10731,13 @@
         "--text-page-gap",
         "--text-page-height",
         "--text-page-width",
-        "--text-shortcut-bottom",
         "--text-stack-height",
         "--text-viewport-bottom-padding",
         "--text-z",
         "--workbench-content-scale",
         "--workbench-content-width",
         "--workbench-control-scale",
+        "--workbench-controls-gap",
         "--workflow-border",
         "--workflow-ink",
         "--workflow-panel",
@@ -11164,7 +10760,7 @@
     {
       "path": "src/text/textTools.css",
       "role": "Local",
-      "sha256": "b9cefc26e3be28c201239826c1d71a724b61d203be33187a95bde3b36851b416",
+      "sha256": "47aa18e6ba4271c08062d8431451d24152a3b03003bd0b4442629b03ada3d3ce",
       "definitions": [
         {
           "name": "--workflow-border",

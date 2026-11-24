@@ -6,7 +6,7 @@ const chapters = [
     ['Compose', 'Arrange Image, Text and Shape on your Workbench. Layers controls their order and visibility. Color changes text and shape colors; Transform changes the selected item’s dimensions.'],
     ['Starting layouts', 'Choose Canvas for a blank composition or Bento to start with cells. Place artwork freely or add it to a cell in the same composition.'],
     ['Your tools', 'Tool tabs can share a dock or detach into separate windows. Text stays in its own window. Keeper and Navigator stay on screen as you move around the canvas.'],
-    ['Your workspace', 'Library settings and tool-window layouts are saved in this browser for your profile. Settings controls your local workspace preferences. Discover lets you visit other profiles.'],
+    ['Your workspace', 'Library settings and tool-window layouts are saved in this browser for your profile. Settings controls your local workspace preferences.'],
   ] },
   { id: 'identity', label: 'Identity', summary: 'Give your profile its own presentation.', sections: [
     ['Edit on the card', 'Use the cogwheel to edit the card in place. Choose its artwork and background, write your bio and tags, and add text or list cells. Save applies your changes; Cancel discards that edit.'],
@@ -20,7 +20,7 @@ const chapters = [
     ['Browse', 'Search, filters, sorting and thumbnail size change the Library view. Your Library organisation stays private when you publish.'],
   ] },
   { id: 'publish', label: 'Publish', summary: 'Review the experience visitors will enter.', sections: [
-    ['Preview', 'Preview shows your public composition and custom Identity card, with the current window arrangement. Check both expanded content and smaller screens.'],
+    ['Preview', 'Preview shows the current composition as a visitor would see it. Choose Back to editing to return to your work.'],
     ['Destinations', 'Choose Gallery, Profile or both for each composition you publish.'],
     ['Prepare', 'Arrange the windows and decide which should start open. Prepare Publication saves that starting setup and freezes a snapshot for review. Preparing does not upload or ask your wallet to publish.'],
     ['Make it public', 'The next action uploads and verifies the prepared presentation. Publishing the verified result to your profile is a separate wallet action. Later edits need a new preparation and publication.'],

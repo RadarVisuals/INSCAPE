@@ -11,8 +11,6 @@ import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/
 import { buildProfileDocumentV9, countProfileDocumentV9Assets } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
-import { createSystemWorkflowMovementGesture, updateSystemWorkflowMovementGesture } from '../systemWorkflow/systemWorkflowMovement.js';
-import { projectSystemWorkflowViewport } from '../systemWorkflow/systemWorkflowViewportProjection.js';
 import { addReceptionFrame, coupleReceptionFrames, changeReceptionGroup } from './receptionArrangement.js';
 import { createWorkbenchCollection } from '../systemWorkflow/domain/workbenchCollection.js';
 import { canvasPublicationCandidates, buildCanvasPublication } from '../profileDocument/domain/canvasPublication.js';
@@ -266,13 +264,9 @@ test('mobile overrides reject duplicate, unknown, unbounded or content-carrying 
   }
 });
 
-test('Reception scene placements use Display precision and feed its movement geometry directly', () => {
+test('Saved Reception scene positions keep their grid precision', () => {
   const value = layered(), cell = value.regions[0].id, original = value.regions[0].scene.placements[1];
-  const field = projectSystemWorkflowViewport(value.regions[0].scene.geometry, { width: 960, height: 540 });
-  const point = { x: original.column * field.cellSize + 10, y: original.row * field.cellSize + 10 };
-  const gesture = createSystemWorkflowMovementGesture(original, field, point);
-  const moved = updateSystemWorkflowMovementGesture(gesture, { x: point.x + 30, y: point.y + 30 }, field);
-  const next = changeReceptionScenePlacement(value, cell, original.id, moved.previewGeometry);
+  const next = changeReceptionScenePlacement(value, cell, original.id, { column: original.column + 1, row: original.row + 1 });
   assert.equal(validReception(next), true);
   assert.equal(next.regions[0].scene.placements[1].column, original.column + 1);
   const slider = changeReceptionScenePlacement(next, cell, original.id, { column: 1.31, row: 2.25 });

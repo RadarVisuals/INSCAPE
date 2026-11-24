@@ -44,6 +44,7 @@ async function waitForVite(url, signal) {
 }
 
 async function setRoutingState(patch) {
+  if (Object.hasOwn(patch, 'isWalletConnected')) patch = { ...patch, accounts: patch.isWalletConnected ? [patch.hostProfileAddress] : [] };
   await page.evaluate(async (next) => {
     const { useWalletStore } = await import('/src/store/useWalletStore.js');
     window.__routingAuthorityPatch = next;
@@ -205,7 +206,8 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
   test('root A to B, explicit visitor, RETURN, and Back/Forward preserve URL intent', async () => {
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_A,
       isWalletConnected: true, isHostProfileOwner: true });
-    await waitForOwnerShell('Owner A did not become active');
+    await page.locator('.visitor-profile-card').waitFor();
+    await page.getByRole('button', { name: 'Studio', exact: true }).waitFor();
     await page.locator('.startveil').waitFor({ state: 'detached', timeout: 20_000 });
     await page.waitForFunction(() => document.querySelector('.application-interface')?.dataset.visible === 'true', undefined, { timeout: 15_000 });
 
@@ -215,27 +217,28 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE UNAVAILABLE|GALLERY/iu);
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_B,
       isWalletConnected: true, isHostProfileOwner: true });
-    await waitForOwnerShell('Owner B did not replace owner A');
+    await page.locator('.visitor-profile-card').waitFor();
+    await page.getByRole('button', { name: 'Studio', exact: true }).waitFor();
 
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
-    await page.getByText('PROFILE UNAVAILABLE').waitFor();
-    assert.match(await page.url(), new RegExp(`view=${PROFILE_B}`),
-      'disconnect must retain owner B as an explicit public visitor route');
+    await page.getByRole('main', { name: 'Sign in to Inscape' }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.has('view'), false);
     assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE CONTEXT REQUIRED/iu);
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_B,
       isWalletConnected: true, isHostProfileOwner: true });
-    await waitForOwnerShell('Reconnecting B did not restore owner B');
+    await page.locator('.visitor-profile-card').waitFor();
+    await page.getByRole('button', { name: 'Studio', exact: true }).waitFor();
 
     await setUrl(`?view=${PROFILE_A}`);
-    await page.getByText('PROFILE UNAVAILABLE').waitFor();
+    await page.locator('.visitor-profile-card').waitFor();
     assert.match(await page.url(), new RegExp(`view=${PROFILE_A}`));
     await workspaceDestination(page, 'Studio');
     await waitForOwnerShell('Studio did not open the connected owner B');
     assert.equal(new URL(page.url()).searchParams.get('view'), PROFILE_B);
     assert.equal(new URL(page.url()).searchParams.get('editor'), 'studio');
 
-    await page.goBack(); await page.getByText('PROFILE UNAVAILABLE').waitFor();
+    await page.goBack(); await page.locator('.visitor-profile-card').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Studio', exact: true }).count(), 0);
     await page.goForward(); await waitForOwnerShell('Forward did not restore owner B');
     assert.equal(new URL(page.url()).searchParams.get('work'), null);
@@ -245,6 +248,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_A,
       isWalletConnected: true, isHostProfileOwner: true });
     await setUrl('');
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
     await waitForOwnerShell('Owner before reception');
     const back = () => page.locator('.visitor-header').getByRole('button', { name: 'Studio', exact: true });
     const openReception = async () => {
@@ -282,7 +286,6 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       const { createEmptySystemWorkflowDraft } = await import('/src/systemWorkflow/domain/systemWorkflowDraft.js');
       const { publishedProfileResolutionStore: store } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
       const draft = createEmptySystemWorkflowDraft(address);
-      draft.grids[0].title = 'Published reception';
       const document = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Reception owner' }, assetRecords: [], systemWorkflowDraft: draft });
       store.repository = { resolve: async (target) => target === address
         ? { status: 'RESOLVED', address: target, document }
@@ -403,13 +406,13 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
   });
 
 
-  test('signed-out root, profile fallback, and unpublished explicit visitor have exact return semantics', async () => {
+  test('signed-out root and an explicit artist visit remain distinct', async () => {
     assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
     await waitForInitialWalletSettlement();
     await detachWalletLifecycle();
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
-    await setUrl(''); await page.locator('.public-entry-portal').waitFor();
+    await setUrl(''); await page.getByRole('main', { name: 'Sign in to Inscape' }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Connect profile', exact: true }).count(), 1);
     assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE CONTEXT REQUIRED/iu);
     assert.equal(await page.getByRole('button', { name: 'Studio', exact: true }).count(), 0);
@@ -425,25 +428,23 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     });
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
-    await setUrl(`?profile=${PROFILE_A}&view=${PROFILE_B}`);
-    await page.locator('h1', { hasText: 'PROFILE UNAVAILABLE' }).waitFor({ state: 'attached' });
-    await setUrl(`?profile=${PROFILE_A}`);
-    await page.locator('h1', { hasText: 'PROFILE UNAVAILABLE' }).waitFor({ state: 'attached' });
+    await setUrl(`?view=${PROFILE_B}`);
+    await page.locator('.visitor-profile-card').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Studio', exact: true }).count(), 0);
-    await setUrl(`?profile=${PROFILE_B}`);
-    await page.waitForFunction((address) => document.querySelector('.published-profile-status__body code')?.textContent === address, PROFILE_B);
+    await setUrl(`?profile=${PROFILE_A}`);
+    await page.getByRole('main', { name: 'Sign in to Inscape' }).waitFor();
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_B,
       isWalletConnected: true, isHostProfileOwner: true });
-    await waitForOwnerShell('Connected B did not supersede profile fallback A');
-
+    await page.getByRole('button', { name: 'Studio', exact: true }).waitFor();
+    assert.equal(await page.locator('.system-workflow').count(), 0);
     await setUrl(`?profile=${PROFILE_A}&view=${PROFILE_A}`);
-    await page.locator('h1', { hasText: 'PROFILE UNAVAILABLE' }).waitFor({ state: 'attached' });
+    await page.locator('.visitor-profile-card').waitFor();
     await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
     assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Studio', exact: true }).isEnabled(), true);
     await page.keyboard.press('Escape');
   });
 
-  test('explicit disconnect opens Discover from the Workbench and preserves public visitor destinations', async () => {
+  test('disconnect opens the sign-in entrance from home and preserves explicit public visitor destinations', async () => {
     await page.route('**/src/wallet/standaloneWalletSession.js', (route) => route.fulfill({
       contentType: 'application/javascript', body: `
         import { useWalletStore } from '/src/store/useWalletStore.js';
@@ -451,8 +452,8 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
           useWalletStore.setState({authorityLifecycleStatus:'complete',hostProfileAddress:null,isWalletConnected:false,isHostProfileOwner:false});
           return { release() {}, session: {
             showSignIn() {
-              if (window.__cancelSignIn) { options.onSignInClose(); return; }
-              const connect = () => useWalletStore.setState({authorityLifecycleStatus:'complete',hostProfileAddress:'${PROFILE_A}',isWalletConnected:true,isHostProfileOwner:true});
+              if (window.__cancelSignIn) { options.onSignInClose(); window.__signInCancelled = true; return; }
+              const connect = () => useWalletStore.setState({authorityLifecycleStatus:'complete',hostProfileAddress:'${PROFILE_A}',accounts:['${PROFILE_A}'],isWalletConnected:true,isHostProfileOwner:true});
               if (window.__delaySignIn) window.__finishSignIn = connect; else connect();
             },
             async disconnect() {
@@ -462,89 +463,76 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
             }
           }};
         }` }));
+    const useEmptyPublication = () => page.evaluate(async () => {
+      const { publishedProfileResolutionStore: store } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
+      store.clear();
+      store.repository = { resolve: async (address) => ({ status: 'UNAVAILABLE', address, document: null }) };
+    });
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto(`${baseUrl}/?discover`, { waitUntil: 'domcontentloaded' });
-      await page.evaluate(async () => {
-        const { publishedProfileResolutionStore: store } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
-        store.clear();
-        store.repository = { resolve: async (address) => ({ status: 'UNAVAILABLE', address, document: null }) };
-      });
+      await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
+      await useEmptyPublication();
+      const entrance = page.getByRole('main', { name: 'Sign in to Inscape' });
+      const connect = entrance.getByRole('button', { name: 'Connect profile' });
       await page.evaluate(() => { window.__cancelSignIn = true; });
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-      await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
-      assert.match(page.url(), /[?&]discover/);
+      await connect.click();
+      await page.waitForFunction(() => window.__signInCancelled);
+      await connect.waitFor();
+      assert.equal(new URL(page.url()).search, '');
       assert.equal(await page.locator('.system-workflow').count(), 0);
       await page.evaluate(() => { window.__cancelSignIn = false; });
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-      await waitForOwnerShell('Connect from Discover opens owner');
-      await page.evaluate(() => { window.__ownerBeforeDiscover = document.querySelector('.system-workflow'); });
-      await editorDestination(page, 'Discover');
-      assert.match(page.url(), /[?&]discover/);
-      assert.equal(await page.locator('.public-entry-portal').count(), 1);
+      await connect.click();
+      const studio = page.getByRole('button', { name: 'Studio', exact: true });
+      await studio.click();
+      await waitForOwnerShell('Studio from owner profile');
       await page.goBack();
-      await editorMenu(page).waitFor();
+      await studio.waitFor();
       await page.goForward();
-      await page.getByRole('searchbox', { name: 'Search published worlds' }).waitFor();
-      await page.keyboard.press('Escape');
-      await editorMenu(page).waitFor();
-      assert.equal(await page.evaluate(() => window.__ownerBeforeDiscover === document.querySelector('.system-workflow')), true,
-        'Discover and history navigation must preserve the mounted owner workspace');
-      await editorDestination(page, 'Profile');
-      await page.getByRole('button', { name: / account$/ }).click();
+      await waitForOwnerShell('Studio after browser Forward');
+      await page.goBack();
+      await studio.waitFor();
+      const account = page.getByRole('button', { name: / account$/ });
       const disconnect = page.getByRole('button', { name: 'Disconnect', exact: true });
-      await disconnect.waitFor();
+      await account.click();
       const bounds = await disconnect.boundingBox();
       assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
       if (process.env.INSCAPE_CAPTURE) await page.screenshot({ path: `.browser-test-runtime/profile-account-${width}.png` });
       await disconnect.click();
-      await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
-      assert.match(page.url(), /[?&]discover/);
-      assert.equal(await page.locator('.published-profile-status').count(), 0);
+      await entrance.waitFor();
+      assert.equal(new URL(page.url()).search, '');
       assert.equal(await page.locator('.system-workflow').count(), 0);
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-      await waitForOwnerShell('Reconnect returns to owner');
-      await editorDestination(page, 'Discover');
-      await page.locator('.public-entry-portal').getByRole('button', { name: / account$/ }).click();
-      await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
-      await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
-      assert.equal(await page.locator('.system-workflow').count(), 0);
-      if (process.env.INSCAPE_CAPTURE) await page.screenshot({ path: `.browser-test-runtime/disconnected-discover-${width}.png` });
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-      await waitForOwnerShell('Owner before explicit visit');
+      await useEmptyPublication();
+      await entrance.getByRole('button', { name: 'Connect profile' }).click();
+      await page.getByRole('button', { name: 'Studio', exact: true }).waitFor();
       await setUrl(`?view=${PROFILE_B}`);
-      await workspaceDestination(page, 'Discover');
-      await page.locator('.public-entry-portal').getByRole('button', { name: / account$/ }).click();
+      await account.click();
       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
       await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Back', exact: true }).click();
       assert.match(page.url(), new RegExp(`view=${PROFILE_B}`));
       assert.equal(await page.locator('.system-workflow').count(), 0);
       // An in-flight disconnect belongs to its originating route, not a later visit.
-      await setUrl('?discover');
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-      await waitForOwnerShell('Owner before delayed disconnect');
+      await setUrl('');
+      await connect.click();
+      await page.getByRole('button', { name: 'Studio', exact: true }).waitFor();
       await page.evaluate(() => { window.__delayDisconnect = true; window.__disconnectCalls = 0; });
-      await editorDestination(page, 'Profile');
       await page.getByRole('button', { name: / account$/ }).click();
       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
       await page.waitForFunction(() => typeof window.__finishDisconnect === 'function');
+      if (!(await disconnect.isVisible())) await account.click();
       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
       assert.equal(await page.evaluate(() => window.__disconnectCalls), 1);
       await setUrl(`?view=${PROFILE_B}`);
       await page.evaluate(() => { window.__finishDisconnect(); window.__delayDisconnect = false; });
-      await page.locator('.published-profile-status').waitFor();
-      assert.match(await page.locator('.published-profile-status').innerText(), new RegExp(PROFILE_B));
+      await page.locator('.visitor-profile-card').waitFor();
       assert.match(page.url(), new RegExp(`view=${PROFILE_B}`));
-      await setUrl('?discover');
+      await setUrl('');
       await page.evaluate(() => { window.__delaySignIn = true; });
-      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+      await connect.click();
       await page.waitForFunction(() => typeof window.__finishSignIn === 'function');
       await setUrl(`?view=${PROFILE_B}`);
       await page.evaluate(() => window.__finishSignIn());
-      await page.locator('.published-profile-status').waitFor();
+      await page.locator('.visitor-profile-card').waitFor();
       assert.match(page.url(), new RegExp(`view=${PROFILE_B}`));
       assert.equal(await page.locator('.system-workflow').count(), 0);
     }

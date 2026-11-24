@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Frame, Maximize, Scan, Eye, X } from 'lucide-react';
+import { Frame, Maximize, Eye, X } from 'lucide-react';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -139,9 +139,6 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
         <Eye />Show outside canvas</button>
       <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={fit}
         title="Fit to the object edges without extra margin"><Maximize />Fit canvas to content</button>
-      <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={() => navigation.focusDestination({
-        getBounds: () => ({ left: area.left + area.width - 300, top: area.top + area.height - 200, width: 600, height: 400 }),
-      })}><Scan />Find resize corner</button>
       {(error || historyBlocked) && <p role="alert">{error || historyBlocked}</p>}
     </div>}
     {open && !blocked && hostRef.current && createPortal(<>

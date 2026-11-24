@@ -1,5 +1,5 @@
 import WorkspaceBoundary from '../workspace/WorkspaceBoundary.jsx';
-import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { createProfileDraftReader } from '../systemWorkflow/profileDraftReader.js';
 import { useProfileIdentity } from '../profileIdentity/state/useProfileIdentity.js';
 import { createProductionIdentityDossierViewModel } from '../public/identity/productionIdentityDossierViewModel.js';
@@ -7,7 +7,6 @@ import { createPublishedIdentityRackViewModel } from '../profileDocument/compone
 import ReceptionOverview from './ReceptionOverview.jsx';
 import { createReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import { publishedPresentationSnapshot } from '../presentation/presentationSources.js';
-const OwnerReceptionCollection = lazy(() => import('./OwnerReceptionCollection.jsx'));
 
 export default function OwnerReception(props) {
   return <WorkspaceBoundary profile={props.address}><LocalReception key={props.address} {...props} /></WorkspaceBoundary>;
@@ -23,8 +22,7 @@ function LocalReception({ address, document, ...navigation }) {
     : createPublishedIdentityRackViewModel({ document, identity }), [draft, document, identity]);
   const failed = status === 'corrupt' || status === 'unavailable';
   const notice = failed ? `Your local Profile could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Studio to recover your draft.` : null;
-  const View = collection ? OwnerReceptionCollection : ReceptionOverview;
-  return <Suspense fallback={<p role="status">Opening Profile…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
+  return <ReceptionOverview snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
     notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed
-    {...navigation} /></Suspense>;
+    {...navigation} />;
 }

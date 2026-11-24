@@ -18,7 +18,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
     try {
       const page = await browser.newPage({ viewport: { width, height: 1100 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, displayWidth: 320 });
+      await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, shapeWidth: 320 });
       const hand = page.getByRole('button', { name: 'Hand tool', exact: true });
       const initialTool = visitor ? hand : page.getByRole('button', { name: 'Select tool', exact: true });
       await initialTool.waitFor();
@@ -48,9 +48,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         // a genuinely exposed point on the intended surface, not the panel.
         const point = await target.evaluate(node => {
           const rect = node.getBoundingClientRect();
-          // Display may place its input layer beside the painted canvas.
-          const surface = node.matches('.system-workflow__canvas, .visitor-grid-world__viewport')
-            ? node.closest('[data-workbench-view-id]') : node;
+          const surface = node;
           const hits = [];
           for (const yRatio of [.5, .1, .9]) for (const xRatio of [.5, .1, .9, .25, .75]) {
             const x = rect.x + rect.width * xRatio, y = rect.y + rect.height * yRatio;
@@ -107,17 +105,6 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await handle.focus(); await page.keyboard.press('ArrowRight');
         await drag(handle);
         assert.deepEqual(await firstImage.boundingBox(), bounds);
-        // Properties exists only for a selected Display layer. Open an actual
-        // floating Display instrument through its ordinary module menu.
-        await page.getByLabel(/Move Display Module:/).focus();await page.keyboard.press('Shift+F10');
-        await page.getByRole('menuitem',{name:'APPEARANCE',exact:true}).click();
-        const instrument = page.locator('[data-shared-tool="appearance"]').locator('xpath=ancestor::aside').locator('header');
-        const instrumentBounds = await instrument.boundingBox();
-        await drag(instrument);
-        await instrument.focus(); await page.keyboard.press('ArrowRight');
-        assert.deepEqual(await instrument.boundingBox(), instrumentBounds, 'Hand keeps floating tool windows fixed too');
-        await page.getByRole('button', { name: 'Close Display appearance', exact: true }).focus();
-        await page.keyboard.press('Enter');
       }
       await reset(page);
       if (!visitor) {
@@ -125,7 +112,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await settle(page);
         assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'revealing the title beside the sidebar preserves geometry');
       }
-      const canvas = page.locator(visitor ? '.visitor-grid-world__viewport' : '.system-workflow__canvas').first();
+      const canvas = page.locator('aside.shape-window').first();
       await drag(canvas);
       const title = page.locator('[data-workbench-view-id="text:fit"] [data-workbench-selectable]').first();
       // The quiet title strip is pointer-inert until hover or keyboard focus.

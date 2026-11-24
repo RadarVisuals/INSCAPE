@@ -217,7 +217,6 @@ test('a filled composition keeps miniature media mounted during live camera trav
       if (url.origin === origin) return route.continue();
       if (url.hostname === 'workbench-perf.invalid') {
         if (url.pathname.startsWith('/__perf-')) return route.fulfill({ path: 'browser-tests/fixtures/keeper-layered.svg', contentType: 'image/svg+xml' });
-        if (url.pathname === '/panel.html') return route.fulfill({ contentType: 'text/html', body: '<p>Static artwork</p>' });
         return route.fulfill({ path: 'public' + url.pathname });
       }
       return route.abort(); });

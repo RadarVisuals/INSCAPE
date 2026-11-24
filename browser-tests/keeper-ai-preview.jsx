@@ -22,7 +22,6 @@ const asset = await resolveLibraryImageAsset({ ...OWNER_SYSTEM_WORKFLOW_REVIEW_A
 const draft = JSON.parse(storage.getItem(key));
 draft.keeperDocks = [{ id: 'keeper:ai-preview', name: 'Octo', asset, faces: 'right', movement: 'swim', size: 320, visibility: 'PRIVATE' }];
 draft.workbench = createDefaultWorkbenchPresentation();
-draft.workbench.display.open = false;
 draft.workbench.keeperDocks = [{ id: 'keeper:ai-preview', position: { left: 600, top: 280 } }];
 if (new URLSearchParams(location.search).has('artwork')) {
   const study = await resolveLibraryImageAsset(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0]);

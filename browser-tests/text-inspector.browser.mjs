@@ -9,7 +9,7 @@ import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 
-for (const width of [1440, 390]) test(`Text inspector preserves editing, document styles and Display connection at ${width}px`, { timeout: 90000 }, async () => {
+for (const width of [1440, 390]) test(`Text inspector preserves editing, document styles at ${width}px`, { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: width === 1440 ? 'light' : 'dark' });
@@ -51,8 +51,6 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
         await dialog.waitFor({ state: 'detached' });
       }
     }
-    await openTextToolSection(tools, 'Display connection');
-    assert.equal(await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     await body.fill('An illustrated article deserves careful typography.'); await body.press('Control+A');
     await tools.getByLabel('Selected text size', { exact: true }).scrollIntoViewIfNeeded();
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
@@ -62,8 +60,6 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     await tracking.fill('.08'); await tracking.press('Enter');
     assert.equal(await body.locator('span').first().evaluate(n => n.style.letterSpacing), '0.08em');
     await openTextToolSection(tools, 'Text box layout');
-    await openTextToolSection(tools, 'Display connection');
-    assert.equal(await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     assert.equal(await tools.getByRole('spinbutton', { name: 'Text column gap', exact: true }).count(), 0);
     await tools.getByRole('combobox', { name: 'Text columns', exact: true }).selectOption('2');
     await tools.getByRole('spinbutton', { name: 'Text column gap', exact: true }).fill('32');
@@ -101,13 +97,6 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     // Opening and closing settings must preserve the original editing history.
     await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     assert.equal(await tools.getByRole('button', { name: 'Undo', exact: true }).isEnabled(), true);
-    await openTextToolSection(tools, 'Display connection');
-    const follow = tools.getByRole('combobox', { name: 'Follow Display', exact: true });
-    const target = await follow.locator('option').nth(1).getAttribute('value');
-    await follow.selectOption(target); await tools.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
-    assert.equal((await page.evaluate(() => window.savedDraft())).texts[0].sceneLink.displayId, target);
-    await tools.getByRole('button', { name: 'Unlink Text from Display', exact: true }).click();
-    assert.equal((await page.evaluate(() => window.savedDraft())).texts[0].sceneLink, undefined);
     await mountTextToolsFixture(page, origin);
     await openTextToolSection(tools, 'Default text style');
     assert.equal(await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).inputValue(), '18');

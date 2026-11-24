@@ -1,7 +1,7 @@
 import { authoredStorage } from '../workspace/profileWorkspace.js';
 import { normalizeProfileAddress } from '../library/config.js';
 import { restoreReception } from '../profileDocument/domain/receptionPresentation.js';
-import { serializeWorkbenchBackup, parseWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
+import { serializeWorkbenchBackup, parseLegacyWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
 import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import { workbenchLayoutKey } from '../systemWorkflow/workbenchLayoutKey.js';
 import { createReceptionEditorDocument } from './receptionEditorDocument.js';
@@ -35,7 +35,7 @@ export function readReceptionRecovery(storage, profile) {
     if (!storage?.getItem) throw new Error('Local recovery storage is unavailable.');
     const source = authoredStorage(storage).getItem(receptionRecoveryKey(profile));
     if (source === null) return { status: 'absent' };
-    const backup = parseWorkbenchBackup(source, profile);
+    const backup = parseLegacyWorkbenchBackup(source, profile);
     const reception = backup.draft.shared?.reception || backup.draft.reception;
     if (!reception) throw new Error('This backup has no Profile Bento.');
     return { status: 'ready', value: { reception } };

@@ -58,7 +58,7 @@ test('metadata dossiers require provenance and do not convert creator evidence i
   const owned = readTarget('src/library/domain/normalizeProfileAsset.js');
   const created = readTarget('src/creations/domain/normalizeCreation.js');
   const publishedAsset = readTarget('src/profileDocument/domain/profileDocumentV9Asset.js');
-  const dossier = readTarget('src/profileDocument/components/profileDocumentV9FocusViewModel.js');
+  const dossier = readTarget('src/profileDocument/components/profileDocumentV9AssetDossier.js');
   assert.match(owned, /fieldProvenance/u);
   assert.match(created, /fieldProvenance/u);
   assert.match(publishedAsset, /fieldProvenance\?\.creators/u);

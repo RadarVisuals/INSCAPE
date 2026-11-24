@@ -12,7 +12,7 @@ export default function ReceptionArtboard() {
   return <>
     <div className="lab-reception-stage">
       <ReceptionOverview reception={reception} model={receptionProfile}
-        onOpenCanvas={destination('Canvases')} onOpenDirectory={destination('Discover')}
+        onOpenCanvas={destination('Canvases')}
         onEdit={destination('Edit Reception')} onReturnToWorkbench={destination('Workbench')} />
     </div>
     {notice && <p className="lab-note" role="status">{notice}</p>}

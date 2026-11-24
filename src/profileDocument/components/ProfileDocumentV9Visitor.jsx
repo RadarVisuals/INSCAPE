@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { WorkbenchViewProvider, WorkbenchViewControls } from '../../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import WorkbenchCanvasContent from '../../public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
@@ -14,7 +13,6 @@ import '../../public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 import './visitorGridWorld.css';
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
-const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const ImageWorkbench = lazy(() => import('../../imageModule/ImageWorkbench.jsx'));
 const ShapeWorkbench = lazy(() => import('../../shapes/ShapeWorkbench.jsx'));
 const KeeperWorkbench = lazy(() => import('../../keeper/KeeperWorkbench.jsx'));
@@ -23,12 +21,11 @@ const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-
 
 
 export default function ProfileDocumentV9Visitor(props) {
-  return <SharedDisplayToolsProvider key={[props.document.profile.address, props.document.documentId, props.document.revision].join(':')}><SceneNavigationProvider
-    scope={{ profileAddress: props.document.profile.address, canvasId: props.document.canvas?.id || 'workbench:main', revision: `${props.document.documentId}:${props.document.revision}` }} content={props.document}>
-    <WorkbenchViewProvider groupContent={props.document}><ProfileDocumentV9Session {...props} /><VisitorEntryFocus target={props.entryTarget} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
+  return <SharedDisplayToolsProvider key={[props.document.profile.address, props.document.documentId, props.document.revision].join(':')}>
+    <WorkbenchViewProvider groupContent={props.document}><ProfileDocumentV9Session {...props} /><VisitorEntryFocus target={props.entryTarget} /></WorkbenchViewProvider></SharedDisplayToolsProvider>;
 }
 
-function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, entryTarget, renderHeader }) {
+function ProfileDocumentV9Session({ document, onExit, onReturn, entryTarget, renderHeader }) {
   useStartupDestinationReady();
   const rootRef = useRef(null), identityControlRef = useRef(null), profileDockControlRef = useRef(null);
   useEffect(() => { rootRef.current?.focus({ preventScroll: true }); }, []);
@@ -78,7 +75,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
 
   const openIdentityRack = () => { if (identityRack) { setIdentityOpen(true); setProfileVisible(false); } };
   return <main ref={rootRef} tabIndex={-1} className="visitor-grid-world system-workflow" data-workbench data-public-header={renderHeader ? true : undefined} data-layout={layout.mode}
-    aria-label="Published INSCAPE composition" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
+    aria-label="Published INSCAPE composition" data-lattice-menu-surface data-guide-mode={document.appearance?.guideMode}
     >
     {renderHeader?.(identityRack)}
     <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />
@@ -89,8 +86,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       <SharedDisplayToolsLauncher readOnly  />
       <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
         onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile} ref={profileDockControlRef} type="button">PROFILE</button>
-      {((!renderHeader && (onOpenDirectory || onReturn)) || onExit) && <div className="visitor-grid-world__actions">
-        {!renderHeader && onOpenDirectory && <button onClick={onOpenDirectory} type="button">DISCOVER</button>}
+      {((!renderHeader && onReturn) || onExit) && <div className="visitor-grid-world__actions">
         {!renderHeader && onReturn && <button onClick={onReturn} type="button">RETURN</button>}
         {onExit && <button onClick={onExit} type="button">EXIT</button>}
       </div>}
@@ -115,10 +111,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       <TextWorkbench initiallyOpenId={entryTarget?.moduleId} records={document.texts} presentations={document.workbench?.texts} profileAddress={document.profile.address} />
     </Suspense>}
     </WorkbenchCanvasContent>
-    {document.miniApps?.length > 0 && <Suspense fallback={<p role="status">Opening mini apps…</p>}>
-      <MiniAppsWorkbench records={document.miniApps} presentations={document.workbench?.miniApps}
-        profileAddress={document.profile.address} onConnect={onConnect} />
-    </Suspense>}
 
   </main>;
 }

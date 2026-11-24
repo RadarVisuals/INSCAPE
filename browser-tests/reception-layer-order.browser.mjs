@@ -54,8 +54,9 @@ test('Reception canvas follows the theme through transparent artwork without cha
         return [...context.getImageData(0, 0, 1, 1).data];
       });
       assert.deepEqual(background, mode === 'dark' ? [23, 23, 23, 255] : [222, 219, 211, 255]);
-      const surround = page.locator(view === 'preview' ? '.reception-document-preview' : '.reception-page');
-      assert.equal(await surround.evaluate(node => getComputedStyle(node).backgroundColor), expected);
+      if (view.startsWith('public')) {
+        assert.equal(await page.locator('.reception-page').evaluate(node => getComputedStyle(node).backgroundColor), expected);
+      }
       assert.equal(await canvas.locator('[data-cell-id="shape:cell"] .shape-fill').evaluate(node => getComputedStyle(node).opacity), '0');
       assert.equal(await canvas.locator('[data-layer-id="shape:backdrop"] .shape-fill').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(59, 22, 57)');
       assert.equal(await canvas.locator('.reception-image').evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
@@ -129,8 +130,8 @@ test('Reception opens and returns Home centred without moving authored geometry;
     assert.notEqual(panned.x, initial.x);
     await editorCommand(page, 'Canvas', 'Preview');
     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
-    const preview = await assertDocumentCentered(page, '.reception-preview-content');
-    assert.equal(preview.width, 947); assert.equal(preview.height, 575);
+    const preview = await assertDocumentCentered(page, '.workbench-overview-preview');
+    assert.ok(Math.abs(preview.width / preview.height - 947 / 575) < 0.005, 'fitting the canvas preserves its authored aspect ratio');
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/centred-preview.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click(); await settle(page);
@@ -216,7 +217,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
     await editorCommand(page, 'Canvas', 'Preview');
     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
     await assertPaint(page, false);
-    assert.deepEqual(await textPaint(page, false), nativeText, 'the cell preserves the text layerâ€™s authored padding, font and surface');
+    assert.deepEqual(await textPaint(page, false), nativeText, 'the cell preserves the text layerÃ¢â‚¬â„¢s authored padding, font and surface');
     assert.deepEqual(await textPaint(page, false, 'text:rotated'), nativeRotatedText, 'authored padding, colored surface and quarter-turn match native Text');
     assert.equal(await page.locator('.reception-document-canvas [data-layer-id="text:private"]').count(), 0);
     assert.deepEqual(await page.locator('.reception-document-canvas [data-layer-id], .reception-document-canvas [data-cell-id]').evaluateAll(nodes => nodes
@@ -244,6 +245,326 @@ test('Reception Editor, preview and public reader preserve interleaved global la
   } finally { await browser.close(); }
 });
 
+
+test('Composition preview excludes private cells and their otherwise public layers', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(origin + '/browser-tests/reception-layer-order-fixture.html?session=' + crypto.randomUUID());
+    await page.getByRole('toolbar', { name: 'Creation tools' }).waitFor();
+    const expected = await page.evaluate(() => {
+      const { root } = window.receptionLayerFixture, draft = root.getDraft();
+      draft.reception.shapes.find(shape => shape.id === 'shape:cell').visibility = 'PRIVATE';
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not set cell visibility');
+      return root.getDraft().reception;
+    });
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+    await preview.locator('[data-layer-id="shape:backdrop"]').waitFor();
+    for (const id of ['shape:cell', 'image:art', 'text:nomad', 'text:private']) {
+      assert.equal(await preview.locator(`[data-cell-id="${id}"], [data-layer-id="${id}"]`).count(), 0, id);
+    }
+    await preview.getByRole('button', { name: 'Back to editing' }).click();
+    assert.deepEqual(await page.evaluate(() => window.receptionLayerFixture.root.getDraft().reception), expected);
+  } finally { await browser.close(); }
+});
+
+test('Studio authors linked multilayer slides; swiping either public cell changes both without saving playback', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page.setDefaultTimeout(8000);
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
+    const saved = () => page.evaluate(() => window.receptionLayerFixture.root.getDraft().reception);
+    const layers = await openSharedTool(page, 'Layers');
+    await layers.getByRole('button', { name: 'Select Artwork cell', exact: true }).click();
+    const inspector = await openSharedTool(page, 'Inspector');
+    await inspector.getByRole('tab', { name: 'Contents', exact: true }).click();
+    assert.match(await page.getByLabel('Bento dimensions').textContent(), /^\d+ \u00d7 \d+ px$/u);
+    await inspector.getByLabel('Link swiping with').selectOption('shape:source');
+    await inspector.getByLabel('Swipe to advance').selectOption('up');
+    await inspector.getByLabel('Slide for Layered artwork').selectOption('1');
+    await inspector.getByLabel('Slide for NOMAD').selectOption('1');
+    await inspector.getByLabel('Editing slide').selectOption('1');
+    const document = await saved();
+    await inspector.getByRole('button', { name: 'Duplicate slide', exact: true }).click();
+    assert.equal(await inspector.getByLabel('Editing slide').inputValue(), '2');
+    const duplicated = await saved();
+    assert.deepEqual(duplicated.cells.map(cell => cell.slides.length), [2, 2]);
+    assert.equal(duplicated.cells[0].slides[1].length, 2);
+    assert.ok(duplicated.cells[0].slides[1].every(id => !document.cells[0].members.includes(id)));
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual(await saved(), document);
+    assert.deepEqual(new Set(document.cells[0].slides[0]), new Set(['image:art', 'text:nomad']));
+    await page.reload();
+    await editorCommand(page, 'Canvas', 'Preview');
+    const cell = page.locator('[data-cell-group="shape:cell"]'), source = page.locator('[data-cell-group="shape:source"]');
+    await cell.waitFor();
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+    await preview.getByRole('button', { name: 'Back to editing', exact: true }).waitFor();
+    assert.equal(await preview.locator('[data-profile-header]').count(), 0);
+    const hint = source.locator('.reception-swipe-glow');
+    const opacity = node => getComputedStyle(node).opacity;
+    await source.hover({ position: { x: 10, y: 10 } });
+    await page.waitForTimeout(800); // Beyond the former one-shot pulse.
+    assert.equal(await hint.evaluate(opacity), '1');
+    await page.mouse.move(0, 0);
+    await hint.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished)));
+    assert.equal(await hint.evaluate(opacity), '0');
+    await source.hover({ position: { x: 10, y: 10 } });
+    await hint.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished)));
+    assert.equal(await hint.evaluate(opacity), '1');
+    await cell.focus(); await page.keyboard.press('ArrowDown');
+    const cellBox = await cell.boundingBox();
+    const caption = cell.locator('[data-layer-id="text:nomad"]').getByText('Public layered text', { exact: true });
+    const { x: midX, y: startY } = await caption.evaluate(node => {
+      const range = document.createRange(); range.selectNodeContents(node);
+      const rect = range.getBoundingClientRect();
+      return { x: rect.left + 2, y: rect.top + rect.height / 2 };
+    });
+    await page.mouse.move(midX, startY);
+    const linkedHint = cell.locator('.reception-swipe-glow');
+    await linkedHint.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished)));
+    assert.equal(await linkedHint.evaluate(opacity), '1');
+    await page.mouse.down();
+    await page.mouse.move(midX + 16, startY + 2, { steps: 3 });
+    assert.equal(await page.evaluate(() => getSelection().toString()), '', 'dragging over caption glyphs does not select text');
+    await page.mouse.up();
+    await page.mouse.move(midX, startY); await page.mouse.down();
+    assert.equal(await linkedHint.evaluate(opacity), '0');
+    await page.mouse.move(midX, startY - cellBox.height * .65, { steps: 5 });
+    await page.waitForTimeout(180); await page.mouse.up();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    assert.equal(await source.getAttribute('data-slide'), '1');
+    await cell.focus(); await page.keyboard.press('ArrowDown');
+    assert.equal(await source.getAttribute('data-slide'), '2');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await source.getAttribute('data-slide'), '2');
+    await source.focus(); await page.keyboard.press('ArrowRight');
+    assert.equal(await cell.getAttribute('data-slide'), '1');
+    await cell.focus(); await page.keyboard.press('ArrowDown');
+    assert.equal(await source.getAttribute('data-slide'), '2');
+    assert.equal(await cell.locator('[data-layer-id]').count(), 2);
+    await source.focus(); await page.keyboard.press('ArrowLeft');
+    assert.equal(await cell.getAttribute('data-slide'), '1');
+    await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to Profile', exact: true }).click();
+    await source.waitFor();
+    await page.setViewportSize({ width: 390, height: 850 });
+    await source.scrollIntoViewIfNeeded();
+    const box = await source.boundingBox(), x = box.x + box.width * .8, y = box.y + box.height * .4;
+    const touch = await page.context().newCDPSession(page);
+    await touch.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    const press = () => touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    const move = fraction => touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - box.width * fraction, y }] });
+    const lift = () => touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    const displacement = (group, selector) => group.evaluate((node, selector) =>
+      parseFloat(getComputedStyle(node.querySelector(selector)).translate) / node.getBoundingClientRect().width, selector);
+    await page.evaluate(() => {
+      window.swipeOverlap = false;
+      const source = document.querySelector('[data-cell-group="shape:source"]');
+      // Unwrap the visible layer's translation, independently of the playback clock.
+      source.addEventListener('pointerup', () => {
+        if (!source.hasAttribute('data-swiping')) return;
+        let position = Number(source.style.getPropertyValue('--slide-position'));
+        let last = null;
+        const sample = () => {
+          if (!source.hasAttribute('data-swiping')) return;
+          const content = source.querySelector('.reception-document-cell-content');
+          if (!content) return;
+          const offset = parseFloat(getComputedStyle(content).translate) / source.getBoundingClientRect().width;
+          if (last !== null) {
+            const delta = last - offset;
+            position += delta - 2 * Math.round(delta / 2);
+          }
+          last = offset;
+          window.visualPosition = position;
+          requestAnimationFrame(sample);
+        };
+        sample();
+      }, true);
+      const monitor = new MutationObserver(() => {
+        for (const layer of document.querySelectorAll('[data-swiping] > .reception-document-layer, [data-swiping] .reception-document-cell-content')) {
+          if (getComputedStyle(layer).translate === 'none') window.swipeOverlap = true;
+        }
+      });
+      monitor.observe(document.querySelector('.reception-document-canvas'), { subtree: true, attributes: true, attributeFilter: ['style', 'data-swiping'] });
+    });
+    await press(); await move(.25);
+    assert.ok(Math.abs(await displacement(source, '.reception-document-cell-content') + .25) < .02);
+    const verticalOffset = await cell.evaluate(node => {
+      const translate = getComputedStyle(node.querySelector('[data-layer-id="image:art"]')).translate.split(' ').map(parseFloat);
+      if (translate[0] !== 0) throw Error('Vertical follower moved horizontally');
+      return translate[1] / node.getBoundingClientRect().height;
+    });
+    assert.ok(Math.abs(verticalOffset - .75) < .02);
+    await page.waitForTimeout(180); // Holding still must discard the release velocity.
+    await lift();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    assert.equal(await cell.getAttribute('data-slide'), '1');
+    const landedNeighbour = cell.locator('[data-layer-id="image:art"]');
+    assert.equal(await landedNeighbour.count(), 0, 'a completed coast releases inactive artwork');
+    const flick = async () => { await press(); await move(.08); await move(.65); await lift(); };
+    const progress = () => source.evaluate(node => Number(node.style.getPropertyValue('--slide-position')));
+    await flick();
+    // Absolute track coordinates continue beyond the two authored slides.
+    await page.waitForFunction(() => window.visualPosition > 2.1);
+    assert.equal(await page.evaluate(() => {
+      const cells = [...document.querySelectorAll('[data-swiping]')];
+      const caption = cells[0]?.querySelector('[data-layer-id="image:art"]'), content = cells[1]?.querySelector('.reception-document-cell-content');
+      if (!caption || !content) return false;
+      const dy = parseFloat(getComputedStyle(caption).translate.split(' ')[1]) / cells[0].getBoundingClientRect().height;
+      const dx = parseFloat(getComputedStyle(content).translate) / cells[1].getBoundingClientRect().width;
+      return Math.abs(Math.abs(dy - dx) - 1) < .01;
+    }), true);
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    assert.equal(await source.getAttribute('data-slide'), await cell.getAttribute('data-slide'));
+    await flick();
+    await page.waitForTimeout(120);
+    await press();
+    const caught = await progress();
+    await page.waitForTimeout(180);
+    assert.equal(await progress(), caught, 'touching the track holds its exact position');
+    await lift();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    if (await cell.getAttribute('data-slide') === '1') {
+      await source.focus(); await page.keyboard.press('ArrowRight');
+    }
+    assert.equal(await cell.locator('[data-layer-id]').count(), 2);
+    assert.equal(await page.evaluate(() => window.swipeOverlap), false, 'outgoing layers retain their translation until removed');
+    await press(); await move(.25);
+    assert.ok(Math.abs(await displacement(source, '.reception-document-cell-content') - .75) < .02, 'first slide enters from the right after the last');
+    await move(.68); await page.waitForTimeout(180); await lift();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    assert.equal(await cell.getAttribute('data-slide'), '1');
+    // Start near the left edge so a backward drag stays inside the viewport.
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width * .2, y }] });
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: box.x + box.width * .86, y }] });
+    await page.waitForTimeout(180); await lift();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    assert.equal(await source.getAttribute('data-slide'), '2');
+    // A rightward flick coasts backward through the beginning of the sequence.
+    for (const [type, fraction] of [['touchStart', .12], ['touchMove', .23], ['touchMove', .83]]) {
+      await touch.send('Input.dispatchTouchEvent', { type, touchPoints: [{ x: box.x + box.width * fraction, y }] });
+    }
+    await lift();
+    await page.waitForFunction(() => window.visualPosition < -1.1);
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    assert.equal(await page.evaluate(() => window.swipeOverlap), false);
+    assert.deepEqual(await saved(), document);
+  } finally { await browser.close(); }
+});
+
+test('rightward and downward swipes advance a linked three-slide sequence in authored order', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
+    await page.evaluate(() => {
+      const { root } = window.receptionLayerFixture, draft = root.getDraft();
+      for (const [i, cell] of draft.reception.cells.entries()) {
+        cell.swipeLink = 'swipe:directions';
+        cell.slides = [[], []];
+        cell.swipeDirection = i === 0 ? 'right' : 'down';
+      }
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not seed directions');
+    });
+    await editorCommand(page, 'Canvas', 'Preview');
+    const cells = page.locator('[data-swipe-key="swipe:directions"]');
+    for (const [index, expected] of [[0, '2'], [1, '3'], [1, '1']]) {
+      const group = cells.nth(index), box = await group.boundingBox();
+      const x = box.x + box.width * (index === 0 ? .15 : .5);
+      const y = box.y + box.height * (index === 1 ? .15 : .5);
+      await page.mouse.move(x, y); await page.mouse.down();
+      await page.mouse.move(x + (index === 0 ? box.width * .65 : 0), y + (index === 1 ? box.height * .65 : 0), { steps: 6 });
+      await page.waitForTimeout(180); await page.mouse.up();
+      await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+      assert.deepEqual(await cells.evaluateAll(nodes => nodes.map(node => node.dataset.slide)), [expected, expected]);
+    }
+    const art = await cells.first().boundingBox(), peer = cells.nth(1), box = await peer.boundingBox();
+    await page.mouse.move(art.x + art.width * .15, art.y + art.height * .5);
+    await page.mouse.down(); await page.mouse.move(art.x + art.width * .75, art.y + art.height * .5); await page.mouse.up();
+    await peer.evaluate(node => {
+      node.addEventListener('pointerdown', () => {
+        const layer = node.querySelector('.reception-document-cell-content');
+        if (!layer.getAnimations().length) throw Error('Expected a moving linked cell');
+        window.beforeCatch = getComputedStyle(layer).translate;
+      }, { capture: true, once: true });
+    });
+    await page.mouse.move(box.x + box.width * .5, box.y + box.height * .15);
+    await page.mouse.down();
+    const caught = await peer.evaluate(node => {
+      const layer = node.querySelector('.reception-document-cell-content');
+      return [window.beforeCatch, getComputedStyle(layer).translate].map(value => parseFloat(value.split(' ')[1]));
+    });
+    assert.ok(Math.abs(caught[0] - caught[1]) < 1, 'catching the vertical peer preserves the rendered offset to within one pixel');
+    await page.waitForTimeout(100);
+    assert.equal(await peer.evaluate(node => parseFloat(getComputedStyle(node.querySelector('.reception-document-cell-content')).translate.split(' ')[1])), caught[1]);
+    await page.mouse.up();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+
+  } finally { await browser.close(); }
+});
+
+test('an upcoming image stays mounted and tracks fractional positions through a slide boundary', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 850 } });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.route('**/abyssal_eye/full.webp', serveTransparentThumbnail);
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
+    await page.evaluate(() => {
+      const { root } = window.receptionLayerFixture, draft = root.getDraft();
+      const [art, source] = draft.reception.cells;
+      art.swipeLink = source.swipeLink = 'swipe:test';
+      art.slides = [['text:nomad'], ['image:art'], [], [], []];
+      source.slides = [[], [], [], [], []];
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not seed slides');
+    });
+    await editorCommand(page, 'Canvas', 'Preview');
+    const cell = page.locator('[data-cell-group="shape:cell"]'), source = page.locator('[data-cell-group="shape:source"]');
+    await source.scrollIntoViewIfNeeded();
+    const box = await source.boundingBox(), x = box.x + box.width * .8, y = box.y + box.height * .4;
+    const image = cell.locator('[data-layer-id="image:art"]');
+    assert.equal(await image.count(), 0, 'inactive artwork is unmounted before the first swipe');
+    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x - box.width * .2, y);
+    assert.equal(await image.count(), 1, 'slide three is prepared before slide two comes into view');
+    const progress = await image.evaluate(node => [node, node.firstElementChild].map(element =>
+      Number(getComputedStyle(element).getPropertyValue('--slide-position'))));
+    assert.ok(progress[0] > 0, 'the moving layer receives fractional progress');
+    assert.equal(progress[1], 0, 'its artwork subtree does not inherit frame-by-frame progress');
+    const samples = await cell.evaluateHandle(node => {
+      const result = { positions: [], errors: [] };
+      const image = node.querySelector('[data-layer-id="image:art"]');
+      const sample = () => {
+        if (!node.hasAttribute('data-swiping')) return;
+        const neighbour = node.querySelector('[data-layer-id="text:nomad"]');
+        if (!neighbour) { requestAnimationFrame(sample); return; }
+        const position = 1 - parseFloat(getComputedStyle(neighbour).translate) / node.clientWidth;
+        // The same slide can return on a later lap as a newly buffered node.
+        if (result.positions.length && position > 1.8) return;
+        if (position >= .9 && position <= 1.8) {
+          const offset = parseFloat(getComputedStyle(image).translate) / node.clientWidth;
+          result.positions.push(position);
+          if (!image.isConnected || Math.abs(offset - (2 - position)) > .01 || !Number.isFinite(offset)) result.errors.push(position);
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+      return result;
+    });
+    await page.mouse.move(x - box.width * .65, y); await page.mouse.up();
+    await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
+    const { positions, errors } = await samples.jsonValue();
+    assert.ok(positions.some(value => value > 1), 'coast crosses the boundary');
+    assert.deepEqual(errors, []);
+    await samples.dispose();
+  } finally { await browser.close(); }
+});
 
 test('Layers thumbnails and locks work for free and cell artwork after reload', async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -331,6 +652,11 @@ for (const width of [1440, 900]) test(`Layers selects and ungroups an entire com
         await page.mouse.move(x + 80, y + 45, { steps: 8 });
         assert.deepEqual(await saved(), folded, 'drag preview does not write the draft');
       };
+      await page.keyboard.down('Control'); await drag(); await page.mouse.up(); await page.keyboard.up('Control');
+      const duplicatedStack = (await saved()).artworkLayers.find(layer => layer.children && layer.id !== group.id);
+      assert.ok(duplicatedStack.stackPosition.left > storedGroup.stackPosition.left);
+      assert.equal(duplicatedStack.children.length, 2);
+      await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await saved(), folded);
       await drag(); await page.keyboard.press('Escape'); await page.mouse.up();
       assert.deepEqual(await saved(), folded);
       await drag(); await page.mouse.up();
@@ -371,6 +697,21 @@ for (const width of [1440, 900]) test(`Layers selects and ungroups an entire com
     await selectGroup.click();
     assert.equal(await selectGroup.getAttribute('aria-description'), '2 layers inside');
     assert.equal(await button('Ungroup selected group').isEnabled(), true);
+    if (width === 1440) {
+      const outline = page.getByRole('group', { name: '2 selected Workbench modules', exact: true });
+      const rect = await outline.boundingBox();
+      await page.mouse.move(rect.x + rect.width * .4, rect.y + rect.height * .55);
+      await page.keyboard.down('Control'); await page.mouse.down();
+      await page.mouse.move(rect.x + rect.width * .4 + 75, rect.y + rect.height * .55 + 40, { steps: 6 });
+      await page.mouse.up(); await page.keyboard.up('Control');
+      const copied = await saved(), newGroup = copied.artworkLayers.find(item => item.children && item.id !== group.id);
+      assert.equal(newGroup.children.length, 2);
+      assert.equal(copied.imageModules.length, grouped.imageModules.length + 1);
+      assert.equal(copied.shapes.length, grouped.shapes.length + 1);
+      assert.deepEqual(copied.workbench.imageModules[0], grouped.workbench.imageModules[0]);
+      await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await saved(), grouped);
+      await selectGroup.click();
+    }
     await page.getByRole('group', { name: '2 selected Workbench modules', exact: true }).press('Alt+ArrowRight');
     const moved = await saved();
     assert.deepEqual(moved.cells, grouped.cells);
@@ -433,6 +774,30 @@ test('a free shape and two cells share canvas selection, Layers transfers and du
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not seed two cells');
     });
     const shape = page.locator('aside[data-workbench-view-id="shape:overlay"]');
+    const original = await saved();
+    const first = await page.locator('[data-editor-cell-surface="shape:cell"]').boundingBox();
+    const second = await page.locator('[data-editor-cell-surface="shape:source"]').boundingBox();
+    await page.mouse.move(first.x - 12, first.y - 12); await page.mouse.down();
+    await page.mouse.move(second.x + second.width + 12, second.y + second.height + 12, { steps: 8 }); await page.mouse.up();
+    assert.equal(await page.locator('[data-editor-cell-surface][data-selected]').count(), 2, 'marquee selects both cells');
+    const startX = first.x + first.width / 2, startY = first.y + first.height / 2;
+    const dragCopy = async cancel => {
+      await page.keyboard.down('Control');
+      await page.mouse.move(startX, startY); await page.mouse.down();
+      await page.mouse.move(startX + 20, startY + 200, { steps: 6 });
+      if (cancel) await page.keyboard.press('Escape');
+      await page.mouse.up(); await page.keyboard.up('Control');
+    };
+    await dragCopy(true); assert.deepEqual(await saved(), original);
+    await dragCopy(false);
+    const doubled = await saved();
+    assert.equal(doubled.cells.length, 4);
+    assert.deepEqual(doubled.cells.slice(0, 2), original.cells);
+    assert.ok(doubled.artworkLayers.every(layer => typeof layer === 'string'), 'a marquee copy stays ungrouped');
+    const placed = doubled.workbench.shapes.filter(s => doubled.cells.slice(2).some(cell => cell.id === s.id));
+    const delta = placed.map((p, i) => p.window.top - original.workbench.shapes.find(s => s.id === original.cells[i].id).window.top);
+    assert.ok(delta[0] > 0); assert.equal(delta[0], delta[1]);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await saved(), original);
     await shape.click();
     const layers = await openSharedTool(page, 'Layers');
     const row = layers.getByRole('button', { name: 'Select White overlay', exact: true });

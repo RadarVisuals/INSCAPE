@@ -7,13 +7,13 @@ import test from 'node:test';
 import { availableBrowserTestPort, createBrowserTestServer } from '../scripts/runBrowserTests.mjs';
 import { createBrowserTestCleanup } from './browser-test-lifecycle.mjs';
 import { createPlaywrightRouteController, launchPlaywrightEdge } from './playwright-browser-adapter.mjs';
-import { FEATURED_WORLD_PROFILE_ADDRESS as featured } from '../src/startveil/featuredWorld.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const other = '0x1111111111111111111111111111111111111111';
+const ownerStudio = `?owner=${other}&view=${other}&editor=studio`;
 const screenshotDir = process.env.INSCAPE_BROWSER_OUTPUT || process.env.INSCAPE_STARTUP_SCREENSHOT_DIR;
 
-test('automatic startup and the editorial landing world through the real App', { timeout: 120_000 }, async (t) => {
+test('automatic startup and isolated sign-in through the real App', { timeout: 120_000 }, async (t) => {
   const resources = {};
   const runtimePath = resolve(root, `.browser-test-runtime-owner-routing-${process.pid}-${Date.now()}-${randomUUID()}`);
   let cleanup = createBrowserTestCleanup({ runtimePath, workspaceRoot: root });
@@ -107,7 +107,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await capture('direct-loading-wide');
       await page.evaluate((address) => window.__startup.resolve(address), other);
       await entered();
-      await page.getByRole('main', { name: /reception$/ }).waitFor();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
       await capture('direct-world-wide');
     });
 
@@ -115,7 +115,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await page.setViewportSize({ width: 1024, height: 768 });
       await open(`?view=${other}`);
       await entered();
-      await page.getByRole('main', { name: /reception$/ }).waitFor();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
       await capture('direct-world-small-desktop');
     });
 
@@ -127,49 +127,73 @@ test('automatic startup and the editorial landing world through the real App', {
       await page.getByRole('button', { name: 'RETRY', exact: true }).click();
       await page.waitForFunction(() => window.__startup.requests.length === 2);
       await page.evaluate((address) => window.__startup.resolve(address), other);
-      await page.getByRole('main', { name: /reception$/ }).waitFor();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
       assert.equal(await page.locator('.startveil').count(), 0);
     });
 
-    await t.test('the landing portal features the chosen world independent of directory order and search', async () => {
+    await t.test('signed-out entry offers only sign-in without requesting a directory or cover', async t => {
+      const externalRequests = [];
+      const observeRequest = request => {
+        if (/^https?:/u.test(request.url()) && new URL(request.url()).origin !== origin) externalRequests.push(request.url());
+      };
+      page.on('request', observeRequest);
+      t.after(() => page.off('request', observeRequest));
       await open();
-      const feature = page.locator('[data-variant="feature"]');
-      await feature.getByRole('button', { name: 'Enter Featured artist', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Connect profile', exact: true }).waitFor();
+      const login = page.getByRole('main', { name: 'Sign in to Inscape' });
+      await login.getByRole('button', { name: 'Connect profile', exact: true }).waitFor();
+      assert.equal(await login.getByRole('button').count(), 1);
+      assert.equal(await page.locator('.public-entry-portal__world-card, .visitor-header').count(), 0);
+      assert.deepEqual(await page.evaluate(() => window.__startup.requests), []);
+      assert.deepEqual(externalRequests, []);
       await capture('landing-small-desktop');
       await page.setViewportSize({ width: 1440, height: 900 });
       await capture('landing-wide');
-      await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
-      await page.getByRole('searchbox', { name: 'Search published worlds' }).fill('Other artist');
-      await page.getByRole('button', { name: 'Return to INSCAPE landing' }).click();
-      await feature.getByRole('button', { name: 'Enter Featured artist', exact: true }).click();
-      await entered();
-      assert.equal(new URL(page.url()).searchParams.get('view'), featured);
-      await page.getByRole('main', { name: /reception$/ }).waitFor();
+      await login.getByRole('button', { name: 'Connect profile', exact: true }).click();
+      await page.waitForFunction(() => window.__startup.signIns === 1);
     });
 
-    await t.test('directory failure does not replace or prevent resolving the featured world', async () => {
-      await open('?directoryError=1');
-      await page.locator('[data-variant="feature"]').getByRole('button', { name: 'Enter Featured artist' }).waitFor();
-      assert.equal(await page.locator('.startveil[data-portal]').count(), 1);
-      assert.equal(await page.evaluate(() => window.__startup.signIns), 0);
-    });
-
-    await t.test('an unavailable featured publication stays disabled without substituting another world', async () => {
-      await open('?delay=1');
-      await page.waitForFunction((address) => window.__startup.requests.includes(address), featured);
-      await page.evaluate((address) => window.__startup.resolve(address, 'UNAVAILABLE'), featured);
-      const feature = page.locator('[data-variant="feature"]');
-      assert.equal(await feature.getByRole('button', { name: 'Published world unavailable' }).isDisabled(), true);
-      assert.match(await feature.innerText(), /Featured artist/);
-      assert.equal(await page.locator('.startveil[data-portal]').count(), 1);
-    });
-
-    await t.test('a connected owner automatically reaches their Workbench', async () => {
+    await t.test('a connected owner lands on their profile and can enter Studio', async () => {
       await open(`?owner=${other}`);
       await entered();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
+      assert.equal(await page.locator('main.system-workflow').count(), 0);
+      await page.getByRole('button', { name: 'Studio', exact: true }).click();
       await page.locator('main.system-workflow').waitFor();
-      assert.equal(await page.locator('.visitor-grid-world').count(), 0);
+    });
+
+    await t.test('only the owner of a rejected document can open replacement review from the error', async () => {
+      const action = page.getByRole('button', { name: 'Review replacement in Studio', exact: true });
+      const forbidden = [];
+      const observe = request => {
+        if (/\/api\/profile-publications|\.pinata\.cloud/i.test(request.url()) || /eth_sendTransaction|eth_signTypedData|personal_sign/.test(request.postData() || '')) forbidden.push(request.url());
+      };
+      page.on('request', observe);
+      try {
+        for (const [account, failure] of [
+          ['', 'INVALID_DOCUMENT'],
+          ['0x' + '2'.repeat(40), 'INVALID_DOCUMENT'],
+          [other, 'HASH_MISMATCH'],
+        ]) {
+          await open(`?view=${other}&reception=published&owner=${account}&publicationFailure=${failure}`);
+          await page.getByRole('heading', { name: /^invalid published profile$/i }).waitFor();
+          assert.equal(await action.count(), 0);
+        }
+        await open(`?owner=${other}&publicationFailure=INVALID_DOCUMENT`);
+        await action.click();
+        const panel = page.getByRole('complementary', { name: 'Publish profile' });
+        await panel.getByRole('heading', { name: 'Replace invalid publication' }).waitFor();
+        assert.equal(new URL(page.url()).searchParams.get('editor'), 'studio');
+        assert.equal(await panel.getByRole('checkbox', { name: /Replace the invalid publication/ }).isChecked(), false);
+        assert.equal(await panel.getByRole('button', { name: 'Prepare publication' }).isEnabled(), false);
+        await page.goBack();
+        await action.waitFor();
+        await page.goForward();
+        await page.locator('main.system-workflow').waitFor();
+        assert.equal(await panel.count(), 0, 'history does not repeat the review action');
+        assert.deepEqual(forbidden, []);
+      } finally {
+        page.off('request', observe);
+      }
     });
 
     for (const mode of ['visitor', 'owner']) {
@@ -183,7 +207,7 @@ test('automatic startup and the editorial landing world through the real App', {
         await resources.context.route(pattern, async (route) => { requested(); await gate; await route.continue(); });
         try {
           await page.setViewportSize({ width: mode === 'visitor' ? 1440 : 1024, height: 900 });
-          await open(`?${mode === 'visitor' ? 'view' : 'owner'}=${other}${mode === 'owner' ? '&delayLease=1' : ''}`, 'no-preference');
+          await open(mode === 'visitor' ? `?view=${other}` : `${ownerStudio}&delayLease=1`, 'no-preference');
           let waitingForLease;
           if (mode === 'owner') {
             await page.waitForFunction(() => window.__startup.leaseRequests.length > 0);
@@ -226,7 +250,7 @@ test('automatic startup and the editorial landing world through the real App', {
 
     for (const access of ['busy', 'unavailable', 'unsupported', 'released']) {
       await t.test(`owner ${access} access reveals recovery and can retry into the Workbench`, async () => {
-        await open(`?owner=${other}&${access === 'released' ? 'delayLease=1' : `editorAccess=${access}`}`);
+        await open(`${ownerStudio}&${access === 'released' ? 'delayLease=1' : `editorAccess=${access}`}`);
         if (access === 'released') {
           await page.waitForFunction(() => window.__startup.leaseRequests.length > 0);
           await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
@@ -251,7 +275,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await resources.context.route(pattern, (route) => route.fulfill({ contentType: 'text/javascript',
         body: "throw new Error('Fixture renderer unavailable');" }));
       try {
-        await open(`?${mode === 'visitor' ? 'view' : 'owner'}=${other}`);
+        await open(mode === 'visitor' ? `?view=${other}` : ownerStudio);
         await entered();
         await page.getByRole('button', { name: 'RELOAD', exact: true }).waitFor();
         await page.getByRole('alert').filter({ has: page.getByRole('button', { name: 'RELOAD', exact: true }) }).waitFor();

@@ -1,15 +1,14 @@
 import { isRecord as object } from '../../recordValidation.js';
 import { exact } from '../../text/domain/article.js';
-import { displayContent, displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
 
 const id = (value, prefix) => typeof value === 'string' && new RegExp(`^${prefix}:[A-Za-z0-9_-]{1,80}$`, 'u').test(value);
 export function validPresentationReference(value, destination = false) {
-  const optional = destination ? ['destinationId'] : ['gridId'];
+  const optional = destination ? ['destinationId'] : [];
   const required = destination ? ['profileAddress', 'canvasId'] : ['profileAddress', 'canvasId', 'moduleId'];
   return exact(value, required, optional)
     && /^0x[0-9a-f]{40}$/u.test(value.profileAddress) && id(value.canvasId, 'workbench')
     && (destination ? !Object.hasOwn(value, 'destinationId') || id(value.destinationId, 'workbench-view')
-      : id(value.moduleId, '(?:display|image|text)') && (!Object.hasOwn(value, 'gridId') || id(value.gridId, 'grid')));
+      : id(value.moduleId, '(?:image|text)'));
 }
 export function validReceptionLinks(links) {
   if (!Array.isArray(links) || links.length > 32) return false;
@@ -18,24 +17,8 @@ export function validReceptionLinks(links) {
     if (!object(link) || !id(link.id, 'link') || ids.has(link.id)) return false;
     ids.add(link.id);
     if (link.destination !== null && !validPresentationReference(link.destination, true)) return false;
-    if (link.kind === 'source') return exact(link, ['id', 'kind', 'source', 'destination']) && validPresentationReference(link.source);
-    return link.kind === 'scene' && exact(link, ['id', 'kind', 'controller', 'sources', 'destination'])
-      && validPresentationReference(link.controller) && link.controller.moduleId.startsWith('display:')
-      && !link.controller.gridId && object(link.sources)
-      && Object.keys(link.sources).length > 0 && Object.keys(link.sources).length <= 64
-      && Object.entries(link.sources).every(([grid, source]) => id(grid, 'grid') && validPresentationReference(source) && !source.moduleId.startsWith('display:'));
+    return link.kind === 'source' && exact(link, ['id', 'kind', 'source', 'destination']) && validPresentationReference(link.source);
   });
-}
-
-export function projectReceptionSceneMappings(reception, snapshot) {
-  if (!reception?.links) return reception;
-  return { ...reception, links: reception.links.map(link => {
-    if (link.kind !== 'scene') return link;
-    const draft = snapshot.entries.find(entry => entry.id === link.controller.canvasId)?.draft;
-    if (!draft || !displayModuleIds(draft).includes(link.controller.moduleId)) return link;
-    const grids = new Set(displayContent(draft, link.controller.moduleId).grids.map(grid => grid.id));
-    return { ...link, sources: Object.fromEntries(Object.entries(link.sources).filter(([gridId]) => grids.has(gridId))) };
-  }) };
 }
 
 // Referential checks run against the final publication, after selective canvas
@@ -45,26 +28,16 @@ export function receptionLinkProblems(reception, snapshot) {
   const source = ref => {
     const draft = entry(ref)?.draft;
     if (!draft) return false;
-    if (displayModuleIds(draft).includes(ref.moduleId)) return !ref.gridId || displayContent(draft, ref.moduleId).grids.some(grid => grid.id === ref.gridId);
     const native = draft.composition || draft;
     const image = native.imageModules?.find(item => item.id === ref.moduleId);
-    if (image) return !ref.gridId && Boolean(image.artwork);
+    if (image) return Boolean(image.artwork);
     const text = native.texts?.find(item => item.id === ref.moduleId);
-    if (!text) return false;
-    if (!text.sceneLink) return !ref.gridId;
-    return displayModuleIds(draft).includes(text.sceneLink.displayId)
-      && (!ref.gridId || displayContent(draft, text.sceneLink.displayId).grids.some(grid => grid.id === ref.gridId));
+    return Boolean(text);
   };
   return (reception?.links || []).filter(link => (reception.version === 3 ? reception.cells : reception.regions).some(region => region.content === link.id)).flatMap(link => {
     const destination = link.destination && entry(link.destination)?.draft;
     if (link.destination && (!destination || link.destination.destinationId && !destination.workbenchIndex?.destinations.some(item => item.id === link.destination.destinationId)))
       return [{ id: link.id, reason: 'The linked canvas or camera point is not in this publication.' }];
-    if (link.kind === 'source') return source(link.source) ? [] : [{ id: link.id, reason: 'Linked content is not in this publication.' }];
-    const draft = entry(link.controller)?.draft;
-    if (!draft || !displayModuleIds(draft).includes(link.controller.moduleId)) return [{ id: link.id, reason: 'The linked Display is not in this publication.' }];
-    const grids = displayContent(draft, link.controller.moduleId).grids;
-    return grids.every(grid => link.sources[grid.id] && source(link.sources[grid.id]))
-      && Object.keys(link.sources).every(id => grids.some(grid => grid.id === id)) ? []
-      : [{ id: link.id, reason: 'Choose available content for every published Display scene.' }];
+    return source(link.source) ? [] : [{ id: link.id, reason: 'Linked content is not in this publication.' }];
   });
 }

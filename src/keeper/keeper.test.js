@@ -13,7 +13,6 @@ import { captureWorkbenchPresentation } from '../public/ownerSystemWorkflow/work
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { workbenchGroupModules } from '../systemWorkflow/domain/workbenchGroups.js';
 import { loadWorkbenchLayout, saveWorkbenchLayout } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
-import { createDisplayModuleSession } from '../systemWorkflow/displayModuleSession.js';
 import { resolveLibraryImageAsset } from '../library/resolveLibraryImageAsset.js';
 import { resolveImageLibraryArtwork } from '../imageModule/imageLibraryArtwork.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
@@ -126,7 +125,6 @@ test('Keeper creation, artwork replacement and removal are atomic, undoable and 
   assert.ok(removeWorkbenchModule(store, profile, 'keeper', before.keeperDocks[0]));
   assert.deepEqual(store.getDraft().keeperDocks, []); assert.deepEqual(store.getDraft().workbench, old.workbench);
   assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
-  createDisplayModuleSession(store, 'display:primary').createGrid();
   assert.deepEqual(store.getDraft().keeperDocks, before.keeperDocks);
 });
 

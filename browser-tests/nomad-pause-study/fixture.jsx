@@ -4,7 +4,7 @@ import Boundary from '../../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRe
 import { createEmptySystemWorkflowDraft } from '../../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchCollection, appendWorkbench, assertValidWorkbenchCollection } from '../../src/systemWorkflow/domain/workbenchCollection.js';
-import { createDefaultWorkbenchPresentation, createTextPresentation, createMiniAppPresentation } from '../../src/profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation } from '../../src/profileDocument/domain/workbenchPresentation.js';
 import { createArticle } from '../../src/text/domain/article.js';
 import { createProfileDocumentV9AssetResolver } from '../../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
@@ -20,7 +20,6 @@ const studyStorage = { getItem: key => memory.get(key) ?? null, setItem: (key,va
 const params = new URLSearchParams(location.search);
 const size = params.get('size') || 'filled', animated = params.get('animated') === '1';
 const svgMode = params.get('svgMode') || (animated ? 'raf' : 'static');
-const htmlAnimated = params.has('htmlAnimated') ? params.get('htmlAnimated') === '1' : animated;
 const svgQuery = new URLSearchParams({ mode: svgMode, fps: params.get('svgFps') || '0', legacy: params.get('legacy') || '0' });
 const count = Number(params.get('count') || 2), profile = '0x' + '2'.repeat(40);
 const key = systemWorkflowDraftKey(profile);
@@ -49,12 +48,12 @@ const nomads = params.get('nomad') === '1' ? Array.from({ length: 4 }, (_, i) =>
       [key, mediaOrigin + '/study-media/' + (params.get('variant') === 'baseline' ? 'baseline' : 'compact') + '.svg'])) };
 }) : [];
 const assets = [...sources, layered, keeperSource, ...nomads], resolve = createProfileDocumentV9AssetResolver(assets);
-const draft = createEmptySystemWorkflowDraft(profile); draft.grids = [];
+const draft = createEmptySystemWorkflowDraft(profile);
 
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 4200, height: 3200 } };
-draft.workbench.display.open = false;
-const numbers = size === 'small' ? { images: 4, texts: 2, shapes: 4, apps: 0, paragraphs: 3 }
-  : { images: 16, texts: 12, shapes: 24, apps: 2, paragraphs: 12 };
+
+const numbers = size === 'small' ? { images: 4, texts: 2, shapes: 4, paragraphs: 3 }
+  : { images: 16, texts: 12, shapes: 24, paragraphs: 12 };
 draft.imageModules = Array.from({ length: numbers.images }, (_, i) => ({
   id: 'image:perf-' + i, name: 'Artwork ' + (i + 1), width: 400, height: 400, visibility: 'PRIVATE',
   artwork: { id: 'artwork:perf-' + i, asset: resolve(i % 4 === 0 ? (nomads[i / 4]?.id || layered.id) : sources[i % sources.length].id),
@@ -79,16 +78,12 @@ draft.shapes = Array.from({ length: numbers.shapes }, (_, i) => ({ id: 'shape:pe
   color: ['#caa080', '#48656b', '#815c72'][i % 3], opacity: .5, visibility: 'PRIVATE' }));
 draft.workbench.shapes = draft.shapes.map((item, i) => ({ id: item.id, open: true,
   window: { left: 30 + (i % 6) * 620, top: 100 + Math.floor(i / 6) * 690, width: 550, height: 540 } }));
-draft.miniApps = Array.from({ length: numbers.apps }, (_, i) => ({ id: 'miniapp:perf-' + i, name: 'Motion panel ' + (i + 1),
-  url: mediaOrigin + '/study-media/panel.html', surface: 'artwork', visibility: 'PRIVATE' }));
-draft.workbench.miniApps = draft.miniApps.map((item, i) => ({ ...createMiniAppPresentation(item.id),
-  window: { left: 480 + i * 500, top: 2450, width: 400, height: 300 } }));
 draft.keeperDocks = [{ id: 'keeper:perf', name: 'Shared Keeper', asset: resolve(keeperSource.id), faces: 'right',
   movement: 'swim', size: 192, visibility: 'PRIVATE' }];
 draft.workbench.keeperDocks = [{ id: 'keeper:perf', position: { left: 24, top: 32 } }];
-const empty = createEmptySystemWorkflowDraft(profile); empty.grids = [];
+const empty = createEmptySystemWorkflowDraft(profile);
 empty.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 2000, height: 1600 } };
-empty.workbench.display.open = false;
+
 empty.workbench.keeperDocks = structuredClone(draft.workbench.keeperDocks);
 if (!studyStorage.getItem(key)) {
   let collection = createWorkbenchCollection(draft); collection.workbenches[0].name = 'Filled study';

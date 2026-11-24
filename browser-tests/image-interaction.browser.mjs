@@ -187,12 +187,12 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) test(`Runt
     const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(8000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320, seamReview: 'single' });
+    await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 320, seamReview: 'single' });
     await page.evaluate(async ({ visitor, width }) => {
       const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
       const { createArticle } = await import('/src/text/domain/article.js');
       const { createTextPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
-      draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+      draft.shapes = []; draft.workbench.shapes = [];
       draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:selection-${index}`, width: 200, height: 160 }));
       draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: visitor ? (width === 390 ? 80 : 320 + index * 300) : 900 + index * 300, top: visitor ? (width === 390 ? 180 + index * 240 : 180) : 780 } }));
       draft.texts = [{ id: 'text:candidate', article: createArticle('Candidate text'), visibility: 'PUBLIC' }];

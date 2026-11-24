@@ -12,6 +12,41 @@ Read the current focus and product map first, then the affected detailed
 section. Section dates identify decisions, not today's release status. Execution
 history belongs in dated audits; check the current checkout and CI for status.
 
+## Current cleanup and entry points (founder decision, 2026-11-23)
+
+The founder is the sole user and explicitly declines backward compatibility.
+Remove retired schemas, readers, conversion commands, routes and fixtures
+whose only purpose is supporting previous formats. Old documents, backups
+and historical URLs may cease to open. A profile reset or deletion of actual
+files, drafts, or published data requires a separate explicit instruction.
+Keep the current offline JSON export and restore usable. Trace and explain
+shared dependencies before changing the backup format or its recovery path.
+
+Retire the current implementations of Discover, world covers and mini apps,
+including the directory, the cover on sign-in and the mini-app host. Earlier
+instructions about those features describe historical behavior. They may be
+designed again in the future. The ordinary signed-out entry offers sign-in.
+The signed-in root opens the user's Profile. A current direct artist link
+opens that artist's Profile and retains that destination through sign-in.
+An unpublished own Profile is a normal entry with access to Studio.
+
+Studio Preview shows the current composition and returns to its editing
+session. Remove Reception page chrome, navigation and appearance editing
+from this workflow. The current Profile entrance card introduces the artist.
+
+## Writing (founder decision, 2026-11-23)
+
+Writing is a separate profile blog. Its author writes standalone articles and
+explicitly pins them to Writing. Text authored within a composition belongs
+to that composition. Publishing a work never creates a Writing entry.
+
+## Studio object shortcuts (2026-11-23)
+
+Text, Images and mini apps do not collapse into floating shortcuts. Layers
+owns editor visibility, deletion and reopening previously closed artwork.
+Stopping a mini app releases its running frame and microphone. Starting it
+again uses the same window and requires a fresh connection.
+
 ## Studio groups, stacks and Display (2026-11-23)
 
 Studio uses one kind of layer group. Grouping preserves the members' positions,
@@ -27,18 +62,44 @@ Dragging the stack title moves its cover. Its members keep their authored
 positions and cell assignments. Layers offers Stack and Unstack on the group row. A stack is saved with its
 layer group in the editor. The public composition keeps its authored layout.
 Older workspace groups keep their existing stack controls.
-A future cell interaction may synchronize a swipe across explicitly linked
-cells. Group membership and stack presentation stay independent of those links.
+Cells can contain slides with multiple layers. Existing contents start together on slide 1.
+Explicitly linked cells share a slide index during playback; during a drag, each linked cell reveals its neighbouring slide at the same fractional progress.
+Each cell can advance with a leftward (default), rightward, upward or downward swipe. Linked cells follow their own direction while keeping the same slide order.
+After release, the slides coast according to the recent drag velocity and can pass several slides before settling. Touching the moving cell or a linked cell catches the sequence at its current position. The sequence wraps between its first and last slides in either direction. Group membership and stack presentation stay independent of those links.
+
+## One Studio authoring mode (2026-11-23)
+
+The founder's latest clarification retires Reception and the old Identity
+module and card entirely. The current Profile entrance and its own profile
+card remain. Transfer shared Studio and Profile behavior to their current
+owners as the obsolete systems are removed. This supersedes earlier
+Reception and Identity module directions below.
+
+The founder requires one editor for every composition. Canvas and Bento may
+describe starting arrangements only. A composition can contain free layers
+and cells together. Its starting arrangement, saved format and cell count
+must not decide which Studio commands are available or how an unrelated
+object behaves. Adding the first cell and removing the last are ordinary
+content edits. Neither operation should require the artist to switch modes
+or choose “Use canvas modules.”
+
+Tools can depend on what they act on: slide controls belong to a cell,
+text alignment belongs to a text frame. Every supported object can coexist
+with cells regardless of insertion order. Remove both conversion commands
+and the underlying need for conversion.
+Preserve existing authored content, behavior and Undo while bringing current
+documents into the single workflow. The older implementation still has
+format-specific restrictions; those are implementation gaps.
 
 ## Studio and public navigation (2026-11-19)
 
-The public tabs are Profile, Gallery, Writing and Exhibition, in that order.
-Exhibition is reserved and inactive. Studio is the single authoring destination.
+The public tabs are Profile, Gallery and Writing, in that order. The founder
+removed the Exhibition reservation. Studio is the single authoring destination.
 Canvas and Bento are starting layouts for a composition. Free layers and cell
 contents can coexist in that work. In a compatible older Canvas, Add cell starts
 drawing the first cell. Placing it keeps the composition ID and existing artwork.
-One Undo restores the original Canvas. Works with Display or workspace groups
-keep their full Canvas tools. Moving or resizing a cell affects its own
+One Undo restores the original Canvas. The implementation at the time kept
+works with Display or workspace groups in the full Canvas editor. Moving or resizing a cell affects its own
 members according to their authored positions and constraints. Explicit Publish
 selects Gallery, Profile or both for the same work. In their published Gallery,
 owners can select one or more works and remove them in a single publication.
@@ -46,9 +107,10 @@ Selections span index pages and the grid. Existing Studio drafts and separate
 Profile placements are preserved.
 
 Studio and public pages share a 48px top header with 16px horizontal padding
-and the same left wordmark position. The public header identifies the viewed
-maker beside the wordmark and reserves its account menu for the connected
-account. Studio shows its return destination and document title beside the
+and the same left wordmark position. The left profile strip identifies another artist being visited. Omit it when
+the viewed address matches the signed-in account. The signed-in user's own
+profile entry and account controls belong on the right. Tip LYX is available
+only to signed-in visitors viewing another artist. Studio shows its return destination and document title beside the
 wordmark, with theme, Preview and Publish on the right. This decision
 supersedes earlier navigation labels and header dimensions below.
 
@@ -169,6 +231,8 @@ keeping a hidden alternative. Existing cell layouts and authored content remain
 valid. This supersedes the earlier split/merge control descriptions below.
 
 ## Reception preview and responsive editing (2026-11-13)
+
+Studio Preview opens on the current composition with a compact toolbar. Page appearance reveals the profile header for editing its lighting. The public profile and profile restore preview retain the header.
 
 The founder explicitly retains the responsive layout settings inside Preview.
 Do not move them into a separate editor mode or remove them. Keep the continuous
@@ -3602,8 +3666,8 @@ extends resizing to all four edges and corners and removes Fit's former
 48-work-pixel margin. Canvas size in the camera rail reveals these controls.
 Resizing never moves or scales existing content or changes the camera. Fit uses
 open registered content and collapsed group stacks without rearranging anything.
-An explicit Find resize corner action
-uses existing camera navigation and Back when the edge is outside the viewport.
+The founder retired Find resize corner on 23 November. Remove its dedicated
+camera action and retain direct edge resizing and exact dimensions.
 
 The default remains 2,000 wide × 4,000 high work pixels. Whole-pixel dimensions
 from 1 to 16,384 are saved as optional `workbench.area: { width, height, left?, top? }`
@@ -5908,3 +5972,13 @@ All Library entry points share the approved search, New / Filters / Sort / View,
 Icons / Names navigation and fixed-square previews. Target-specific image
 pickers retain their explicit selection action while reusing this presentation.
 The accepted folder, cover-count and progressive-media behavior is unchanged.
+
+### Free text boxes in Studio (2026-11-23)
+
+Clicking a free text box places the insertion point. New free text starts with
+24 authored pixels of padding on each side. Four white controls on the selected
+frame adjust its insets independently, with the top and left controls marking
+the text origin. The toolbar aligns with the frame's left edge where the
+viewport allows. Its grip moves the frame and its ellipsis opens the inspector.
+Studio derives editability from the editing context. An older saved reading
+preference cannot prevent typing in a free text box.

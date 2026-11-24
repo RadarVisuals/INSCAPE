@@ -12,19 +12,13 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`every resize grip
     const page = await browser.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: density, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.route(`${origin}/__resize_handles__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
-    await page.goto(`${origin}/__resize_handles__`);
-    await page.evaluate(async () => {
-      const refresh = (await import('/@react-refresh')).default;
-      refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
-      (await import('/browser-tests/workbench-resize-handles-fixture.jsx')).mount();
-    });
+    await page.goto(origin + '/browser-tests/workbench-resize-handles-fixture.html');
     await page.locator('.image-module__window').waitFor();
     const show = async (kind, scale, extra) => { await page.evaluate(([kind, scale, extra]) => resizeFixture.show(kind, scale, extra), [kind, scale, extra]); await settle(page); };
-    for (const kind of ['Image', 'Shape', 'Text', 'Display']) for (const scale of [.25, .55, 1]) {
+    for (const kind of ['Image', 'Shape', 'Text']) for (const scale of [.25, .55, 1]) {
       await show(kind, scale);
-      const surface = page.locator(kind === 'Display' ? '.system-workflow__presentation-board' : '[data-workbench-view-id="sample"]');
-      const handles = surface.locator(kind === 'Display' ? '.system-workflow__board-resize-handle' : '[role="separator"]');
+      const surface = page.locator('[data-workbench-view-id="sample"]');
+      const handles = surface.locator('[role="separator"]');
       const edges = await handles.evaluateAll(nodes => nodes.map(node => [...node.classList].find(name => name.startsWith('is-')).slice(3)));
       for (const edge of edges) {
         await show(kind, scale);
@@ -43,10 +37,8 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`every resize grip
         const dy = edge.includes('n') ? -12 : edge.includes('s') ? 12 : 0;
         await page.mouse.move(x + dx, y + dy, { steps: 4 }); await page.mouse.up(); await settle(page);
         const after = await surface.boundingBox();
-        if (kind !== 'Display') {
-          near(after.width, before.width + Math.abs(dx), `${kind} ${scale} ${edge} width`);
-          near(after.height, before.height + Math.abs(dy), `${kind} ${scale} ${edge} height`);
-        } else assert.ok(after.width > before.width && after.height > before.height, 'Display resizes proportionally');
+        near(after.width, before.width + Math.abs(dx), `${kind} ${scale} ${edge} width`);
+        near(after.height, before.height + Math.abs(dy), `${kind} ${scale} ${edge} height`);
         near(edge.includes('w') ? after.x + after.width : after.x, edge.includes('w') ? before.x + before.width : before.x, 'opposite horizontal edge');
         near(edge.includes('n') ? after.y + after.height : after.y, edge.includes('n') ? before.y + before.height : before.y, 'opposite vertical edge');
         assert.equal(await handle.evaluate(node => getComputedStyle(node).outlineStyle), 'none', `${kind}: pointer resize exposes no hit-zone outline`);

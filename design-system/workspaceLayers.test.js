@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dropLayer} from './workspaceLayers.js';
-const item=id=>({id,parent:'display',locked:false});
-const ids=items=>items.filter(i=>i.parent==='display').map(i=>i.id);
+const item=id=>({id,parent:'cell',locked:false});
+const ids=items=>items.filter(i=>i.parent==='cell').map(i=>i.id);
 test('explicit drop edges match front-to-back rows while keeping groups intact',()=>{
  const items=[{id:'image'},...['a','b','c','d','e'].map(item)];
  const groups=[{id:'group',placementIds:['b','c']}];

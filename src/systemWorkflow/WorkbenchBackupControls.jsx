@@ -9,7 +9,7 @@ import { textRecoveries } from '../text/textEditRecovery.js';
 import { preparePublishedReception, preparePreviousReception, readReceptionRecovery, restorePreparedReception } from '../reception/publishedReceptionRecovery.js';
 import { publishedPresentationSnapshot } from '../presentation/presentationSources.js';
 import './workbenchBackup.css';
-const ReceptionEditorPreview = lazy(() => import('../reception/ReceptionEditorPreview.jsx'));
+const ReceptionRestorePreview = lazy(() => import('../reception/ReceptionRestorePreview.jsx'));
 
 export default function WorkbenchBackupControls({ store, storage, getDraft = () => store.getDraft(), onRestored, recoveryPending = false, disabled = false, receptionRecovery }) {
   const [pending, setPending] = useState(null), [message, setMessage] = useState(''), [reading, setReading] = useState(false);
@@ -169,7 +169,7 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
     {!native && recoveryPending && <p>Save pending Text edits or download their article backups before restoring this Workbench.</p>}
     {message && <p role="status">{message}</p>}
     {pending?.reception && createPortal(<Suspense fallback={<p role="status">Opening restore preview.</p>}>
-      <ReceptionEditorPreview reception={pending.reception.reception} snapshot={pending.snapshot} label="Profile Bento restore preview"
+      <ReceptionRestorePreview reception={pending.reception.reception} snapshot={pending.snapshot} label="Profile Bento restore preview"
         onClose={() => { setPending(null); setMessage(''); opener.current?.focus(); }} actions={<>
           {message && <span role="alert">{message}</span>}
           <button type="button" className="workflow-tactile-control" autoFocus disabled={disabled} onClick={restore}>Back up current and load Profile Bento</button>

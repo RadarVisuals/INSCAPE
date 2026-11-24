@@ -49,7 +49,7 @@
 .editor-object-toolbar-button:disabled { opacity: .4; cursor: default; }
 .editor-object-toolbar .system-workflow__detached-window-controls { display: flex; align-items: center; gap: 2px; }
 .workbench-window--external-controls > .editor-object-toolbar {
-  position: absolute; inset: auto auto calc(100% + 28px) 0; z-index: 5;
+  position: absolute; inset: auto auto calc(100% + var(--workbench-controls-gap, 28px)) 0; z-index: 5;
   zoom: var(--workbench-control-scale, 1); cursor: grab; touch-action: none;
 }
 .workbench-window-controls > .editor-object-toolbar { bottom: auto; }
@@ -123,78 +123,14 @@
 [data-window-chrome="bevel"] .system-workflow__window-cap:disabled { cursor: default; opacity: .35; }
 
 /* Display keeps its frame geometry (including the attached bay) outside Stage. */
-.system-workflow__presentation-board, .text-window {
+.text-window {
   --workflow-window-chrome-shadow: calc(4px * var(--workbench-content-scale, 1)) calc(6px * var(--workbench-content-scale, 1)) calc(14px * var(--workbench-content-scale, 1)) rgb(17 19 19 / 14%);
 }
-.system-workflow__presentation-board[data-window-chrome="bevel"] {
-  --workflow-board-radius: calc(var(--workflow-window-chrome-radius) * var(--workbench-content-scale, 1));
-  --workflow-board-frame-gap: 0px;
-  --workflow-board-frame-surface: var(--workflow-panel);
-  grid-template-rows: minmax(0, 1fr);
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"]::before {
-  inset: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"][data-module-frame="on"]:not([data-metadata-sidecar])::before {
-  z-index: 40;
-  border: calc(1px * var(--workbench-content-scale, 1)) solid var(--workflow-window-edge);
-}
-.system-workflow__presentation-board > :is(.system-workflow__identity-strip, .system-workflow__toolbar-reveal) { zoom: var(--workbench-content-scale, 1); }
-.system-workflow__presentation-board > .system-workflow__board-resize-handle { zoom: var(--workbench-control-scale, 1); }
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip {
-  position: absolute; inset: 0 0 auto; z-index: 41;
-  height: 12px; padding: 0 10px; opacity: 0;
-  justify-content: flex-end; overflow: visible; background: transparent;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:focus-visible {
-  outline: 1px solid var(--workflow-ink); outline-offset: -2px;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip .system-workflow__board-title { pointer-events: none; }
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:is(:hover, :focus-within, [data-toolbar-open]) { height: 48px; padding-block: 8px; opacity: 1; }
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:is(:hover, :focus-within, [data-toolbar-open]) .system-workflow__board-title { pointer-events: auto; }
 .system-workflow__toolbar-reveal { display: none; }
 @media (hover: none) {
-  .system-workflow__presentation-board > .system-workflow__toolbar-reveal { display: block; position: absolute; top: 4px; left: 4px; z-index: 43; width: 28px; height: 28px; border: 1px solid var(--workflow-border); background: var(--workflow-window-overlay); color: var(--workflow-ink); font: var(--workflow-type-control); }
-  .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip { padding-left: 36px; }
 }
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__board-title {
-  max-width: 100%; gap: 4px; padding-inline: 4px;
-  background: var(--workflow-window-overlay); border-radius: 4px;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon {
-  box-sizing: border-box; display: grid; place-items: center; flex: 0 0 28px;
-  width: 28px; min-width: 28px; height: 28px; padding: 0;
-  border: 0; border-radius: 0; background: transparent; box-shadow: none;
-  color: var(--workflow-ink); cursor: pointer; transform: none;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon svg {
-  width: 16px; height: 16px; stroke-width: 1.8;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon:hover { background: var(--workflow-hover); }
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon[aria-pressed="true"] { box-shadow: inset 0 -2px 0 currentColor; }
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 1px; }
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon:disabled { opacity: .35; cursor: default; }
-.system-workflow__presentation-board[data-window-chrome="bevel"][data-authoring-locked] .system-workflow__identity-strip .system-workflow__composition-lock { color: #ff5a62; }
-.system-workflow__presentation-board[data-window-chrome="bevel"] :is(.system-workflow__board-window-controls, .system-workflow__composition-lock-controls) {
-  padding-inline: 4px; gap: 5px;
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] > .system-workflow__identity-strip { pointer-events: none; }
-.system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] .system-workflow__board-title { pointer-events: auto; }
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-viewport {
-  border-radius: calc(var(--workflow-board-radius) - 1px * var(--workbench-content-scale, 1));
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-border { border: 0; }
 /* Paint the standalone outline above the artwork's antialiased clip, once.
    A stroke behind that clip lets light artwork brighten the curved edge. */
-.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar])::before { border-color: transparent; }
-.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar]) > .system-workflow__stage-border {
-  inset: calc(-1px * var(--workbench-content-scale, 1)); border: calc(1px * var(--workbench-content-scale, 1)) solid var(--workflow-window-edge);
-  border-radius: var(--workflow-board-radius);
-}
-.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__window-cap svg,
 .system-workflow__instrument-bay[data-window-chrome="bevel"] .system-workflow__window-cap svg {
   width: 16px; height: 16px; stroke-width: 1.8;
 }

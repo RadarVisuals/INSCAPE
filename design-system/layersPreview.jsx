@@ -24,7 +24,7 @@ import {
 } from './workspaceLayers.js';
 import './layersPreview.css';
 
-const nameOf = (item) => item.name.replace(' · Display', '');
+const nameOf = (item) => item.name.replace(' · Cell', '');
 function Key({ label, icon: Icon, buttonRef, ...props }) {
   return (
     <button
@@ -76,7 +76,7 @@ export function LayerScene({ items, selectedIds, onSelect, zoom, view, onTextHos
     <div
       className="ds-layer-scene"
       role="group"
-      aria-label="Example Display composition"
+      aria-label="Example Bento composition"
       style={{
         transform:
           'translate(' +
@@ -147,7 +147,7 @@ export function LayerRemovalConfirmation({ count, onCancel, onConfirm, inline = 
   return (
     <div
       role="alertdialog"
-      aria-label="Remove layers from Grid"
+      aria-label="Remove layers from cell"
       aria-describedby="ds-layer-remove-copy"
       className={'ds-layer-confirm' + (inline ? ' ds-layer-confirm--inline' : '')}
       onKeyDown={(event) => {
@@ -164,7 +164,7 @@ export function LayerRemovalConfirmation({ count, onCancel, onConfirm, inline = 
             : 'Remove ' + count + ' layers?'
           : 'Remove ' +
             (count === 1 ? 'this layer' : count + ' selected layers') +
-            ' from Grid?'}
+            ' from cell?'}
       </p>
       <div>
         {inline ? (
@@ -416,7 +416,7 @@ export default function LayersPreview({
                     buttonRef={(node) =>
                       node ? removeRefs.current.set(key, node) : removeRefs.current.delete(key)
                     }
-                    label={'Remove ' + label + ' from Grid'}
+                    label={'Remove ' + label + ' from cell'}
                     icon={Trash2}
                     disabled={readOnly || item.locked}
                     onClick={(event) => remove(item.id, event)}

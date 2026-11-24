@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { editorCommand, receptionPreviewControls } from './fixtures/editor-menu.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { editorCommand } from './fixtures/editor-menu.mjs';
 const origin = process.env.INSCAPE_TEST_ROOT, output = process.env.INSCAPE_BROWSER_OUTPUT;
 
 test('one explicit cell choice preserves a shallow strip and fades long text horizontally at every width', {timeout:60000}, async()=>{
@@ -64,19 +65,20 @@ test('the single checkbox saves, undoes and reloads through the existing Recepti
   await page.getByRole('group',{name:'Upper text bento cell',exact:true}).waitFor();
   const before=await page.evaluate(()=>window.nativeReceptionFixture.root.getDraft().reception);
   const open=async()=>{
-   await editorCommand(page,'Canvas','Preview');
-   await (await receptionPreviewControls(page)).getByRole('button',{name:'Responsive layout settings',exact:true}).click();
-   await page.getByRole('combobox',{name:'Preview cell',exact:true}).selectOption('shape:tiling-top');
+   await page.locator('[data-editor-cell-surface="shape:tiling-top"]').click({ position: { x: 12, y: 12 } });
+   const inspector = await openSharedTool(page, 'Inspector');
+   await inspector.getByRole('tablist', {name:'Cell settings'}).getByRole('tab', {name:'Cell',exact:true}).click();
+   const responsive = inspector.locator('[data-inspector-section="Responsive"]');
+   if (!await responsive.evaluate(node => node.open)) await responsive.locator(':scope > summary').click();
   };
   await open(); const checkbox=page.getByRole('checkbox',{name:'Single-line text',exact:true});
   await checkbox.check();
   const after=await page.evaluate(()=>window.nativeReceptionFixture.root.getDraft().reception);
   assert.equal(after.cells.find(c=>c.id==='shape:tiling-top').singleLine,true);
   assert.deepEqual(after.workbench,before.workbench);assert.deepEqual(after.texts,before.texts);
-  const history=page.getByRole('group',{name:'Studio edit history',exact:true});
-  await history.getByRole('button',{name:'Undo',exact:true}).click();assert.equal(await checkbox.isChecked(),false);
+  await editorCommand(page,'Edit','Undo');assert.equal(await checkbox.isChecked(),false);
   assert.deepEqual(await page.evaluate(()=>window.nativeReceptionFixture.root.getDraft().reception),before);
-  await history.getByRole('button',{name:'Redo',exact:true}).click();assert.equal(await checkbox.isChecked(),true);
+  await editorCommand(page,'Edit','Redo');assert.equal(await checkbox.isChecked(),true);
   await page.screenshot({path:`${output}/single-line-checkbox.png`});
   await page.reload();await page.getByRole('group',{name:'Upper text bento cell',exact:true}).waitFor();
   assert.deepEqual(await page.evaluate(()=>window.nativeReceptionFixture.root.getDraft().reception),after);

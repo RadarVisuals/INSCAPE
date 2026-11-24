@@ -1,3 +1,4 @@
+import LibraryArtworkImage from './LibraryArtworkImage.jsx';
 import { useState } from 'react';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { Image } from 'lucide-react';
@@ -7,7 +8,7 @@ function ImageSample({ url }) {
   const original = resolvePublishedAssetUrl(url);
   const [src, setSrc] = useState(() => libraryPreviewUrl(url, 64));
   return <span className="workbench-layer-image">
-    {src ? <img src={src} alt="" loading="lazy" decoding="async" draggable={false}
+    {src ? <LibraryArtworkImage src={src} alt="" loading="lazy" decoding="async" draggable={false}
       onError={() => setSrc(src === original ? null : original)} /> : <Image />}
   </span>;
 }

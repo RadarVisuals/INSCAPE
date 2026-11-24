@@ -16,7 +16,7 @@ test('Hand pans live owner and Visitor scenes without per-frame React commits or
       const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (/flushSync was called|Maximum update depth|unmounted component/.test(message.text())) errors.push(message.text()); });
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, shapeWidth: 600 });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       const toggle = page.getByRole('button', { name: visitor ? 'Hand tool' : 'Select tool', exact: true }); await toggle.waitFor();
       await page.waitForFunction(() => document.querySelectorAll('[data-workbench-view-id^="text:"]').length === 3);
@@ -89,7 +89,7 @@ test('reduced motion and paused releases omit inertia, and input cancels a new c
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 1000 }, reducedMotion: 'reduce' });
-    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320 });
+    await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 320 });
     await choosePointer(page, 'Hand');
     const host = page.locator('main.system-workflow').first();
     await host.dispatchEvent('wheel', { deltaX: 5000, deltaY: 5000, bubbles: true, cancelable: true }); await settle(page);

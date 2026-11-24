@@ -107,7 +107,6 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
     Tools: [
       ...(cells ? [command('bento', 'Bento settings', cells.openSettings, { disabled: blocked })] : []),
       check('library', 'Library', openPanels.includes('library'), () => onLibrary(trigger.current)),
-      command('grids', 'Grids', () => onOpenPanel('grids', trigger.current)),
       ...(navigation.openGroups ? [command('groups', 'Groups', navigation.openGroups, { disabled: camera.locked })] : []),
       check('drawing', 'Drawing toolbar', creationBarVisible, () => onCreationBarChange(!creationBarVisible)),
       check('Layers', 'Layers', artworkLayersOpen, onToggleLayers),
@@ -120,7 +119,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
       <div className="editor-menu-start">
         {!hidden && <WorkspaceBrand key={activeId} current="Studio" trigger={trigger} groups={commands}
           editorActions={onManageCompositions ? [command('manage', 'Manage compositions', onManageCompositions, { disabled: blocked })] : []}
-          destinations={{ Discover: source => onOpenPanel('discover', source), ...workspaceDestinations }}
+          destinations={workspaceDestinations}
           blocked={blocked} onPanel={onOpenPanel} onError={setError} onSearch={!camera.locked && onSearchCommands}
           onOpen={() => { setForm(null); setSizeOpen(false); setError(''); }} />}
         {onReturnToWorks && <button className="editor-return-link" type="button" aria-label={'Back to ' + returnLabel}

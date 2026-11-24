@@ -1,7 +1,7 @@
 /* Keep clipping and artwork in one raster surface at the final transform scale.
    Without compositing, fractional screen density can filter a seam into a join. */
 .image-module__window { position: fixed; z-index: 45; padding: 0; border: 0; background: transparent; color: var(--workflow-ink); will-change: transform; }
-.image-module__bounds, .image-module__resize, .image-module__inspect, .image-module__close { zoom: var(--image-density, 1); }
+.image-module__bounds, .image-module__resize, .image-module__inspect { zoom: var(--image-density, 1); }
 .image-module__window { touch-action: none; }
 .image-module__window[data-active] > :is(.image-module__bounds, .image-module__resize) { opacity: 1; }
 .image-module__resize { pointer-events: none; }
@@ -21,7 +21,7 @@
 .image-module__resize:is(.is-n, .is-s) { cursor: ns-resize; }
 .image-module__resize:is(.is-ne, .is-sw) { cursor: nesw-resize; }
 .image-module__resize:is(.is-w, .is-e) { cursor: ew-resize; }
-.image-module__window:focus-visible, .image-module__close:focus-visible, .image-module__inspect:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.image-module__window:focus-visible, .image-module__inspect:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
 .image-module__resize:focus { outline: none; }
 .image-module__resize:focus-visible::after { background: #fff; border-color: #111313; }
 .image-module__canvas:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
@@ -38,20 +38,18 @@
 .image-module__window[data-controls-outside] .image-module__recovery-status { zoom: var(--image-density, 1); left: var(--image-recovery-left); top: var(--image-recovery-top); bottom: auto; box-sizing: border-box; width: var(--image-recovery-width); max-width: none; }
 .image-module__window[data-controls-outside] .image-module__recovery-status button { zoom: 1; }
 .image-module__inspection-status { display: block; max-width: calc(100vw - 64px); margin-top: 4px; pointer-events: none; }
-.image-module__inspect, .image-module__close { position: absolute; right: 6px; z-index: 5; display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; padding: 0; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); cursor: pointer; opacity: 0; pointer-events: none; }
+.image-module__inspect { position: absolute; right: 6px; z-index: 5; display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; padding: 0; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); cursor: pointer; opacity: 0; pointer-events: none; }
 .image-module__inspect { bottom: 6px; left: 6px; right: auto; }
-.image-module__close { top: 6px; }
-.image-module__window:is(:hover, :focus-within) > :is(.image-module__inspect, .image-module__close) { opacity: 1; pointer-events: auto; }
-.image-module__window[data-controls-outside] > :is(.image-module__inspect, .image-module__close) { top: var(--image-controls-top); bottom: auto; right: auto; left: var(--image-controls-left); }
-.image-module__window[data-controls-outside] > .image-module__inspect { left: calc(var(--image-controls-left) + 28px); }
+.image-module__window:is(:hover, :focus-within) > .image-module__inspect { opacity: 1; pointer-events: auto; }
+.image-module__window[data-controls-outside] > .image-module__inspect { top: var(--image-controls-top); bottom: auto; right: auto; left: var(--image-controls-left); }
 .image-module__window[data-controls-outside]:is(:hover, :focus-within)::before { content: ''; position: absolute; zoom: var(--image-density, 1); left: var(--image-controls-left); top: var(--image-controls-bridge); width: 56px; height: 28px; }
 .image-module__publication { display: flex; align-items: center; gap: 6px; font: var(--workflow-type-control); }
 .workbench-image-inspector { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .image-inspector-transforms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .image-module__error { font: var(--workflow-type-control); }
-.image-module__shortcut { position: fixed; left: 24px; border: 1px solid var(--workflow-border); padding: 8px; color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); }
+.system-workflow__lift-artwork { position: absolute; z-index: 35; pointer-events: none; }
 .image-lift { position: fixed; inset: 0; z-index: 200; background: rgb(0 0 0 / calc(.65 * var(--inspection-lift-progress, 0))); }
 .image-module__window[data-svg-inspection] { z-index: 201; pointer-events: none; }
-.image-module__window:is([data-svg-inspection], [data-suspended]) > :is(.image-module__close, .image-module__bounds, .image-module__resize, .image-module__inspect) { visibility: hidden; }
+.image-module__window:is([data-svg-inspection], [data-suspended]) > :is(.image-module__bounds, .image-module__resize, .image-module__inspect) { visibility: hidden; }
 .image-lift-return, .system-workflow > .image-lift-return { position: fixed; right: 16px; top: 16px; z-index: 202; padding: 10px; border: 1px solid currentColor; color: #e7e3d9; background: #171717; font: 400 11px/1.4 "Inscape Sora", sans-serif; cursor: pointer; }
-@media (hover: none) { .image-module__inspect, .image-module__close { opacity: 1; pointer-events: auto; } }
+@media (hover: none) { .image-module__inspect { opacity: 1; pointer-events: auto; } }

@@ -24,14 +24,13 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
     const order = layerIds(view.layers || []), hidden = new Set(view.editorHiddenIds);
     return { revision, mediaRevision, items: [...view.frames].flatMap(([id, ref]) => {
       const node = view.entries.get(id), moduleId = artworkModuleId(view.content, id);
-      const app = view.content?.miniApps?.find(item => item.id === id);
-      if ((!node?.closest('.workbench-canvas-content') && !app) || !node || node.hasAttribute('data-workbench-group-hidden') || hidden.has(moduleId)) return [];
+      if (!node?.closest('.workbench-canvas-content') || node.hasAttribute('data-workbench-group-hidden') || hidden.has(moduleId)) return [];
       const transform = view.presentationTransforms?.[id] || view.transforms[id] || { scale: 1, x: 0, y: 0 };
       const base = transform.frame || ref.current;
       if (!base) return [];
       const frame = { left: base.left * transform.scale + transform.x, top: base.top * transform.scale + transform.y,
         width: base.width * transform.scale, height: base.height * transform.scale };
-      return [{ id, frame, scale: transform.scale, source: view.miniatures.sources.get(id)?.current, name: app?.name || node.getAttribute('aria-label'), order: order.indexOf(moduleId) }];
+      return [{ id, frame, scale: transform.scale, source: view.miniatures.sources.get(id)?.current, name: node.getAttribute('aria-label'), order: order.indexOf(moduleId) }];
     }).sort((a, b) => a.order - b.order) };
   }, [revision, mediaRevision, view.layers, view.editorHiddenIds, view.transforms, view.presentationTransforms, view.content, view.frames, view.entries, view.miniatures]);
   current.current = { navigation, area, showOutside, items };

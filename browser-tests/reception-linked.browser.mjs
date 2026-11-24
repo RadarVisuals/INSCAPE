@@ -1,4 +1,3 @@
-import { workspaceDestination, workspacePicker } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -21,39 +20,14 @@ async function setup(width, query) {
   await page.goto(`${origin}/browser-tests/reception-linked-fixture.html?session=${crypto.randomUUID()}&${query}`);
   return { browser, page, errors };
 }
-for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`Reception ${mode}: direct Display swipe, linked content, separate overview and camera at ${width}`, { timeout: 90000 }, async () => {
+for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`Reception ${mode}: linked text and image, separate overview and camera at ${width}`, { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup(width, mode);
   try {
-    if (mode === 'public') {
-      await workspacePicker(page).click();
-      assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Studio', exact: true }).count(), 0);
-      await page.getByRole('menu', { name: 'Workspace menu' }).press('Escape');
-    }
-    const display = page.locator('.reception-display .visitor-grid-world__viewport');
-    await display.locator('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-media-state=ready]').first().waitFor();
     const before = await page.evaluate(() => ({ storage: JSON.stringify(localStorage), writes: linkedFixture.writes() }));
-    const bounds = await display.boundingBox(), x = bounds.x + bounds.width * .8, y = bounds.y + bounds.height * .65;
-    if (width === 390) {
-      const session = await page.context().newCDPSession(page);
-      await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-      for (let step = 1; step <= 8; step++) await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - bounds.width * .65 * step / 8, y }] });
-      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      await session.detach();
-    } else {
-      await page.mouse.move(x, y); await page.mouse.down();
-      await page.mouse.move(x - bounds.width * .35, y, { steps: 6 });
-      const progress = await page.evaluate(() => ['.visitor-grid-world__grid-track', '.text-scene-track'].map(selector => {
-        const node = document.querySelector(selector); return new DOMMatrix(getComputedStyle(node).transform).m41 / node.getBoundingClientRect().width;
-      }));
-      assert.ok(progress[0] < -.1 && Math.abs(progress[0] - progress[1]) < .025, 'Text follows the actual Display swipe');
-      await page.mouse.move(x - bounds.width * .65, y, { steps: 4 }); await page.mouse.up();
-    }
-    await page.waitForFunction(() => document.querySelector('.reception-display [data-active-grid-id]')?.dataset.activeGridId === 'grid:second');
-    await page.locator('.reception-linked-content .text-scene-page').getByRole('heading', { name: 'Dawn', exact: true }).first().waitFor();
+    await page.locator('[data-linked-kind="text"]').getByText('A quiet world, held in the dark.', { exact: true }).waitFor();
+    await page.locator('[data-linked-kind="image"] [data-media-state="ready"]').waitFor();
     assert.equal(await page.locator('[data-linked-kind="image"] .reception-artwork').getAttribute('aria-label'), 'Study 2');
     assert.ok(await page.getByRole('heading', { name: 'Small worlds.', exact: true }).isVisible());
-    await page.waitForFunction(() => ['.reception-display .visitor-grid-world__grid-track', '.reception-linked-content .text-scene-track'].every(selector =>
-      { const node = document.querySelector(selector); return Math.abs(new DOMMatrix(getComputedStyle(node).transform).m41 + Number(node.dataset.railOrigin || 0) * node.getBoundingClientRect().width) < 1; }));
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/${mode}-${width}-reception.png` });
     const open = page.getByRole('button', { name: 'Open canvas', exact: true });
@@ -66,7 +40,7 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     assert.equal(await dialog.getByRole('button', { name: 'View Artwork detail' }).getAttribute('aria-pressed'), 'true');
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.textContent === 'Open canvas');
-    await workspaceDestination(page, 'Gallery');
+    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Gallery' }).click();
     await page.locator('.workbench-overview').waitFor();
     if (await page.locator('.composition-index').count()) {
       await page.getByRole('button', { name: 'Grid', exact: true }).click();
@@ -82,9 +56,9 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     await page.screenshot({ path: `${output}/${mode}-${width}-gallery.png` });
     if (width === 390) { await card.tap({ position: { x: 20, y: 20 } }); await card.tap({ position: { x: 20, y: 20 } }); }
     else { await card.focus(); await card.press('Enter'); }
-    const second = page.getByRole('dialog', { name: 'View Second canvas' }); await second.waitFor();
+    const selected = page.locator('.composition-index [aria-current="page"]').getByText('Second canvas', { exact: true }); await selected.waitFor();
     await page.screenshot({ path: `${output}/${mode}-${width}-viewer.png` });
-    await page.keyboard.press('Escape'); await second.waitFor({ state: 'detached' });
+    await page.keyboard.press('Escape'); await main.waitFor();
     assert.ok(Math.abs(await main.evaluate(node => node.scrollTop) - scroll) < 2, 'Closing a canvas restores the overview position');
     await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Open Second canvas');
     await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();

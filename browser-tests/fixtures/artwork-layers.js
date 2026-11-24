@@ -5,7 +5,7 @@ import { createProfileDocumentV9AssetResolver } from '../../src/profileDocument/
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 export const layersProfile = `0x${'1'.repeat(40)}`;
 export function layersDraft() {
-  const draft = createEmptySystemWorkflowDraft(layersProfile); draft.grids = [];
+  const draft = createEmptySystemWorkflowDraft(layersProfile);
   const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
   const side = id => ({ id: `artwork:${id}`, asset: structuredClone(asset), crop: { x: .4, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } });
   draft.imageModules = ['body', 'eyes'].map((id, index) => ({ id: `image:${id}`, name: index ? 'Eyes' : 'Body', width: 260, height: 220,

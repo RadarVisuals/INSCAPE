@@ -30,103 +30,6 @@ async function mountTransfer(page) {
       reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Text transfer' } }));
   });
 }
-for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into and out of Display at ${viewScale * 100}%`, { timeout: 120000 }, async () => {
-  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-  const evidence = `${process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR || process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/text-transfer-${viewScale}`;
-  await mkdir(evidence, { recursive: true });
-  let page;
-  try {
-    page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
-    const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
-    await mountTransfer(page);
-    const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
-    await output.waitFor();
-    await page.evaluate(() => document.fonts.ready);
-    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
-    for (const name of ['Close Workbench Layers', 'Close Inspector']) {
-      const close = page.getByRole('button', { name, exact: true });
-      if (await close.count()) { await close.focus(); await close.press('Enter'); }
-    }
-    assert.equal(await output.getByRole('textbox', { name: 'Article title', exact: true }).getAttribute('placeholder'), 'Title');
-    await output.getByRole('textbox', { name: 'Article title', exact: true }).fill('Arrival');
-    const body = output.getByRole('textbox', { name: 'Article text', exact: true });
-    await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
-
-    await openTextToolSection(tools, 'More text tools');
-    await tools.getByRole('button', { name: 'Bold', exact: true }).click();
-    assert.equal(await output.getByRole('toolbar').count(), 0);
-    const writeBounds = await body.locator('p').boundingBox();
-    await output.getByRole('button', { name: 'Read', exact: true }).click();
-    const readBounds = await output.locator('article p').boundingBox();
-    assert.ok(Math.abs(writeBounds.y - readBounds.y) < 1, 'Read does not move text');
-    await output.getByRole('button', { name: 'Write', exact: true }).click();
-    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
-    await setTextBackground(page, 'colour');
-    await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
-    assert.notEqual(await output.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
-    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
-    await setTextBackground(page, 'none');
-    await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
-    // Simulate another writer updating unrelated saved data.
-    await page.evaluate(() => { const draft = window.readDraft(); draft.identityPresentation.alias = 'Other tab'; localStorage.setItem(window.draftKey, JSON.stringify(draft)); });
-    await body.fill('Unsaved but recoverable.');
-    await tools.getByRole('button', { name: 'Retry local save', exact: true }).click();
-    assert.equal(await tools.getByRole('alert').count(), 0);
-    assert.equal(await page.evaluate(() => window.readDraft().identityPresentation.alias), 'Other tab');
-    assert.equal(await page.evaluate(() => window.readDraft().texts[0].article.content.content[0].content[0].text), 'Unsaved but recoverable.');
-    await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
-
-    if (!await body.locator('strong').count()) await tools.getByRole('button', { name: 'Bold', exact: true }).click();
-    await tools.locator('.workbench-inspector').evaluate(node => { node.scrollTop = 0; });
-    await page.screenshot({ path: `${evidence}/text-tools-wide.png` });
-    await tools.getByRole('button', { name: 'Close Inspector' }).click();
-    if (viewScale === .5) await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('50');
-    const originalTextHeight = (await body.locator('p').boundingBox()).height;
-    const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }); if (await unlock.count()) await unlock.click();
-    const canvas = page.locator('[data-system-workflow-artboard]').first(), bounds = await canvas.boundingBox();
-    const handle = output.getByRole('button', { name: 'Drag Text into Display' }); await handle.focus(); await handle.hover();
-    const from = await handle.boundingBox();
-    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2); await page.mouse.down();
-    await page.mouse.move(bounds.x + bounds.width * .6, bounds.y + bounds.height * .55, { steps: 12 }); await page.mouse.up();
-    await page.waitForTimeout(300);
-    assert.equal(await text.count(), 0, 'attached text no longer has an independent window');
-    const editor = canvas.getByRole('textbox', { name: 'Article text', exact: true }); await editor.waitFor();
-    assert.equal(await editor.locator('strong').innerText(), 'The landscape remembers.');
-    assert.ok(Math.abs((await editor.locator('p').boundingBox()).height - originalTextHeight) < 1, 'attachment retains visible text size at the current Workbench scale');
-    const externalTools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
-    assert.equal(await canvas.getByRole('toolbar').count(), 0);
-    await canvas.getByRole('textbox', { name: 'Article title', exact: true }).fill('Attached text');
-    await externalTools.getByRole('button', { name: 'Close Inspector' }).click();
-    const attached = canvas.getByRole('button', { name: 'Select Attached text', exact: true });
-    await attached.focus(); await page.keyboard.press('Enter');
-    // Move the floating toolbox aside before reaching the artwork underneath.
-    const toolGrip = externalTools.getByLabel('Move Inspector panel', { exact: true });
-    const toolRect = await toolGrip.boundingBox();
-    await page.mouse.move(toolRect.x + 40, toolRect.y + 15); await page.mouse.down();
-    await page.mouse.move(60, 70, { steps: 8 }); await page.mouse.up();
-    const outHandle = canvas.getByRole('button', { name: 'Drag Text out of Display' });
-    const start = await outHandle.boundingBox();
-    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2); await page.mouse.down();
-    await page.mouse.move(1580, 960, { steps: 8 }); await page.keyboard.press('Escape'); await page.mouse.up();
-    assert.equal(await text.count(), 0, 'Escape cancels detachment, including the following pointer release');
-    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2); await page.mouse.down();
-    await page.mouse.move(1580, 960, { steps: 12 }); await page.mouse.up();
-    await page.screenshot({ path: `${evidence}/text-detach-debug.png` });
-    await text.waitFor({ state: 'attached' });
-    assert.equal(await text.locator('.text-editor-content strong').innerText(), 'The landscape remembers.');
-    assert.ok(Math.abs((await text.locator('.text-editor-content p').boundingBox()).height - originalTextHeight) < 1, 'detachment retains visible text size at the current Workbench scale');
-    assert.equal(await page.evaluate(() => window.readDraft().grids.flatMap(grid => grid.placements).filter(item => item.kind === 'text').length), 0);
-    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
-    const toolBounds = await tools.boundingBox();
-    assert.ok(toolBounds.x >= 0 && toolBounds.x + toolBounds.width <= 391);
-    await page.screenshot({ path: `${evidence}/text-tools-narrow.png` });
-    assert.deepEqual(errors, []);
-  } catch (error) {
-    await page?.screenshot({ path: `${evidence}/failure.png` });
-    throw error;
-  } finally { await browser.close(); }
-});
-
 for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text controls respect canvas clipping at ${width}px and ${scale * 100}%`, { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   const evidence = `${process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR || process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/text-controls-${width}-${scale}`;
@@ -143,8 +46,6 @@ for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) { await close.focus(); await close.press('Enter'); }
     }
-    const minimize = page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true });
-    await minimize.focus(); await minimize.press('Enter');
     const saved = await page.evaluate(() => window.readDraft());
     await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill(String(scale * 100));
     await grip.focus();
@@ -156,11 +57,6 @@ for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text
       await page.mouse.move(from.x + 72 - rect.x, from.y + 250 - rect.y, { steps: 8 });
       await page.mouse.up(); await page.keyboard.up('Space'); await grip.focus();
     }
-    const transfer = text.getByRole('button', { name: 'Drag Text into Display', exact: true });
-    await transfer.hover();
-    assert.equal(await transfer.evaluate(node => {
-      const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
-    }), true, 'the native transfer target is exposed at the default authored position');
     const geometry = await text.evaluate(node => {
       const host = node.closest('.workbench-canvas-content'), header = node.querySelector('header');
       return { frame: node.getBoundingClientRect().toJSON(), controls: header.getBoundingClientRect().toJSON(), clipTop: parseFloat(getComputedStyle(host).getPropertyValue('--canvas-top')) };

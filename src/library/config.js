@@ -50,15 +50,3 @@ export function normalizeProfileAddress(value) {
   const candidate = String(value || '').trim();
   return /^0x[a-fA-F0-9]{40}$/.test(candidate) ? candidate.toLowerCase() : null;
 }
-
-export function resolveLibraryProfile(locationLike = globalThis.location) {
-  try {
-    return normalizeProfileAddress(new URLSearchParams(locationLike?.search || '').get('profile'));
-  } catch {
-    return null;
-  }
-}
-
-export function resolveWorkspaceProfile(hostProfileAddress, locationLike = globalThis.location) {
-  return normalizeProfileAddress(hostProfileAddress) || resolveLibraryProfile(locationLike);
-}

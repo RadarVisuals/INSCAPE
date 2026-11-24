@@ -116,10 +116,6 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Default text style');
     assert.equal(await tools.getByRole('combobox', { name: 'Default font', exact: true }).inputValue(), 'literata');
     await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    // Close the other windows through their normal controls before testing a drop.
-    const displayHeader = page.locator('[data-display-instance="display:primary"] .system-workflow__identity-strip');
-    await displayHeader.focus(); await displayHeader.press('Shift+F10');
-    await page.getByRole('menuitem', { name: 'CLOSE MODULE', exact: true }).click();
     const closeLayers = page.getByRole('button', { name: 'Close Workbench Layers', exact: true });
     if (await closeLayers.count()) await closeLayers.click();
     // Leave the writing surface beside the Library's current workspace panel.

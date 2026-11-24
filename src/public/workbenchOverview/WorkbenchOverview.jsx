@@ -14,7 +14,7 @@ import '../ownerSystemWorkflow/workflowFlat.css';
 import './workbenchOverview.css';
 import CanvasJourney from './CanvasJourney.jsx';
 import useGalleryLayoutJourney from './useGalleryLayoutJourney.js';
-import { GalleryStudioMotion, useGalleryStudioDestination, useGalleryStudioEndpoint } from '../../profileDiscovery/galleryStudioMotion.js';
+import { GalleryStudioMotion, useGalleryStudioDestination, useGalleryStudioEndpoint } from '../../navigation/galleryStudioMotion.js';
 import { fitCanvasRegion } from './fitCanvasRegion.js';
 import { captureOverviewCanvas, overviewCanvasNode } from './overviewCanvasFrame.js';
 

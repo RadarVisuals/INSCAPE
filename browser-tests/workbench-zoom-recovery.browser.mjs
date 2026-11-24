@@ -24,7 +24,7 @@ for (const visitor of [false, true]) for (const lost of ['control', 'hand', 'mod
         window.__focusChanges = 0;
         window.addEventListener('blur', () => window.__focusChanges++);
       });
-      await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320 });
+      await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 320 });
       const host = page.locator('main.system-workflow').first();
       const image = page.locator('[data-workbench-view-id="image:motion-0"]');
       await image.locator('.image-module__artwork[data-media-state="ready"]').waitFor();

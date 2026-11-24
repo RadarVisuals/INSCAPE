@@ -1,7 +1,6 @@
 import { hasAllowedKeys as exact } from '../../recordValidation.js';
 import { validateProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { validModuleEdges, moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
-import { articleSections, joinArticleSections } from '../articleSections.js';
 
 export const ARTICLE_TYPE = 'INSCAPEArticle';
 export const ARTICLE_MAX_BYTES = 192 * 1024;
@@ -215,82 +214,21 @@ export function validTextModules(items, published = false) {
     if (!Array.isArray(items) || items.length > MAX_TEXT_MODULES) return false;
     const ids = new Set();
     return items.every(item => {
-      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], ['sceneLink', 'pagination']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
+      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], ['pagination']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
       ids.add(item.id); assertArticle(item.article);
       if (item.pagination !== undefined && item.pagination !== 'pages') return false;
-      if (item.sceneLink !== undefined) {
-        const link = item.sceneLink;
-        const identifier = value => typeof value === 'string' && value.length > 0 && value.length <= 160;
-        if (link?.mode === 'sections') {
-          if (!exact(link, ['mode', 'displayId']) || !/^display:[A-Za-z0-9_-]+$/u.test(link.displayId) || item.pagination !== undefined) return false;
-        } else {
-          if (!exact(link, ['displayId', 'gridId', 'passages']) || !/^display:[A-Za-z0-9_-]+$/u.test(link.displayId)
-            || !identifier(link.gridId) || !Array.isArray(link.passages) || link.passages.length > 128) return false;
-          const grids = new Set([link.gridId]);
-          for (const passage of link.passages) {
-            if (!exact(passage, ['gridId', 'article']) || !identifier(passage.gridId) || grids.has(passage.gridId)) return false;
-            grids.add(passage.gridId); assertArticle(passage.article);
-          }
-        }
-      }
       return published || ['PRIVATE', 'PUBLIC'].includes(item.visibility);
     });
   } catch { return false; }
 }
-export function projectTextModules(items, displays = []) {
-  return items.filter(i => i.visibility === 'PUBLIC').flatMap(item => {
-    let { article, sceneLink } = item;
-    if (sceneLink) {
-      const display = displays.find(d => d.id === sceneLink.displayId);
-      if (sceneLink.mode === 'sections') {
-        const sections = articleSections(article);
-        const selected = (display?.grids || []).flatMap((grid, index) => grid.visibility === 'PUBLIC' ? [{ index, nodes: sections[index] || [] }] : []);
-        if (!selected.length) return [];
-        article = { ...article, title: selected[0].index === 0 ? article.title : '', content: joinArticleSections(selected.map(section => section.nodes)) };
-      } else {
-        const ids = new Set(display?.grids.filter(g => g.visibility === 'PUBLIC').map(g => g.id));
-        const passages = [{ gridId: sceneLink.gridId, article }, ...sceneLink.passages].filter(p => ids.has(p.gridId));
-        if (!passages.length) return [];
-        const [first, ...rest] = passages;
-        article = first.article;
-        sceneLink = { displayId: sceneLink.displayId, gridId: first.gridId, passages: rest };
-      }
-    }
-    return [{ id: item.id, article: structuredClone(article), ...(sceneLink ? { sceneLink: structuredClone(sceneLink) } : {}),
-      ...(item.pagination ? { pagination: item.pagination } : {}) }];
-  });
+export function projectTextModules(items) {
+  return items.filter(item => item.visibility === 'PUBLIC')
+    .map(({ id, article, pagination }) => ({ id, article: structuredClone(article), ...(pagination && { pagination }) }));
 }
-export const restoreTextModules = (published = [], local = [], sectionDisplays = null) => [
-  ...published.map(i => {
-    const restored = { ...structuredClone(i), visibility: 'PUBLIC' };
-    const previous = local.find(p => p.id === i.id);
-    if (previous?.sceneLink && previous.sceneLink.displayId !== restored.sceneLink?.displayId)
-      throw new Error('This publication uses a different Text scene connection. Local passages have been preserved; restore was not applied.');
-    if (previous && (previous.sceneLink?.mode === 'sections' || restored.sceneLink?.mode === 'sections') && previous.sceneLink?.mode !== restored.sceneLink?.mode)
-      throw new Error('This publication uses a different Text linking mode. Local text has been preserved; restore was not applied.');
-    if (restored.sceneLink?.mode === 'sections' && previous) {
-      if (!sectionDisplays) throw new Error('Display order is required to restore linked Text sections without losing local text.');
-      const id = restored.sceneLink.displayId;
-      const ids = key => (sectionDisplays[key].find(d => d.id === id)?.grids || []).map(g => g.id);
-      const oldIds = ids('previous'), publicIds = ids('published'), nextIds = ids('restored');
-      const oldSections = articleSections(previous.article), newSections = articleSections(restored.article);
-      // A private first section's title was deliberately excluded from publication.
-      // Preserve it with that section if restore places public Grids before it.
-      if (previous.article.title && oldIds[0] && !publicIds.includes(oldIds[0])) {
-        if (nextIds[0] === oldIds[0]) restored.article.title = previous.article.title;
-        else oldSections[0] = [{ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: previous.article.title }] }, ...oldSections[0]];
-      }
-      const sections = nextIds.map(gridId => publicIds.includes(gridId) ? newSections[publicIds.indexOf(gridId)] || [] : oldSections[oldIds.indexOf(gridId)] || []);
-      const retained = oldSections.filter((_, index) => index >= oldIds.length || !nextIds.includes(oldIds[index]));
-      restored.article.content = joinArticleSections([...sections, ...retained]);
-    } else if (restored.sceneLink && previous?.sceneLink?.displayId === restored.sceneLink.displayId) {
-      const retained = [{ gridId: previous.sceneLink.gridId, article: previous.article }, ...previous.sceneLink.passages]
-        .filter(p => p.gridId !== restored.sceneLink.gridId && !restored.sceneLink.passages.some(next => next.gridId === p.gridId));
-      restored.sceneLink.passages.push(...structuredClone(retained));
-    }
-    return restored;
-  }),
-  ...local.filter(i => !published.some(p => p.id === i.id)).map(i => ({ ...structuredClone(i), visibility: 'PRIVATE' })),
+
+export const restoreTextModules = (published = [], local = []) => [
+  ...published.map(item => ({ ...structuredClone(item), visibility: 'PUBLIC' })),
+  ...local.filter(item => !published.some(record => record.id === item.id)).map(item => ({ ...structuredClone(item), visibility: 'PRIVATE' })),
 ];
 
 export { exact };

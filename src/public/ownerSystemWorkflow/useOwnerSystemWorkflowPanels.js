@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
-export const OWNER_SYSTEM_WORKFLOW_PANEL_IDS = Object.freeze(['activity', 'backup', 'discover', 'docs', 'grids', 'profile', 'settings']);
+export const OWNER_SYSTEM_WORKFLOW_PANEL_IDS = Object.freeze(['activity', 'backup', 'docs', 'profile', 'settings']);
 
 const reducedMotionPreferred = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
@@ -37,7 +37,7 @@ export function useOwnerSystemWorkflowPanelPresence(open, { exitMs = 140, entran
   return useMemo(() => ({ ...state, completeTransition }), [completeTransition, state]);
 }
 
-export default function useOwnerSystemWorkflowPanels({ blocked = false, libraryOpen = false } = {}) {
+export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
   // Exclusive overlays are separate from the persistent editor tool groups.
   const [openPanels, setOpenPanels] = useState([]);
   const activePanel = openPanels.at(-1) || null;
@@ -47,12 +47,10 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false, libraryO
   const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
   const activity = useOwnerSystemWorkflowPanelPresence(activePanel === 'activity');
   const backup = useOwnerSystemWorkflowPanelPresence(activePanel === 'backup');
-  const discover = useOwnerSystemWorkflowPanelPresence(activePanel === 'discover', { exitMs: 200 });
   const docs = useOwnerSystemWorkflowPanelPresence(activePanel === 'docs');
-  const grids = useOwnerSystemWorkflowPanelPresence(activePanel === 'grids');
   const profile = useOwnerSystemWorkflowPanelPresence(activePanel === 'profile');
   const settings = useOwnerSystemWorkflowPanelPresence(activePanel === 'settings');
-  const presence = useMemo(() => ({ activity, backup, discover, docs, grids, profile, settings }), [activity, backup, discover, docs, grids, profile, settings]);
+  const presence = useMemo(() => ({ activity, backup, docs, profile, settings }), [activity, backup, docs, profile, settings]);
 
   const closePanel = useCallback(({ panelId = null, returnFocus = true } = {}) => {
     const focused = document.activeElement;
@@ -87,20 +85,19 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false, libraryO
 
   useEffect(() => {
     const onKeyDown = (event) => {
-      if (event.key !== 'Escape' || blocked || !activePanel || event.defaultPrevented || event.target?.closest?.('[role="listbox"]:not(.system-workflow__grid-list), select')) return;
+      if (event.key !== 'Escape' || blocked || !activePanel || event.defaultPrevented || event.target?.closest?.('[role="listbox"], select')) return;
       event.preventDefault();
       closePanel({ panelId: activePanel });
     };
     const onPointerDown = (event) => {
       if (blocked || !activePanel || event.defaultPrevented || event.target?.closest?.('[data-system-workflow-panel-trigger], [data-system-workflow-overlay]')) return;
-      if (activePanel === 'grids' && libraryOpen) return;
       if (event.target?.closest?.('[data-system-workflow-panel]')) return;
       closePanel({ panelId: activePanel });
     };
     globalThis.addEventListener?.('keydown', onKeyDown);
     globalThis.addEventListener?.('pointerdown', onPointerDown, true);
     return () => { globalThis.removeEventListener?.('keydown', onKeyDown); globalThis.removeEventListener?.('pointerdown', onPointerDown, true); };
-  }, [activePanel, blocked, closePanel, libraryOpen]);
+  }, [activePanel, blocked, closePanel]);
 
   const completePanelTransition = useCallback((panelId) => presence[panelId]?.completeTransition(), [presence]);
   return { activePanel, isPanelOpen, openPanels, closePanel, completePanelTransition, openPanel, presence, togglePanel };

@@ -45,20 +45,10 @@ test('assembled publication blocks missing/private sources without automatically
   const corrupt = structuredClone(publicDocument); corrupt.reception.links[0].source.profileAddress = '0x' + '2'.repeat(40);
   assert.throws(() => assertValidProfileDocumentV9(corrupt), /Linked content/);
 });
-test('every published controller scene needs a valid mapping, including retained canvas versions', () => {
+test('publication rejects links to a retired Display controller', () => {
   const record = withLink(), reception = record.shared.reception;
   reception.links[0] = { id: 'link:story', kind: 'scene', controller: source('display:primary'), sources: { 'grid:first': source() }, destination: null };
-  const first = publish(record, ['workbench:main', 'workbench:second']);
-  const content = record.workbenches[1].content;
-  content.grids.push({ ...structuredClone(content.grids[0]), id: 'grid:next' });
-  assert.throws(() => publish(record, ['workbench:second'], first), /every published Display scene/);
-  assert.doesNotThrow(() => publish(record, [], first));
-  reception.links[0].sources['grid:next'] = source();
-  assert.doesNotThrow(() => publish(record, ['workbench:second'], first));
-  content.grids.find(grid => grid.id === 'grid:next').visibility = 'PRIVATE';
-  const withoutPrivate = publish(record, ['workbench:second'], first);
-  assert.deepEqual(Object.keys(withoutPrivate.reception.links[0].sources), ['grid:first']);
-  assert.ok(reception.links[0].sources['grid:next'], 'private mapping remains in the local draft');
+  assert.throws(() => publish(record, ['workbench:main', 'workbench:second']), /Invalid local Bento/);
 });
 test('link edits use canonical save, undo, redo, quota failure, reload and private recovery', () => {
   const values = new Map(); let fail = false;

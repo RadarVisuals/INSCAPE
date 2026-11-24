@@ -1,6 +1,5 @@
 /* Workbench creation feedback; independent of toolbar appearance. */
-.system-workflow[data-creation-tool="text"],
-.system-workflow[data-creation-tool="text"] .system-workflow__presentation-board:not([data-authoring-locked]):not([data-inspecting]) :is(.system-workflow__canvas, .system-workflow__placement) {
+.system-workflow[data-creation-tool="text"] {
   cursor: text;
 }
 .system-workflow:is([data-creation-tool="shape"], [data-creation-tool="shape-grid"], [data-creation-tool="cell"]) { cursor: crosshair; }

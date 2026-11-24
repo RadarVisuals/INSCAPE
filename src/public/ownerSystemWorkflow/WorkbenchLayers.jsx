@@ -12,6 +12,7 @@ import './workbenchLayers.css';
 import ArtworkOrderControls from '../../ui/ArtworkOrderControls.jsx';
 import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
 
+import { slideOf } from '../../reception/cellSlides.js';
 import LayerThumbnail from './LayerThumbnail.jsx';
 
 export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, hostRef }) {
@@ -103,6 +104,8 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
       const stack = workspaceGroup?.position ? workspaceGroup : layers.find(layer => layer.stackPosition && layer.children.includes(ids[0]));
       if (stack) view.groupScene.current?.open(stack);
     }
+    const owner = cellsById.get(cellId);
+    if (owner?.slides && owner.members.includes(ids[0])) cellContext.store.showSlide(owner.id, slideOf(owner, ids[0]));
     cellContext?.store.setEditingCell(cellId);
     view.selectLayers(ids, additive, part);
   };

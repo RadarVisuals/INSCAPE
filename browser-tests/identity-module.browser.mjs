@@ -124,7 +124,7 @@ test('expansion preserves the cloud program, clock and top-anchored pattern', as
     await page.screenshot({ path: '.browser-test-runtime/identity-gutter-narrow.png' });
   } finally { await browser.close(); }
 });
-test('Library drops replace Identity artwork, shader animates, and Display stays unchanged', async () => {
+test('Library drops replace Identity artwork, shader animates, and canvas artwork stays unchanged', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   try {
@@ -234,18 +234,16 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     await page.unrouteAll({ behavior: 'wait' });
   } finally { await browser.close(); }
 });
-test('published Identity uses the shared chrome without blocking Grid navigation', async () => {
+test('published Identity uses the shared chrome as a nonmodal panel', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     await page.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/fixture.html?view=0x1111111111111111111111111111111111111111&runtime=grid`);
+    await page.goto(`${origin}/browser-tests/fixture.html?view=0x1111111111111111111111111111111111111111`);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
-    await page.locator('[data-identity-dossier-source]').click();
     const identity = page.locator('.identity-module aside');
     await identity.waitFor();
     assert.match(await identity.innerText(), /Alpha Visitor Fixture/i);
-    await page.getByRole('button', { name: 'Next Grid', exact: true }).click();
     assert.equal(await identity.count(), 1);
     assert.equal(await identity.getAttribute('aria-modal'), null);
     const chrome = await identity.evaluate(node => ({ radius: getComputedStyle(node).borderRadius,
@@ -275,7 +273,6 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await closeArtworkTools(page);
     await observeDraftWrites(page);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
-    await page.locator('[data-identity-dossier-source]').click();
     const identity = page.locator('.identity-module aside');
     await identity.waitFor();
     for (const width of [1440, 390]) {
@@ -329,9 +326,9 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.evaluate(() => { navigator.clipboard.writeText = async () => { throw new Error('Denied'); }; });
     await identity.getByRole('button', { name: 'Address copied', exact: true }).click();
     await identity.getByText('Copy failed — use the full address above.', { exact: true }).waitFor();
-    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).waitFor();
+    await page.locator('.image-module__canvas').first().waitFor();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
+    await page.locator('.image-module__canvas').first().focus();
     await page.keyboard.press('Shift+F10');
     await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).click();
     await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
@@ -343,7 +340,7 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.keyboard.press('Space');
     assert.equal(await page.locator('[data-system-workflow-placement-id]').count(), placements);
     assert.equal(await page.evaluate(() => window.__identityWrites), 0);
-    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
+    await page.locator('.image-module__canvas').first().focus();
     await page.getByRole('button', { name: 'Crop', exact: true }).click();
     const crop = page.getByRole('slider', { name: 'Crop zoom', exact: true });
     await crop.waitFor();
@@ -355,7 +352,7 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     assert.equal(await page.evaluate(() => window.__identityWrites), 0);
     // Changing the active module cancels temporary crop, as required by the
     // shared contextual tools contract. Returning reads the saved crop again.
-    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
+    await page.locator('.image-module__canvas').first().focus();
     await page.getByRole('button', { name: 'Crop', exact: true }).click();
     assert.equal(await crop.inputValue(), cropZoom);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -371,28 +368,6 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     assert.equal(await page.getByRole('button', { name: 'Profile', exact: true }).evaluate(node => node === document.activeElement), true);
   } finally { await browser.close(); }
 });
-test('Display title follows the existing shortcut name and survives reload', async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-    await page.goto(`${origin}/development/owner/system-workflow`);
-    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
-    await closeArtworkTools(page);
-    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
-    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
-    await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
-    const shortcut = page.locator('.system-workflow__desktop-shortcut');
-    await shortcut.click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'RENAME', exact: true }).click();
-    const input = page.getByRole('textbox', { name: 'Display Module shortcut name' });
-    await input.fill('Lunar Desert'); await input.press('Enter');
-    await shortcut.dblclick();
-    await page.getByLabel('Move Display Module: Lunar Desert', { exact: true }).waitFor();
-    await page.reload();
-    await page.getByLabel('Move Display Module: Lunar Desert', { exact: true }).waitFor();
-  } finally { await browser.close(); }
-});
-
 test('Identity edits in place, exposes all cells with one click, and fits content without manual resizing', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
@@ -400,7 +375,6 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     await page.goto(`${origin}/development/owner/system-workflow`);
     await closeArtworkTools(page);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
-    await page.locator('[data-identity-dossier-source]').click();
     const identity = page.locator('.identity-module aside');
     const officialName = await identity.locator('.identity-module__story h2').innerText();
     assert.equal(await identity.getByRole('separator').count(), 0);

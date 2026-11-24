@@ -28,7 +28,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await textReady;
         await route.fulfill({ response: await route.fetch() });
       });
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, shapeWidth: 600 });
       const explore = page.getByRole('button', { name: visitor ? 'Hand tool' : 'Pointer tools', exact: true });
       await explore.waitFor();
       const existingImage = page.locator('[data-workbench-view-id="image:motion-0"]');

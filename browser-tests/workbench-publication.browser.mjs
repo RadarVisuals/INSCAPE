@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174';
 test('published Workbench restores new Identity content, module layout and session-only interaction', async () => {
@@ -29,46 +29,6 @@ test('published Workbench restores new Identity content, module layout and sessi
       await page.getByText('The Underneath', { exact: true }).waitFor();
       await page.screenshot({ path: `${output}/published-workbench-identity-${width}.png` });
       await identity.getByRole('button', { name: 'Close Identity', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Lunar Desert', exact: true }).dblclick();
-      const display = page.locator('[aria-label="Display Module"]');
-      await display.waitFor();
-      const bounds = await display.boundingBox();
-      // Workbench windows retain authored coordinates even beyond the viewport.
-      assert.equal(bounds.x, 40, JSON.stringify(bounds));
-      assert.equal(bounds.y, 90, JSON.stringify(bounds));
-      await page.screenshot({ path: `${output}/published-workbench-display-${width}.png` });
-      await page.getByRole('button', { name: 'Next Grid', exact: true }).click();
-      await page.waitForFunction(() => document.querySelector('[data-active-grid-id]')?.dataset.activeGridId === 'grid:alpha-archive');
-      await display.locator('.system-workflow__identity-strip').focus();
-      const minimize = page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true });
-      const readHit = node => {
-        const rect = node.getBoundingClientRect(), hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-        return { rect: rect.toJSON(), exposed: node.contains(hit), hit: hit?.getAttribute('aria-label') || hit?.className || null };
-      };
-      const beforeMinimize = await minimize.evaluate(readHit);
-      let cameraNavigation = null;
-      if (width === 390) {
-        // Keep controls at 100% while the temporary Visitor camera moves.
-        assert.equal(await display.getAttribute('data-workbench-scale'), '1');
-        const panPoint = await page.evaluate(() => {
-          for (let y = 600; y > 200; y -= 20) for (let x = 40; x < innerWidth - 40; x += 20) {
-            if (document.elementFromPoint(x, y)?.matches('main.system-workflow')) return { x, y };
-          }
-          throw Error('No exposed Visitor canvas for temporary camera panning');
-        });
-        const target = await minimize.boundingBox();
-        cameraNavigation = { scale: 1, panPoint, deltaX: Math.max(0, target.x + target.width - (width - 60)) };
-        await page.mouse.move(panPoint.x, panPoint.y);
-        await page.mouse.wheel(cameraNavigation.deltaX, 0);
-        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      }
-      await display.locator('.system-workflow__identity-strip').focus();
-      const afterMinimize = await minimize.evaluate(readHit);
-      await writeFile(`${output}/publication-minimize-${width}.json`, JSON.stringify({ beforeMinimize, cameraNavigation, afterMinimize }, null, 2));
-      assert.equal(afterMinimize.exposed, true, 'temporary Visitor camera exposes the real minimize button');
-      await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
-      await identity.getByRole('button', { name: 'Close Identity', exact: true }).waitFor();
       const writes = await page.evaluate(() => window.__visitorStorageOps.filter(({ method }) => ['setItem', 'removeItem', 'clear'].includes(method)));
       assert.deepEqual(writes, []);
       await page.reload();

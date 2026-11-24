@@ -2,9 +2,8 @@ import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { StudioHeaderTools, WorkspaceBrand } from '../menus/WorkspaceHeader.jsx';
 import '../ownerSystemWorkflow/editorMenuBar.css';
-import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import { workbenchSaveError } from '../ownerSystemWorkflow/namedWorkbenchActions.js';
-import { overviewAssetIds, workbenchOverviewModel } from './workbenchOverviewModel.js';
+import { workbenchOverviewModel } from './workbenchOverviewModel.js';
 import WorkbenchOverview from './WorkbenchOverview.jsx';
 import PublicWorkspaceHeader from '../../profileDocument/components/PublicWorkspaceHeader.jsx';
 import CompositionSources from './CompositionSources.jsx';
@@ -24,7 +23,7 @@ function StudioCollectionHeader({ ownerDestinations, onEdit, onPanel }) {
   </header>;
 }
 
-export default function OwnerWorkbenchOverview({ store, preferences, reviewAssets, profileModel, account, view, onViewChange, onEdit, onOpenReception, onOpenGallery, onOpenWriting, onOpenDiscover, ownerDestinations, workspace }) {
+export default function OwnerWorkbenchOverview({ store, preferences, profileModel, account, view, onViewChange, onEdit, onOpenReception, onOpenGallery, onOpenWriting, ownerDestinations, workspace }) {
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const { galleryCardSize } = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
   const preferenceError = useSyncExternalStore(preferences.subscribe, preferences.getError);
@@ -41,11 +40,7 @@ export default function OwnerWorkbenchOverview({ store, preferences, reviewAsset
   }), [store, generation, previewId]);
   const { entries } = snapshot;
   const selected = entries.find(item => item.id === selectedId);
-  const referencedIds = useMemo(() => [...new Set(entries.flatMap(item => overviewAssetIds(item.draft)))], [entries]);
-  const browser = useOwnerLatticeBrowser(selected.draft.profileAddress, false, referencedIds);
-  const assets = useMemo(() => new Map([...(browser.data.assets || []), ...(browser.records || []), ...(import.meta.env.DEV ? reviewAssets || [] : [])]
-    .map(asset => [asset.stableAssetId || asset.id, asset])), [browser.data.assets, browser.records, reviewAssets]);
-  const previews = useMemo(() => entries.map(item => ({ ...item, model: workbenchOverviewModel(item.draft, assets) })), [entries, assets]);
+  const previews = useMemo(() => entries.map(item => ({ ...item, model: workbenchOverviewModel(item.draft) })), [entries]);
   const model = previews.find(item => item.id === selectedId).model;
   const moving = workspace.entering || workspace.exiting;
   const openEditor = callback => () => {
@@ -58,9 +53,9 @@ export default function OwnerWorkbenchOverview({ store, preferences, reviewAsset
     <VisitorLightField paused={moving} />
     <PublicWorkspaceHeader component={StudioCollectionHeader} model={profileModel} account={account} current="Studio"
       onEdit={openEditor(() => onEdit(selectedId))} ownerDestinations={{ Profile: onOpenReception, Gallery: onOpenGallery,
-        Writing: onOpenWriting, Discover: onOpenDiscover, ...ownerDestinations, Studio: openEditor(() => onEdit(selectedId)) }} />
+        Writing: onOpenWriting, ...ownerDestinations, Studio: openEditor(() => onEdit(selectedId)) }} />
     {navigationError && <p role="alert" className="visitor-notice">{navigationError}</p>}
-    <CompositionSources snapshot={snapshot} assets={assets} profile={profileModel}><WorkbenchOverview collectionManager visitorHeader items={items} selected={selected} model={model} previews={previews} view={view} onViewChange={onViewChange} onSelect={setSelectedId}
+    <CompositionSources snapshot={snapshot} profile={profileModel}><WorkbenchOverview collectionManager visitorHeader items={items} selected={selected} model={model} previews={previews} view={view} onViewChange={onViewChange} onSelect={setSelectedId}
       cardSize={galleryCardSize} onCardSize={value => preferences.update(current => ({ ...current, galleryCardSize: value }))}
       preferenceError={preferenceError} onRetryPreferences={preferences.retry}
       onDeleteDraft={id => { if (!store.deleteWorkbench(id, { fromManager: true })) throw workbenchSaveError(store); }}

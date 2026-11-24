@@ -55,7 +55,7 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
         onChange={(shortcutSnap) => onWorkbenchPreferencesChange({ shortcutSnap })} />
       <p>Hold Alt while dragging to temporarily switch grid snapping on or off.</p>
       {canvasGuides && <>
-      <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid display"  onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
+      <label><span>Grid style</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid style"  onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
       <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(mode)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
       <label><span>Grid cell size</span><input key={workbenchPreferences.gridSpacing} aria-label="Workbench grid cell size" type="number" min="8" max="512" step="any" defaultValue={workbenchPreferences.gridSpacing}
         onBlur={event => { const gridSpacing = event.target.valueAsNumber; if (Number.isFinite(gridSpacing) && gridSpacing >= 8 && gridSpacing <= 512) onWorkbenchPreferencesChange({ gridSpacing }); else event.target.value = workbenchPreferences.gridSpacing; }}

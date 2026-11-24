@@ -73,7 +73,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // the measured gzip-boundary shift caused by that shared chunk.
   // Phase 8B adds only the lazy-module activation and explicit snapshot inputs
   // to the owner graph; the writer implementation remains in its own lazy chunk.
-  // Phase 9 activates the already isolated Creations, Activity, Discovery, and
+  // Phase 9 activates the already isolated Creations, Activity, and
   // Settings boundaries. The measured owner graph grows only at the activation
   // seam; each substantial surface remains independently lazy.
   // The prior owner presentation stayed within a measured allowance. The extra rollback
@@ -154,8 +154,8 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // live public LSP3/RPC read boundary; the RACK itself remains lazy/reused.
   // Phase 8B adds one owner-triggered lazy publication module around the
   // existing canonical IPFS/wallet/read-back pipeline. MODUL-8R Task 4 adds
-  // shared headless controllers to the existing lazy Activity and Discovery
-  // surfaces while its adapters remain development-only. Initial entry stays
+  // shared headless controllers to lazy Activity while its adapters remain
+  // development-only. Initial entry stays
   // unchanged; bound the measured aggregate production graph explicitly.
   // Task 8 prunes the old Browser/Rack owner branch at build selection time.
   // The remaining measured growth is the accepted complete MODUL-8R
@@ -442,11 +442,9 @@ const sum = (items) => ({
 
 function entryKey(manifest) {
   const keys = Object.keys(manifest).filter((key) => manifest[key].isEntry);
-  if (!manifest['index.html']?.isEntry || keys.some(key => !['index.html', 'mini-app-host.html'].includes(key))) {
+  if (keys.length !== 1 || keys[0] !== 'index.html') {
     throw new Error(`Unexpected Vite application entries: ${keys.join(', ')}`);
   }
-  // Host bytes remain in core/lazy totals; this entry is loaded only inside an
-  // opened mini app and is not part of the main document's initial graph.
   return 'index.html';
 }
 

@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import PublishedProfileBoundary from '/src/profileDocument/components/PublishedProfileBoundary.jsx';
 import OwnerRuntimeBoundary from '/src/public/OwnerRuntimeBoundary.jsx';
-import useApplicationNavigation from '/src/profileDiscovery/useApplicationNavigation.js';
+import useApplicationNavigation from '/src/navigation/useApplicationNavigation.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '/src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createReception } from '/src/profileDocument/domain/receptionPresentation.js';
 import { splitReception } from '/src/reception/receptionLayout.js';
@@ -34,8 +34,6 @@ reception.regions[0].content = 'profile';
 reception.regions[1].content = 'text:audit';
 reception.branding.name = 'LOCAL A';
 const draft = { ...base, workbench: createDefaultWorkbenchPresentation(), reception };
-// The native Display frame excludes the retired 32px titlebar height.
-draft.workbench.display.window.height = 540;
 if (!localStorage.getItem(key)) {
   localStorage.setItem(key, JSON.stringify(draft));
 }
@@ -70,13 +68,13 @@ function Fixture() {
 function RoutedFixture({ status, owner, onRetry }) {
   const navigation = useApplicationNavigation({ status: 'complete', profileAddress: owner ? address : null, ownershipVerified: owner });
   const resolution = useMemo(() => ({ status, address, ...(['RESOLVED', 'STALE'].includes(status) ? { document } : {}) }), [status]);
-  const content = navigation.content;
+  const content = navigation.destination;
   const enterEditor = () => navigation.openStudio(address);
   const editReception = () => navigation.editReception(address);
   const connectedProfile = owner ? { address, name: 'Audit profile' } : null;
   const ownerDestinations = owner && {
     Profile: () => navigation.openOverview(address), Gallery: () => navigation.openCanvas(address),
-    Writing: () => navigation.openWriting(address), Studio: enterEditor, Discover: navigation.openDiscover,
+    Writing: () => navigation.openWriting(address), Studio: enterEditor,
   };
   const openReception = mode => navigation.openReception(address, mode === 'published' ? 'published' : true);
   return content?.kind === 'workbench' ? <OwnerRuntimeBoundary ownerAuthoringEnabled

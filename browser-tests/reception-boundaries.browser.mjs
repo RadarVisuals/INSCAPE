@@ -29,6 +29,15 @@ async function viewReception(page) {
   await page.goto(location.href);
   await page.locator('.reception-page').waitFor();
 }
+async function editFixtureDocument(page) {
+  // The header resumes the active Studio work. Address this fixture's
+  // composition explicitly to compare its reader with its own preview.
+  const editor = new URL(page.url());
+  editor.searchParams.set('editor', 'studio');
+  editor.searchParams.set('work', 'reception');
+  await page.goto(editor.href);
+  await page.locator('[data-reception-editor]').waitFor();
+}
 test('local Reception survives every public failure; visitors never see owner drafts', { timeout: 60000 }, async () => {
   const { browser, open, errors } = await setup();
   try {
@@ -41,7 +50,7 @@ test('local Reception survives every public failure; visitors never see owner dr
     await page.evaluate(() => window.receptionBoundaryFixture.setOwner(false));
     await page.getByText('PUBLIC ONLY', { exact: true }).waitFor();
     assert.equal(await page.getByText('LOCAL ARTICLE', { exact: true }).count(), 0);
-    await page.getByRole('link', { name: /Inscape.*Discover/ }).waitFor();
+    await page.getByRole('link', { name: 'Inscape home' }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Studio', exact: true }).count(), 0);
     await page.evaluate(() => window.receptionBoundaryFixture.setStatus('UNAVAILABLE'));
     await page.locator('.published-profile-status').waitFor();
@@ -115,14 +124,15 @@ test('authored Text typography survives native Editor preview and return to Rece
   const { browser, open, errors } = await setup({ hasTouch: true });
   try {
     const page = await open();
-    const metrics = () => page.locator('h1.text-document-title:visible').evaluate(el => {
+    const metrics = (root = page) => root.locator('h1.text-document-title:visible').evaluate(el => {
       const style = getComputedStyle(el); return { fontSize: style.fontSize, lineHeight: style.lineHeight };
     });
     const reader = await metrics();
-    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    await editFixtureDocument(page);
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.locator('h1.text-document-title:visible').waitFor();
-    assert.deepEqual(await metrics(), reader);
+    const preview = page.getByRole('dialog', { name: 'Composition preview' });
+    await preview.locator('h1.text-document-title').waitFor();
+    assert.deepEqual(await metrics(preview), reader);
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     await viewReception(page);
@@ -180,41 +190,39 @@ for (const collection of [false, true]) test(`StrictMode public-to-Editor entry 
       const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       const { createReceptionEditorScope } = await import('/src/reception/receptionEditorScope.js');
       const { addShape } = await import('/src/shapes/shapeSession.js');
+      const { authoredStorage, hydrateWorkspace, confirmWorkspaceSaved } = await import('/src/workspace/profileWorkspace.js');
       const { address, key } = window.receptionBoundaryFixture;
+      await hydrateWorkspace(address);
       const root = createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage });
       const scope = createReceptionEditorScope(root);
       const count = () => scope.getDraft().shapes.length + scope.getDraft().texts.length + scope.getDraft().imageModules.length;
       while (count() < 8) addShape(scope, address, { position: { left: 100 + count() * 25, top: 120 + count() * 20 }, size: { width: 180, height: 140 } });
       scope.release();
       if (collection && !root.createWorkbench('Second canvas')) throw new Error('Could not seed a collection');
+      if (!await confirmWorkspaceSaved(address)) throw new Error('Could not commit the seeded workspace');
       window.receptionBoundaryFixture.remount();
-      return { raw: localStorage.getItem(key), reception: root.getDraft().reception };
+      return { raw: authoredStorage(localStorage).getItem(key), reception: root.getDraft().reception };
     }, collection);
-    const saved = () => page.evaluate(() => localStorage.getItem(window.receptionBoundaryFixture.key));
+    const saved = () => page.evaluate(async () => {
+      const { authoredStorage } = await import('/src/workspace/profileWorkspace.js');
+      return authoredStorage(localStorage).getItem(window.receptionBoundaryFixture.key);
+    });
+    assert.ok(before.raw, 'the seeded draft was saved to the workspace');
     await page.locator('.reception-document-canvas').waitFor();
-    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    await editFixtureDocument(page);
     await editorMenu(page, 'Canvas').waitFor();
     await page.waitForFunction(count => document.querySelectorAll('main[data-reception-editor] .shape-instance').length === count, before.reception.shapes.length);
     assert.equal(await page.locator('main[data-reception-editor] .shape-instance').count(), before.reception.shapes.length);
     assert.equal(await saved(), before.raw, 'opening the unified Editor does not rewrite saved content');
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).waitFor();
+    await page.getByRole('dialog', { name: 'Composition preview', exact: true }).waitFor();
     const afterPreview = await saved();
-    const authored = raw => {
-      const value = JSON.parse(raw);
-      const reception = value.shared?.reception || value.reception;
-      // The shared presentation capture normalizes the unused primary Display
-      // slot; it must not change any Reception artwork, membership or geometry.
-      delete reception.workbench.display;
-      delete reception.workbench.displays;
-      return value;
-    };
-    assert.deepEqual(authored(afterPreview), authored(before.raw));
+    assert.equal(afterPreview, before.raw, 'viewing the composition preserves the complete stored draft');
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await viewReception(page);
     assert.equal(await saved(), afterPreview, 'returning to public view preserves all native records');
     await page.reload();
-    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    await editFixtureDocument(page);
     await editorMenu(page, 'Canvas').waitFor();
     assert.equal(await saved(), afterPreview, 'StrictMode remount and reconciliation preserve the exact saved draft');
     assert.deepEqual(errors, []);

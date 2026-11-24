@@ -34,7 +34,7 @@ const noSubscription = () => () => {};
 const closedMetadata = () => false;
 export function SharedDisplayToolsProvider({ children, value, onChange, targetId, onTargetChange, metadataDock }) {
   const [local, setLocal] = useState(defaultSharedTools);
-  const [localTarget, setLocalTarget] = useState('display:primary');
+  const [localTarget, setLocalTarget] = useState(null);
   const [hosts, setHosts] = useState({});
   const metadataOpen = useSyncExternalStore(metadataDock?.subscribe || noSubscription, metadataDock?.infoVisible || closedMetadata);
   // The owner Info section registers its host only while expanded. Inspector

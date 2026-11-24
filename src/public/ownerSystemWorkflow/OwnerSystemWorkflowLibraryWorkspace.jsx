@@ -63,8 +63,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   useEffect(() => { onPlacingChange?.(placing); return () => onPlacingChange?.(false); }, [placing, onPlacingChange]);
   const place = async (asset) => {
     if (authoringLocked || libraryClosed) return false;
-    // Registry wrappers follow selection. Retain the receiving module/Grid
-    // before asynchronous media work, rather than selecting again afterward.
+    // Capture the destination before resolving image dimensions.
     const target = placementTargetRef?.current?.captureTarget();
     if (!target) return false;
     preload(asset);
@@ -178,11 +177,11 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
             ? shortcutTargetRef?.current.has(shortcut) : shortcutTargetRef?.current === shortcut),
           place: () => shortcut.placeAsset(asset), rejection: 'This shortcut could not accept the artwork.' };
       }
-      const display = active.target?.targetAt?.(point);
-      const target = display || workbenchTarget;
+      const placement = active.target?.targetAt?.(point);
+      const target = placement || workbenchTarget;
       if (!target) return null;
       return { preview: dimensions => target.previewAt(point, dimensions, options),
-        isCurrent: () => target.isCurrent?.() !== false && (display || workbenchImageTargetRef?.current === workbench),
+        isCurrent: () => target.isCurrent?.() !== false && (placement || workbenchImageTargetRef?.current === workbench),
         place: (dimensions, preview, isCurrent) => dimensions && preview?.destination
           && target.placeAsset(asset, dimensions, preview.destination, isCurrent),
         reject: target.rejectDrop, rejection: 'Artwork could not be placed here.' };

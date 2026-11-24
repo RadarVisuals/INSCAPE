@@ -11,5 +11,6 @@ export function receptionTextDefaults(reception, cellId, mode) {
   const fill = cell ? rgb(cell.color) : environment, alpha = cell?.opacity ?? 0;
   const luminance = relativeLuminance(fill.map((channel, index) => channel * alpha + environment[index] * (1 - alpha)));
   return { visibility: 'PUBLIC', appearance: { background: null, compact: true, fontSize: 28,
+    ...(!cellId && { padding: { top: 24, right: 24, bottom: 24, left: 24 } }),
     color: contrast(luminance, 0) > contrast(luminance, 1) ? '#000000' : '#ffffff' } };
 }

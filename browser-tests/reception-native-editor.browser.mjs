@@ -1,6 +1,6 @@
 import { undockWindow } from './fixtures/undock-window.mjs';
 import { setBentoCellCount, bentoCellCount, setBentoFormat, addBentoCell, setCurrentBentoField, seedBentoGrid } from './fixtures/bento-layout.mjs';
-import { openEditorMenu, receptionPreviewControls, workspacePicker, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, workspacePicker, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -16,46 +16,36 @@ const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-i
 const withoutReception = ({ reception: _reception, ...draft }) => draft;
 const cellFrame = (value, id) => value.workbench.shapes.find(item => item.id === id).window;
 
-for (const width of [1440,900]) test(`Studio Preview Space-pan preserves responsive geometry, cancels and resets (${width})`, { timeout:90000 }, async () => {
-  const { browser,page,errors }=await setup({width,height:1000});
+for (const width of [1440, 900]) test(`Composition preview resizes with the browser and returns without editing (${width})`, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
   try {
-    await editorCommand(page,'Canvas','Preview');
-    const viewport=page.locator('.reception-preview-content');
-    const plane=page.locator('.reception-preview-pan-plane');
-    const canvas=page.locator('.reception-document-canvas');
-    await canvas.locator('[data-cell-id]').first().waitFor();
-    const geometry=()=>canvas.locator('[data-cell-id], [data-layer-id]').evaluateAll(nodes=>nodes.map(node=>({
-      cell:node.dataset.cellId,layer:node.dataset.layerId,style:node.getAttribute('style'),
-    })));
-    const original=await reception(page), beforeGeometry=await geometry();
-    const originalWidth=await canvas.evaluate(node=>node.clientWidth);
-    const header=page.locator('.reception-preview-page > .reception-window-header');
-    const beforeHeader=await header.boundingBox();
-    const box=await viewport.boundingBox(), start={x:box.x+box.width/2,y:box.y+Math.min(120,box.height/2)};
-    const drag=async(dx,dy)=>{
-      await page.mouse.move(start.x,start.y);
-      await page.keyboard.down('Space'); await page.mouse.down();
-      await page.mouse.move(start.x+dx,start.y+dy,{steps:8});
-      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    };
-    await drag(100,-80); await page.mouse.up(); await page.keyboard.up('Space');
-    assert.equal(await plane.evaluate(node=>node.style.translate),'100px -80px');
-    assert.deepEqual(await geometry(),beforeGeometry);
-    assert.equal(await canvas.evaluate(node=>node.clientWidth),originalWidth);
-    assert.deepEqual(await reception(page),original);
-    assert.deepEqual(await header.boundingBox(),beforeHeader);
-    await drag(-160,90); await page.keyboard.press('Escape'); await page.mouse.up(); await page.keyboard.up('Space');
-    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
-    assert.equal(await plane.evaluate(node=>node.style.translate),'100px -80px');
-    const menu=await receptionPreviewControls(page);
-    await menu.getByRole('button',{name:'Reset preview position',exact:true}).click();
-    assert.equal(await plane.evaluate(node=>node.style.translate),'0px 0px');
-    assert.deepEqual(await reception(page),original);
-    await page.getByRole('button',{name:'Back to editing',exact:true}).click();
-    await editorCommand(page,'Canvas','Preview');
-    assert.equal(await plane.evaluate(node=>node.style.translate),'');
-    assert.deepEqual(errors,[]);
-  } finally {await browser.close();}
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
+    await page.getByRole('toolbar', { name: 'Creation tools' }).waitFor();
+    const before = await snapshot(page);
+    const history = () => page.evaluate(() => window.nativeReceptionFixture.root.getHistory());
+    const previousHistory = await history();
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+    const artwork = preview.locator('.reception-document-canvas');
+    await artwork.locator('[data-cell-id]').first().waitFor();
+    assert.equal(await preview.locator('[data-profile-header], [contenteditable=true]').count(), 0);
+    assert.equal(await preview.getByRole('slider', { name: 'Preview width' }).count(), 0);
+    assert.equal(await preview.getByRole('button', { name: 'Page appearance' }).count(), 0);
+    for (const nextWidth of [800, 1200]) {
+      await page.setViewportSize({ width: nextWidth, height: 800 });
+      await page.waitForFunction(() => {
+        const node = document.querySelector('dialog[open] .reception-document-canvas');
+        const rect = node?.getBoundingClientRect();
+        return rect?.width > 0 && rect.left >= -1 && rect.right <= innerWidth + 1;
+      });
+      assert.deepEqual(await snapshot(page), before);
+    }
+    await preview.getByRole('button', { name: 'Back to editing' }).click();
+    await preview.waitFor({ state: 'hidden' });
+    assert.deepEqual(await snapshot(page), before);
+    assert.deepEqual(await history(), previousHistory);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
 });
 
 test('marquee moves two cells together before and after grouping', async () => {
@@ -271,11 +261,14 @@ for (const width of [1440, 900]) test(`published Reception recovery previews, ed
     const load = () => page.getByRole('button', { name: 'Load published Profile Bento', exact: true }).click();
     const preview = page.getByRole('region', { name: 'Profile Bento restore preview', exact: true });
     await load(); await preview.waitFor();
-    assert.equal(await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).count(), 0);
+    await preview.getByRole('button', { name: 'Restore preview controls', exact: true }).click();
+    const controls = page.getByRole('dialog', { name: 'Restore preview controls', exact: true });
+    await controls.waitFor();
+    assert.equal(await controls.getByRole('button', { name: 'Responsive layout settings', exact: true }).count(), 0);
     assert.equal(await preview.getByRole('group', { name: 'Studio edit history', exact: true }).count(), 0);
-    assert.equal(await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true }).count(), 1);
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).press('Escape');
-    await page.getByRole('dialog', { name: 'Studio preview controls', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await controls.getByRole('slider', { name: 'Preview width', exact: true }).count(), 1);
+    await controls.getByRole('button', { name: 'Fit', exact: true }).press('Escape');
+    await controls.waitFor({ state: 'hidden' });
     assert.equal(await preview.isVisible(), true, 'Escape dismisses the menu before leaving recovery preview');
     assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), initial);
     assert.equal(await preview.locator('[data-cell-id]').count(), 2);
@@ -410,7 +403,7 @@ test('deleting the edited cell then Undo leaves a consistent mode and explicit r
   } finally { await browser.close(); }
 });
 
-test('Fit uses the available desktop width and new Light Text keeps authored contrast after theme changes', { timeout: 90000 }, async () => {
+test('Preview renders new Light Text with its authored contrast after theme changes', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup({ width: 900, height: 900 });
   try {
     await generateBento(page, 1);
@@ -425,15 +418,11 @@ test('Fit uses the available desktop width and new Light Text keeps authored con
     const appearance = (await reception(page)).texts[0].article.appearance;
     assert.equal(appearance.color, '#000000'); assert.equal(appearance.background, null);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     const viewport = preview.locator('.reception-document-viewport');
     await preview.locator('.reception-document-canvas:not([data-mobile])').waitFor();
-    assert.equal(await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).getAttribute('aria-pressed'), 'true');
-    assert.equal(await preview.getByRole('complementary', { name: 'Responsive cell settings' }).count(), 0);
-    const effective = Math.round((await viewport.boundingBox()).width);
-    assert.ok(effective > 800);
-    assert.equal(Number(await (await receptionPreviewControls(page)).getByRole('spinbutton', { name: 'Preview width in pixels' }).inputValue()), effective);
-    assert.equal(Number(await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width' }).inputValue()), effective);
+    assert.equal(await preview.getByRole('slider', { name: 'Preview width' }).count(), 0);
+    assert.ok((await viewport.boundingBox()).width > 0);
     await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'DARK', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
@@ -446,11 +435,13 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
   const { browser, page, errors } = await setup();
   try {
     await mkdir(output, { recursive: true });
-    await generateBento(page, 6);
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await openEditorMenu(page, 'Bento');
+    await panel.getByRole('button', { name: 'New layout', exact: true }).click();
+    await setBentoCellCount(panel, 6);
     for (const [name, value] of [['Width (px)', '1200'], ['Height (px)', '400'], ['Gutter (px)', '0'], ['Outer margin (px)', '0']])
       await setCurrentBentoField(panel, name, value);
+    await panel.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     await seedBentoGrid(page, 3, 2);
     for (const cell of (await reception(page)).cells) {
@@ -542,8 +533,7 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
       await page.screenshot({ path: `${output}/inner-lines-editor-${width}.png` });
       await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
       await editorCommand(page, 'Canvas', 'Preview');
-      const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
-      await (await receptionPreviewControls(page)).getByRole('button', { name: 'Desktop', exact: true }).click();
+      const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
       const paint = preview.locator('.reception-inner-lines path');
       const edges = await preview.locator('.reception-document-canvas').evaluate(node => {
         const canvas = node.getBoundingClientRect();
@@ -552,7 +542,8 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
         if (cells.length !== 6) throw Error('Expected the complete six-cell grid');
         return [cells[0].right - canvas.left, cells[0].top - canvas.top, cells[5].bottom - canvas.top,
           cells[1].right - canvas.left, cells[0].top - canvas.top, cells[5].bottom - canvas.top,
-          cells[0].left - canvas.left, cells[0].bottom - canvas.top, cells[5].right - canvas.left];
+          cells[0].left - canvas.left, cells[0].bottom - canvas.top, cells[5].right - canvas.left]
+          .map(edge => edge * node.offsetWidth / canvas.width);
       });
       const path = await paint.getAttribute('d');
       assert.match(path, /^M[^MVH]+V[^MVH]+ M[^MVH]+V[^MVH]+ M[^MVH]+H[^MVH]+$/u);
@@ -560,12 +551,11 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
       assert.equal(coordinates.length, edges.length);
       coordinates.forEach((value, index) => assert.ok(Math.abs(value - edges[index]) < .02,
         'preview strokes meet the actual painted cell edges, including fractional canvas origins'));
-      const paintedWidth = await preview.locator('.reception-document-canvas').evaluate(node => node.getBoundingClientRect().width);
+      const paintedWidth = await preview.locator('.reception-document-canvas').evaluate(node => node.offsetWidth);
       const scale = paintedWidth / saved.workbench.area.width;
       assert.ok(Math.abs(Number(await paint.getAttribute('stroke-width')) - 2 * scale) < .00001, 'stroke width follows the actual preview scale');
       assert.equal(await preview.locator('.shape-outline').count(), 0);
       assert.equal(await preview.locator('.reception-document-canvas').evaluate(node => getComputedStyle(node).outlineStyle), 'none');
-      await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).click();
       await page.screenshot({ path: `${output}/inner-lines-preview-${width}.png` });
       await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
     }
@@ -629,7 +619,7 @@ test('Wireframe outlines and the optional outer frame save through native contro
       await page.screenshot({ path: `${output}/wireframe-bento-${viewportWidth}.png` });
       await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
       await editorCommand(page, 'Canvas', 'Preview');
-      const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+      const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
       const canvas = preview.locator('.reception-document-canvas');
       assert.equal(await canvas.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
       const outlinePaint = preview.locator(`[data-cell-id="${id}"] .shape-outline`);
@@ -771,106 +761,6 @@ test('Cell numeric fields preserve untouched precision and recover saved values 
 
 
 
-for (const width of [1440, 900]) test(`Studio Preview exposes saved responsive edits and shared history at ${width}px`, { timeout: 90000 }, async () => {
-  const { browser, page, errors } = await setup({ width, height: 1000 });
-  try {
-    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
-    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    if (width === 900) {
-      await editorCommand(page, 'Edit', 'Settings');
-      await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
-      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
-    }
-    await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
-    await preview.waitFor();
-    const original = await snapshot(page), history = () => page.evaluate(() => window.nativeReceptionFixture.root.getHistory());
-    const originalHistory = await history(), id = original.reception.cells[0].id;
-    for (const preset of ['Fit', 'Desktop', 'Tablet', 'Phone']) assert.equal(await (await receptionPreviewControls(page)).getByRole('button', { name: preset, exact: true }).count(), 1);
-    const slider = (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true });
-    await slider.focus(); await slider.press('Home'); await slider.press('ArrowRight');
-    assert.deepEqual(await snapshot(page), original); assert.deepEqual(await history(), originalHistory);
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Phone', exact: true }).click();
-    await page.waitForFunction(() => document.querySelector('.reception-viewport-width input[type=number]')?.value === '390');
-    assert.deepEqual(await snapshot(page), original); assert.deepEqual(await history(), originalHistory);
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).click();
-    const settings = preview.getByRole('complementary', { name: 'Responsive cell settings', exact: true });
-    await settings.waitFor();
-    assert.equal(await settings.getByText('Responsive editing', { exact: true }).count(), 1);
-    assert.match(await settings.innerText(), /Layout changes save to this Reception. Width only changes this view./);
-    const status = settings.getByRole('status', { name: 'Responsive edit status', exact: true });
-    assert.equal(await status.innerText(), 'Saved locally');
-    await settings.getByRole('combobox', { name: 'Preview cell', exact: true }).selectOption(id);
-    const columns = settings.getByRole('combobox', { name: 'Phone cell width', exact: true });
-    const undo = settings.getByRole('button', { name: 'Undo', exact: true }), redo = settings.getByRole('button', { name: 'Redo', exact: true });
-    await columns.selectOption('1');
-    const changed = await snapshot(page);
-    assert.equal(changed.reception.cells.find(cell => cell.id === id).mobile.columns, 1);
-    assert.deepEqual(withoutReception(changed), withoutReception(original));
-    assert.deepEqual(changed.reception.workbench, original.reception.workbench);
-    assert.deepEqual(changed.reception.texts, original.reception.texts);
-    assert.deepEqual(changed.reception.imageModules, original.reception.imageModules);
-    assert.equal(await status.innerText(), 'Saved locally');
-    assert.match(await undo.getAttribute('title'), /Arrange Reception/);
-    await undo.click(); assert.deepEqual(await snapshot(page), original);
-    assert.equal(await status.innerText(), 'Saved locally');
-    assert.equal(await redo.isEnabled(), true);
-    await redo.click(); assert.deepEqual(await snapshot(page), changed);
-    await undo.focus(); await page.keyboard.press('Control+z');
-    assert.deepEqual(await snapshot(page), original);
-    await page.keyboard.press('Control+Shift+z'); assert.deepEqual(await snapshot(page), changed);
-    const changedHistory = await history();
-    await page.evaluate(() => window.nativeReceptionFixture.fail(true));
-    await columns.selectOption('2');
-    await preview.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
-    assert.equal(await status.innerText(), 'Changes need attention');
-    assert.deepEqual(await snapshot(page), changed); assert.deepEqual(await history(), changedHistory);
-    await page.evaluate(() => window.nativeReceptionFixture.fail(false));
-    await columns.selectOption('2');
-    assert.deepEqual(await snapshot(page), original); assert.equal(await status.innerText(), 'Saved locally');
-    const acceptedHistory = await history();
-    await page.evaluate(() => window.nativeReceptionFixture.fail(true));
-    await undo.click();
-    await preview.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
-    assert.equal(await status.innerText(), 'Changes need attention');
-    assert.deepEqual(await snapshot(page), original); assert.deepEqual(await history(), acceptedHistory);
-    await mkdir(output, { recursive: true });
-    await page.screenshot({ path: `${output}/responsive-history-error-${width}.png` });
-    await page.evaluate(() => window.nativeReceptionFixture.fail(false));
-    await undo.click(); assert.deepEqual(await snapshot(page), changed);
-    assert.equal(await status.innerText(), 'Saved locally');
-    assert.equal(await preview.getByRole('alert').count(), 0);
-    await redo.click(); assert.deepEqual(await snapshot(page), original);
-    await settings.getByRole('button', { name: 'Move later', exact: true }).click();
-    const ordered = await snapshot(page); assert.notEqual(ordered.reception.cells[0].id, id);
-    assert.deepEqual(withoutReception(ordered), withoutReception(original));
-    await undo.click(); assert.deepEqual(await snapshot(page), original);
-    await redo.click(); assert.deepEqual(await snapshot(page), ordered);
-    const height = settings.getByRole('spinbutton', { name: 'Stacked cell height', exact: true });
-    await height.fill('350'); await height.press('Enter');
-    const saved = await snapshot(page);
-    assert.equal(saved.reception.cells.find(cell => cell.id === id).mobile.height, 350);
-    assert.equal(saved.reception.cells.find(cell => cell.id === id).mobile.autoHeight, false);
-    assert.deepEqual(saved.reception.workbench, original.reception.workbench);
-    assert.deepEqual(withoutReception(saved), withoutReception(original));
-    await undo.click(); assert.deepEqual(await snapshot(page), ordered);
-    await redo.click(); assert.deepEqual(await snapshot(page), saved);
-    assert.equal(await settings.evaluate(node => node.scrollWidth <= node.clientWidth), true);
-    assert.equal(await preview.locator('header').evaluate(node => node.scrollWidth <= node.clientWidth), true);
-    await page.screenshot({ path: `${output}/responsive-history-${width}.png` });
-    await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
-    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    assert.deepEqual(await snapshot(page), saved);
-    await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    assert.deepEqual(await reception(page), saved.reception);
-    assert.deepEqual(withoutReception(await snapshot(page)), withoutReception(saved));
-    await editorCommand(page, 'Canvas', 'Preview');
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).click();
-    assert.equal(await status.innerText(), 'Saved locally');
-    assert.equal(await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true }).count(), 1);
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
 
 for (const width of [1440, 900]) test(`invalid Reception numeric input explains its range without saving at ${width}px`, { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup({ width, height: 1000 });
@@ -915,23 +805,6 @@ for (const width of [1440, 900]) test(`invalid Reception numeric input explains 
     assert.equal((await reception(page)).cells.find(cell => cell.id === id).radius, 24);
     await page.reload(); await bentoCell(page, id).waitFor();
     assert.equal((await reception(page)).cells.find(cell => cell.id === id).radius, 24);
-    await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
-    const pixels = (await receptionPreviewControls(page)).getByRole('spinbutton', { name: 'Preview width in pixels', exact: true });
-    const previewWidth = await pixels.inputValue(), saved = await snapshot(page), savedHistory = await history();
-    await pixels.fill('800.5'); await pixels.press('Tab');
-    assert.equal(await pixels.getAttribute('aria-invalid'), 'true');
-    assert.match(await pixels.evaluate(node => document.getElementById(node.getAttribute('aria-describedby'))?.textContent), /whole number/);
-    assert.deepEqual(await snapshot(page), saved); assert.deepEqual(await history(), savedHistory);
-    assert.equal(await preview.locator('header').evaluate(node => node.scrollWidth <= node.clientWidth), true);
-    await page.screenshot({ path: `${output}/preview-width-invalid-${width}.png` });
-    await pixels.press('Escape'); assert.equal(await pixels.inputValue(), previewWidth);
-    assert.equal(await pixels.getAttribute('aria-invalid'), null);
-    await pixels.fill('768'); await pixels.press('Enter');
-    await page.waitForFunction(() => document.querySelector('.reception-viewport-width input[type=number]')?.value === '768');
-    assert.equal(await pixels.inputValue(), '768');
-    assert.deepEqual(await snapshot(page), saved, 'A valid preview width stays temporary');
-    assert.deepEqual(await history(), savedHistory);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -1015,7 +888,7 @@ test('Reception layout generator previews without saving, applies native cells a
     assert.equal((await reception(page)).cells.length, 4);
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), saved);
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).waitFor();
+    await page.getByRole('dialog', { name: 'Composition preview', exact: true }).waitFor();
     await page.screenshot({ path: `${output}/layout-preview-900-light.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     const id = (await page.evaluate(() => window.nativeReceptionFixture.root.listWorkbenches()))[0].id;
@@ -1358,7 +1231,7 @@ for (const width of [1440, 900]) test(`Bento merges preserve artwork, history an
     const saved = await reception(page);
     assert.deepEqual(withoutReception(await snapshot(page)), canvas);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     await preview.getByText('MERGED ARTWORK', { exact: true }).waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${saved.imageModules[0].id}"]`).count(), 1);
     await page.screenshot({ path: `${output}/bento-merge-preview-${width}.png` });
@@ -1477,7 +1350,7 @@ test('Bento cell buttons add native Image and Text directly, retain content when
     await page.screenshot({ path: `${output}/bento-artwork-menu-1440.png` });
     await page.getByRole('button', { name: 'Close Bento', exact: true }).click();
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     await preview.getByText('BENTO INSCAPE', { exact: true }).waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${value.imageModules[0].id}"]`).count(), 1);
     await page.screenshot({ path: `${output}/bento-artwork-preview.png` });
@@ -1632,7 +1505,7 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
       await page.getByRole('region', { name: 'Library workspace', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Close Library', exact: true }).click();
       await editorCommand(page, 'Canvas', 'Preview');
-      await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).waitFor();
+      await page.getByRole('dialog', { name: 'Composition preview', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
       await openSavedReception(page);
       await page.getByRole('button', { name: 'Studio', exact: true }).click();
@@ -1860,9 +1733,8 @@ test('Cell settings save rounded corners with undo, clipping and reload at wide 
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/cell-radius-settings-${width}.png`, fullPage: true });
       await editorCommand(page, 'Canvas', 'Preview');
-      const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
-      await (await receptionPreviewControls(page)).getByRole('button', { name: 'Desktop', exact: true }).click();
-      const previewCell = preview.locator(`[data-cell-id="${id}"]`), previewWidth = (await previewCell.boundingBox()).width;
+      const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+      const previewCell = preview.locator(`[data-cell-id="${id}"]`), previewWidth = await previewCell.evaluate(node => node.offsetWidth);
       const previewRadius = await previewCell.evaluate(node => parseFloat(getComputedStyle(node).borderRadius));
       assert.ok(Math.abs(previewRadius - 48 * previewWidth / cellFrame(before, id).width) < 0.1, 'the preview radius follows its projected cell size');
       assert.match(await preview.locator(`[data-layer-id="${child}"]`).evaluate(node => node.style.clipPath), /^path\(/u);
@@ -1994,7 +1866,7 @@ test('native cell contents remain editable independently and travel with their p
   } finally { await browser.close(); }
 });
 
-test('native Library Image and Text belong to the cell and render in Desktop and Phone preview', { timeout: 120000 }, async () => {
+test('native Library Image and Text belong to the cell and render across preview sizes', { timeout: 120000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     const id = await rectangle(page, { x: 240, y: 180 }, { x: 1050, y: 850 });
@@ -2030,7 +1902,7 @@ test('native Library Image and Text belong to the cell and render in Desktop and
     await text.fill('Welcome to my Reception. This is a real Text layer.');
     while (await closeTools.count()) await closeTools.first().click();
     await openSharedTool(page, 'Inspector');
-    const inclusion = page.getByRole('checkbox', { name: 'Include in Reception', exact: true });
+    const inclusion = page.getByRole('checkbox', { name: 'Include in publication', exact: true });
     if (!await inclusion.isChecked()) { await inclusion.focus(); await page.keyboard.press('Space'); }
     assert.equal(await page.getByRole('combobox', { name: 'Follow Display', exact: true }).count(), 0);
     assert.equal(await page.getByRole('checkbox', { name: 'Read as pages', exact: true }).count(), 0);
@@ -2053,27 +1925,20 @@ test('native Library Image and Text belong to the cell and render in Desktop and
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/native-image-text-editor.png`, fullPage: true });
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true }); await preview.waitFor();
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true }); await preview.waitFor();
     await preview.getByText('Welcome to my Reception. This is a real Text layer.', { exact: true }).waitFor().catch(async error => {
       console.log('preview evidence', await reception(page), await preview.innerText(), errors);
       await page.screenshot({ path: `${output}/native-preview-debug.png`, fullPage: true }); throw error;
     });
     assert.equal(await preview.locator(`[data-layer-id="${imageId}"]`).count(), 1);
     await page.screenshot({ path: `${output}/native-preview-desktop-1440.png`, fullPage: true });
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Phone', exact: true }).click();
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).click();
-    await preview.locator('.reception-document-canvas[data-mobile="true"]').waitFor();
-    await preview.getByRole('combobox', { name: 'Preview cell', exact: true }).selectOption(id);
-    await preview.getByRole('combobox', { name: 'Phone layer', exact: true }).selectOption(textId);
-    await preview.getByRole('spinbutton', { name: 'Horizontal position', exact: true }).fill('20');
-    await preview.getByRole('spinbutton', { name: 'Horizontal position', exact: true }).press('Enter');
-    assert.deepEqual((await reception(page)).workbench, document.workbench, 'phone override preserves desktop geometry');
-    assert.equal((await reception(page)).cells[0].mobile.placements[0].id, textId);
-    await page.screenshot({ path: `${output}/native-preview-phone-390.png`, fullPage: true });
+    await page.setViewportSize({ width: 900, height: 900 });
+    await preview.locator(`[data-layer-id="${imageId}"]`).waitFor();
+    assert.deepEqual(await reception(page), document, 'viewing a resized composition preserves the artwork');
     await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    assert.equal((await reception(page)).cells[0].mobile.placements[0].id, textId);
+    assert.deepEqual(await reception(page), document);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -2094,7 +1959,7 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
     const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeTools.isVisible()) { await closeTools.focus(); await page.keyboard.press('Enter'); }
     await editorCommand(page, 'Canvas', 'Preview');
-    let preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    let preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     await preview.getByText('NOMAD', { exact: true }).waitFor();
     const textLayer = preview.locator(`[data-layer-id="${textId}"]`);
     assert.equal(await textLayer.evaluate(node => {
@@ -2112,13 +1977,13 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
     const sharedTools = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
     while (await sharedTools.count()) await sharedTools.first().click();
     await openSharedTool(page, 'Inspector');
-    const include = page.getByRole('checkbox', { name: 'Include in Reception', exact: true });
+    const include = page.getByRole('checkbox', { name: 'Include in publication', exact: true });
     assert.equal(await include.isChecked(), true);
     await include.focus(); await page.keyboard.press('Space');
     await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.texts[0].visibility === 'PRIVATE');
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).focus(); await page.keyboard.press('Enter');
     await editorCommand(page, 'Canvas', 'Preview');
-    preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true }); await preview.waitFor();
+    preview = page.getByRole('dialog', { name: 'Composition preview', exact: true }); await preview.waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${textId}"]`).count(), 0, 'explicitly private Text is absent from the public projection');
     assert.equal(await preview.getByText('NOMAD', { exact: true }).count(), 0);
     assert.match(JSON.stringify((await reception(page)).texts[0].article), /NOMAD/, 'hiding Text preserves its actual writing');
@@ -2148,6 +2013,7 @@ test('Bento keeps proposal count separate, preserves mixed cell style and scales
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     const tools = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
     while (await tools.count()) await tools.first().click();
+    await seedBentoGrid(page, 2, 1);
     const ids = (await reception(page)).cells.map(cell => cell.id);
     for (const [index, radius] of [12, 64].entries()) {
       while (await tools.count()) await tools.first().click();
@@ -2166,20 +2032,33 @@ test('Bento keeps proposal count separate, preserves mixed cell style and scales
     while (await tools.count()) await tools.first().click();
     await bentoCell(page, ids[1]).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
     await backToCells(page);
+    // Deliberately exercise the fully inset case. The generator and the default
+    // text size can otherwise place this layer across the rounded boundary.
+    await page.evaluate(id => {
+      const { root } = window.nativeReceptionFixture, draft = root.getDraft(), value = draft.reception;
+      const owner = value.workbench.shapes.find(item => item.id === id).window;
+      const cell = value.cells.find(item => item.id === id);
+      value.workbench.texts.find(item => item.id === cell.members[0]).window = {
+        left: owner.left + 80, top: owner.top + 80, width: 180, height: 60,
+      };
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not position the text fixture');
+    }, ids[1]);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
-    await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true }).fill('900');
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+    await page.setViewportSize({ width: 900, height: 1000 });
     const cell = preview.locator(`[data-cell-id="${ids[1]}"]`);
-    assert.equal(await cell.evaluate(node => getComputedStyle(node).borderRadius), '40px');
-    assert.equal(await cell.locator('.shape-fill').evaluate(node => getComputedStyle(node).borderRadius), '40px');
+    const expectedRadius = 64 * (await cell.evaluate(node => node.offsetWidth)) / cellFrame(await reception(page), ids[1]).width;
+    for (const element of [cell, cell.locator('.shape-fill')]) {
+      assert.ok(Math.abs(await element.evaluate(node => parseFloat(getComputedStyle(node).borderRadius)) - expectedRadius) < 0.2);
+    }
     const member = (await reception(page)).cells[1].members[0];
     const inset = await preview.locator(`[data-layer-id="${member}"]`).evaluate(node => {
       const owner = node.closest('.reception-cell-group').querySelector('[data-cell-id]');
       const cell = owner.getBoundingClientRect(), text = node.getBoundingClientRect();
-      return { clip: node.style.clipPath, clearance: Math.min(text.left - cell.left, text.top - cell.top,
+      return { clip: node.style.clipPath, radius: parseFloat(getComputedStyle(owner).borderRadius) * cell.width / owner.offsetWidth, clearance: Math.min(text.left - cell.left, text.top - cell.top,
         cell.right - text.right, cell.bottom - text.bottom) };
     });
-    assert.ok(inset.clearance >= 40, 'the text lies wholly inside the clear part of the rounded cell');
+    assert.ok(inset.clearance >= inset.radius - 1, 'the text lies wholly inside the clear part of the rounded cell: ' + JSON.stringify(inset));
     assert.equal(inset.clip, '', 'inset text needs no second rounded clip');
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/mixed-radius-900.png` });
@@ -2241,7 +2120,7 @@ test('adding beside a filled cell supports Text below the standalone article wid
 });
 
 
-test('cropped preview fills aligned cells and follows window resizing after slider use', { timeout: 90000 }, async () => {
+test('cropped preview fills aligned cells as the browser resizes', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
@@ -2258,33 +2137,19 @@ test('cropped preview fills aligned cells and follows window resizing after slid
     });
     const saved = await reception(page);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
-    const slider = (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true });
-    await slider.fill('1200');
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     for (const width of [1440, 900, 600, 390, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
-      await page.waitForFunction(() => {
-        const preview = document.querySelector('.reception-document-preview');
-        const host = preview.querySelector('.reception-document-viewport');
-        const scroll = preview.querySelector('.reception-document-preview-scroll');
-        const style = getComputedStyle(scroll), available = scroll.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-        const shown = Number(preview.querySelector('input[type="range"]').value);
-        return Math.abs(host.clientWidth - Math.min(1200, available)) < 2 && Math.abs(shown - host.clientWidth) < 2;
-      });
+      await preview.locator('.workbench-overview-preview').evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const geometry = await preview.evaluate((node, ids) => {
         const image = [...node.querySelectorAll('[data-layer-id]')].find(el => el.dataset.layerId === ids.image).getBoundingClientRect();
-        const cell = [...node.querySelectorAll('[data-cell-anchor]')].find(el => el.dataset.cellAnchor === ids.cell).getBoundingClientRect();
+        const cell = node.querySelector(`[data-cell-id="${ids.cell}"]`).getBoundingClientRect();
         return { image: { x: image.x, y: image.y, width: image.width, height: image.height }, cell: { x: cell.x, y: cell.y, width: cell.width, height: cell.height }, overflow: document.documentElement.scrollWidth > innerWidth + 1 };
       }, ids);
       for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(geometry.image[key] - geometry.cell[key]) < 1, key + ' matches cell at ' + width);
       assert.equal(geometry.overflow, false);
       if ([900, 1440].includes(width)) { await mkdir(output, { recursive: true }); await page.screenshot({ path: output + '/responsive-crop-' + width + '.png' }); }
     }
-    await slider.fill('650');
-    await page.waitForFunction(() => Number(document.querySelector('.reception-document-preview input[type="range"]').value) === 650);
-    assert.equal(Number(await slider.inputValue()), 650);
-    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).click();
-    await page.waitForFunction(() => Number(document.querySelector('.reception-document-preview input[type="range"]').value) > 1200);
     assert.deepEqual(await reception(page), saved, 'viewing never changes authored geometry or crop');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -2304,6 +2169,7 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Reception f
     await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     for (const [label, hex] of [['Frame line', 'ff5500'], ['Frame fill', '112233'], ['Page background', '345678']]) {
+      if (label === 'Page background') await panel.getByRole('button', { name: 'Page', exact: true }).click();
       const button = panel.getByRole('button', { name: `${label} color`, exact: true });
       await button.click();
       const picker = page.getByRole('dialog', { name: `${label} color`, exact: true });
@@ -2313,6 +2179,7 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Reception f
       await page.waitForFunction(node => node.getAttribute('aria-expanded') === 'false', await button.elementHandle());
       assert.equal(await button.getAttribute('aria-expanded'), 'false');
     }
+    await panel.getByRole('button', { name: 'Current grid', exact: true }).click();
     assert.equal(await panel.locator('details').count(), 0, 'color pickers no longer expand inside Bento');
     await panel.getByRole('button', { name: 'Frame fill color', exact: true }).click();
     const fillPicker = page.getByRole('dialog', { name: 'Frame fill color', exact: true });
@@ -2354,7 +2221,7 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Reception f
     });
     assert.deepEqual(style, { fill: [0, 0, 0, 0], line: [255, 85, 0, 255] });
     assert.ok(await canvas.evaluate(node => parseFloat(getComputedStyle(node).borderRadius) > 0));
-    assert.equal(await page.locator('.reception-document-preview-body').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(52, 86, 120)');
+    assert.notEqual(await page.getByRole('dialog', { name: 'Composition preview' }).evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(52, 86, 120)', 'the studio canvas surround stays outside the visitor preview');
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/frame-colors-${width}.png` });
     assert.deepEqual(errors, []);
@@ -2417,7 +2284,7 @@ for (const width of [1440, 900]) test(`typing retains divider geometry; resize r
     await editorCommand(page, 'Edit', 'Redo');
     assert.deepEqual(await reception(page), resized);
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).getByText('Retain this article through geometry edits.', { exact: true }).waitFor();
+    await page.getByRole('dialog', { name: 'Composition preview', exact: true }).getByText('Retain this article through geometry edits.', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

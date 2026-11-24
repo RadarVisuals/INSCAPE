@@ -68,7 +68,7 @@ for (const { theme, width, height } of r12Cases) {
   });
 }
 
-test('route recovery, stale preview rejection and Display suspension share explicit lifetimes', { timeout: 90000 }, async () => {
+test('Text recovers across routes and Preview rejects superseded edits', { timeout: 90000 }, async () => {
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 try {
   const shots = await mkdtemp(join(tmpdir(), 'inscape-lifecycle-'));
@@ -86,30 +86,23 @@ try {
     const React = (await import('/@id/react')).default;
     const { createRoot } = (await import('/@id/react-dom/client')).default;
     const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
-    const useNavigation = (await import('/src/profileDiscovery/useApplicationNavigation.js')).default;
+    const useNavigation = (await import('/src/navigation/useApplicationNavigation.js')).default;
     const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
-    const { addDisplayModule, createDisplayModuleSession } = await import('/src/systemWorkflow/displayModuleSession.js');
     const { addTextModule } = await import('/src/text/textSession.js');
-    const { createDefaultWorkbenchPresentation, createTextPresentation, createNewDisplayPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
+    const { createDefaultWorkbenchPresentation, createTextPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
     const profileAddress = `0x${'1'.repeat(40)}`;
     const storage = { getItem: k => localStorage.getItem(k), setItem: (k, v) => {
       if (window.failDraft && k.startsWith('inscape.system-workflow-draft')) throw Error('full');
       localStorage.setItem(k, v);
     } };
     const store = createSystemWorkflowDraftStore({ profileAddress, storage });
-    const second = addDisplayModule(store);
-    createDisplayModuleSession(store, 'display:primary').createGrid();
-    createDisplayModuleSession(store, second).createGrid();
     addTextModule(store, profileAddress);
     const draft = store.getDraft();
     draft.texts[0].visibility = 'PUBLIC';
     draft.texts[0].article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Saved sentence.' }] }];
     draft.workbench = createDefaultWorkbenchPresentation();
-    draft.workbench.display.window = { left: 360, top: 50, width: 480, height: 270 };
-    draft.workbench.displays = [{ ...createNewDisplayPresentation('LANDSCAPE', 1), id: second, window: { left: 860, top: 50, width: 480, height: 270 } }];
     draft.workbench.texts = [{ ...createTextPresentation(draft.texts[0].id), window: { left: 20, top: 400, width: 330, height: 300 } }];
     if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Fixture save failed');
-    window.second = second;
     window.readDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
     await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
     const props = { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Hygiene audit' } };
@@ -125,30 +118,6 @@ try {
   });
   const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
   await editor.waitFor();
-  // This lifecycle fixture places its shortcuts at the canvas origin. Use the
-  // normal workspace command to reveal them beneath the optional sidebar.
-  await page.locator('main.system-workflow').press('Shift+F10');
-    await page.keyboard.press('Escape');
-  const additional = page.locator(`[data-display-instance="${await page.evaluate(() => window.second)}"]`);
-  const openDisplayMenu = async () => {
-    const header = additional.locator('.system-workflow__identity-strip');
-    await header.focus();
-    await header.press('Shift+F10');
-  };
-  await page.evaluate(() => { window.failDraft = true; });
-  await openDisplayMenu();
-  await page.getByRole('menuitem', { name: 'INCLUDE DISPLAY IN PUBLICATION', exact: true }).click();
-  await page.getByRole('button', { name: 'Dismiss notification' }).filter({ hasText: 'publication choice could not be saved' }).waitFor();
-  assert.equal(await page.evaluate(() => window.readDraft().displays[0].visibility), 'PRIVATE');
-  await page.getByRole('button', { name: 'Dismiss notification' }).click();
-  await page.evaluate(() => { window.failDraft = false; });
-  // The shortcut and open Display use the same explicit inclusion action.
-  await additional.locator('.system-workflow__desktop-shortcut').click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'INCLUDE DISPLAY IN PUBLICATION', exact: true }).click();
-  assert.equal(await page.evaluate(() => window.readDraft().displays[0].visibility), 'PUBLIC');
-  await openDisplayMenu();
-  await page.getByRole('menuitem', { name: 'MAKE DISPLAY PRIVATE', exact: true }).click();
-  assert.equal(await page.evaluate(() => window.readDraft().displays[0].visibility), 'PRIVATE');
   await page.evaluate(() => { window.failDraft = true; });
   await editor.fill('Unsaved audit sentence.');
   await page.getByRole('button', { name: 'Retry local save', exact: true }).waitFor();
@@ -169,17 +138,6 @@ try {
     const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented;
   }), false, 'confirmed save releases the page leave guard');
   await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-  for (const id of ['display:primary', await page.evaluate(() => window.second)]) {
-    const board = page.locator(`[data-display-instance="${id}"]`).getByRole('article', { name: 'Display Module', exact: true });
-    await board.locator('.system-workflow__identity-strip').focus();
-    await board.locator('.system-workflow__identity-strip').press('Shift+F10');
-    await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
-  }
-  const owner = page.locator('main.system-workflow');
-  assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 2);
-  await owner.press('Shift+F10');
-    await page.keyboard.press('Escape');
-  await page.locator('aside.workspace-navigation').waitFor({ state: 'visible' });
   let releasePreview;
   let markRequested;
   const requested = new Promise(resolve => { markRequested = resolve; });
@@ -199,39 +157,11 @@ try {
   assert.equal(await page.locator('.visitor-grid-world').count(), 0, 'stale preparation cannot open');
   await editorCommand(page, 'Canvas', 'Preview');
   await page.locator('main.system-workflow[data-previewing]').waitFor({ state: 'attached' });
-  assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 0);
   await page.locator('.visitor-grid-world').waitFor();
   // Text also keeps an inert measuring copy; assert the reader-facing passage.
   assert.equal(await page.locator('.visitor-grid-world p:not([aria-hidden="true"] *):visible').filter({ hasText: /^Saved while preview was loading\.$/ }).count(), 1);
-  const secondId = await page.evaluate(() => window.second);
-  const activeGrid = await owner.locator(`[data-display-instance="${secondId}"] [data-rendered-grid-id]:not([aria-hidden])`).getAttribute('data-rendered-grid-id');
-  // One full playback interval: the hidden owner Display must remain paused.
-  await page.waitForTimeout(12500);
-  assert.equal(await owner.locator(`[data-display-instance="${secondId}"] [data-rendered-grid-id]:not([aria-hidden])`).getAttribute('data-rendered-grid-id'), activeGrid);
   await page.getByRole('button', { name: 'RETURN', exact: true }).click();
   await editorMenu(page, 'Canvas').waitFor();
-  assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 0);
-  assert.equal(await owner.locator(`[data-display-instance="${secondId}"] [data-rendered-grid-id]:not([aria-hidden])`).getAttribute('data-rendered-grid-id'), activeGrid);
-  // Normal motion must preserve its fractional camera position, not snap back.
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  const secondBoard = owner.locator(`[data-display-instance="${secondId}"]`).getByRole('article', { name: 'Display Module', exact: true });
-  await secondBoard.locator('.system-workflow__identity-strip').focus();
-  await secondBoard.locator('.system-workflow__identity-strip').press('Shift+F10');
-  await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
-  const track = owner.locator(`[data-display-instance="${secondId}"] .system-workflow__grid-track`);
-  await page.waitForFunction(id => {
-    const element = document.querySelector(`main.system-workflow [data-display-instance="${id}"] .system-workflow__grid-track`);
-    return element && Math.abs(new DOMMatrix(getComputedStyle(element).transform).m41) > 10;
-  }, secondId);
-  await editorCommand(page, 'Canvas', 'Preview');
-  await page.locator('.visitor-grid-world').waitFor();
-  const stopped = await track.evaluate(node => getComputedStyle(node).transform);
-  await page.waitForTimeout(200);
-  assert.equal(await track.evaluate(node => getComputedStyle(node).transform), stopped);
-  assert.ok(await track.evaluate(node => Math.abs(new DOMMatrix(getComputedStyle(node).transform).m41) > 10));
-  await page.getByRole('button', { name: 'RETURN', exact: true }).click();
-  await editorMenu(page, 'Canvas').waitFor();
-  assert.equal(await track.evaluate(node => getComputedStyle(node).transform), stopped);
   assert.deepEqual(errors, []);
 } finally { await browser.close(); }
 });

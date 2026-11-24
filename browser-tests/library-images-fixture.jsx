@@ -23,7 +23,8 @@ let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...as
 const seed = createOwnerSystemWorkflowReviewStorage();
 if (new URLSearchParams(location.search).has('empty')) {
   const key = systemWorkflowDraftKey(profile), draft = JSON.parse(seed.getItem(key));
-  draft.grids = draft.grids.map(grid => ({ ...grid, placements: [] }));
+  draft.imageModules = [];
+  draft.workbench.imageModules = [];
   seed.setItem(key, JSON.stringify(draft));
 }
 const storage = {

@@ -656,6 +656,61 @@ export function WorkbenchViewControls({
       reportError: setMoveError,
     });
   };
+  const beginDuplicate = event => {
+    const context = latestCells.current, current = latest.current;
+    if (!event.ctrlKey || !context?.store.duplicateLayers || !context.store.hasWriteAccess()) return false;
+    const target = event.target, stack = target.closest('[data-workbench-stack]');
+    if (stack && !target.closest('.workbench-group-stack__grip')) return false;
+    if (!stack && target.closest('input,textarea,select,a,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable]):not([data-editor-cell-surface])')) return false;
+    const stackGroup = stack && current.layers.find(layer => layer.id === stack.dataset.workbenchStack);
+    const module = target.closest('[data-workbench-view-id]');
+    const raw = target.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface || module?.dataset.workbenchViewId;
+    const owner = editorCellForModule(context.cells, raw);
+    const id = owner && owner.id !== context.editingCellId ? owner.id : raw;
+    const group = current.layers.find(layer => layer.children?.includes(id) && layer.id !== current.editingBlockId);
+    const ids = stackGroup?.children || (target.matches('.workbench-selection') || current.selection.includes(id)
+      ? current.selection : group?.children || (id ? [id] : []));
+    if (!ids.length) return false;
+    event.preventDefault(); event.stopPropagation();
+    const store = context.store, generation = store.getGeneration();
+    if (lockedSelection(current, ids)) return true;
+    const nodes = stack ? [stack] : ids.map(id => current.entries.get(id)).filter(Boolean);
+    const bounds = workbenchSelectionBounds(nodes.map(node => node.getBoundingClientRect()));
+    if (!bounds) return true;
+    const camera = navigation.getCamera(), start = { x: event.clientX, y: event.clientY };
+    let delta;
+    gestures.beginResize(event, {
+      beforeTransforms: current.transforms,
+      valid: () => latest.current.store === store && store.isCurrent() && store.hasWriteAccess() && store.getGeneration() === generation,
+      preview: movement => {
+        delta = Math.hypot(movement.x, movement.y) >= 4 ? movement : null;
+        setMarquee(delta && { ...bounds, left: bounds.left + delta.x, top: bounds.top + delta.y });
+      },
+      commit: pointer => {
+        if (!delta || Math.hypot(pointer.clientX - start.x, pointer.clientY - start.y) < 4) return true;
+        try {
+          const shift = { x: (pointer.clientX - start.x) / camera.scale, y: (pointer.clientY - start.y) / camera.scale };
+          const host = hostRef.current.getBoundingClientRect();
+          const point = { x: (pointer.clientX - host.left - camera.offset.x) / camera.scale,
+            y: (pointer.clientY - host.top - camera.offset.y) / camera.scale };
+          const owners = new Set(ids.map(id => editorCellForModule(context.cells, id)?.id));
+          // A mixed selection keeps its individual memberships. A selection from
+          // one surface follows the drop into a cell or onto free canvas.
+          const transfer = !stack && owners.size === 1 && !ids.some(id => context.cells.some(c => c.id === id));
+          const destination = transfer ? [...context.cells].reverse().find(c => {
+            const frame = current.frames.get(c.id)?.current;
+            return frame && !current.hiddenModuleIds.includes(c.id) && !current.editorHiddenIds.includes(c.id) && pointInWorkbenchFrame(point, frame);
+          })?.id || null : undefined;
+          const copies = store.duplicateLayers(ids, shift, destination, generation, current.getPresentation());
+          if (transfer) store.setEditingCell(destination);
+          current.selectLayers(copies);
+          setMoveError('');
+        } catch (error) { setMoveError(error.message); return false; }
+        return true;
+      },
+    });
+    return true;
+  };
   const beginMove = (event, ids = selection) => {
     if (event.button !== 0 || gestures.isActive()) return;
     event.preventDefault();
@@ -779,7 +834,7 @@ export function WorkbenchViewControls({
       setTransforms(operation.beforeTransforms);
   };
   const interactionActions = useRef(null);
-  interactionActions.current = { navigation, moveByKey, beginMove, pick: objectPicker.pick };
+  interactionActions.current = { navigation, moveByKey, beginDuplicate, beginMove, pick: objectPicker.pick };
   useEffect(() => {
     const host = hostRef.current;
     if (!host || disabled) return;
@@ -972,14 +1027,14 @@ export function WorkbenchViewControls({
       if (
         locked ||
         latest.current.interactionTool !== 'select' ||
-        event.target.closest?.(
+        !(event.ctrlKey && event.target.matches?.('[data-editor-cell-surface]')) && event.target.closest?.(
           '[data-workbench-selection-tools], [data-workbench-toolbar], [data-workbench-layers], [data-context-tools], [data-shared-text-tools], [data-shared-display-tools]'
         )
       )
         return;
       if (event.button === 0 && gestures.ownsPointer(event.pointerId)) cancelGesture();
       if (event.button !== 0 || gestures.isActive() || event.target.closest?.('[data-immersive]')) return;
-      if (pick(event)) return;
+      if (interactionActions.current.beginDuplicate(event) || pick(event)) return;
       // Resolve Shift-click through the selection overlay to the module's own
       // selectable surface: a window header or Image's artwork surface.
       const target =
@@ -998,11 +1053,11 @@ export function WorkbenchViewControls({
               }) || event.target
           : event.target;
       const module = target.closest?.('[data-workbench-view-id]');
-      // Host controls (including a Display's failure notice) keep their current
+      // Host controls keep their current
       // target. Only an artwork or the canvas background changes selection.
       const background =
         event.target === host ||
-        event.target.matches?.('.system-workflow__workbench, .system-workflow__display-instance');
+        event.target.matches?.('.system-workflow__workbench');
       if (!module && !background) return;
       if (module && latest.current.presentationTransforms[module.dataset.workbenchViewId]) return;
       const current = latest.current,
@@ -1096,7 +1151,7 @@ export function WorkbenchViewControls({
       if (
         module &&
         current.store &&
-        (layerIds(current.layers || []).includes(moduleId) || moduleId?.startsWith('display:')) &&
+        layerIds(current.layers || []).includes(moduleId) &&
         !event.shiftKey
       )
         current.selectArtwork(module.dataset.workbenchViewId);
@@ -1312,7 +1367,7 @@ export function WorkbenchViewControls({
                 role="group"
                 tabIndex={0}
                 aria-label={`${selected.length} selected Workbench modules`}
-                aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
+                aria-description={cells ? "Drag to move. Ctrl-drag to duplicate the selection. Escape cancels the drag." : "Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."}
                 onDoubleClick={event => {
                   const group = view.layers.find(layer => layer.children?.every(id => selection.includes(id)));
                   if (!group) return;

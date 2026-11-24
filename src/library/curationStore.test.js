@@ -2,7 +2,7 @@ import { saveMissingSnapshots } from './curatedSnapshots.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { curatedImages, curatedAssetIds, changeCuratedAssets, curatedDisplayAssets } from './curationStore.js';
-import { applicationRouteUrl, readApplicationRoute, resolveApplicationDestination } from '../profileDiscovery/applicationNavigation.js';
+import { applicationRouteUrl, readApplicationRoute, resolveApplicationDestination } from '../navigation/applicationNavigation.js';
 
 import { createEmptyWorkspace, createFolder, setFolderAssets } from './domain/libraryWorkspace.js';
 import { normalizeWorkspace } from './storage/libraryWorkspaceStorage.js';

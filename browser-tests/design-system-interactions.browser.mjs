@@ -25,7 +25,7 @@ test('composition geometry and content survive every inspector tab and targeted 
         const scene=studio.locator('.ds-layer-scene');
         const geometry=()=>scene.locator('[data-layer-id]').evaluateAll(nodes=>nodes.map(n=>({id:n.dataset.layerId,style:n.getAttribute('style'),art:n.querySelector('svg')?.outerHTML})));
         const initial=await geometry();
-        for(const name of ['Layers','Color','Shape','Image','Display','Transform','FX']) {
+        for(const name of ['Layers','Color','Shape','Image','Transform','FX']) {
           await tab(name);assert.deepEqual(await geometry(),initial,name+' does not replace the canvas');
           assert.equal(await scene.locator('[data-layer-id]').count(),5);
           assert.equal(await studio.locator('.ds-studio-art').count(),0,'no rectangular fallback');
@@ -144,7 +144,7 @@ test('adding and editing text keeps frames separate and the selected text tool t
   for(const width of [1440,390]) {
    const {page,studio,errors,tab}=await mount(browser,width);
    await tab('Layers');
-   const scene=studio.getByRole('group',{name:'Example Display composition'});
+   const scene=studio.getByRole('group',{name:'Example Bento composition'});
    const select=studio.getByLabel('Workspace selection');
    const initialCount=await select.locator('option').count();
    const original=scene.locator('[data-layer-id="text"]');

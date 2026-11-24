@@ -1,18 +1,13 @@
 import { FIRST_WORKBENCH_ID, isWorkbenchCollection, createWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { createBlankWorkbenchDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { CANVAS_CONTENT_KEYS, canvasContent, canvasDetails, canvasDocument, publishedCanvasEntries, publishedCompositionEntries, validPublicationDestinations } from './publishedCanvases.js';
 import { projectReception, validReception } from './receptionPresentation.js';
-import { projectReceptionSceneMappings } from './receptionLinks.js';
-import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 
-export function canReplaceInvalidPublication(resolution, profileAddress) {
-  const address = normalizeProfileAddress(profileAddress);
-  return Boolean(address && !resolution?.busy && resolution?.status === 'INVALID'
-    && resolution.errorCode === 'INVALID_DOCUMENT' && normalizeProfileAddress(resolution.address) === address);
-}
+import { canReplaceInvalidPublication } from './canReplaceInvalidPublication.js';
+export { canReplaceInvalidPublication };
 
 export function resolvePublicationBaseline(resolution, profileAddress, { replaceInvalid = false } = {}) {
   if (!resolution?.busy && resolution?.status === 'RESOLVED') {
@@ -54,7 +49,7 @@ export function canvasPublicationCandidates({ record, assetRecords, profile }) {
       // from an unselected canvas just to satisfy the v9 document envelope.
       const { reception, ...shared } = collection.shared;
       if (!validReception(reception)) throw new Error('Invalid local Bento.');
-      const document = build({ ...createEmptySystemWorkflowDraft(collection.profileAddress), ...shared, grids: [] });
+      const document = build({ ...createBlankWorkbenchDraft(collection.profileAddress), ...shared });
       candidates.push({ id: 'reception', name: 'Bento', reception: projectReception(reception), document });
     } catch (error) { candidates.push({ id: 'reception', name: 'Bento', error: error.message }); }
   }
@@ -100,18 +95,6 @@ export function buildCanvasPublication({ candidates, selectedIds, includeShared,
   const document = { ...root, canvas: entries.length ? canvasDetails(entries[0]) : null, canvases: entries.slice(1),
     ...(reception ? { reception } : {}), ...(receptionDestinations ? { receptionDestinations } : {}),
     createdAt: previous?.createdAt || new Date(exportedAt).toISOString(), exportedAt: new Date(exportedAt).toISOString(), revision: (previous?.revision || 0) + 1 };
-  // Only selected content can change. Verify retained links against the final
-  // whole document without modifying an unselected work or its mappings.
-  let snapshot;
-  function projectLinks(layout) {
-    if (!layout.links?.length) return layout;
-    snapshot ??= publishedPresentationSnapshot(document);
-    return projectReceptionSceneMappings(layout, snapshot);
-  }
-  if (selectedIds.includes('reception')) document.reception = projectLinks(document.reception);
-  if (document.composition && selectedIds.includes(document.canvas.id)) document.composition = projectLinks(document.composition);
-  document.canvases = document.canvases.map(item => item.content.composition?.links?.length && selectedIds.includes(item.id)
-    ? { ...item, content: { ...item.content, composition: projectLinks(item.content.composition) } } : item);
   return assertValidProfileDocumentV9(document);
 }
 
@@ -146,8 +129,7 @@ export function buildGalleryRemoval(previousVerifiedDocument, workIds, exportedA
       Object.assign(document, content);
       document.canvas = details;
     } else {
-      const { artboard, geometry, appearance } = createEmptySystemWorkflowDraft(document.profile.address, { generateId: () => 'empty' });
-      Object.assign(document, { artboard, geometry, appearance, grids: [], metadata: {}, canvas: null });
+      document.canvas = null;
     }
   } else if (document.canvas && selection.has(document.canvas.id)) {
     document.canvas.destinations = ['profile'];

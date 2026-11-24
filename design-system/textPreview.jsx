@@ -22,13 +22,13 @@ function TextExample({
   const [mount] = useState(() => document.createElement('div'));
   const disabled =
     item.locked ||
-    (readOnly && item.parent === 'display') ||
+    (readOnly && item.parent === 'cell') ||
     item.textReadOnly ||
     !item.visible;
   const changeArticle = (article) => {
     if (!disabled) onChange(item.id, { article });
   };
-  const inDisplay = item.parent === 'display';
+  const inCell = item.parent === 'cell';
   const onFocusCapture = useTextColourSelection({
     editor,
     item,
@@ -38,11 +38,11 @@ function TextExample({
     onTarget: onColourTarget,
   });
   useLayoutEffect(() => {
-    const host = selected && inDisplay && layerHost ? layerHost : canvasHost;
+    const host = selected && inCell && layerHost ? layerHost : canvasHost;
     host?.appendChild(mount);
     mount.hidden = !selected;
     return () => mount.remove();
-  }, [mount, canvasHost, layerHost, selected, inDisplay]);
+  }, [mount, canvasHost, layerHost, selected, inCell]);
   return (
     <>
       {canvasHost &&
@@ -80,24 +80,8 @@ function TextExample({
         disabled={disabled}
         backupScope={item.id}
         footer={<p>Local example · changes are not saved.</p>}
-        connection={
-          !inDisplay && (
-            <>
-              <label>
-                Follow Display
-                <select aria-label="Follow Display" disabled value="">
-                  <option value="">Choose a Display…</option>
-                </select>
-              </label>
-              <button type="button" className="workflow-tactile-control" disabled>
-                Link Text to Display
-              </button>
-              <p>Connection controls are shown for reference. They need a real Display.</p>
-            </>
-          )
-        }
         readOptions={
-          !inDisplay && (
+          !inCell && (
             <label className="text-visibility text-settings-wide">
               <input type="checkbox" disabled checked={false} readOnly />
               Read as pages
@@ -105,7 +89,7 @@ function TextExample({
           )
         }
         publication={
-          !inDisplay && (
+          !inCell && (
             <label className="text-visibility">
               <input
                 type="checkbox"
@@ -117,29 +101,7 @@ function TextExample({
             </label>
           )
         }
-      >
-        {inDisplay ? (
-          <>
-            <button type="button" className="workflow-tactile-control" disabled>
-              Move onto Workbench
-            </button>
-            <p>Moving between modules is shown for reference.</p>
-          </>
-        ) : (
-          <details className="text-tools-transfer text-settings-wide">
-            <summary>Move into Display</summary>
-            <label>
-              Destination
-              <select aria-label="Text destination" disabled value="">
-                <option value="">Choose a Display…</option>
-              </select>
-            </label>
-            <button type="button" className="workflow-tactile-control" disabled>
-              Move into Display
-            </button>
-          </details>
-        )}
-      </TextTools>
+      />
     </>
   );
 }

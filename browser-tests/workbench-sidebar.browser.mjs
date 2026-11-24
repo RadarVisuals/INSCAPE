@@ -64,36 +64,6 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
   });
 }
 
-test('Discover account Escape closes only its menu and restores focus', { timeout: 45000 }, async () => {
-  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  try {
-    const { page, errors } = await mount(browser);
-    await editorDestination(page, 'Discover');
-    const discover = page.locator('[data-system-workflow-panel="discover"] .public-entry-portal');
-    await discover.waitFor();
-    const trigger = discover.getByRole('button', { name: / account$/ });
-    await trigger.click();
-    const before = await interactionState(page);
-    // Discover suspends the artwork tool hosts. Test its rendered state, rather
-    // than requiring a hidden Editor selection counter from the retired UI.
-    await discover.getByRole('button', { name: 'Copy address', exact: true }).focus();
-    await page.keyboard.press('Escape');
-    assert.equal(await discover.isVisible(), true);
-    assert.equal(await discover.locator('.visitor-tools .strip-drawer:popover-open').count(), 0);
-    assert.deepEqual(await interactionState(page), before);
-    assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
-    await trigger.click();
-    await discover.locator('main button:enabled').first().waitFor();
-    await discover.locator('.visitor-tools .strip-drawer:popover-open').locator('a,button:enabled').last().focus();
-    await page.keyboard.press('Tab');
-    assert.equal(await discover.evaluate(node => node.contains(document.activeElement) && !document.activeElement.closest('.visitor-tools .strip-drawer:popover-open')), true);
-    assert.equal(await discover.locator('.visitor-tools .strip-drawer:popover-open').count(), 0);
-    assert.equal(await discover.isVisible(), true);
-    assert.deepEqual(await interactionState(page), before);
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
-
 test('navigation closes across canvas switches and preview', { timeout: 60000 }, async () => {
  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
  try {
@@ -107,7 +77,7 @@ test('navigation closes across canvas switches and preview', { timeout: 60000 },
   await selectEditorDocument(page, { label: 'Workbench 1' });
   assert.equal(await sidebar.isVisible(), false);
   await editorCommand(page, 'Canvas', 'Preview');
-  await page.getByRole('button', { name: 'EXIT', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Composition preview' }).getByRole('button', { name: 'Back to editing' }).click();
   await editorMenu(page, 'Canvas').waitFor();
   assert.equal(await sidebar.isVisible(), false);
   await logo.click(); assert.equal(await sidebar.isVisible(), true);

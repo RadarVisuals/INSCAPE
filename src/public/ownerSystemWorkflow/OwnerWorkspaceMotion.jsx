@@ -1,5 +1,5 @@
 import { useContext, useLayoutEffect, useRef } from 'react';
-import { GalleryStudioMotion, useGalleryStudioDestination } from '../../profileDiscovery/galleryStudioMotion.js';
+import { GalleryStudioMotion, useGalleryStudioDestination } from '../../navigation/galleryStudioMotion.js';
 import { fitCanvasRegion } from '../workbenchOverview/fitCanvasRegion.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import CanvasJourney from '../workbenchOverview/CanvasJourney.jsx';

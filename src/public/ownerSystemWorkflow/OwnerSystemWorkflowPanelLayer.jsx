@@ -1,6 +1,5 @@
 import { cloneElement, lazy, Suspense } from 'react';
 import { X } from 'lucide-react';
-import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
 import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
 import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
 import OwnerSystemWorkflowSettings from './OwnerSystemWorkflowSettings.jsx';
@@ -13,8 +12,8 @@ function PanelPresence({ children, id, panels }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ activity, connectedProfile,
-  profileAddress, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
+export default function OwnerSystemWorkflowPanelLayer({ activity,
+  profileAddress, onClose, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, panels, profileIdentity, profileModel,
   workbenchPreferences, onWorkbenchPreferencesChange, backupControls, canvasGuides = true }) {
   const show = (id) => panels.presence[id];
   return <>
@@ -28,11 +27,6 @@ export default function OwnerSystemWorkflowPanelLayer({ activity, connectedProfi
     {show('activity').present && <PanelPresence id="activity" panels={panels}>
       <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}
         phase={show('activity').phase} /></Suspense></PanelPresence>}
-    {show('discover').present && <PanelPresence id="discover" panels={panels}>
-      <PublicEntryPortal connectedProfile={connectedProfile || profileIdentity} embedded initialMode="explore" onClose={onClose}
-        onConnect={onConnect} onDisconnect={onDisconnect}
-        onEnterMyWorld={() => { onClose(); onEnterMyWorld?.(); }}
-        onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
     {show('backup').present && <PanelPresence id="backup" panels={panels}>
       <aside role="dialog" aria-label="Backup" data-workflow-material="tactile" data-workflow-finish="flat"
         className="workbench-tool-panel system-workflow__settings system-workflow__motion-panel"

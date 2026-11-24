@@ -2,7 +2,7 @@ import { authoredStorage, hydrateWorkspace, workspaceSession } from '../../works
 import { saveMissingSnapshots } from '../curatedSnapshots.js';
 import { create } from 'zustand';
 import { createLibraryInventoryActions } from './libraryInventoryActions.js';
-import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
+import { normalizeProfileAddress } from '../config.js';
 import { useWalletStore } from '../../store/useWalletStore.js';
 import { developmentLog } from '../../diagnostics.js';
 import {
@@ -24,7 +24,7 @@ import {
 import { browserLibraryStorage, createLibraryWorkspacePersistence } from '../storage/libraryWorkspacePersistence.js';
 import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/libraryAssetCache.js';
 
-const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
+const profileAddress = normalizeProfileAddress(useWalletStore.getState().hostProfileAddress);
 let workspaceStorage = browserLibraryStorage();
 let workspacePersistence = createLibraryWorkspacePersistence(authoredStorage(workspaceStorage));
 let injected = false;

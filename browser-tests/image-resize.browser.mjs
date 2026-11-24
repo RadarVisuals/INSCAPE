@@ -46,7 +46,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
       saveWorkbenchPreferences(profileAddress, { surfaceId: 'graphite', gridMode: 'DOTS' }, storage);
       const assets = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS;
       const square = { ...assets[0], selectedMedia: { url: assets[0].originalImageUrl.replace('actors/abyssal_eye/full.webp', 'PFP/PFP.webp'), width: 2000, height: 2000 } };
-      const workbench = createDefaultWorkbenchPresentation(); workbench.display.open = false;
+      const workbench = createDefaultWorkbenchPresentation();
       addImageModule(store, profileAddress, { artwork: await resolveImageLibraryArtwork(square), size: { width: 720, height: 240 }, position: { left: 8, top: 160 }, workbench });
       addImageModule(store, profileAddress, { artwork: await resolveImageLibraryArtwork(assets[1]), size: { width: 320, height: 300 }, position: { left: innerWidth > 700 ? 900 : 32, top: innerWidth > 700 ? 160 : 470 } });
       window.readDraft = () => JSON.parse(storage.getItem(key));

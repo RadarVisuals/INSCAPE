@@ -19,9 +19,9 @@ test('cursor camera and grid stay aligned after pan, reverse smoothly, and ignor
     for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
       const errors = []; page.on('pageerror', e => errors.push(e.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: Math.min(600, width - 40) });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, shapeWidth: Math.min(600, width - 40) });
       await resetAtActualSize(page);
-      const board = page.locator('.system-workflow__presentation-board').first();
+      const board = page.locator('aside.shape-window').first();
       await board.waitFor(); await page.waitForTimeout(700);
       const host = page.locator('main.system-workflow').first();
       const initial = await board.boundingBox();

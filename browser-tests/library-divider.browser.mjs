@@ -72,7 +72,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
       await resize(width); assert.equal((await divider.boundingBox()).x, expandedX);
     }
     await dragBy(divider, -250);
-    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+    await page.getByRole('button', { name: 'Library view options', exact: true }).click();
     await page.getByRole('checkbox', { name: 'Labels', exact: true }).uncheck();
     await page.getByRole('slider', { name: 'Card size', exact: true }).focus(); await page.keyboard.press('Home');
     await page.keyboard.press('Escape');
@@ -117,7 +117,7 @@ for (const theme of ['dark', 'light']) test(`Library keeps square tiles, explici
     await detachTool(page, 'Library');
     const panel = sharedToolPanel(page, 'Library');
     const navigation = page.getByRole('navigation', { name: 'Browser navigation' });
-    const view = page.getByRole('button', { name: 'Library display options', exact: true });
+    const view = page.getByRole('button', { name: 'Library view options', exact: true });
     const setView = async mode => { await view.click(); await page.getByRole('button', { name: mode, exact: true }).click(); await page.keyboard.press('Escape'); };
     const before = await page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
     await view.click(); await page.getByRole('checkbox', { name: 'Labels', exact: true }).uncheck();

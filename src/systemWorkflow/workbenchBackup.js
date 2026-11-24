@@ -35,7 +35,8 @@ export function parseLegacyWorkbenchBackup(source, profile) {
     || value.version !== (isWorkbenchCollection(value.draft) ? 2 : 1)
     || typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt)))
     throw new Error('This is not a supported INSCAPE Workbench backup.');
-  const draft = isWorkbenchCollection(value.draft) ? assertValidWorkbenchCollection(value.draft) : assertValidSystemWorkflowDraft(value.draft);
+  const candidate = value.draft;
+  const draft = isWorkbenchCollection(candidate) ? assertValidWorkbenchCollection(candidate) : assertValidSystemWorkflowDraft(candidate);
   if (draft.profileAddress !== normalizeProfileAddress(profile)) throw new Error('This backup belongs to a different Universal Profile.');
   return { ...value, draft: structuredClone(draft) };
 }
@@ -45,8 +46,8 @@ export function summarizeWorkbenchBackup(draft) {
     draft.workbenches.find(item => item.id === draft.activeId).name}. ${summarizeWorkbenchBackup(projectWorkbenchDraft(draft))}`;
   return [
     ['Text', draft.texts?.length || 0], ['Images', draft.imageModules?.length || 0],
-    ['Shapes', draft.shapes?.length || 0], ['Displays', (draft.grids.length ? 1 : 0) + (draft.displays?.length || 0)],
-    ['Mini apps', draft.miniApps?.length || 0], ['Keeper docks', draft.keeperDocks?.length || 0],
+    ['Shapes', draft.shapes?.length || 0],
+    ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
     ['Bento cells', draft.reception?.cells?.length ?? draft.reception?.regions?.length ?? 0],
   ].map(([name, count]) => `${count} ${name}`).join(' · ');
@@ -84,6 +85,7 @@ function finishRestore(storage, profile, layoutIds) {
 }
 
 const workspaceKind = 'inscape-workspace-backup';
+const workspaceBackupVersion = 2;
 const recordKinds = ['library', 'workbenches', 'textRecovery', 'receptionRecovery'];
 const decoded = rows => Object.fromEntries(recordKinds.map(key => [key, JSON.parse(rows[key])]));
 const encoded = workspace => Object.fromEntries(recordKinds.map(key => [key, workspace[key] === null ? null : JSON.stringify(workspace[key])]));
@@ -93,7 +95,8 @@ function exactRecord(value, keys) {
 function validatePortable(workspace, profile) {
   if (!exactRecord(workspace, recordKinds)) throw Error('Incomplete workspace backup.');
   validateWorkspaceRows(encoded(workspace), profile);
-  const { library, workbenches } = workspace;
+  const { library, workbenches, receptionRecovery } = workspace;
+  if (receptionRecovery !== null) parseLegacyWorkbenchBackup(JSON.stringify(receptionRecovery), profile);
   if (library !== null) {
     const normalized = normalizeWorkspace(library, profile);
     for (const selections of [library.curatedImageSelections, ...library.folders.map(folder => folder.imageSelections)])
@@ -104,7 +107,7 @@ function validatePortable(workspace, profile) {
   }
   const recoveryContexts = new Set();
   if (workbenches !== null) {
-    const group = isWorkbenchCollection(workbenches) ? assertValidWorkbenchCollection(workbenches) : createWorkbenchCollection(workbenches);
+    const group = assertValidWorkbenchCollection(workbenches);
     if (group.profileAddress !== profile) throw Error('Workbench profile mismatch.');
     const ids = new Set(group.workbenches.map(item => item.id));
     for (const id of ids) recoveryContexts.add(profile + '/' + id);
@@ -137,13 +140,14 @@ export function parseWorkbenchBackup(source, profile) {
   let value;
   try { value = JSON.parse(source); } catch { throw Error('Choose a valid INSCAPE Workbench JSON backup.'); }
   if (value?.kind !== workspaceKind) return parseLegacyWorkbenchBackup(source, profile);
-  if (value.schemaVersion !== 1) throw Error('Unsupported workspace backup schema version: ' + value.schemaVersion);
+  if (value.schemaVersion !== workspaceBackupVersion) throw Error('Unsupported workspace backup schema version: ' + value.schemaVersion);
   const active = normalizeProfileAddress(profile);
   if (!active || value.chainId !== LUKSO_CHAIN_ID || value.profileAddress !== active)
     throw Error('Open the matching workspace for profile ' + value.profileAddress + ' on chain ' + value.chainId + '.');
   if (!exactRecord(value, ['kind','schemaVersion','chainId','profileAddress','exportedAt','workspaceRevision','workspace'])
     || !Number.isSafeInteger(value.workspaceRevision) || value.workspaceRevision < 0
     || typeof value.exportedAt !== 'string' || !Number.isFinite(Date.parse(value.exportedAt))) throw Error('Invalid workspace backup envelope.');
+  if (!exactRecord(value.workspace, recordKinds)) throw Error('Incomplete workspace backup.');
   validatePortable(value.workspace, value.profileAddress);
   return value;
 }
@@ -164,7 +168,7 @@ function serializeWorkspaceRows(profileAddress, rows, workspaceRevision, exporte
     }
   }
   validatePortable(workspace, profileAddress);
-  return JSON.stringify({ kind: workspaceKind, schemaVersion: 1, chainId: LUKSO_CHAIN_ID, profileAddress,
+  return JSON.stringify({ kind: workspaceKind, schemaVersion: workspaceBackupVersion, chainId: LUKSO_CHAIN_ID, profileAddress,
     exportedAt, workspaceRevision, workspace });
 }
 
@@ -223,7 +227,11 @@ export async function previewWorkspaceRestore(source, address, mode = 'replace')
       if (equivalent(createWorkbenchCollection(local.workbenches), workspace.workbenches)) rows.workbenches = base.rows.workbenches;
     } catch { /* Explicit Replace can repair an invalid local draft. */ }
   }
-  if (legacy) { validateWorkspaceRows(rows, profile); validatePortable({ ...incoming, workbenches: workspace.workbenches }, profile); }
+  if (legacy) {
+    validateWorkspaceRows(rows, profile);
+    const restored = workspace.workbenches;
+    validatePortable({ ...incoming, workbenches: isWorkbenchCollection(restored) ? restored : createWorkbenchCollection(restored) }, profile);
+  }
   else if (mode === 'merge') {
     validateWorkspaceRows(rows, profile);
     validatePortable({ ...workspace, library: null }, profile);

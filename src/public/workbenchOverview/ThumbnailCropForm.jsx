@@ -18,7 +18,7 @@ export default function ThumbnailCropForm({ selected, model, ratio, onSave, onCa
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onCancel(); }
   }} onSubmit={event => { event.preventDefault(); try { onSave(crop); } catch (failure) { setError(failure.message); } }}>
     <h2>Thumbnail crop</h2>
-    <p id="thumbnail-crop-help">Drag to position, then zoom to frame your cover. Arrow keys also move it.</p>
+    <p id="thumbnail-crop-help">Drag to position, then zoom to frame the thumbnail. Arrow keys also move it.</p>
     <button ref={preview} type="button" className="workbench-thumbnail-crop-preview" aria-label="Reposition thumbnail" aria-describedby="thumbnail-crop-help"
       style={{ '--thumbnail-ratio': ratio }}
       onPointerDown={event => {

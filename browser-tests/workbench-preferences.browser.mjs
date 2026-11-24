@@ -58,7 +58,7 @@ for (const width of [1440, 390]) test(`Workbench and editor save failures stay v
     assert.notEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).gridSpacing, key), 52);
     await settings(page).getByRole('button', { name: 'Close Settings', exact: true }).click();
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
-    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+    await page.getByRole('button', { name: 'Library view options', exact: true }).click();
     await page.getByRole('region', { name: 'Library workspace', exact: true }).getByLabel('Card size', { exact: true }).fill('250');
     await page.keyboard.press('Escape');
     const editorRetry = page.getByRole('button', { name: 'Save current editor preferences', exact: true });

@@ -69,44 +69,7 @@ for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
         const resized = await text.boundingBox();
         near(resized.width - start.width, 37, 1.6, 'Text resize converts screen delta to authored width');
         near(resized.height - start.height, 23, 1.6, 'Text resize converts screen delta to authored height');
-        const board = await page.locator('.system-workflow__presentation-board').boundingBox();
-        const placement = page.locator('[data-system-workflow-placement-id]').nth(1);
-        await placement.click({ position: { x: (await placement.boundingBox()).width / 2, y: 60 } });
-        const east = page.getByRole('button', { name: 'Resize selection from e', exact: true });
-        const h = await east.boundingBox(); near(h.width, 28, .5, 'selection handle retains its screen-sized pointer target through camera zoom');
-        const readPlacement = () => page.evaluate(() => JSON.parse(localStorage.getItem(window.__motionKey)).grids[0].placements[1]);
-        const authored = await readPlacement();
-        await page.keyboard.down('Alt'); await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2); await page.mouse.down();
-        await page.mouse.move(h.x + h.width / 2 + 26, h.y + h.height / 2, { steps: 5 });
-        await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
-        const changed = await readPlacement();
-        near(changed.columnSpan - authored.columnSpan, 26 / (board.width / 32), .12, 'artwork pointer uses physical-to-screen conversion');
-        assert.equal(changed.rowSpan, authored.rowSpan, 'horizontal resize retains authored height');
-        await page.keyboard.press('Escape');
       }
-      await page.getByRole('button', { name: 'Tools', exact: true }).click();
-      await page.getByRole('menuitem', { name: 'METADATA', exact: true }).click();
-      const cue = page.getByRole('button', { name: /^Read metadata for / }).first();
-      await cue.focus();
-      const cueLabel = (await cue.getAttribute('aria-label')).replace('Read metadata for ', '');
-      for (const zoom of [.67, 1.371]) {
-        await setWorkbenchZoom(page, zoom); await settle(page);
-        const c = await cue.boundingBox(), board = await page.locator('.system-workflow__presentation-board').boundingBox();
-        near(c.width, 30 * zoom, .1, 'metadata control retains logical size');
-        assert.ok(c.x >= board.x && c.x + c.width <= board.x + board.width + 1, 'metadata control remains inside the projected Stage');
-      }
-      await cue.focus(); await page.keyboard.press('Enter');
-      const metadata = page.locator('[data-shared-tool="metadata"]').locator('xpath=ancestor::aside');
-      assert.ok((await metadata.getAttribute('aria-label')).includes(cueLabel), 'metadata control selects its originating artwork');
-      await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
-      await setWorkbenchZoom(page, .67); await settle(page);
-      const atWide = await text.boundingBox();
-      await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
-      near((await text.boundingBox()).width, atWide.width, 1, 'narrow viewport cannot reinterpret physical width as CSS width');
-      await setWorkbenchZoom(page, 2); await settle(page);
-      near((await text.boundingBox()).width, atWide.width * 2 / .67, 2, 'zoomed content is not capped by companion-window viewport constraints');
-      await setWorkbenchZoom(page, .67); await page.mouse.move(380, 780); await settle(page);
-      await page.screenshot({ path: '.browser-test-runtime/surface-' + visitor + '-' + density + '-narrow.png' });
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });

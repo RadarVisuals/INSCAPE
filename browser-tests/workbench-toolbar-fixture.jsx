@@ -4,10 +4,10 @@ if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(loca
 }
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { addShape } from '../src/shapes/shapeSession.js';
 import Runtime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
-import { createSystemWorkflowAuthoringSession } from '../src/systemWorkflow/systemWorkflowAuthoringSession.js';
 import '../src/inscapeTokens.css';
 import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 import '../src/lattice/rendering/latticeMenuSurface.css';
@@ -19,9 +19,7 @@ const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value)
 const profileAddress = '0x9999999999999999999999999999999999999999';
 const assets = OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => ({ ...asset, imageUrl: asset.src, thumbnailUrl: asset.src, originalImageUrl: asset.src }));
 const store = createSystemWorkflowDraftStore({ profileAddress, storage });
-const session = createSystemWorkflowAuthoringSession({ store });
 const theme = new URLSearchParams(location.search).get('theme') === 'mist' ? 'mist' : 'carbon';
-session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: assets[0].id,
-  destination: { column: 10, row: 4, columnSpan: 9, rowSpan: 9 } });
+addShape(store, profileAddress, { position: { left: 120, top: 96 } });
 createRoot(document.getElementById('root')).render(<Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={assets}
   reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Toolbar review' }} />);
