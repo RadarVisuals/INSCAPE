@@ -8,8 +8,6 @@
 .reception-preview-menu .reception-viewport-controls { display: grid; width: 100%; gap: 10px; }
 .reception-preview-menu .reception-viewport-presets > button { flex: 1; }
 .reception-preview-menu .reception-viewport-width > input[type="range"] { flex: 1; min-width: 40px; }
-.reception-preview-menu-settings, .reception-preview-menu-destinations { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--editor-line); }
-.reception-preview-menu-settings .workflow-tactile-control, .reception-preview-menu-destinations .workflow-tactile-control { justify-content: flex-start; }
 @supports (position-area: bottom) {
   .editor-toolbar-popover.reception-preview-menu { position-area: bottom; margin: 10px; }
 }
@@ -24,26 +22,12 @@
 .reception-viewport-width input[type="range"] { width: 68px; margin: 0; accent-color: var(--tactile-accent); }
 .reception-viewport-width input[type="number"] { width: 5ch; padding: 0; border: 0; appearance: textfield; background: transparent; color: var(--tactile-ink); text-align: right; font: inherit; font-variant-numeric: tabular-nums; }
 .reception-viewport-width input::-webkit-inner-spin-button { appearance: none; }
-.reception-viewport-width input:focus-visible, .reception-document-preview-tools :is(input, select):focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
+.reception-viewport-width input:focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
 .reception-document-preview-body { display: flex; flex: 1; min-height: 0; }
 .reception-document-preview-scroll { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: auto; scrollbar-width: none; }
 .reception-preview-pan-plane { flex: 0 0 auto; width: 100%; min-width: 0; margin-block: auto; }
 .reception-preview-content[data-workbench-pan-ready], .reception-preview-content[data-workbench-pan-ready] * { cursor: grab; }
 .reception-preview-content[data-workbench-panning], .reception-preview-content[data-workbench-panning] * { cursor: grabbing; user-select: none; }
-.reception-document-preview-tools { flex: 0 0 240px; padding: 12px; overflow: auto; background: var(--tactile-face); border-left: 1px solid var(--tactile-edge); display: flex; flex-direction: column; gap: 12px; }
-.reception-responsive-fields, .reception-responsive-fields label:not(.workbench-inspector-check) { display: grid; gap: 6px; }
-.reception-responsive-fields input:not([type='checkbox']), .reception-responsive-fields select { min-width: 0; width: 100%; box-sizing: border-box; background: var(--tactile-well); color: inherit; border: 1px solid var(--tactile-edge); border-radius: var(--tactile-radius-control); padding: 6px; font: inherit; }
-.reception-document-preview-tools p { margin: 0; color: var(--tactile-muted); line-height: 1.5; }
-.reception-document-preview-tools fieldset { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
-.reception-document-preview-tools legend { margin-bottom: 10px; }
-.reception-document-preview-order { display: flex; gap: 4px; }
-.reception-preview-edit-history { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.reception-preview-edit-history > div { display: flex; gap: 4px; }
-.reception-preview-edit-history [data-icon-only] { width: 28px; padding: 0; }
-@media (max-width: 700px) {
-  .reception-document-preview-body { flex-direction: column; }
-  .reception-document-preview-tools { flex-basis: 200px; border-left: 0; border-top: 1px solid var(--tactile-edge); }
-}
 @media (forced-colors: active) {
   .reception-viewport-presets { --tactile-selected: Highlight; --tactile-selected-ink: HighlightText; }
   .editor-toolbar-popover.reception-preview-menu { background: Canvas; backdrop-filter: none; border-color: CanvasText; }

@@ -196,7 +196,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
       for (const name of ['Image', 'Text', 'Rectangle', 'Grid']) {
         assert.equal(await dialog.getByRole('button', { name, exact: true }).isEnabled(), true, `${name} remains available`);
       }
-      assert.equal(await page.locator('[data-display-instance]').count(), 1, 'an existing Display remains mounted');
+      assert.equal(await page.locator('aside.shape-window').count(), 1, 'an existing Shape remains mounted');
       await page.screenshot({ path: `${output}/add-modules-${theme}-${width}.png` });
       await add.click();
       assert.equal(await root.getByRole('dialog').count(), 0, 'trigger toggles the menu closed');
@@ -224,7 +224,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
       assert.equal(await commands.getByRole('menuitem', { name: /DISPLAY|HORIZONTAL|VERTICAL|CUSTOM SIZE/ }).count(), 0, 'context menu shares the same creation choices');
       await commands.getByRole('menuitem', { name: 'IMAGE', exact: true }).click();
       await page.locator('[data-image-module] .image-module__canvas').waitFor();
-      assert.equal(await page.locator('[data-display-instance]').count(), 1, 'creating an Image does not replace an existing Display');
+      assert.equal(await page.locator('aside.shape-window').count(), 1, 'creating an Image does not replace an existing Shape');
       assert.deepEqual(errors, []);
     } finally { for (const context of browser.contexts().filter(context => !initialContexts.has(context))) await context.close(); }
   });

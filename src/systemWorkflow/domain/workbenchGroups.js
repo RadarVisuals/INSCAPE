@@ -14,9 +14,6 @@ export const validWorkbenchGroupName = name => typeof name === 'string' && name 
 
 export function workbenchGroupModules(draft) {
   const modules = new Map();
-  if (draft?.grids?.length) modules.set('display:primary', draft.workbench?.display?.name || 'Display');
-  for (const record of records(draft?.displays).filter(record => typeof record?.id === 'string')) modules.set(record.id,
-    records(draft.workbench?.displays).find(item => item?.id === record.id)?.name || 'Display');
   for (const [key, label] of [['texts', 'Text'], ['imageModules', 'Image'], ['shapes', 'Shape']]) {
     for (const [index, record] of records(draft?.[key]).entries()) if (typeof record?.id === 'string') modules.set(record.id,
       record.name || record.article?.title || `${label} ${index + 1}`);

@@ -31,11 +31,10 @@ test('one wordmark menu keeps keyboard access, tools and destinations at wide an
         await top(page).press('ArrowDown');
         const menu = page.getByRole('menu', { name: 'Inscape menu', exact: true });
         assert.deepEqual(await menu.locator(':scope > button > span').allTextContents(), [
-          'Search commands...', 'Profile', 'Gallery', 'Writing', 'Exhibition', 'Studio', 'Discover',
+          'Search commands...', 'Profile', 'Gallery', 'Writing', 'Studio',
           'Canvas', 'Edit', 'View', 'Tools', 'Manage compositions', 'Activity', 'Settings', 'Help & Docs', 'Backup',
         ]);
         assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Studio', checked: true }).count(), 1);
-        assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Exhibition' }).isDisabled(), true);
         const anchor = await page.locator('.editor-menu-bar .workspace-wordmark').boundingBox();
         assert.deepEqual([anchor.x, anchor.y], [16, 11]);
         await page.getByRole('menuitem', { name: 'Edit', exact: true }).focus();

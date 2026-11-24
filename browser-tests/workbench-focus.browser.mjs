@@ -53,7 +53,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 1100 }, reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, displayWidth: 320 });
+      await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, shapeWidth: 320 });
       await page.locator('[data-workbench-view-id="image:motion-0"] .image-module__artwork[data-media-state="ready"]').waitFor();
       await page.evaluate(() => document.fonts.ready); await settle(page);
       const saved = await page.evaluate(() => ({ draft: localStorage.getItem(window.__motionKey), layouts: Object.fromEntries(Object.keys(localStorage)
@@ -112,14 +112,6 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await navigateWorkbench(page, 'back'); await arrived(page);
       assert.deepEqual(await camera(page), original);
       await page.keyboard.press('Escape');
-      const placement = page.locator(visitor ? '.lattice-production-placement[tabindex="0"]' : '.system-workflow__placement[tabindex="0"]').first();
-      await placement.focus(); await settle(page);
-      const displayCentre = await destinationCentre(page);
-      await placement.press('Enter'); await arrived(page);
-      await centered(page, ['display:primary'], displayCentre);
-      assert.equal(await page.locator('.display-focus-viewer').count(), 0, 'ordinary Display activation focuses the module');
-      await navigateWorkbench(page, 'back'); await arrived(page);
-      assert.deepEqual(await camera(page), original);
       const restored = await page.evaluate(() => ({ draft: localStorage.getItem(window.__motionKey), layouts: Object.fromEntries(Object.keys(localStorage)
         .filter(key => key.startsWith('inscape:workbench:layout:')).map(key => [key, JSON.parse(localStorage.getItem(key)).layout])) }));
       assert.deepEqual(restored, saved, 'focus and return never rewrite the draft or module positions');

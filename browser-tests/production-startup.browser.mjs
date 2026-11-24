@@ -182,7 +182,7 @@ test('built fresh entry stays below 1 MB JS without wallet/owner acquisition; bu
       page.on('request',r=>{if(new URL(r.url()).pathname.endsWith('.js')) requests.push(new URL(r.url()).pathname);});
       await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
       await page.goto(origin,{waitUntil:'networkidle'});
-      await page.getByRole('button',{name:'Connect',exact:true}).waitFor();
+      await page.getByRole('button',{name:'Connect profile',exact:true}).waitFor();
       assert.deepEqual(requests.filter(p=>forbidden.has(p)),[]);
       const bytes=await page.evaluate(()=>performance.getEntriesByType('resource')
         .filter(x=>new URL(x.name).pathname.endsWith('.js')).reduce((sum,x)=>sum+x.decodedBodySize,0));
@@ -299,7 +299,7 @@ test('built wallet connects, restores, follows account and chain changes, and di
       announce();
     });
     await page.goto(origin, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Connect', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Connect profile', exact: true }).waitFor();
     assert.ok(report.standaloneWalletEntry?.file, 'Build must identify the actual wallet entry');
     await page.evaluate(async file => {
       const exports = await import('/' + file);

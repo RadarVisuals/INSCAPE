@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
-import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { canvasModuleDraft, studioCellsUnavailableReason } from '../../systemWorkflow/domain/studioComposition.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
@@ -97,7 +96,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     if (lastCanvas.getSnapshot() !== undefined || store.getRecordState().status !== 'valid') return null;
     const draft = store.getSnapshot();
     const hasCanvas = store.isCollection() || draft.workbench || draft.shapes?.length || draft.imageModules?.length
-      || draft.texts?.length || draft.miniApps?.length || draft.displays?.length || draft.grids.some(grid => grid.placements.length);
+      || draft.texts?.length;
     return hasCanvas ? store.getWorkbenchId() : null;
   });
   useEffect(() => {
@@ -227,7 +226,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     && Boolean(canvasModuleDraft(store.getSnapshot()));
   const cellsUnavailableReason = scope === reception ? '' : studioCellsUnavailableReason(store.getSnapshot());
   return (
-    <EditorDocument key={activation} component={Session} scope={scope} revision={activation}
+    <Session key={activation} sharedStore={scope}
         {...props}
         overview={{ active: overview, store, view: overviewView, onViewChange: setOverviewView, memory: overviewMemory.current,
           onEdit: selectDocument, journey, saveBeforeRoute, returning: returning.current,
@@ -248,11 +247,4 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
         focusWorkbench={activation > 0 || Boolean(props.requestedWorkId)}
       />
   );
-}
-
-function EditorDocument({ component: Session, scope, revision, ...props }) {
-  const content = useSyncExternalStore(scope.subscribe, scope.getSnapshot);
-  return <SceneNavigationProvider scope={{ profileAddress: scope.getProfileAddress(), canvasId: scope.getWorkbenchId(), revision }} content={content}>
-    <Session {...props} sharedStore={scope} />
-  </SceneNavigationProvider>;
 }

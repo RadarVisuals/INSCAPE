@@ -17,11 +17,9 @@ export function createStudioComposition(layout) {
 // These existing module types have their own canvas presentation and reader.
 // Moving them into a native layer document would change their behavior.
 export function studioCellsUnavailableReason(draft) {
-  if (draft.grids?.length || draft.displays?.length || draft.workbench?.displays?.length) return 'This canvas uses Display.';
-  if (draft.miniApps?.length || draft.workbench?.miniApps?.length) return 'This canvas uses an interactive module.';
   if (draft.workbench?.keeperDocks?.length) return 'This canvas uses a Keeper dock.';
   if (draft.workbenchGroups?.length || draft.workbenchIndex) return 'This canvas uses workspace groups or a camera index.';
-  if (draft.texts?.some(text => text.sceneLink || text.pagination) || draft.workbench?.texts?.some(text => text.frames))
+  if (draft.texts?.some(text => text.pagination) || draft.workbench?.texts?.some(text => text.frames))
     return 'This canvas uses linked or paginated text.';
   return '';
 }

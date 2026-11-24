@@ -47,7 +47,7 @@ test('owner and Visitor focus live modules, activate them idempotently and retur
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: visitor ? 2 : 1, reducedMotion: reduced ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, shapeWidth: 600 });
       // The production owner route loads this shared theme above the runtime.
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await prepareCameraTestView(page, visitor);
@@ -195,10 +195,10 @@ const viewportCentreX = page => page.locator('main.system-workflow').first().eva
   return (host.clientWidth + left - right) / 2;
 });
 async function mountArrivalReview(page, visitor) {
-  await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320, seamReview: 'single' });
+  await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 320, seamReview: 'single' });
   await page.evaluate(async visitor => {
     const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
-    draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+    draft.shapes = []; draft.workbench.shapes = [];
     draft.imageModules = ['a', 'b'].map(id => ({ ...original, id: `image:arrival-${id}`, name: `Arrival ${id.toUpperCase()}`, width: 200, height: 180 }));
     draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: 32, top: 64 + index * 250 } }));
     draft.artworkLayers = draft.imageModules.map(image => image.id);

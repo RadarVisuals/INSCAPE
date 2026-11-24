@@ -10,9 +10,9 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 const settle = page => page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
 const words = 'An illustrated world grows through the stories we tell. The words continue from one column into the next, leaving the artwork room to breathe. ';
-async function seed(page, { columns = 2, width = 720, height = 290, scale = 1, display = false } = {}) {
-  await mountTextToolsFixture(page, origin, { displayTextCount: display ? 1 : 0 });
-  await page.evaluate(async ({ columns, width, height, scale, words, display }) => {
+async function seed(page, { columns = 2, width = 720, height = 290, scale = 1 } = {}) {
+  await mountTextToolsFixture(page, origin);
+  await page.evaluate(async ({ columns, width, height, scale, words }) => {
     const draft = window.savedDraft();
     const article = draft.texts[0].article;
     article.title = 'Stories from underneath';
@@ -20,15 +20,9 @@ async function seed(page, { columns = 2, width = 720, height = 290, scale = 1, d
       padding: { top: 16, right: 24, bottom: 20, left: 24 } };
     article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: words.repeat(7) }] }];
     draft.workbench.texts[0].window = { left: 24, top: 100, width, height };
-    if (display) {
-      const placement = draft.grids.flatMap(grid => grid.placements).find(item => item.text?.article);
-      placement.text.article = structuredClone(article); placement.text.article.title = 'Display article 1';
-      placement.columnSpan = 20; placement.rowSpan = 10;
-      draft.workbench.display.window = { left: 24, top: 650, width: 1050, height: 590.625 };
-    }
     const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
-  }, { columns, width, height, scale, words, display });
+  }, { columns, width, height, scale, words });
   await mountTextToolsFixture(page, origin); await settle(page);
 }
 const measure = locator => locator.evaluate(body => {
@@ -162,28 +156,5 @@ test('narrow three-column frames support scaling, full-content Focus writing and
     assert.equal(await page.locator('.text-window .text-module-scroll').evaluate(node => node.scrollTop), 0);
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.screenshot({ path: '.browser-test-runtime/text-columns-short-390.png' });
-  } finally { await browser.close(); }
-});
-
-test('Display uses the same bounded column flow in authoring and public reading', { timeout: 90000 }, async () => {
-  const browser = await launch();
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1300 } }); page.setDefaultTimeout(10000);
-    await seed(page, { display: true });
-    const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
-    if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
-    const target = page.getByRole('button', { name: 'Select Display article 1', exact: true });
-    await target.focus(); await page.keyboard.press('Enter');
-    const body = target.getByRole('textbox', { name: 'Article text', exact: true }); await body.waitFor(); await settle(page);
-    const write = await measure(body);
-    assert.ok(write.scrollWidth > write.width); assert.equal(write.cut, 0);
-    assert.equal(await target.locator('.text-frame-overflow').count(), 0, 'no warning covers the text');
-    await page.screenshot({ path: '.browser-test-runtime/text-columns-display-write.png' });
-    await mountTextToolsFixture(page, origin, { visitor: true }); await settle(page);
-    const read = await measure(page.locator('.display-text-content article > .text-document-body'));
-    assert.deepEqual(read.glyphs, write.glyphs);
-    await assertPainted(page, page.locator('.display-text-content article > .text-document-body'));
-    assert.equal(await page.locator('.text-frame-overflow').count(), 0);
-    await page.screenshot({ path: '.browser-test-runtime/text-columns-display-visitor.png' });
   } finally { await browser.close(); }
 });

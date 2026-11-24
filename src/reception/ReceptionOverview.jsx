@@ -19,12 +19,12 @@ const CanvasPresentation = lazy(() => import('../public/workbenchOverview/Canvas
 const ReceptionDocumentCanvas = lazy(() => import('./ReceptionDocumentCanvas.jsx'));
 
 // Presentation only: the caller supplies either public data or an owner's draft.
-export default function ReceptionOverview({ snapshot, assets, assetStatus, ...props }) {
-  return <ReceptionPresentation snapshot={snapshot} assets={assets} assetStatus={assetStatus}><ReceptionPage {...props} /></ReceptionPresentation>;
+export default function ReceptionOverview({ snapshot, ...props }) {
+  return <ReceptionPresentation snapshot={snapshot}><ReceptionPage {...props} /></ReceptionPresentation>;
 }
 function ReceptionPage({ reception, model, address, ownerEditingAllowed = false, embedded = false,
   ownerDestinations, account, onEditReception, onOpenOverview, onCloseBento, unavailableTarget = false,
-  onOpenDirectory, onOpenCanvas, onOpenWriting, onConnect, onDisconnect, notice, onRetry }) {
+  onOpenCanvas, onOpenWriting, onConnect, onDisconnect, notice, onRetry }) {
   useStartupDestinationReady();
   const [exploring, setExploring] = useState(false);
   const explore = useRef(null), roomTitle = useRef(null), flightArea = useRef(null), previous = useRef(false);
@@ -39,8 +39,8 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
     setOpened({ id: destination.entry.id, destinationId: reference.destinationId, origin: button?.closest('.workbench-overview-card, .reception-region, .reception-document-cell') });
   };
   const selectedCanvas = presentation?.snapshot.entries.find(entry => entry.id === opened?.id);
-  const selectedModel = useMemo(() => selectedCanvas && workbenchOverviewModel(selectedCanvas.draft, presentation?.assets),
-    [selectedCanvas, presentation?.assets]);
+  const selectedModel = useMemo(() => selectedCanvas && workbenchOverviewModel(selectedCanvas.draft),
+    [selectedCanvas]);
   const close = () => { setOpened(null); restoreFocus(() => trigger.current?.isConnected ? trigger.current : pageRoot.current); };
   useLayoutEffect(() => {
     if (exploring) roomTitle.current?.focus({ preventScroll: true });
@@ -55,7 +55,7 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
   return <>
     {!embedded && <PublicWorkspaceHeader model={model} account={account} current="Profile" ownerDestinations={ownerDestinations}
       onProfile={home} onWorks={onOpenCanvas} onWriting={onOpenWriting}
-      onDiscover={onOpenDirectory} onConnect={onConnect} onDisconnect={onDisconnect} />}
+      onConnect={onConnect} onDisconnect={onDisconnect} />}
     <main data-public-header={!embedded || undefined} ref={pageRoot} className="reception-page system-workflow__token-scope"
     data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat" data-frameless={frameless || undefined}
     data-profile-page={reception.version === 3 || undefined} data-published-focus-fallback tabIndex={-1} aria-label={`${name} profile`} style={{ '--reception-page-background': reception.backgroundColor || undefined,

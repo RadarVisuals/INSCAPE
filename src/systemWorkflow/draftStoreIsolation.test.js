@@ -5,18 +5,17 @@ import { createArticle } from '../text/domain/article.js';
 import { saveTextModuleResult } from '../text/textSession.js';
 const profile = `0x${'1'.repeat(40)}`;
 
-test('normalization detaches accepted data and does not add a cover Grid to the caller', () => {
+test('validation detaches the accepted draft from the submitted data', () => {
   const records = new Map();
   const storage = { getItem: key => records.get(key) ?? null, setItem: (key,value) => records.set(key,value) };
   const store = createSystemWorkflowDraftStore({ profileAddress:profile, storage });
   const candidate = store.getDraft();
-  candidate.grids = candidate.grids.filter(grid => grid.id !== 'grid:world-cover');
   candidate.texts = [{id:'text:first',visibility:'PRIVATE',article:createArticle('Accepted')}];
   const submitted = structuredClone(candidate);
   assert.ok(store.commitCompletedOperation(candidate,{expectedGeneration:store.getGeneration()}));
   assert.deepEqual(candidate,submitted,'normalization cannot mutate the submitted value');
   const accepted = JSON.stringify(store.getSnapshot());
-  candidate.texts[0].article.title='Outside mutation'; candidate.grids[0].title='Outside mutation';
+  candidate.texts[0].article.title='Outside mutation';
   assert.equal(JSON.stringify(store.getSnapshot()),accepted);
   assert.equal(storage.getItem(systemWorkflowDraftKey(profile)),accepted);
   assert.throws(() => { store.getSnapshot().texts[0].article.title='Frozen mutation'; });

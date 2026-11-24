@@ -39,7 +39,7 @@
 .system-workflow[data-workbench-panning], .system-workflow[data-workbench-panning] * { cursor: grabbing !important; user-select: none; }
 
 .system-workflow[data-workbench-hand],
-.system-workflow[data-workbench-hand] :is(.system-workflow__workbench, .system-workflow__display-instance, [data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .image-module__canvas, [data-workbench-selectable], .system-workflow__resize-handle, .image-module__resize) { cursor: grab; }
+.system-workflow[data-workbench-hand] :is(.system-workflow__workbench, [data-workbench-view-id], [data-workbench-module], .image-module__canvas, [data-workbench-selectable], .image-module__resize) { cursor: grab; }
 
 .workbench-move-error { position: fixed; z-index: 85; box-sizing: border-box; left: calc(var(--workbench-left-dock-width, 0px) + 12px); bottom: calc(var(--workflow-dock-height, 40px) + 52px); max-width: calc(100% - var(--workbench-left-dock-width, 0px) - var(--workbench-right-dock-width, 0px) - 24px); background: var(--workflow-panel); color: var(--workflow-ink); border: 1px solid var(--workflow-border); padding: 8px; font: var(--workflow-type-control); }
 .workbench-object-preview { position: fixed; z-index: 89; pointer-events: none; box-sizing: border-box; border: 1px solid #fff; outline: 1px solid #111313; }

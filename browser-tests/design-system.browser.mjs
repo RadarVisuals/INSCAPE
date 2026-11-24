@@ -309,44 +309,6 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
   } finally { await browser.close(); }
 });
 
-test('Display Properties covers single, multiple, grouped, locked, text and empty selection', { timeout: 90000 }, async () => {
-  const browser = await chromium.launch({ executablePath, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 1000 }, hasTouch: true });
-    const errors = await mount(page, 'components');
-    await page.getByLabel('Properties for', { exact: true }).selectOption('display');
-    const panel = page.getByRole('complementary', { name: 'Properties preview', exact: true });
-    const state = page.getByLabel('Properties example state');
-    assert.equal(await panel.getByRole('navigation', { name: 'Selection actions' }).getByRole('button').count(), 10);
-    await panel.getByText('Dimensions…', { exact: true }).click();
-    const width = panel.getByRole('spinbutton', { name: 'Width', exact: true });
-    await width.fill('0'); await width.press('Enter');
-    await panel.getByRole('alert').filter({ hasText: 'Use a size' }).waitFor();
-    await width.press('Escape'); assert.equal(await width.inputValue(), '12');
-    await width.fill('18'); await width.press('Enter'); assert.equal(await width.inputValue(), '18');
-    await panel.getByRole('button', { name: 'Lift', exact: true }).click();
-    assert.equal(await panel.getByRole('button', { name: 'Lift', exact: true }).getAttribute('aria-pressed'), 'true');
-    await panel.getByRole('button', { name: 'Send to back', exact: true }).click();
-    assert.equal(await panel.getByRole('button', { name: 'Move backward', exact: true }).isDisabled(), true);
-    await panel.getByRole('button', { name: 'Crop', exact: true }).click();
-    await panel.getByRole('button', { name: 'Native fit', exact: true }).click();
-    await state.selectOption('multiple');
-    assert.equal(await panel.getByRole('button', { name: 'Crop', exact: true }).isDisabled(), true);
-    await panel.getByRole('button', { name: 'Group layers', exact: true }).click();
-    await panel.getByRole('button', { name: 'Ungroup', exact: true }).click();
-    await state.selectOption('group'); await panel.getByRole('button', { name: 'Ungroup', exact: true }).waitFor();
-    await state.selectOption('locked');
-    assert.equal(await panel.getByRole('button', { name: 'Rotate', exact: true }).isDisabled(), true);
-    await panel.getByText('Dimensions…', { exact: true }).click(); assert.equal(await width.isDisabled(), true);
-    await state.selectOption('text');
-    assert.equal(await panel.getByRole('navigation', { name: 'Selection actions' }).getByRole('button').count(), 5);
-    await panel.getByRole('button', { name: 'Edit Text', exact: true }).click();
-    await state.selectOption('empty'); await panel.getByText('Select a layer to edit its properties.', { exact: true }).waitFor();
-    assert.equal(await panel.getByRole('navigation').count(), 0);
-    assert.deepEqual(errors, []); assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')), []);
-  } finally { await browser.close(); }
-});
-
 test('Shape Properties retains rectangle, grid and legacy texture controls and disposable editing', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath, headless: true });
   try {

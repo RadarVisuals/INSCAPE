@@ -16,7 +16,7 @@ export default function TextTools({ targetId, available = true, onClose, ...prop
 
 // Content controls are independent of the Workbench window and its registration.
 // A layout host can own the article's box without changing stored appearance.
-export function TextToolsContent({ targetId, sharedColour = false, titleInput = false, frameLayout = false, defaultOverflow = 'scroll', available = true, article, onChange, controlsRef, disabled, children, connection, readOptions, publication, footer, backupScope = targetId, recoveryPending = false, containerControls = true, transform, color, position, information, onBackToCell, onEditText }) {
+export function TextToolsContent({ targetId, sharedColour = false, titleInput = false, frameLayout = false, defaultOverflow = 'scroll', available = true, article, onChange, controlsRef, disabled, children, readOptions, publication, footer, backupScope = targetId, recoveryPending = false, containerControls = true, transform, color, position, information, onBackToCell, onEditText }) {
   const recovery = useRef(null);
   useLayoutEffect(() => { if (recoveryPending) recovery.current?.scrollIntoView({ block: 'nearest' }); }, [recoveryPending, footer]);
   const appearance = textAppearance(article);
@@ -130,9 +130,8 @@ export function TextToolsContent({ targetId, sharedColour = false, titleInput = 
           <TextStyleControls sharedColour={sharedColour} appearance={appearance} defaultFont={article.font} disabled={disabled} onChange={value => onChange({ ...article, appearance: value })} />
         </div>
       </details>
-      {(connection || children) && <details className="text-inspector-section text-inspector-connections">
-        <summary>Display connection</summary>
-        {connection && <div className="text-settings text-settings--connection">{connection}</div>}
+      {children && <details className="text-inspector-section text-inspector-connections">
+        <summary>Article options</summary>
         {children && <div className="text-settings text-settings--options">{children}</div>}
       </details>}
       <TextBackupControls key={backupScope} article={article} onChange={onChange} disabled={disabled || !available} recoveryPending={recoveryPending} />

@@ -23,7 +23,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 1100 }, hasTouch: width === 390, reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(10000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 2, displayWidth: 320, inspectionMode: 'IN_PLACE' });
+      await mountGridMotionFixture(page, { origin, visitor, count: 2, shapeWidth: 320, inspectionMode: 'IN_PLACE' });
       const image = page.locator('[data-workbench-view-id="image:motion-0"]');
       const source = image.locator('.image-module__canvas');
       await image.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
@@ -96,29 +96,6 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await page.locator('.image-lift').count(), 0);
       await page.keyboard.press('Escape');
 
-      const placement = page.locator(visitor ? '.lattice-production-placement[tabindex="0"]' : '.system-workflow__placement[tabindex="0"]').first();
-      await placement.focus(); await placement.press('Enter'); await settled(page);
-      const displayFocus = await camera(page);
-      assert.equal(await page.locator('.display-focus-viewer').count(), 0);
-      await page.keyboard.press('i');
-      await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor();
-      await page.waitForFunction(() => document.querySelector('[data-inspection-context="selected"]'));
-      assert.equal(await page.locator('.system-workflow__lift-artwork, [data-lift-source]').count(), 0, 'Display Inspect respects the authored In-place mode');
-      assert.deepEqual(await camera(page), displayFocus, 'In-place inspection keeps the focused camera');
-      await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor({ state: 'detached' }); await settled(page);
-      assert.deepEqual(await camera(page), displayFocus);
-      const board = page.locator('[data-workbench-view-id="display:primary"]');
-      if (width === 390) await board.getByRole('button', { name: 'Show Display controls', exact: true }).tap();
-      else await board.locator(':scope > header').hover({ position: { x: 150, y: 2 } });
-      await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/inspect-controls-${visitor ? 'visitor' : 'owner'}-${width}.png` });
-      if (width === 390) await board.getByRole('button', { name: 'Inspect artwork', exact: true }).tap();
-      else await board.getByRole('button', { name: 'Inspect artwork', exact: true }).click();
-      await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor();
-      await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor({ state: 'detached' });
-      await navigateWorkbench(page, 'back'); await settled(page);
-      assert.deepEqual(await camera(page), initial);
       assert.deepEqual(await saved(page), before, 'inspection mode, content, crop and authored geometry stay unchanged');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
@@ -131,7 +108,7 @@ test('explicit Image Inspect retains its live SVG document and returns to the fo
     for (const visitor of [false, true]) {
       const page = await browser.newPage({ viewport: { width: 1200, height: 1100 }, deviceScaleFactor: 1.25 });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 2, displayWidth: 320,
+      await mountGridMotionFixture(page, { origin, visitor, count: 2, shapeWidth: 320,
         inspectionArtwork: { target: 'image', url: 'https://motion.invalid/inspect.svg', width: 640, height: 480,
           body: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="640" height="480" fill="#593887"/><circle cx="320" cy="240" r="110" fill="#f54789"/></svg>' } });
       const source = page.locator('[data-workbench-view-id="image:motion-0"] .image-module__canvas');

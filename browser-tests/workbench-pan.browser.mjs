@@ -9,7 +9,7 @@ const settle = page => page.evaluate(() => new Promise(resolve => requestAnimati
 const emptyPoint = page => page.evaluate(() => {
   for (let y = 350; y < innerHeight - 100; y += 20) for (let x = 30; x < innerWidth - 30; x += 20) {
     const target = document.elementFromPoint(x, y);
-    if (target?.matches('.system-workflow, .system-workflow__workbench, .system-workflow__display-instance')) return { x, y };
+    if (target?.matches('.system-workflow, .system-workflow__workbench')) return { x, y };
   }
   throw Error('No empty Workbench space');
 });
@@ -20,7 +20,6 @@ const snapshot = page => page.evaluate(() => ({
   }),
   dock: document.querySelector('.workbench-sidebar, .visitor-grid-world__dock').getBoundingClientRect().toJSON(),
   grid: document.querySelector('main.system-workflow > .lattice-pixel-grid')?.getBoundingClientRect().toJSON(),
-  shortcut: document.querySelector('.system-workflow__desktop-shortcut')?.getBoundingClientRect().toJSON(),
   storage: Object.fromEntries(Object.keys(localStorage).map(key => [key, localStorage.getItem(key)])),
 }));
 async function drag(page, delta, { space = true, end = 'up', focus = true, target = null } = {}) {
@@ -50,10 +49,6 @@ function shifted(before, after, dx, dy, checkStorage = true) {
   });
   assert.deepEqual(after.dock, before.dock);
   assert.deepEqual(after.grid, before.grid);
-  if (before.shortcut) {
-    assert.ok(Math.abs(after.shortcut.x - before.shortcut.x - dx) < 1);
-    assert.ok(Math.abs(after.shortcut.y - before.shortcut.y - dy) < 1);
-  }
   if (checkStorage) assert.deepEqual(after.storage, before.storage, 'Panning never writes content or window layouts');
 }
 
@@ -64,9 +59,9 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, textModes: true, displayWidth: Math.min(600, width - 40) });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, textModes: true, shapeWidth: Math.min(600, width - 40) });
       await prepareCameraTestView(page, visitor);
-      await page.locator('[data-workbench-view-id]').nth(7).waitFor();
+      await page.locator('[data-workbench-view-id="text:fit"]').waitFor();
       if (!visitor && await page.getByRole('button', { name: 'Close Inspector', exact: true }).isVisible())
         await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
@@ -106,16 +101,13 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
         shifted(stopped, await snapshot(page), 0, 0);
         await resetCameraTestView(page, visitor); await settle(page);
       }
-      const rail = page.locator('.system-workflow__grid-track, .visitor-grid-world__grid-track').first();
-      const railBefore = await rail.evaluate(el => getComputedStyle(el).transform);
       const image = page.locator('.image-module__canvas').first();
-      const targets = [image, page.locator('[data-system-workflow-artboard], .visitor-grid-world__viewport').first(),
+      const targets = [image, page.locator('aside.shape-window').first(),
         page.locator('[data-workbench-view-id="text:fit"] .text-module-scroll')];
       for (const target of targets) {
         const original = await snapshot(page);
         await drag(page, { x: 70, y: -30 }, { target });
         shifted(original, await snapshot(page), 70, -30);
-        assert.equal(await rail.evaluate(el => getComputedStyle(el).transform), railBefore, 'Space never moves the Display Grid camera');
         assert.equal(await page.locator('.image-lift, .system-workflow__lift-artwork').count(), 0, 'release never opens artwork');
         await resetCameraTestView(page, visitor); await settle(page);
       }

@@ -659,11 +659,10 @@ test('the public header and Studio share one anchor and keep account actions sco
           left: css.paddingLeft, right: css.paddingRight, border: css.borderBottomWidth, background: css.backgroundColor };
       });
       await page.goto(url);
-      await page.getByRole('link', { name: 'Inscape — Discover' }).waitFor();
+      await page.getByRole('link', { name: 'Inscape home' }).waitFor();
       assert.equal(await button('Studio').count(), 0);
       const tabs = page.getByRole('navigation', { name: 'Profile navigation' });
-      assert.deepEqual(await tabs.getByRole('button').allTextContents(), ['Profile', 'Gallery', 'Writing', 'Exhibition']);
-      assert.equal(await tabs.getByRole('button', { name: 'Exhibition' }).isDisabled(), true);
+      assert.deepEqual(await tabs.getByRole('button').allTextContents(), ['Profile', 'Gallery', 'Writing']);
       await page.goto(url + '&viewer=1');
       await expectAvatar('PFP.webp');
       await button('Reader account').click();
@@ -676,37 +675,19 @@ test('the public header and Studio share one anchor and keep account actions sco
       assert.ok((await account.getByRole('link', { name: 'Universal Profile' }).getAttribute('href')).toLowerCase().includes('2'.repeat(40)));
       await page.keyboard.press('Escape');
       assert.equal(await button('Studio').count(), 0);
+      const header = page.locator('.visitor-header');
+      assert.equal(await header.getByRole('link', { name: 'Discover', exact: true }).count(), 0);
       await page.goto(url + '&owner=1');
       await expectAvatar('PFP.png');
-      const header = page.locator('.visitor-header');
+      assert.equal(await header.locator('.visitor-breadcrumb').count(), 0);
       const publicBox = await metrics(header);
       if (width >= 1280) {
         assert.ok(await tabs.evaluate(node => node.scrollWidth <= node.clientWidth),
           'All desktop navigation labels fit beside the Gallery toolbar');
       }
-      const discover = header.getByRole('link', { name: 'Discover', exact: true });
-      assert.equal(await discover.isVisible(), width > 700);
-      if (width > 700) {
-        const brand = await button('Inscape menu').boundingBox(), link = await discover.boundingBox();
-        const maker = await header.locator('.visitor-breadcrumb').boundingBox();
-        const text = await discover.evaluate(node => {
-          const range = document.createRange();
-          range.selectNodeContents(node);
-          const { left, right } = range.getBoundingClientRect();
-          return { left, right };
-        });
-        assert.ok(brand.x + brand.width < link.x && link.x + link.width < maker.x);
-        assert.ok(Math.abs((text.left - brand.x - brand.width) - (maker.x - text.right)) <= 1,
-          'Discover has equal visible space between the brand and the maker');
-        await discover.click();
-        assert.ok(new URL(page.url()).searchParams.has('discover'));
-        await page.goBack();
-        await discover.waitFor();
-      }
       const studioLabel = header.getByRole('button', { name: 'Studio', exact: true });
       const publicLabel = await studioLabel.boundingBox();
       if (width <= 390) {
-        assert.ok(await tabs.evaluate(list => list.scrollWidth > list.clientWidth), 'The mobile tabs can scroll');
         const tabBox = await tabs.boundingBox(), controls = await header.locator('.visitor-tools').boundingBox();
         assert.ok(tabBox.x + tabBox.width <= controls.x, 'The tab scroller ends before the Studio controls');
         const activeTabVisible = () => tabs.evaluate(list => {
@@ -726,13 +707,13 @@ test('the public header and Studio share one anchor and keep account actions sco
         await tabs.getByRole('button', { name: 'Gallery', exact: true }).click();
         await tabs.getByRole('button', { name: 'Gallery', exact: true }).waitFor();
       }
-      assert.equal(publicBox.height, width > 1250 ? 64 : 92); assert.equal(publicBox.top, 0); assert.equal(publicBox.x, 16);
+      assert.equal(publicBox.height, width > 1250 ? 48 : 92); assert.equal(publicBox.top, 0); assert.equal(publicBox.x, 16);
       assert.equal(publicBox.left, '16px'); assert.equal(publicBox.right, '16px');
       assert.equal(publicBox.border, '0px'); assert.equal(publicBox.background, 'rgba(0, 0, 0, 0)');
       await button('Inscape menu').click();
       const menu = page.getByRole('menu', { name: 'Inscape menu', exact: true });
       assert.deepEqual(await menu.getByRole('menuitemcheckbox').locator('span').allTextContents(),
-        ['Profile', 'Gallery', 'Writing', 'Exhibition', 'Studio', 'Discover']);
+        ['Profile', 'Gallery', 'Writing', 'Studio']);
       assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Gallery' }).getAttribute('aria-checked'), 'true');
       assert.equal(await menu.getByRole('menuitem', { name: 'Canvas' }).count(), 0);
       assert.equal(await menu.getByRole('menuitem', { name: 'Backup' }).count(), 0);
@@ -788,7 +769,7 @@ test('unpublished Gallery and Writing remain navigable with creation available t
       await page.goto(url + '&unpublished=1' + session);
       await page.getByRole('heading', { name: 'Gallery', exact: true }).waitFor();
       await page.getByText('No compositions in Gallery yet.').waitFor();
-      assert.deepEqual(await tabs.getByRole('button').allTextContents(), ['Profile', 'Gallery', 'Writing', 'Exhibition']);
+      assert.deepEqual(await tabs.getByRole('button').allTextContents(), ['Profile', 'Gallery', 'Writing']);
       assert.equal(await create.count(), session === '&owner=1' ? 1 : 0);
       assert.equal(await page.getByRole('button', { name: 'Open Private experiment' }).count(), 0);
       await tabs.getByRole('button', { name: 'Writing' }).click();
@@ -1062,16 +1043,31 @@ test('Studio Preview opens a single image from Gallery and on direct editor entr
     await play.waitFor();
     for (const direct of [false, true]) {
       if (direct) await page.reload();
+      const saved = await page.evaluate(() => window.__galleryStore.getBackupSnapshot());
+      const editorUrl = page.url();
       await play.click();
-      const preview = page.getByRole('region', { name: 'Studio responsive preview' });
-      const image = preview.locator('[data-layer-id="image:study"] iframe.artwork-svg-document');
-      await image.waitFor();
-      await image.contentFrame().frameLocator('iframe').locator('svg').first().waitFor();
-      assert.equal(await preview.locator('[data-layer-id]').count(), 1);
+      const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+      const artwork = preview.locator('[data-navigator-object="image:study"]');
+      await artwork.locator('svg image').waitFor();
+      assert.equal(await preview.locator('[data-navigator-object]').count(), 1);
+      const pixels = (await artwork.screenshot()).toString('base64');
+      assert.ok(await page.evaluate(async png => {
+        const image = new Image(); image.src = 'data:image/png;base64,' + png;
+        await image.decode();
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
+        const raster = ctx.getImageData(0, 0, image.width, image.height).data;
+        return raster.some((channel, i) => i % 4 === 0 && channel === 211 && raster[i + 1] === 208 && raster[i + 2] === 200);
+      }, pixels), 'the published portrait colour is painted in Preview');
       assert.equal(await page.locator('.visitor-grid-world').count(), 0);
+      assert.equal(await preview.getByRole('navigation').count(), 0);
+      assert.equal(await preview.getByRole('button', { name: /page appearance|responsive layout|studio preview controls/i }).count(), 0);
+      assert.equal(await preview.getByRole('slider').count(), 0);
       await preview.getByRole('button', { name: 'Back to editing' }).click();
       await preview.waitFor({ state: 'detached' });
-      await play.waitFor();
+      await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Preview');
+      assert.equal(page.url(), editorUrl);
+      assert.deepEqual(await page.evaluate(() => window.__galleryStore.getBackupSnapshot()), saved);
     }
   } finally { await browser.close(); }
 });
@@ -1121,8 +1117,22 @@ test('visited profile strip opens below its fixed header and QR fills the drawer
     await panel.getByRole('button', { name: 'Review in wallet' }).waitFor();
     await page.keyboard.press('Escape');
     await panel.waitFor({state:'hidden'});
-    await page.goto(url + '&owner=1');
+    await page.goto(url);
     await trigger.click();
     assert.equal(await panel.getByRole('button', { name: 'Tip LYX' }).count(), 0);
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: async () => { throw new DOMException('Denied', 'NotAllowedError'); } },
+    }));
+    await panel.getByRole('button', { name: 'Copy address' }).click();
+    const full = panel.getByRole('textbox', { name: 'Full UP address' });
+    assert.equal(await full.inputValue(), '0x' + '1'.repeat(40));
+    assert.ok(await full.evaluate(input => input === document.activeElement && input.selectionStart === 0 && input.selectionEnd === input.value.length));
+    await panel.getByRole('button', { name: 'Back', exact: true }).click();
+    await page.waitForFunction(() => document.activeElement?.dataset.view === 'address');
+    await page.goto(url + '&owner=1');
+    await page.getByRole('button', { name: 'Nomad account' }).click();
+    assert.equal(await trigger.count(), 0);
+    assert.equal(await panel.getByRole('button', { name: 'Tip LYX' }).count(), 0);
+    await panel.getByRole('button', { name: 'My profile' }).waitFor();
   } finally { await browser.close(); }
 });

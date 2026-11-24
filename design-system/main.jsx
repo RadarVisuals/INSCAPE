@@ -424,7 +424,7 @@ function ComponentExamples({ theme }) {
       <details className="ds-studio-baseline">
         <summary>Existing Properties controls · full reference</summary>
         <p>
-          The existing Image, Display artwork and Shape controls remain here while we review their
+          The Image and Shape controls remain here while we review their
           new homes in the shared tabs.
         </p>
         <PropertiesPreview

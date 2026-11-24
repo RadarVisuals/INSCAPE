@@ -30,8 +30,7 @@ export function commitWorkbenchSelectionResize(changes) {
         workbench = { ...workbench, texts: /** @type {TextPresentation[]} */ (workbench.texts).map(item => item !== text ? item : {
           ...item, frames: /** @type {NonNullable<TextPresentation['frames']>} */ (item.frames).map(frame => frame.id === id ? { ...frame, window } : frame),
         }) };
-      } else if (key === 'display') workbench = { ...workbench, display: { ...workbench.display, window } };
-      else {
+      } else {
         const items = workbench[key] || [];
         const previous = items.find(item => item.id === id) || { id, open: true };
         const next = key === 'imageModules' ? { ...previous, position: { left: change.left, top: change.top } } : { ...previous, window };
@@ -48,6 +47,3 @@ export function commitWorkbenchSelectionResize(changes) {
     return false;
   }
 }
-
-/** @param {import('../contracts/workbench.js').WorkflowDraft} draft */
-export function prepareWindowResize(draft) { return draft; }

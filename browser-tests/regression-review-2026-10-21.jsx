@@ -30,7 +30,7 @@ const storage = scene === 'images' ? {
 if (!localStorage.getItem(key)) {
   const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   if (scene === 'images') {
-    const workbench = createDefaultWorkbenchPresentation(); workbench.display.open = false;
+    const workbench = createDefaultWorkbenchPresentation();
     const square = { ...assets[0], selectedMedia: { url: assets[0].originalImageUrl.replace('actors/abyssal_eye/full.webp', 'PFP/PFP.webp'), width: 2000, height: 2000 } };
     addImageModule(store, profile, { artwork: await resolveImageLibraryArtwork(square),
       size: { width: 720, height: 240 }, position: { left: 8, top: 160 }, workbench });

@@ -35,10 +35,10 @@ export default function LibraryBrowseControls({ workspace, onCreate, canCreateFo
         }}><Plus size={14} aria-hidden="true" /><span>New</span></button>}
       <OwnerSystemWorkflowFilterMenu flat palette="editor" onChange={workspace.setCollection} options={collections} value={workspace.collection} />
         <OwnerSystemWorkflowSelectMenu flat compact palette="editor" label="Sort assets" onChange={workspace.setSort} options={sorts} value={workspace.sort} />
-      <button type="button" ref={viewButton} aria-label="Library display options" aria-haspopup="dialog" aria-expanded={menu?.kind === 'view'}
+      <button type="button" ref={viewButton} aria-label="Library view options" aria-haspopup="dialog" aria-expanded={menu?.kind === 'view'}
         onClick={() => setMenu(menu?.kind === 'view' ? null : { kind: 'view' })}><span>View</span><ChevronDown size={12} aria-hidden="true" /></button>
     </div>
-    {menu?.kind === 'view' && <div className="library-display-options" role="dialog" aria-label="Library display options" ref={display}>
+    {menu?.kind === 'view' && <div className="library-display-options" role="dialog" aria-label="Library view options" ref={display}>
       {!curationRole && <><span>Navigation</span><div className="library-navigation-modes" role="group" aria-label="Navigation style">
         {['icons', 'names'].map(mode => <button key={mode} type="button" aria-pressed={workspace.navigationMode === mode}
           onClick={() => workspace.setNavigationMode(mode)}>{mode === 'icons' ? 'Icons' : 'Names'}</button>)}

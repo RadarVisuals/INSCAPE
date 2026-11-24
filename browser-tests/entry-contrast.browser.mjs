@@ -2,17 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 
 test('entry navigation has readable text, keyboard access and no narrow-screen overflow', { timeout: 45000 }, async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     for (const width of [1440, 640, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-      await page.goto(origin); await page.locator('.public-entry-portal').waitFor();
-      const contrast = await page.locator('.public-entry-portal__header nav button').evaluateAll(buttons => {
+      await page.goto(origin);
+      const connect = page.getByRole('main', { name: 'Sign in to Inscape' }).getByRole('button', { name: 'Connect profile', exact: true });
+      await connect.waitFor();
+      const contrast = await connect.evaluateAll(buttons => {
         const rgba = value => { const parts = value.match(/[\d.]+/g).map(Number); return [...parts.slice(0, 3), parts[3] ?? 1]; };
         const blend = (front, back) => front.slice(0, 3).map((value, i) => value * front[3] + back[i] * (1 - front[3]));
         const background = node => {
@@ -28,12 +31,11 @@ test('entry navigation has readable text, keyboard access and no narrow-screen o
           return { text: node.textContent.trim(), ratio: (values[0] + .05) / (values[1] + .05) };
         });
       });
-      assert.ok(contrast.length >= 2);
+      assert.equal(contrast.length, 1);
       for (const button of contrast) assert.ok(button.ratio >= 4.5, JSON.stringify({ width, ...button }));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-      const seen = [];
-      for (let i = 0; i < 7; i++) { await page.keyboard.press('Tab'); seen.push(await page.evaluate(() => document.activeElement.textContent.trim())); }
-      assert.ok(seen.includes('Discover')); assert.ok(seen.includes('Connect'));
+      await page.keyboard.press('Tab');
+      assert.ok(await connect.evaluate(node => node.matches(':focus-visible')));
       await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/entry-${width}.png` });
       console.log(JSON.stringify({ width, contrast }));
       await page.close();

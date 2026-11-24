@@ -591,9 +591,16 @@ test('invalid publication replacement requires current consent and invalidates p
     assert.equal(await page.getByRole('checkbox', { name: /Profile details/ }).isChecked(), true);
     assert.equal(await page.getByRole('checkbox', { name: /Profile details/ }).isDisabled(), true);
     assert.equal(await page.getByRole('checkbox', { name: /Private experiment/ }).isChecked(), false);
+    const localWork = page.getByRole('checkbox', { name: /Anatomy/ });
+    assert.equal(await localWork.isChecked(), false);
+    assert.equal(await page.getByRole('checkbox', { name: /Vision/ }).isChecked(), false);
+    const before = await page.evaluate(() => JSON.stringify(window.__galleryStore.getBackupSnapshot()));
     await consent.check();
+    assert.equal(await prepare.isDisabled(), true);
+    await localWork.check();
     await prepare.click();
     await page.getByRole('button', { name: 'Make presentation public', exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => JSON.stringify(window.__galleryStore.getBackupSnapshot())), before);
     await consent.uncheck();
     assert.equal(await prepare.isDisabled(), true);
     assert.equal(await page.getByRole('button', { name: 'Make presentation public', exact: true }).count(), 0);
@@ -605,6 +612,21 @@ test('invalid publication replacement requires current consent and invalidates p
     await page.getByRole('button', { name: 'Network failure fixture', exact: true }).click();
     assert.equal(await consent.count(), 0);
     assert.equal(await prepare.isDisabled(), true);
+  } finally { await browser.close(); }
+});
+
+test('replacement review cannot publish an unsaved starter composition', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(origin + '/browser-tests/profile-overview-fixture.html?publish=1&invalid-publication=1&no-saved-compositions=1');
+    await page.getByRole('alert').filter({ hasText: 'no saved compositions' }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Prepare publication' }).isDisabled(), true);
+    assert.equal(await page.getByRole('checkbox', { name: /Replace the invalid publication/ }).isDisabled(), true);
+    assert.equal(await page.getByRole('group', { name: 'Workbench 1' }).count(), 0);
+    assert.equal(await page.getByText('Ready to publish your current public presentation.').count(), 0);
+    assert.equal(await page.evaluate(() => window.__galleryStore.getRecordState().status), 'absent');
   } finally { await browser.close(); }
 });
 

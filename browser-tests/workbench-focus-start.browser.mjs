@@ -15,7 +15,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
     try {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'no-preference', deviceScaleFactor: 1.25 });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, displayWidth: 320 });
+      await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, shapeWidth: 320 });
       await page.locator('[data-workbench-view-id="image:motion-0"] [data-media-state="ready"]').waitFor();
       await page.evaluate(() => document.fonts.ready);
       const sidebar = page.locator('.editor-menu-brand[aria-expanded="true"]');

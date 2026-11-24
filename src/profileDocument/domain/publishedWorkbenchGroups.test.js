@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { editWorkbenchGroups } from '../../systemWorkflow/workbenchGroupSession.js';
 import { addShape } from '../../shapes/shapeSession.js';
-import { addDisplayModule, createDisplayModuleSession } from '../../systemWorkflow/displayModuleSession.js';
 import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import { validateProfileDocumentV9, parseProfileDocumentV9Json } from './profileDocumentV9Validation.js';
 import { canonicalSerializeProfileDocumentV9, profileDocumentV9CanonicalHash } from './profileDocumentV9Serialization.js';
@@ -38,7 +37,7 @@ test('groups are private by default and preserve old canonical bytes; visibility
   f.fail(false); assert.throws(() => f.edit(id, 'visibility', { visibility: 'everyone' }));
 });
 
-test('public groups include only projected members and never leak private groups, private member names or empty covers', () => {
+test('public groups include only projected members and never leak private groups, private member names or empty groups', () => {
   const f = fixture(), mixed = f.create('Public story', [f.a, f.b]);
   f.create('Private notebook', [f.c]); f.edit(mixed, 'visibility', { visibility: 'PUBLIC' });
   f.edit(mixed, 'position', { position: { left: 450, top: 600 } });
@@ -64,14 +63,13 @@ test('strict public validation rejects private, empty, overlapping, unknown and 
   assert.equal(validateProfileDocumentV9({ ...published, workbenchGroups: [] }).valid, true);
 });
 
-test('additional Displays validate independently of root group references', () => {
-  const f = fixture(), display = addDisplayModule(f.store, 'LANDSCAPE');
-  createDisplayModuleSession(f.store, display).createGrid();
-  const id = f.create('Mixed modules', [display, f.a]); f.edit(id, 'visibility', { visibility: 'PUBLIC' });
-  const draft = f.store.getDraft(), module = draft.displays.find(item => item.id === display);
-  module.visibility = 'PUBLIC'; module.grids.filter(grid => grid.id !== 'grid:inscape-world-cover').forEach(grid => { grid.visibility = 'PUBLIC'; });
+test('public groups contain only published members', () => {
+  const f = fixture();
+  const id = f.create('Mixed visibility', [f.b, f.a]); f.edit(id, 'visibility', { visibility: 'PUBLIC' });
+  const draft = f.store.getDraft();
+  draft.shapes.find(shape => shape.id === f.b).visibility = 'PRIVATE';
   const published = publish(draft);
-  assert.deepEqual(published.workbenchGroups[0].memberIds, [display, f.a]);
+  assert.deepEqual(published.workbenchGroups[0].memberIds, [f.a]);
   assert.equal(validateProfileDocumentV9(published).valid, true);
 });
 

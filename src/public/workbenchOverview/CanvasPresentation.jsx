@@ -209,7 +209,6 @@ export default function CanvasPresentation({ selected: openingWork, model: openi
                 <Reveal label="Canvas details" icon={Info} active={reveal === 'canvas'} onActivate={() => setReveal('canvas')}>
                   <h2>{selected.name}</h2><p>{selected.introduction || 'No description yet.'}</p>
                   <dl><div><dt>Canvas</dt><dd>{model.area.width} × {model.area.height}</dd></div><div><dt>Contains</dt><dd>{model.contains}</dd></div></dl>
-                  {model.interactive && <p className="canvas-presentation-note">Interactive apps are shown as placeholders in this preview.</p>}
                 </Reveal>
                 <Reveal label="Artwork info" icon={Tags} active={reveal === 'artwork'} onActivate={() => setReveal('artwork')}>
                   <label className="canvas-presentation-source">Artwork<select aria-label="Artwork source" value={source?.id || ''} onChange={event => setSourceId(event.target.value || null)}>

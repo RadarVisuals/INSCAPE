@@ -69,7 +69,7 @@ test('compact folder filing persists through the production Library store and re
     const input = page.getByRole('textbox', { name: 'folder name', exact: true });
     await input.fill('Filed artwork'); await input.press('Enter');
     await page.getByRole('button', { name: 'All Assets', exact: true }).click();
-    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+    await page.getByRole('button', { name: 'Library view options', exact: true }).click();
     await page.getByRole('button', { name: 'Icons', exact: true }).click(); await page.keyboard.press('Escape');
     const asset = page.locator('.lattice-browser-asset').first();
     await page.waitForFunction(() => document.querySelector('.lattice-browser-asset img')?.naturalWidth > 0);

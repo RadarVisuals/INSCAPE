@@ -1,7 +1,9 @@
+import { duplicateReceptionLayers, duplicateReceptionSlide } from './duplicateReceptionLayers.js';
+import { editCellSlides, slideIndex, slideKey, assignSlide } from './cellSlides.js';
 import { drawReceptionBentoCell } from './receptionCellDrawing.js';
 import { moveReceptionBentoCell, placeReceptionBentoCells } from './receptionBentoInsertion.js';
 import { projectReceptionCellMembers } from './editorCellGeometry.js';
-import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
+import { createBlankWorkbenchDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createShapePresentation } from '../shapes/shapes.js';
@@ -23,11 +25,10 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const moduleKeys = ['imageModules', 'texts', 'shapes'];
 const nativeKeys = ['workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers'];
 const nativeContent = value => Object.fromEntries(nativeKeys.map(key => [key, value[key]]));
-// The shared Editor projects Display defaults even in Reception. Those are
-// host-only values, not Reception edits or history when leaving the document.
+// Preserve host-only values when capturing a Reception edit.
 const receptionWorkbench = (presentation, saved) => {
-  const next = { ...presentation, display: saved.display };
-  for (const key of ['displays', 'miniApps', 'keeperDocks', 'lockedLayerIds']) {
+  const next = { ...presentation };
+  for (const key of ['keeperDocks', 'lockedLayerIds']) {
     if (Object.hasOwn(saved, key)) next[key] = saved[key]; else delete next[key];
   }
   return next;
@@ -53,10 +54,10 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         throw new Error('Studio could not open the profile Bento. Your saved work is unchanged.');
     }
   } catch (error) { underlying.release(); throw error; }
-  const profile = underlying.getProfileAddress(), base = createEmptySystemWorkflowDraft(profile);
-  base.grids = []; base.displays = [];
-  freeze(base);
+  const profile = underlying.getProfileAddress();
+  const base = freeze(createBlankWorkbenchDraft(profile));
   let snapshot, source, projectedReception, released = false, editingCell = null, commitFailure = null;
+  let slidePositions = {};
   const guards = new Set(), listeners = new Set();
   const current = () => !released && underlying.isCurrent();
   const writable = () => current() && underlying.hasWriteAccess()
@@ -91,7 +92,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
       next = { ...next, workbench: { ...next.workbench, [key]: [...(next.workbench[key] || []), make(id, next[key].length - 1)] } };
     }
     if (targetCell && added.length) next = {
-      ...next, cells: next.cells.map(cell => cell.id === targetCell ? { ...cell, members: [...cell.members, ...added] } : cell),
+      ...next, cells: next.cells.map(cell => cell.id === targetCell ? assignSlide({ ...cell, members: [...cell.members, ...added] }, added, slideIndex(cell, slidePositions)) : cell),
     };
     if (targetCell) {
       const cell = receptionModuleWindow(next, targetCell);
@@ -215,6 +216,13 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     setArtworkLocks(ids, lock) {
       return mutate(value => withArtworkLocks(value, ids, lock), lock ? 'Lock artwork' : 'Unlock artwork');
     },
+    getSlidePositions: () => slidePositions,
+    showSlide(id, index) {
+      const cell = api.getCells().find(item => item.id === id);
+      if (!cell || !Number.isInteger(index) || index < 0 || index > (cell.slides?.length || 0)) return;
+      slidePositions = { ...slidePositions, [slideKey(cell)]: index };
+      listeners.forEach(listener => listener());
+    },
     getEditingCell: () => { read(); return current() ? editingCell : null; },
     setEditingCell(id) {
       if (!current() || id !== null && !api.getCells().some(cell => cell.id === id)) return false;
@@ -227,23 +235,39 @@ export function createReceptionEditorScope(rootStore, options = {}) {
       if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
       return mutate(value => applyReceptionLayout(value, settings, seed), 'Generate Bento cell layout', undefined, { moveContents: true });
     },
+    duplicateLayers(ids, delta, destination, expectedGeneration, presentation) {
+      if (underlying.getGeneration() !== expectedGeneration) throw Error('The composition changed. Try the drag again.');
+      if (textRecoveries(api, profile).length) throw Error(TEXT_RECOVERY_MESSAGE);
+      let copies;
+      mutate(value => {
+        const result = duplicateReceptionLayers(value, ids, delta, destination, slidePositions);
+        copies = result.selection;
+        return result.value;
+      }, 'Duplicate selection', presentation);
+      return copies;
+    },
     editBento(action, args, expectedGeneration, presentation) {
       if (!current()) throw new Error('This composition is no longer active.');
       if (expectedGeneration !== underlying.getGeneration()) throw new Error('The composition changed. Try the change again.');
       if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
-      const operations = { drawCell: drawReceptionBentoCell, placeCells: placeReceptionBentoCells, resizeFrame: resizeReceptionBentoFrame, resizeCell: resizeReceptionCell, moveCell: moveReceptionBentoCell,
+      const operations = { duplicateSlide: duplicateReceptionSlide, slides: editCellSlides, drawCell: drawReceptionBentoCell, placeCells: placeReceptionBentoCells, resizeFrame: resizeReceptionBentoFrame, resizeCell: resizeReceptionCell, moveCell: moveReceptionBentoCell,
         fitText: (value, cellId, id, enabled) => {
           const next = setReceptionTextFit(value, cellId, id, enabled);
           return enabled ? fitReceptionText(next, cellId, id, options.measureText) : next;
         },
         settings: setReceptionBentoSettings, cellRadius: setReceptionCellRadius, cellClip: setReceptionCellClip, cellGrain: setReceptionCellGrain, cellSingleLine: setReceptionCellSingleLine,
-        anchorMembers: setReceptionCellMemberAnchor, moveMembers: moveReceptionMembers, cellSize: setReceptionCellSize, merge: mergeReceptionCells };
-      const labels = { drawCell: 'Draw Bento cell', placeCells: 'Move Bento cell', resizeFrame: 'Resize Bento frame', resizeCell: 'Resize Bento cell', moveCell: 'Move Bento cell',
+        anchorMembers: setReceptionCellMemberAnchor, moveMembers: (value, ids, target, ...rest) => {
+          const next = moveReceptionMembers(value, ids, target, ...rest);
+          const added = ids.filter(id => !value.cells.find(cell => cell.id === target)?.members.includes(id));
+          return !added.length || !target ? next : { ...next, cells: next.cells.map(cell => cell.id === target
+            ? assignSlide(cell, added, slideIndex(cell, slidePositions)) : cell) };
+        }, cellSize: setReceptionCellSize, merge: mergeReceptionCells };
+      const labels = { duplicateSlide: 'Duplicate slide', slides: 'Edit cell slides', drawCell: 'Draw Bento cell', placeCells: 'Move Bento cell', resizeFrame: 'Resize Bento frame', resizeCell: 'Resize Bento cell', moveCell: 'Move Bento cell',
         settings: 'Change Bento settings', cellRadius: 'Change cell radius', cellClip: 'Change cell clipping', cellGrain: 'Change cell grain coverage', anchorMembers: 'Position cell contents',
         cellSize: 'Resize Bento cell', fitText: 'Fit box to text', moveMembers: 'Move Bento layers', merge: 'Merge Bento cells', cellSingleLine: 'Change single-line text' };
       if (!operations[action]) throw new Error('Choose an available bento action.');
       return mutate(value => operations[action](value, ...args), labels[action], presentation,
-        { resizeContents: action !== 'merge', preserveMemberAnchors: action === 'anchorMembers', moveContents: action !== 'merge' });
+        { resizeContents: action !== 'merge', preserveMemberAnchors: action === 'anchorMembers' || action === 'duplicateSlide', moveContents: action !== 'merge' });
     },
     turnShapeIntoCell(id, presentation) {
       mutate(value => {
@@ -255,26 +279,6 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         return { ...value, cells: [...value.cells, { id, members: [], mobile: { columns: 2, height: Math.round(Math.max(80, Math.min(1200, receptionModuleWindow(value, id).height))) } }] };
       }, 'Turn rectangle into cell', presentation);
       return id;
-    },
-    setCellMobile(id, patch) {
-      return mutate(value => {
-        if (!value.cells.some(cell => cell.id === id)) throw new Error('This cell is no longer available.');
-        return { ...value, cells: value.cells.map(cell => {
-          if (cell.id !== id) return cell;
-          const previousWidth = cell.mobile.referenceWidth || (cell.mobile.columns === 2 ? 390 : 189);
-          const scale = patch.referenceWidth ? patch.referenceWidth / previousWidth : 1;
-          const placements = cell.mobile.placements?.map(item => ({ id: item.id, window: Object.fromEntries(Object.entries(item.window).map(([key, value]) => [key, value * scale])) }));
-          return { ...cell, mobile: { ...cell.mobile, ...(placements ? { placements } : {}),
-            ...(Object.hasOwn(patch, 'height') ? { autoHeight: false } : {}), ...patch } };
-        }) };
-      }, 'Arrange Bento on mobile');
-    },
-    setCellMobileOrder(ids) {
-      return mutate(value => {
-        if (ids.length !== value.cells.length || new Set(ids).size !== ids.length || ids.some(id => !value.cells.some(cell => cell.id === id)))
-          throw new Error('Choose each Bento cell once.');
-        return { ...value, stackOrder: 'manual', cells: ids.map(id => value.cells.find(cell => cell.id === id)) };
-      }, 'Order Bento on mobile');
     },
     release({ force = false } = {}) {
       if (released) return;

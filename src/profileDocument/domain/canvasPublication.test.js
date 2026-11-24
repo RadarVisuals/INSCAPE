@@ -1,8 +1,8 @@
+import { projectReception } from './receptionPresentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { requiresGalleryPublicationCapability } from './constants.js';
 import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, buildGalleryRemoval, canReplaceInvalidPublication, resolvePublicationBaseline } from './canvasPublication.js';
 import { createReceptionEditorDocument } from '../../reception/receptionEditorDocument.js';
 import { createStudioComposition } from '../../systemWorkflow/domain/studioComposition.js';
@@ -17,8 +17,6 @@ import { openStudioWorkbench, reconcileOwnerDraftWithPublishedProfile } from '..
 const address = '0x' + '1'.repeat(40);
 function fixture() {
   const draft = createEmptySystemWorkflowDraft(address, { generateId: () => 'first' });
-  draft.grids[0].title = 'Public scene';
-  draft.grids.push({ ...structuredClone(draft.grids[0]), id: 'grid:private', title: 'Private scene', visibility: 'PRIVATE' });
   let record = createWorkbenchCollection(draft);
   record.workbenches[0].name = 'First canvas';
   record = appendWorkbench(record, 'workbench:second', 'Second canvas', draft);
@@ -92,12 +90,13 @@ test('Studio opens a published-only work and its linked source in one local save
 
 test('an invalid document can be replaced explicitly from selected local content without reading or retaining it', () => {
   const record = fixture(), before = structuredClone(record);
-  const resolution = { status: 'INVALID', address, errorCode: 'INVALID_DOCUMENT', document: { untrusted: true } };
+  const resolution = { status: 'INVALID', address, errorCode: 'INVALID_DOCUMENT', document: { untrusted: true, revision: 8 } };
   assert.equal(canReplaceInvalidPublication(resolution, address), true);
   assert.throws(() => resolvePublicationBaseline(resolution, address), /Confirm replacement/);
   const previousDocument = resolvePublicationBaseline(resolution, address, { replaceInvalid: true });
   assert.equal(previousDocument, null);
   const document = publish(record, ['workbench:second'], previousDocument);
+  assert.equal(document.revision, 1);
   assert.deepEqual(publishedCanvasEntries(document).map(item => item.id), ['workbench:second']);
   assert.doesNotMatch(canonicalSerializeProfileDocumentV9(document), /Private scene|Never published|untrusted/);
   assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(document)), document);
@@ -149,8 +148,10 @@ test('publication rejects empty/unknown scope and invalid shared, nested, duplic
     doc => { doc.canvases[0].id = doc.canvas.id; },
     doc => { doc.canvases[0].content.profile = { address }; },
     doc => { doc.canvases[0].content.canvases = []; },
-    doc => { doc.canvases[0].content.appearance.menuSurfaceId = 'mist'; },
-    doc => { doc.canvases[0].content.grids[0].visibility = 'PRIVATE'; },
+    doc => { doc.canvases[0].content.miniApps = []; },
+    doc => { doc.canvases[0].content.metadata = { worldCover: { grid: {} } }; },
+    doc => { doc.canvases[0].content.appearance = { menuSurfaceId: 'mist' }; },
+    doc => { doc.canvases[0].content.grids = []; },
     doc => { doc.canvases = Array.from({ length: 30 }, (_, i) => ({ ...doc.canvases[0], id: `workbench:extra-${i}` })); },
   ]) {
     const invalid = structuredClone(first); change(invalid);
@@ -240,7 +241,15 @@ test('named Studio composition survives publication and fresh restore with priva
   }
   composition.cells[0].members = [member.id];
   record.workbenches[1].content.composition = composition;
-  const doc = publish(record, ['workbench:main', 'workbench:second']);
+  const bytes = canonicalSerializeProfileDocumentV9(publish(record, ['workbench:main', 'workbench:second']));
+  const doc = parseProfileDocumentV9Json(bytes);
+  for (const content of [doc, doc.canvases[0].content]) {
+    for (const key of ['grids', 'artboard', 'appearance', 'geometry']) assert.equal(Object.hasOwn(content, key), false);
+  }
+  assert.equal(canonicalSerializeProfileDocumentV9(doc), bytes);
+  const partial = structuredClone(doc);
+  partial.canvases[0].content.grids = [];
+  assert.equal(validateProfileDocumentV9(partial).valid, false);
   const published = doc.canvases[0].content.composition;
   assert.equal(published.version, 3);
   assert.deepEqual(published.texts.map(t => t.id), [free.id, member.id]);
@@ -311,7 +320,6 @@ test('physical removal handles primary, secondary and Gallery-only legacy Bento 
   const record = fixture();
   record.shared.reception = createReceptionEditorDocument();
   record.workbenches[0].content.composition = createStudioComposition('bento');
-  record.workbenches[0].content.grids[0].title = 'Removed source';
   const doc = buildCanvasPublication({ candidates: project(record), includeShared: true,
     selectedIds: ['workbench:main', 'workbench:second', 'reception'], placements: { reception: ['gallery'] } });
   const [primary, second] = publishedCanvasEntries(doc);
@@ -347,9 +355,8 @@ test('removing the last work leaves an empty verified profile and supports a lat
     const empty = buildGalleryRemoval(doc, id, doc.exportedAt);
     assert.equal(empty.canvas, null);
     assert.deepEqual(empty.canvases, []);
-    assert.deepEqual(empty.grids, []);
-    assert.deepEqual(empty.metadata, {});
-    assert.ok(CANVAS_CONTENT_KEYS.slice(5).every(key => !Object.hasOwn(empty, key)));
+    assert.equal(Object.hasOwn(empty, 'grids'), false);
+    assert.deepEqual(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(empty, key)), []);
     assert.doesNotMatch(canonicalSerializeProfileDocumentV9(empty), /Public scene|First canvas/);
     assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(empty)), empty);
     assert.deepEqual(publishedCompositionEntries(empty), []);
@@ -357,7 +364,7 @@ test('removing the last work leaves an empty verified profile and supports a lat
     assert.equal(empty.revision, doc.revision + 1);
     assert.throws(() => buildGalleryRemoval(empty, id), /no longer in the published Gallery/);
     assert.throws(() => buildGalleryRemoval({ ...empty, revision: -1 }, id), /Revision/);
-    for (const extra of [{ composition: record.workbenches[0].content.composition }, { grids: named.grids }, { canvases: [{ id }] }]) {
+    for (const extra of [{ composition: record.workbenches[0].content.composition }, { grids: [] }, { canvases: [{ id }] }]) {
       assert.equal(validateProfileDocumentV9({ ...empty, ...extra }).valid, false);
     }
     const shared = buildCanvasPublication({ candidates: project(record), selectedIds: [], includeShared: true, previousDocument: empty });
@@ -396,7 +403,7 @@ test('batch Gallery removal promotes the first surviving work and commits mixed 
   const empty = buildGalleryRemoval(allGallery, ids);
   assert.deepEqual(publishedCompositionEntries(empty), []);
   assert.equal(empty.revision, allGallery.revision + 1);
-  assert.deepEqual(empty.grids, []);
+  assert.equal(Object.hasOwn(empty, 'grids'), false);
   assert.equal(empty.canvas, null);
   assert.equal(Object.hasOwn(empty, 'reception'), false);
 });
@@ -436,7 +443,7 @@ test('mutually linked Gallery works can be removed together, and only surviving 
   assert.throws(() => buildGalleryRemoval(dual, [first, second]), /break published links in .*First canvas/);
 });
 
-test('upload capability is required only for v9 artifacts that use Studio Gallery extensions', () => {
+test('current v9 documents validate with optional Gallery destinations and Studio composition content', () => {
   const record = fixture();
   record.shared.reception = createReceptionEditorDocument();
   const [first, second] = record.workbenches.map(item => item.id);
@@ -450,10 +457,9 @@ test('upload capability is required only for v9 artifacts that use Studio Galler
   delete implicit.canvases;
   for (const compatible of [implicit, legacy]) {
     assert.equal(validateProfileDocumentV9(compatible).valid, true);
-    assert.equal(requiresGalleryPublicationCapability(compatible), false);
   }
 
-  const native = createStudioComposition('canvas');
+  const native = projectReception(createStudioComposition('canvas'));
   for (const change of [
     doc => { doc.canvas.destinations = ['gallery']; },
     doc => { doc.canvases[0].destinations = ['gallery']; },
@@ -464,9 +470,8 @@ test('upload capability is required only for v9 artifacts that use Studio Galler
     const updated = structuredClone(legacy);
     change(updated);
     assert.equal(validateProfileDocumentV9(updated).valid, true);
-    assert.equal(requiresGalleryPublicationCapability(updated), true);
   }
   const empty = buildGalleryRemoval(legacy, [first, second]);
   assert.equal(empty.canvas, null);
-  assert.equal(requiresGalleryPublicationCapability(empty), true);
+  assert.equal(validateProfileDocumentV9(empty).valid, true);
 });

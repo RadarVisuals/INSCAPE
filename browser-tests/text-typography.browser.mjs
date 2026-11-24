@@ -228,41 +228,6 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
   } finally { await browser.close(); }
 });
 
-test('typography targets a Display heading and stays scoped when Text tools switch articles', { timeout: 90000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
-    page.setDefaultTimeout(10000);
-    const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await mountTextToolsFixture(page, origin, { displayTextCount: 2 });
-    const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
-    if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
-    const first = page.getByRole('button', { name: 'Select Display article 1', exact: true });
-    await first.focus(); await page.keyboard.press('Enter');
-    const body = first.getByRole('textbox', { name: 'Article text', exact: true });
-    await body.fill('ARCHIVE HEADING'); await body.press('Control+A');
-    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
-    await page.getByLabel('Paragraph style', { exact: true }).selectOption('2');
-    await setNumber(page, 'Selected text size', 32); await setNumber(page, 'Selected text tracking', .1);
-    await setNumber(page, 'Paragraph space before', 6); await setNumber(page, 'Paragraph space after', 18);
-    assert.deepEqual(await body.locator('h2').evaluate(n => [getComputedStyle(n).paddingTop, getComputedStyle(n).paddingBottom]), ['6px', '18px']);
-    assert.equal((await styleOf(body.locator('h2 span')))[0], '32px');
-    assert.equal((await styleOf(body.locator('h2 span')))[1], '3.2px');
-    await page.getByLabel('Selected text size', { exact: true }).fill('999');
-    const second = page.getByRole('button', { name: 'Select Display article 2', exact: true });
-    await second.focus(); await page.keyboard.press('Enter');
-    const other = second.getByRole('textbox', { name: 'Article text', exact: true });
-    await other.fill('Separate article'); await other.press('Control+A');
-    assert.equal(await page.getByLabel('Selected text size', { exact: true }).inputValue(), '');
-    assert.equal(await page.getByLabel('Paragraph space after', { exact: true }).inputValue(), '');
-    await setNumber(page, 'Selected text size', 18);
-    const articles = await page.evaluate(() => window.savedDraft().grids.flatMap(grid => grid.placements).filter(p => p.kind === 'text').map(p => p.text.article));
-    assert.equal(articles.find(a => a.title === 'Display article 1').content.content[0].content[0].marks.find(m => m.type === 'textStyle').attrs.fontSize, 32);
-    assert.equal(articles.find(a => a.title === 'Display article 2').content.content[0].content[0].marks.find(m => m.type === 'textStyle').attrs.fontSize, 18);
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
-
 test('title and paragraph gaps control the Nomad layout, undo, reset and persist through Read and Visitor', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {

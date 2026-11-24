@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { useProfileIdentity } from '../../profileIdentity/state/useProfileIdentity.js';
 import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
+import { canReplaceInvalidPublication } from '../domain/canReplaceInvalidPublication.js';
 import PublicWorkspaceHeader from './PublicWorkspaceHeader.jsx';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
@@ -9,6 +10,7 @@ import '../../public/ownerSystemWorkflow/workflowTactile.css';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 import useDeferredFocusReturn from '../../public/useDeferredFocusReturn.js';
+const VisitorProfile = lazy(() => import('./VisitorProfile.jsx'));
 const GalleryRemovalReview = lazy(() => import('./GalleryRemovalReview.jsx'));
 const OwnerReception = lazy(() => import('../../reception/OwnerReception.jsx'));
 const PublishedCanvasGallery = lazy(() => import('./PublishedCanvasGallery.jsx'));
@@ -29,7 +31,7 @@ function RetryButton({ state, onRetry }) {
     aria-disabled={state?.busy} aria-busy={state?.busy}>{state?.busy ? 'RETRYING…' : 'RETRY'}</button>;
 }
 
-function PublishedStatusSurface({ state, onRetry }) {
+function PublishedStatusSurface({ state, onRetry, onReviewReplacement }) {
   const [title, message] = STATUS_COPY[state?.status] || STATUS_COPY.ERROR;
   const supportRequired = [PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status);
   return <main className="published-profile-status" data-lattice-menu-surface
@@ -39,7 +41,10 @@ function PublishedStatusSurface({ state, onRetry }) {
       <header><span>PUBLIC PROFILE</span><h1>{title}</h1></header>
       <div className="published-profile-status__body">
         <p>{message}</p><code>{state?.address}</code>
-        <div className="published-profile-actions">{state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div>
+        <div className="published-profile-actions">
+          {onReviewReplacement && <button type="button" onClick={onReviewReplacement}>Review replacement in Studio</button>}
+          {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}
+        </div>
         {supportRequired && <AlphaSupportPanel
           code={state.status === PUBLISHED_PROFILE_STATUS.INVALID
             ? ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED
@@ -52,21 +57,32 @@ function PublishedStatusSurface({ state, onRetry }) {
   </main>;
 }
 
-function UnpublishedProfilePage({ address, account, state, entry, onRetry, onNewComposition, onManageWorks, ...header }) {
+function UnpublishedProfilePage({ address, account, state, entry, onRetry, onReviewReplacement, onNewComposition, onManageWorks, ...header }) {
   const identity = useProfileIdentity(address);
   const own = address && account?.address?.toLowerCase() === address.toLowerCase();
   const name = identity?.name || (own && account.name);
   const avatarUrl = identity?.avatarUrl || (own && account.avatarUrl) || null;
-  const model = address && { address, officialProfile: { name: name || address.slice(0, 6) + '…' + address.slice(-4) }, profile: { avatarUrl } };
+  const model = address && {
+    address,
+    officialProfile: { name: name || address.slice(0, 6) + '.' + address.slice(-4) },
+    authoredProfile: {},
+    profile: { avatarUrl, description: identity?.description, tags: identity?.tags || [] },
+    links: (identity?.links || []).map(link => ({ ...link, kind: 'AUTHORED' })),
+  };
   const current = entry?.surface === 'writing' ? 'Writing' : entry?.surface === 'canvas' ? 'Gallery' : 'Profile';
-  const emptyCollection = state?.status === PUBLISHED_PROFILE_STATUS.UNAVAILABLE && !entry?.target && current !== 'Profile';
-  return <div className={emptyCollection ? 'visitor-publication' : 'published-status-page'}>
+  const unpublished = state?.status === PUBLISHED_PROFILE_STATUS.UNAVAILABLE && !entry?.target;
+  return <div className={unpublished ? 'visitor-publication' : 'published-status-page'}>
     <PublicWorkspaceHeader model={model} account={account} current={current} {...header} />
-    {emptyCollection ? <Suspense fallback={<p role="status">Opening {current}.</p>}>
+    {unpublished ? <Suspense fallback={<p role="status">Opening {current}.</p>}>
       <StartupDestinationReady />
-      {current === 'Gallery' ? <PublishedCanvasGallery entries={emptyEntries} snapshot={emptySnapshot} onManageWorks={onManageWorks} onNewComposition={onNewComposition} />
-        : <PublishedWriting snapshot={emptySnapshot} />}
-    </Suspense> : <PublishedStatusSurface state={state} onRetry={onRetry} />}
+      {current === 'Profile' && <>
+        <VisitorProfile model={model} />
+        <p className="visitor-notice">{own ? 'You have no published work on Inscape yet.' : 'This artist has no published work on Inscape yet.'}</p>
+      </>}
+      {current === 'Gallery' && <PublishedCanvasGallery entries={emptyEntries} snapshot={emptySnapshot}
+        onManageWorks={onManageWorks} onNewComposition={onNewComposition} />}
+      {current === 'Writing' && <PublishedWriting />}
+    </Suspense> : <PublishedStatusSurface state={state} onRetry={onRetry} onReviewReplacement={onReviewReplacement} />}
   </div>;
 }
 
@@ -92,9 +108,9 @@ function OwnerGallery({ resolution, getWalletPublicationContext, onRetry, onPubl
 }
 
 export default function PublishedProfileBoundary({
-  address, resolution, onRetry, connectedProfile, returnProfileAddress, ownerDestinations, onReturnToWorkbench,
+  address, resolution, onRetry, onReviewReplacement, connectedProfile, returnProfileAddress, ownerDestinations, onReturnToWorkbench,
   getWalletPublicationContext, onPublicationConfirmed,
-  onManageWorks, onNewComposition, onEditComposition, onEditReception, onVisitProfile, onOpenDiscover, onConnect, onDisconnect,
+  onManageWorks, onNewComposition, onEditComposition, onEditReception, onVisitProfile, onConnect, onDisconnect,
   entry, onOpenOverview, onOpenCanvas, onOpenWriting,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
@@ -106,16 +122,17 @@ export default function PublishedProfileBoundary({
   const createComposition = returnToWorkbench ? onNewComposition : undefined;
   const manageWorks = returnToWorkbench ? onManageWorks : undefined;
   const navigation = { onManageWorks: manageWorks, onNewComposition: createComposition, account: connectedProfile, ownerDestinations, onConnect, onDisconnect, onOpenWriting, onOpenOverview, onOpenCanvas,
-    onOpenDirectory: onOpenDiscover, onReturnToWorkbench: returnToWorkbench, onEditReception: editProfile, onEditComposition: editComposition };
-  if (returnToWorkbench && entry?.surface === 'overview' && !entry.target && entry?.reception !== 'published') {
+    onReturnToWorkbench: returnToWorkbench, onEditReception: editProfile, onEditComposition: editComposition };
+  const reviewReplacement = returnToWorkbench && canReplaceInvalidPublication(resolution, address) ? onReviewReplacement : undefined;
+  if (!reviewReplacement && returnToWorkbench && entry?.surface === 'overview' && !entry.target && entry?.reception !== 'published') {
     return <Suspense fallback={<p role="status">Opening Profile…</p>}>
       <OwnerReception key={address} address={address} document={visibleDocument} {...navigation} />
     </Suspense>;
   }
   if (!visibleDocument) return <UnpublishedProfilePage address={address} account={connectedProfile} entry={entry}
-    state={resolution} onRetry={onRetry} onNewComposition={createComposition} onManageWorks={manageWorks}
+    state={resolution} onRetry={onRetry} onReviewReplacement={reviewReplacement} onNewComposition={createComposition} onManageWorks={manageWorks}
     onProfile={onOpenOverview} onWorks={onOpenCanvas} onWriting={onOpenWriting}
-    ownerDestinations={ownerDestinations} onDiscover={onOpenDiscover} onConnect={onConnect} onDisconnect={onDisconnect} />;
+    ownerDestinations={ownerDestinations} onConnect={onConnect} onDisconnect={onDisconnect} />;
   const editableGallery = returnToWorkbench && connectedProfile?.address?.toLowerCase() === address.toLowerCase()
     && entry?.surface === 'canvas' && !entry.target && getWalletPublicationContext && onPublicationConfirmed && onRetry;
   return <>{editableGallery ? <OwnerGallery key={address} resolution={resolution} entry={entry} onReturn={returnHome} {...navigation}

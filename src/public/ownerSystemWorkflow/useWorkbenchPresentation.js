@@ -61,10 +61,8 @@ export default function useWorkbenchPresentation({
 }) {
   const { restoredWorkspace, workbenchLayout, sharedTools } = layoutSession;
   const { views: textViews, presentations: textPresentations } = modules.text;
-  const { presentations: miniAppPresentations } = modules.miniApps;
   const { presentations: imagePresentations } = modules.images;
   const { presentations: shapePresentations } = modules.shapes;
-  const hasPrimaryDisplay = draft.grids.length > 0;
   const workbenchProjection = useMemo(
     () =>
       captureWorkbenchPresentation({
@@ -73,12 +71,8 @@ export default function useWorkbenchPresentation({
           ...(draft.workbench?.lockedLayerIds ? { lockedLayerIds: draft.workbench.lockedLayerIds } : {}),
           ...(draft.workbench?.area ? { area: draft.workbench.area } : {}),
         },
-        hasPrimaryDisplay,
         identityOpen,
-        displays: draft.displays,
-        miniApps: draft.miniApps,
         texts: draft.texts,
-        miniAppPresentations,
         textPresentations,
         imageModules: draft.imageModules,
         imagePresentations,
@@ -90,12 +84,8 @@ export default function useWorkbenchPresentation({
     [
       draft.workbench?.area,
       draft.workbench?.lockedLayerIds,
-      hasPrimaryDisplay,
       workbenchLayout,
       identityOpen,
-      draft.displays,
-      draft.miniApps,
-      miniAppPresentations,
       draft.texts,
       textPresentations,
       draft.imageModules,

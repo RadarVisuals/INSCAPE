@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { openDisplayTool, activate } from './fixtures/display-controls.mjs';
 import { sharedToolTab as tab, sharedToolPanel, openSharedTool, closeSharedTool } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/artwork-info';
@@ -139,32 +138,5 @@ test('reference Info shares the artwork presentation and follows selection in bo
       assert.deepEqual(errors, []);
       await page.close();
     }
-  } finally { await browser.close(); }
-});
-test('Display metadata uses the Inspector Info section without an artwork record or duplicate owner window', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  try {
-    const { page, errors } = await mount(browser);
-    const before = await saved(page);
-    const board = page.getByRole('article', { name: 'Display Module', exact: true });
-    await openDisplayTool(page, board, 'METADATA');
-    const cue = board.getByRole('button', { name: /^Read metadata for / }).first();
-    await activate(page, cue);
-    await info(page).waitFor();
-    assert.equal(await tab(page, 'Info').getAttribute('aria-selected'), 'true');
-    assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1);
-    assert.equal(await page.locator('[data-shared-display-tools] aside').count(), 0);
-    assert.equal(await board.getAttribute('data-inspecting'), null);
-    await sharedToolPanel(page).locator('[data-inspector-section="Info"] > summary').click();
-    await page.locator('[data-shared-tool="metadata"]').waitFor({ state: 'detached' });
-    assert.equal(await board.getByRole('button', { name: /^Read metadata for / }).count(), 0,
-      'collapsed Info does not enable Display metadata picking just because Inspector is visible');
-    assert.equal(await tab(page, 'Inspector').isVisible(), true);
-    await openDisplayTool(page, board, 'METADATA');
-    await info(page).waitFor();
-    assert.equal(await sharedToolPanel(page).locator('[data-inspector-section="Info"]').evaluate(node => node.open), true);
-    assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1);
-    assert.deepEqual(await saved(page), before);
-    assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

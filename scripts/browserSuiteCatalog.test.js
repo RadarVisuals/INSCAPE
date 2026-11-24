@@ -30,10 +30,10 @@ test('removed files, duplicates, unclassified entries and empty explanations fai
 
 test('release selection preserves catalog order; all other classifications remain explicitly runnable', () => {
   const value = catalog(suite('second'), suite('focused', 'targeted'), suite('first'),
-    suite('benchmark', 'performance'), suite('older_case', 'historical_candidate'), suite('mini-apps.production', 'targeted'));
+    suite('benchmark', 'performance'), suite('older_case', 'historical_candidate'), suite('extra.production', 'targeted'));
   validateBrowserSuiteCatalog(value, value.suites.map(entry => entry.name));
   assert.deepEqual(selectBrowserSuites(value), ['second', 'first']);
-  assert.deepEqual(selectBrowserSuites(value, ['older_case', 'benchmark', 'focused', 'mini-apps.production']), ['older_case', 'benchmark', 'focused', 'mini-apps.production']);
+  assert.deepEqual(selectBrowserSuites(value, ['older_case', 'benchmark', 'focused', 'extra.production']), ['older_case', 'benchmark', 'focused', 'extra.production']);
 });
 
 test('explicit selection rejects unknown names, duplicate runs and paths before starting a browser', () => {

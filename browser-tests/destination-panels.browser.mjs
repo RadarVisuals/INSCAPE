@@ -1,21 +1,14 @@
-import { openSharedTool } from './fixtures/shared-tools.mjs';
-import { openEditorMenu, editorDestination, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorDestination, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/destinations';
 const hit = node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); };
-const interactionState = page => page.locator('main.system-workflow').evaluate(node => ({
-  camera: { zoom: node.querySelector('.navigator-zoom output')?.textContent,
-    frames: [...node.querySelectorAll('[data-workbench-view-id]')].map(module => ({ id: module.dataset.workbenchViewId, rect: module.getBoundingClientRect().toJSON() })) },
-  selection: [...node.querySelectorAll('.workbench-layer-row[data-selected]')].map(row => row.dataset.layerId),
-  activeTargets: [...node.querySelectorAll('[data-workbench-view-id]:is([data-window-active], [data-active])')].map(module => module.dataset.workbenchViewId),
-}));
 async function open(browser, width, height, theme, suffix = '') {
   const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce', hasTouch: width < 600 });
   page.setDefaultTimeout(10000);
@@ -45,7 +38,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       const camera = () => page.locator('main.system-workflow').evaluate(n => [n.dataset.workbenchCameraX, n.dataset.workbenchCameraY, n.dataset.workbenchCameraScale]);
       const beforeCamera = await camera();
       await mkdir(output, { recursive: true });
-      for (const name of ['Publish', 'Docs', 'Profile', 'Grids']) {
+      for (const name of ['Publish', 'Docs', 'Profile']) {
         await activate(name);
         const panel = page.locator('.workbench-destination-panel');
         await panel.waitFor();
@@ -85,56 +78,6 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     } finally { await browser.close(); }
   });
 }
-
-test('Grids keeps rename, visibility, duplicate and delete with local cancellation', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  try {
-    const { page, activate, errors } = await open(browser, 390, 640, 'mist');
-    const imageId = await page.evaluate(() => window.readToolChromeDraft().imageModules[0].id);
-    await openSharedTool(page, 'Layers');
-    await page.locator(`[data-layer-id="${imageId}"] .workbench-layer-name`).click();
-    const selectedState = await interactionState(page);
-    assert.deepEqual(selectedState.selection, [imageId]);
-    assert.equal(selectedState.activeTargets.length, 1, 'selecting artwork establishes an active module');
-    await activate('Grids');
-    const panel = page.getByRole('complementary', { name: 'Grids', exact: true });
-    await panel.getByRole('button', { name: 'New Grid', exact: true }).click();
-    const row = panel.locator('.system-workflow__grid-row:not([data-world-cover])').last();
-    await row.getByRole('button', { name: /^Rename / }).click();
-    const input = row.getByRole('textbox');
-    await input.fill('Temporary'); await input.press('Escape');
-    assert.equal(await panel.isVisible(), true, 'rename Escape does not close the whole panel');
-    await row.getByRole('button', { name: /^Rename / }).click();
-    await row.getByRole('textbox').fill('Layered scene');
-    await row.getByRole('button', { name: 'Confirm rename' }).click();
-    await row.getByRole('button', { name: 'Make Layered scene public' }).click();
-    await row.getByRole('button', { name: 'Make Layered scene private' }).waitFor();
-    await row.getByRole('button', { name: 'Duplicate Layered scene' }).click();
-    const copy = panel.locator('.system-workflow__grid-row:not([data-world-cover])').last();
-    await copy.getByRole('button', { name: /^Delete / }).click();
-    await panel.getByRole('alertdialog').getByRole('button', { name: 'Cancel' }).focus();
-    const beforeEscape = await interactionState(page);
-    // Grids hides the Layers host; absence of its rows is not an empty selection.
-    assert.deepEqual(beforeEscape.activeTargets, selectedState.activeTargets, 'the original module remains the active target');
-    await page.keyboard.press('Escape');
-    assert.equal(await panel.getByRole('alertdialog').count(), 0);
-    const afterEscape = await interactionState(page);
-    const focus = await page.evaluate(() => ({ tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label') }));
-    await mkdir(output, { recursive: true });
-    await writeFile(`${output}/grid-escape-state.json`, JSON.stringify({ beforeEscape, afterEscape, focus }, null, 2));
-    assert.equal(await panel.isVisible(), true, 'delete Escape keeps Grids open');
-    assert.deepEqual(afterEscape, beforeEscape, 'local cancellation preserves selected artwork and camera');
-    assert.equal(await copy.getByRole('button', { name: /^Delete / }).evaluate(node => node === document.activeElement), true, 'local cancellation returns focus to its Delete trigger');
-    await copy.getByRole('button', { name: /^Delete / }).click();
-    await panel.getByRole('alertdialog').getByRole('button', { name: 'Confirm', exact: true }).click();
-    assert.equal(await panel.locator('.system-workflow__grid-row:not([data-world-cover])').count(), 2);
-    await panel.getByRole('button', { name: 'Close Grids', exact: true }).click();
-    await openSharedTool(page, 'Layers');
-    assert.deepEqual((await interactionState(page)).selection, selectedState.selection,
-      'the same artwork remains selected when Layers is visible again');
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
 
 for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 900], [390, 844], [844, 390], [320, 320]]) {
   test(`Movable Groups and Index share flat chrome: ${theme} ${width}×${height}`, { timeout: 60000 }, async () => {

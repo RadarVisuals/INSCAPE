@@ -83,7 +83,6 @@ test('workflow typography resolves its semantic scale in the rendered cascade', 
       assert.ok(actual.family.includes(family), `${name}: font family`);
     }
     assert.match(await page.locator('main.system-workflow').evaluate(node => getComputedStyle(node).fontFamily), /Inscape Sora/);
-    assert.equal(await page.locator('.system-workflow__canvas').evaluate(node => getComputedStyle(node).boxShadow), 'none');
     const presentation = await page.locator('main.system-workflow').evaluate(root => {
       const fixture = document.createElement('div');
       fixture.innerHTML = '<div class="system-workflow__select-popover"><code>Technical value</code></div><div class="system-workflow__filter-popover"><output>Technical value</output></div><div class="system-workflow__settings"><svg class="lucide"></svg></div><div data-panel-phase="closing"><div><div class="system-workflow__motion-panel">Nested closing panel</div></div></div>';
@@ -103,40 +102,5 @@ test('workflow typography resolves its semantic scale in the rendered cascade', 
     }
     assert.equal(presentation.stroke, '1.75px');
     assert.equal(presentation.closingOpacity, '0', 'closing styles reach a nested motion panel');
-  } finally { await browser.close(); }
-});
-
-test('Discover distinguishes an empty directory, no search match and a retryable failure', { timeout: 45000 }, async () => {
-  const browser = await chromium.launch({ executablePath, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
-    const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.route(`${origin}/__discovery_contract__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
-    await page.goto(`${origin}/__discovery_contract__`);
-    await page.evaluate(async () => {
-      const refresh = (await import('/@react-refresh')).default;
-      refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
-      const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
-      const Portal = (await import('/src/startveil/PublicEntryPortal.jsx')).default;
-      await import('/src/index.css'); await import('/src/inscapeTokens.css');
-      const root = createRoot(document.getElementById('root'));
-      window.discoveryCloseCount = 0;
-      window.renderDiscovery = failed => root.render(React.createElement(Portal, { embedded: true, initialMode: 'explore', onClose: () => window.discoveryCloseCount++, discoveryRepository: { list: async () => { if (failed) throw Error('Review unavailable'); return []; } } }));
-      window.renderDiscovery(false);
-    });
-    const portal = page.locator('.public-entry-portal');
-    await portal.getByText('No worlds found', { exact: true }).waitFor();
-    assert.equal(await portal.getByText('No published worlds are available yet.', { exact: true }).count(), 1);
-    await portal.getByRole('searchbox', { name: 'Search published worlds', exact: true }).fill('missing world');
-    await portal.getByText('Try another name or profile address.', { exact: true }).waitFor();
-    assert.equal(await portal.getByText('No published worlds are available yet.', { exact: true }).count(), 0);
-    await page.evaluate(() => window.renderDiscovery(true));
-    await portal.getByText('Public directory unavailable', { exact: true }).waitFor();
-    await portal.getByText('You can retry without connecting a profile.', { exact: true }).waitFor();
-    assert.equal(await portal.getByText('Try another name or profile address.', { exact: true }).count(), 0);
-    await portal.getByRole('button', { name: 'Return to workspace', exact: true }).click();
-    assert.equal(await page.evaluate(() => window.discoveryCloseCount), 1);
-    assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

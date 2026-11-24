@@ -11,6 +11,48 @@ const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/reception-cell-interaction';
 const reception = page => page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception);
 const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-id="${id}"]`);
+
+for (const width of [1440, 900]) test(`Composition preview restores the editor's mixed artwork and selected layer at ${width}px`, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(10000);
+    await page.route('**/*', route => {
+      const url = new URL(route.request().url());
+      if (url.origin === origin) return route.continue();
+      const asset = url.hostname === 'raw.githubusercontent.com' && url.pathname.split('/public/')[1];
+      return asset ? route.fulfill({ path: 'public/' + asset }) : route.abort();
+    });
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
+    const layers = await openSharedTool(page, 'Layers');
+    const selected = layers.getByRole('button', { name: 'Select White overlay', exact: true });
+    await selected.click();
+    assert.equal(await selected.getAttribute('aria-pressed'), 'true');
+    const play = page.getByRole('button', { name: 'Preview', exact: true });
+    const snapshot = () => page.evaluate(() => window.receptionLayerFixture.root.getBackupSnapshot());
+    const saved = await snapshot(), editorUrl = page.url();
+    const editor = await page.locator('.editor-menu-bar').elementHandle();
+    await play.press('Enter');
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+    const cell = preview.locator('[data-cell-group="shape:cell"]');
+    await cell.getByText('Public layered text', { exact: true }).waitFor();
+    await cell.locator('[data-layer-id="image:art"]').waitFor();
+    await preview.locator('[data-layer-id="shape:overlay"]').waitFor();
+    assert.equal(await preview.locator('[data-layer-id="text:private"]').count(), 0);
+    assert.equal(await preview.locator('[data-profile-header], .reception-profile, .reception-preview-menu').count(), 0);
+    assert.equal(await preview.getByRole('button', { name: 'Page appearance' }).count(), 0);
+    assert.equal(await preview.getByRole('slider', { name: 'Preview width' }).count(), 0);
+    assert.deepEqual(await snapshot(), saved);
+    await page.keyboard.press('Escape');
+    await preview.waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Preview');
+    assert.equal(await editor.evaluate(node => node.isConnected), true);
+    assert.equal(await selected.getAttribute('aria-pressed'), 'true');
+    assert.equal(page.url(), editorUrl);
+    assert.deepEqual(await snapshot(), saved);
+  } finally { await browser.close(); }
+});
+
 async function setup(viewport = { width: 1440, height: 1000 }) {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   const page = await browser.newPage({ viewport, reducedMotion: 'reduce' }), errors = [];
@@ -182,7 +224,7 @@ for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artw
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before);
     await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), after);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     await preview.getByText('CONTENTS FROM THE LOWER CELL', { exact: true }).waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${after.imageModules[0].id}"]`).count(), 1);
     await page.screenshot({ path: `${output}/unequal-merge-preview-${width}.png` });

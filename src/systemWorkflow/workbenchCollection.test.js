@@ -149,7 +149,7 @@ test('active saves stay detached and atomic across invalid edits, failed writes 
 
 test('shared changes still validate the byte limit of an inactive full Workbench', () => {
   const { store, raw } = fixture();
-  const full = store.getDraft(); full.grids = [];
+  const full = store.getDraft();
   full.texts = Array.from({ length: 3 }, (_, i) => ({
     id: 'text:large-' + i, visibility: 'PRIVATE', article: createArticle('Article ' + i),
   }));
@@ -208,7 +208,7 @@ test('two named Workbenches retain separate modules, dimensions, layout and edit
   assert.equal(store.getDraft().texts, undefined);
   assert.equal(store.getDraft().imageModules, undefined);
   assert.equal(store.getDraft().shapes, undefined);
-  assert.deepEqual(store.getDraft().grids, [], 'new Workbenches never create Display');
+  assert.equal(Object.hasOwn(store.getDraft(), 'grids'), false);
   assert.deepEqual(store.getDraft().keeperDocks, a.keeperDocks, 'one shared Keeper configuration');
   addTextModule(store, profile); addImageModule(store, profile); addShape(store, profile);
   edit(store, draft => { draft.texts[0].article.title = 'Studies article'; draft.workbench.area = { width: 640, height: 480 }; });
@@ -405,7 +405,12 @@ test('all-Workbench backups roundtrip both compositions and reject partial repla
   assert.equal(backup.version, 2);
   const target = fixture();
   assert.ok(restoreWorkbenchBackup(target.store, backup, { expectedGeneration: target.store.getGeneration() }, target.storage).saved);
-  assert.deepEqual(target.store.getBackupSnapshot(), source.store.getBackupSnapshot());
+  assert.deepEqual(target.store.getBackupSnapshot(), backup.draft);
+  const portable = JSON.parse(serializeWorkbenchBackup(source.store.getBackupSnapshot())).draft;
+  for (const { content } of portable.workbenches) {
+    assert.equal(Object.hasOwn(content, 'grids'), false);
+    assert.equal(Object.hasOwn(content.workbench || {}, 'display'), false);
+  }
   const before = target.raw();
   assert.equal(restoreWorkbenchBackup(target.store, single, { expectedGeneration: target.store.getGeneration() }, target.storage).saved, false);
   assert.equal(target.raw(), before);

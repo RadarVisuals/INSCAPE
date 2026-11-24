@@ -4,19 +4,15 @@ import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemW
 import {
   buildOwnerSystemWorkflowPublicationDocument,
   buildOwnerSystemWorkflowPreviewDocument,
-  ownerSystemWorkflowPreviewEntryMediaUrls,
-  preloadOwnerSystemWorkflowPreviewEntryMedia,
-  profileDocumentV9EntryGrid,
 } from './ownerSystemWorkflowPreviewDocument.js';
+import { buildProfileDocumentV9Asset } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import { createCanonicalPublication } from '../profileDocument/domain/profileDocumentPublication.js';
 import { canonicalSerializeProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Serialization.js';
-import { adaptProfileDocumentV9Media } from '../profileDocument/components/profileDocumentV9Media.js';
-import { createSystemWorkflowDropGeometry } from '../systemWorkflow/systemWorkflowPlacement.js';
+import { imageDropGeometry } from '../imageModule/imageDropGeometry.js';
 import {
   ownerSystemWorkflowAssetDimensions,
   ownerSystemWorkflowDecodedAsset,
 } from './ownerSystemWorkflow/ownerSystemWorkflowAssetDimensions.js';
-import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflow/ownerSystemWorkflowMetadataViewModel.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
@@ -35,63 +31,12 @@ const placement = (id, order) => ({
   transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 });
 
-test('Preview uses the v9 builder and the first Grid remaining after public filtering', async () => {
-  const draft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'private-first' });
-  draft.grids[0].visibility = 'PRIVATE';
-  draft.grids.push({
-    ...structuredClone(draft.grids[0]), id: 'grid:visitor-entry', title: 'VISITOR ENTRY', visibility: 'PUBLIC',
-    placements: [placement('one', 0), placement('two', 1)],
-  });
-  draft.grids.push({
-    ...structuredClone(draft.grids[1]), id: 'grid:later', title: 'LATER', placements: [placement('later', 0)],
-  });
-  const preview = buildOwnerSystemWorkflowPreviewDocument({
-    assetRecords: [asset()], profile: { name: 'Resident' }, profileAddress: PROFILE, systemWorkflowDraft: draft,
-  });
-  assert.equal(preview.version, 9);
-  assert.equal(profileDocumentV9EntryGrid(preview).id, 'grid:visitor-entry');
-  assert.deepEqual(ownerSystemWorkflowPreviewEntryMediaUrls(preview), ['https://assets.example/image.png']);
-
-  const decoded = [];
-  class FakeImage {
-    set src(value) { this.source = value; }
-    decode() { decoded.push(this.source); return Promise.resolve(); }
-  }
-  await preloadOwnerSystemWorkflowPreviewEntryMedia(preview, { ImageConstructor: FakeImage });
-  assert.deepEqual(decoded, ['https://assets.example/image.png']);
-});
-
-test('Preview rejects cross-profile draft authority and a draft without public Grids', () => {
+test('Preview rejects cross-profile draft authority', () => {
   const other = createEmptySystemWorkflowDraft('0x3333333333333333333333333333333333333333', { generateId: () => 'other' });
   assert.throws(() => buildOwnerSystemWorkflowPreviewDocument({
     assetRecords: [], profile: {}, profileAddress: PROFILE, systemWorkflowDraft: other,
   }), /profile document authority/);
-  const privateOnly = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'private' });
-  privateOnly.grids[0].visibility = 'PRIVATE';
-  assert.throws(() => buildOwnerSystemWorkflowPreviewDocument({
-    assetRecords: [], profile: {}, profileAddress: PROFILE, systemWorkflowDraft: privateOnly,
-  }), { code: 'INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED' });
-});
 
-test('Preview v9 retains every public placement presentation field and removes private content', () => {
-  const draft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
-  const publicPlacement = {
-    ...placement('public-artwork', 7), column: 8, row: 5, columnSpan: 6, rowSpan: 4, layer: 3,
-    crop: { x: 0.42, y: 0.57, zoom: 1.8 },
-    transform: { quarterTurns: 3, mirrorX: true, mirrorY: true },
-  };
-  draft.grids[0].placements = [publicPlacement, { ...placement('private-artwork', 1), visibility: 'PRIVATE' }];
-  const preview = buildOwnerSystemWorkflowPreviewDocument({
-    assetRecords: [asset()], profile: { name: 'Resident' }, profileAddress: PROFILE, systemWorkflowDraft: draft,
-  });
-  assert.equal(preview.grids[0].placements.length, 1);
-  const { asset: resolvedAsset, visibility, ...projected } = preview.grids[0].placements[0];
-  const { locked: _locked, stableAssetId: _stableAssetId, visibility: _sourceVisibility,
-    mat: _mat, frameId: _frame, backing: _backing, transparencyMode: _transparency, ...expected } = publicPlacement;
-  assert.deepEqual(projected, expected);
-  assert.equal(visibility, 'PUBLIC');
-  assert.equal(resolvedAsset.stableAssetId, ASSET);
-  assert.equal(JSON.stringify(preview).includes('private-artwork'), false);
 });
 
 test('publication preparation freezes the exact canonical v9 bytes consumed by Preview and read-back', () => {
@@ -118,47 +63,43 @@ test('publication preparation freezes the exact canonical v9 bytes consumed by P
   }), /different profile/);
 });
 
-test('decoded source dimensions drive drag geometry, placement, and v9 Visitor media', () => {
+function imageRecord(asset, index = 0) {
+  return { id: 'image:preview-' + index, name: asset.name, width: 300, height: 300, visibility: 'PUBLIC',
+    artwork: { id: 'artwork:preview-' + index, asset: buildProfileDocumentV9Asset(asset, asset.id),
+      crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } };
+}
+
+test('decoded source dimensions drive drag geometry, placement, and published asset dimensions', () => {
   const source = 'https://assets.example/image.png';
   const decodedAsset = ownerSystemWorkflowDecodedAsset({
     ...asset(), imageUrl: source, imageWidth: 1920, imageHeight: 1080,
   }, { source, width: 1080, height: 1920 });
   const dimensions = ownerSystemWorkflowAssetDimensions(decodedAsset);
   assert.deepEqual(dimensions, { width: 1080, height: 1920 });
-  const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height,
-    { x: 320, y: 180 }, { left: 0, top: 0, width: 640, height: 360, cellSize: 20 });
-  assert.ok(destination.rowSpan > destination.columnSpan, 'drag preview and placement use the decoded portrait ratio');
+  const { destination } = imageDropGeometry(dimensions, { x: 320, y: 180 },
+    { left: 0, top: 0, width: 640, height: 360 }, 1, { x: 0, y: 0 });
+  assert.ok(destination.size.height > destination.size.width, 'Image placement uses the decoded portrait ratio');
 
   const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
-  const placed = { ...placement('decoded-phone', 0), ...destination };
-  systemWorkflowDraft.grids[0].placements = [placed];
-  const ownerMetadata = createOwnerSystemWorkflowMetadataViewModel(placed, decodedAsset);
-  assert.equal('technical' in ownerMetadata.dossier, false);
+  systemWorkflowDraft.imageModules = [{ ...imageRecord(decodedAsset), ...destination.size }];
 
   const preview = buildOwnerSystemWorkflowPreviewDocument({
     assetRecords: [decodedAsset], profile: { name: 'Resident' }, profileAddress: PROFILE, systemWorkflowDraft,
   });
-  assert.deepEqual(preview.grids[0].placements[0].asset.media, {
+  assert.deepEqual(preview.imageModules[0].artwork.asset.media, {
     url: source, width: 1080, height: 1920, type: 'image',
   });
-  assert.deepEqual(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset).dimensions, dimensions);
 });
 
 test('missing dimensions remain unknown through owner and v9 projection', () => {
   const unknownAsset = { ...asset(), imageWidth: null, imageHeight: null };
   assert.equal(ownerSystemWorkflowAssetDimensions(unknownAsset), null);
-  const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
-  systemWorkflowDraft.grids[0].placements = [placement('unknown-media', 0)];
-  const preview = buildOwnerSystemWorkflowPreviewDocument({
-    assetRecords: [unknownAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
-  });
-  assert.deepEqual(preview.grids[0].placements[0].asset.media, {
+  assert.deepEqual(buildProfileDocumentV9Asset(unknownAsset, ASSET).media, {
     url: unknownAsset.imageUrl, width: null, height: null, type: 'image',
   });
-  assert.equal(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset).dimensions, null);
 });
 
-test('compact verified on-chain media keeps its ratio and many Burnt Pix placements inside v9', () => {
+test('compact artwork references keep source dimensions and the public avatar retains its full source', () => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1025 1025"><desc>${'x'.repeat(192_000)}</desc><rect width="1025" height="1025"/></svg>`;
   const source = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
   assert.ok(source.length > 256_000, 'the fixture stays representative of the real Burnt Pix payload scale');
@@ -174,28 +115,10 @@ test('compact verified on-chain media keeps its ratio and many Burnt Pix placeme
   };
   onchainAsset.id = `42:${onchainAsset.contractAddress}:${onchainAsset.tokenId}`;
   const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
-  systemWorkflowDraft.grids[0].placements = [{
-    ...placement('burnt-pix', 0), stableAssetId: onchainAsset.id, columnSpan: 6, rowSpan: 6,
-  }];
-  const preview = buildOwnerSystemWorkflowPreviewDocument({
-    assetRecords: [onchainAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
-  });
-  assert.deepEqual(ownerSystemWorkflowPreviewEntryMediaUrls(preview), []);
-  assert.deepEqual(preview.grids[0].placements[0].asset.media, {
+  const compact = buildProfileDocumentV9Asset(onchainAsset, onchainAsset.id);
+  assert.deepEqual(compact.media, {
     url: null, reference: onchainAsset.contentReference, width: 768, height: 768, type: 'image',
   });
-  assert.deepEqual(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset, {
-    resolvedUrl: source, resolutionComplete: true,
-  }), {
-    status: 'ready', dimensions: { width: 768, height: 768 }, label: 'Preview artwork',
-    src: source, stableAssetId: onchainAsset.id,
-  });
-  assert.deepEqual(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset, {
-    decodedDimensions: { width: 150, height: 150 }, resolvedUrl: source, resolutionComplete: true,
-  }).dimensions, { width: 150, height: 150 });
-  assert.equal(canonicalSerializeProfileDocumentV9(preview).includes(source), false);
-  assert.ok(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(preview)).byteLength < 512 * 1024);
-
   systemWorkflowDraft.identityPresentation.avatar = {
     mode: 'inscape', stableAssetId: onchainAsset.id, shape: 'square',
   };
@@ -204,29 +127,4 @@ test('compact verified on-chain media keeps its ratio and many Burnt Pix placeme
   });
   assert.equal(avatarPreview.identityPresentation.avatar.asset.media.url, source,
     'the synchronous identity avatar retains its already-validated media source');
-  systemWorkflowDraft.identityPresentation.avatar = { mode: 'official', stableAssetId: null, shape: 'square' };
-
-  systemWorkflowDraft.grids[0].placements = Array.from({ length: 15 }, (_entry, index) => ({
-    ...placement(`burnt-pix-repeat-${index}`, index), stableAssetId: onchainAsset.id,
-  }));
-  const repeatedPreview = buildOwnerSystemWorkflowPreviewDocument({
-    assetRecords: [onchainAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
-  });
-  assert.equal(repeatedPreview.grids[0].placements.length, 15);
-  assert.ok(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(repeatedPreview)).byteLength < 512 * 1024);
-
-  const distinctAssets = Array.from({ length: 15 }, (_entry, index) => {
-    const tokenId = `0x${(index + 1).toString(16).padStart(64, '0')}`;
-    return { ...onchainAsset, id: `42:${onchainAsset.contractAddress}:${tokenId}`, tokenId,
-      contentReference: { ...onchainAsset.contentReference,
-        verification: { method: 'keccak256(utf8)', data: `0x${(index + 1).toString(16).padStart(64, '0')}` } } };
-  });
-  systemWorkflowDraft.grids[0].placements = distinctAssets.map((entry, index) => ({
-    ...placement(`burnt-pix-distinct-${index}`, index), stableAssetId: entry.id,
-  }));
-  const distinctPreview = buildOwnerSystemWorkflowPublicationDocument({
-    assetRecords: distinctAssets, exportedAt: 2, profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
-  });
-  assert.equal(distinctPreview.grids[0].placements.length, 15);
-  assert.ok(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(distinctPreview)).byteLength < 512 * 1024);
 });

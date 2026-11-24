@@ -56,36 +56,9 @@
 .system-workflow__profile-avatar > .inscape-profile-avatar-ring { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--tactile-edge); pointer-events: none; }
 .system-workflow__profile .system-workflow__profile-action { width: 100%; min-height: 36px; padding: 10px 12px; border: 0; border-top: 1px solid var(--tactile-edge); color: inherit; background: transparent; text-align: left; font: inherit; cursor: pointer; }
 
-.system-workflow__grid-switcher { --destination-width: 560px; container: grid-panel / inline-size; }
-.system-workflow__grid-list { padding: 0 10px; }
-.system-workflow__grid-section-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 10px 0; color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
-.system-workflow__grid-section-label strong { font-weight: 500; color: var(--tactile-ink); }
-.system-workflow__grid-row { position: relative; min-height: 56px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; border-bottom: 1px solid var(--tactile-edge); }
-.system-workflow__grid-row[data-world-cover] { grid-template-columns: 36px minmax(0, 1fr); }
-.system-workflow__grid-row[aria-current=page] { background: var(--tactile-hover); box-shadow: inset 2px 0 var(--tactile-ink); }
-.system-workflow__grid-row > small { text-align: center; color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
-.system-workflow__grid-switcher .system-workflow__grid-activate { min-width: 0; align-self: stretch; display: grid; align-content: center; gap: 4px; padding: 8px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
-.system-workflow__grid-activate strong { font: 500 11px/1.5 var(--font-interface); overflow-wrap: anywhere; }
-.system-workflow__grid-activate span { color: var(--tactile-muted); font: 12px/1.5 var(--font-technical); }
-.system-workflow__grid-actions { display: flex; padding: 4px; gap: 2px; }
-.system-workflow__grid-switcher :is(.system-workflow__grid-actions, .system-workflow__grid-rename) button { display: grid; place-items: center; width: var(--destination-target); min-height: var(--destination-target); padding: 0; border: 0; border-radius: var(--control-radius); color: inherit; background: transparent; cursor: pointer; }
-.system-workflow__grid-switcher svg { width: var(--icon-size-interface); height: var(--icon-size-interface); }
-.system-workflow__grid-rename { grid-column: 2 / -1; display: flex; gap: 4px; padding: 6px; }
-.system-workflow__grid-switcher .system-workflow__grid-rename input { flex: 1; min-width: 0; padding: 6px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); color: inherit; background: transparent; font: inherit; }
-.system-workflow__grid-rename + .system-workflow__grid-actions { display: none; }
-.system-workflow__confirm { grid-column: 1 / -1; padding: 8px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--tactile-edge); }
-.system-workflow__confirm span { flex-basis: 100%; overflow-wrap: anywhere; }
-.system-workflow__grid-switcher > footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.system-workflow__grid-switcher > footer > span { color: var(--tactile-muted); font: 12px/1.5 var(--font-technical); }
-.system-workflow__grid-new { display: flex; align-items: center; gap: 6px; }
-@container grid-panel (max-width: 420px) {
-  .system-workflow__grid-row { grid-template-columns: 28px minmax(0, 1fr); }
-  .system-workflow__grid-actions { grid-column: 2; justify-content: flex-end; }
-}
 @media (max-width: 520px), (pointer: coarse) {
   .workbench-destination-panel.workbench-tool-panel { --destination-target: 44px; }
   .workbench-destination-panel > .workbench-tool-panel-header { min-height: 52px; }
   .workbench-destination-panel .workbench-tool-panel-close { width: 44px; height: 44px; }
   .system-workflow__manual-tabs button, .system-workflow__profile .system-workflow__profile-action { min-height: 44px; }
-  .system-workflow__grid-switcher .system-workflow__grid-rename input { font-size: 16px; }
 }

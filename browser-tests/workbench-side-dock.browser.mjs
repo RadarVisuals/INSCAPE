@@ -92,7 +92,7 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     assert.deepEqual(await collapse.boundingBox(), controlBounds, 'panel controls do not move between Layers and Library');
     const search = page.getByRole('searchbox', { name: 'Search', exact: true });
-    const labels = await page.getByRole('button', { name: 'Library display options', exact: true }).boundingBox();
+    const labels = await page.getByRole('button', { name: 'Library view options', exact: true }).boundingBox();
     const assets = await layers.locator('.lattice-browser-results').boundingBox();
     assert.ok(labels.y < assets.y, 'display controls stay above assets');
     assert.equal(await layers.locator('header').getByRole('button', { name: 'Layers and Library window options', exact: true }).count(), 1);

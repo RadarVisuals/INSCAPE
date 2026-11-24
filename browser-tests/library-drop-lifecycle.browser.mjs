@@ -73,9 +73,9 @@ async function mount(page, { unknownDimensions = false, kind = 'display' } = {})
     destinationNode.style.cssText = 'position:fixed;left:1100px;top:100px;width:250px;height:300px';
     if (kind === 'blocked') destinationNode.dataset.workbenchModule = 'blocked';
     document.body.append(destinationNode);
-    const makeTarget = grid => {
+    const makeTarget = composition => {
       const candidate = { node: destinationNode, isCurrent: () => target === candidate,
-        placeAsset: (_asset, dimensions, destination) => { if (!candidate.isCurrent()) return false; calls.push({ grid, dimensions, destination }); return true; },
+        placeAsset: (_asset, dimensions, destination) => { if (!candidate.isCurrent()) return false; calls.push({ composition, dimensions, destination }); return true; },
         previewAt: (point, dimensions) => candidate.isCurrent() && point.x > 1050 && dimensions ? { destination: { column: 1, row: 2, columnSpan: dimensions.width / 100, rowSpan: dimensions.height / 100 }, rectangle: { left: 1100, top: 100, width: 100, height: 100 } } : null };
       return candidate;
     };
@@ -90,7 +90,7 @@ async function mount(page, { unknownDimensions = false, kind = 'display' } = {})
     const alternate = { current: { targetAt: point => point.x > 1050 ? target : null, has: candidate => candidate === target } };
     const root = createRoot(document.getElementById('root'));
     const configure = (overrides = {}) => root.render(React.createElement('main', { className: 'system-workflow' },
-      React.createElement(Library, { phase: 'open', placementScope: 'profile:primary-grid', placementTargetRef: targets,
+      React.createElement(Library, { phase: 'open', placementScope: 'profile:primary-composition', placementTargetRef: targets,
         workbenchImageTargetRef: { current: { targetAt: point => kind === 'workbench' && point.x > 1050 ? target : null } },
         ...(kind === 'module' ? { moduleAssetTargetRef: alternate } : {}), shortcutTargetRef: kind === 'shortcut' ? alternate : { current: null }, workspaceRef: { current: null },
         categoryCommands: { setCategoryAssets: (...args) => { calls.push({ kind: 'category', args }); return true; } },
@@ -103,7 +103,7 @@ async function mount(page, { unknownDimensions = false, kind = 'display' } = {})
   await page.getByRole('button', { name: 'Delayed image / Fixture', exact: true }).waitFor();
 }
 
-for (const activation of ['double click', 'pointer release']) test(`Library ${activation} cannot switch Display Grid while image dimensions load`, { timeout: 30000 }, async () => {
+for (const activation of ['double click', 'pointer release']) test(`Library ${activation} cannot add an Image to a different composition while its dimensions load`, { timeout: 30000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -116,11 +116,11 @@ for (const activation of ['double click', 'pointer release']) test(`Library ${ac
       await page.mouse.move(1200, 200, { steps: 4 }); await page.mouse.up();
     }
     await page.evaluate(() => { routeProbe.retarget(); routeProbe.resolve(); }); await settle(page);
-    assert.deepEqual(await page.evaluate(() => routeProbe.calls), [], 'stale request must not author into a later Grid');
+    assert.deepEqual(await page.evaluate(() => routeProbe.calls), [], 'stale request must not author into a later composition');
     await card.dblclick(); await page.evaluate(() => routeProbe.resolve()); await settle(page);
     const calls = await page.evaluate(() => routeProbe.calls);
     assert.equal(calls.length, 1, 'fresh activation still succeeds once');
-    assert.equal(calls[0].grid, 'second');
+    assert.equal(calls[0].composition, 'second');
   } finally { await browser.close(); }
 });
 
@@ -184,7 +184,7 @@ for (const scenario of ['unknown dimensions', 'workbench unknown dimensions', 'n
     const calls = await page.evaluate(() => routeProbe.calls);
     if (scenario.includes('unknown dimensions') || scenario === 'navigate before release') {
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].grid, scenario === 'navigate before release' ? 'second' : 'first');
+      assert.equal(calls[0].composition, scenario === 'navigate before release' ? 'second' : 'first');
       assert.equal(calls[0].destination.columnSpan, 2, 'resolved dimensions own final geometry');
       assert.equal(calls[0].destination.rowSpan, 1);
     } else assert.deepEqual(calls, [], 'cancelled/stale routes never redirect or partially place');

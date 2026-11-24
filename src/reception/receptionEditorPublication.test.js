@@ -6,7 +6,7 @@ import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemW
 import { createWorkbenchCollection, appendWorkbench } from '../systemWorkflow/domain/workbenchCollection.js';
 import { canvasPublicationCandidates, buildCanvasPublication } from '../profileDocument/domain/canvasPublication.js';
 import { assertValidProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
-import { publishedPresentationSnapshot, receptionDisplayAssetIds, resolvePresentationSource } from '../presentation/presentationSources.js';
+import { publishedPresentationSnapshot, resolvePresentationSource } from '../presentation/presentationSources.js';
 import { serializeWorkbenchBackup, parseWorkbenchBackup, summarizeWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
 import { createArticle } from '../text/domain/article.js';
 
@@ -35,7 +35,6 @@ test('native Reception retains linked sources through selective publication and 
   assert.doesNotThrow(() => assertValidProfileDocumentV9(document));
   const snapshot = publishedPresentationSnapshot(document);
   assert.equal(resolvePresentationSource(snapshot, document.reception.links[0].source).article.title, 'Linked story');
-  assert.deepEqual(receptionDisplayAssetIds(snapshot, document.reception), []);
   record.workbenches[1].content.texts[0].visibility = 'PRIVATE';
   assert.throws(() => publish(record, ['workbench:story'], document), /Linked content/);
   assert.equal(publish(record, [], document).reception.cells[0].content, 'link:story');

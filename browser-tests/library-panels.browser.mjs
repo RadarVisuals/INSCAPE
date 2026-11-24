@@ -65,7 +65,7 @@ for (const [width, theme] of [[1440, 'dark'], [800, 'light']]) test(`Library has
     assert.equal(await sharedToolPanel(page, 'Inspector').getByRole('tab', { name: 'Library', exact: true }).count(), 1, 'reopening retains the joined group');
     assert.equal(await search.inputValue(), 'nomad');
     await search.fill('');
-    await library.getByRole('button', { name: 'Library display options', exact: true }).click();
+    await library.getByRole('button', { name: 'Library view options', exact: true }).click();
     await page.getByRole('button', { name: 'Icons', exact: true }).click();
     await page.getByRole('slider', { name: 'Card size', exact: true }).fill('80');
     await page.keyboard.press('Escape');

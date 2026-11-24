@@ -1,3 +1,5 @@
+import { buildProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
+import { createDefaultWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { systemWorkflowDraftKey } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 
@@ -68,33 +70,16 @@ export const OWNER_SYSTEM_WORKFLOW_REVIEW_ACTIVITY = Object.freeze([
   { id: 'activity-8', type: 'PROFILE_UNFOLLOWED', title: 'PROFILE UNFOLLOWED', counterparty: 'ARCHIVE NULL', timestamp: '1W', read: true },
 ]);
 
-export const OWNER_SYSTEM_WORKFLOW_REVIEW_DISCOVERY = Object.freeze([
-  { address: '0x8888888888888888888888888888888888888888', name: 'SIGNAL ARCHIVE', role: 'CURATOR', relationship: 'FOLLOWING', group: 'REFERENCES' },
-  { address: '0x9999999999999999999999999999999999999999', name: 'SURFACE UNIT', role: 'ARTIST', relationship: 'FOLLOWS YOU', group: 'COLLABORATORS' },
-  { address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', name: 'CHROMATIC OFFICE', role: 'PUBLISHER', relationship: 'MUTUAL', group: 'COLLABORATORS' },
-]);
-
-const basePlacement = (id, stableAssetId, column, row, columnSpan, rowSpan, layer, crop = null) => ({
-  id,
-  stableAssetId,
-  column,
-  row,
-  columnSpan,
-  rowSpan,
-  layer,
-  navigationOrder: layer,
-  crop,
-  visibility: 'PUBLIC',
-  locked: false,
-  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
-});
-
 export function createOwnerSystemWorkflowReviewStorage() {
   const draft = createEmptySystemWorkflowDraft(OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE, { generateId: () => 'home' });
-  draft.grids[0].placements = [
-    basePlacement('placement-abyssal', OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0].id, 15, 4, 4, 4, 0),
-    basePlacement('placement-mountain-ii', OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[3].id, 20, 9, 5, 3, 1, { x: 0.5, y: 0.5, zoom: 1 }),
-  ];
+  draft.imageModules = [0, 3].map(index => {
+    const asset = OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[index];
+    return { id: 'image:review-' + index, name: asset.name, width: 160, height: 160, visibility: 'PUBLIC',
+      artwork: { id: 'artwork:review-' + index, asset: buildProfileDocumentV9Asset(asset, asset.id), crop: null,
+        transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } };
+  });
+  draft.workbench = { ...createDefaultWorkbenchPresentation(), imageModules: draft.imageModules.map(({ id }, index) =>
+    ({ id, open: true, position: { left: 240 + index * 200, top: 160 } })) };
   const values = new Map([[systemWorkflowDraftKey(OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE), JSON.stringify(draft)]]);
   let writeCount = 0;
   return {

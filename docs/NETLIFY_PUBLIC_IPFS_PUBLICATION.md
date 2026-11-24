@@ -55,7 +55,7 @@ public, nonsecret `VITE_PUBLICATION_SERVICE_ORIGIN` to another configured HTTPS
 service origin if that development target changes. Vite preview includes that one service in its local connection policy. Hosted production builds
 ignore this development override and use their own same-origin function.
 
-For documents with Gallery placements, native Studio compositions or an empty Gallery, the challenge response must advertise `v9-gallery-placements`. Updating the preview requires deploying the matching function and public reader. Older compatible documents still use the existing service.
+Every current document requires the upload challenge to advertise `v9-studio-publication-3`. The browser checks this before asking for a wallet signature. Deploy the matching upload function and public reader together.
 
 The service must include the 30 October loopback CORS support. It allows POST
 and only the content-type/upload-authorization/upload-signature request headers;
@@ -73,25 +73,6 @@ never need a real JWT or transaction. Netlify Dev remains an option for developi
 the function itself, with its required server environment and storage configured.
 
 ## Security and operations
-
-### Hosted mini app origins
-
-Mini apps accept external HTTPS URLs directly in Workbench Settings. The former
-`VITE_MINI_APP_ORIGINS` configuration is no longer used; adding another domain
-requires no code change or rebuild after this host version is deployed.
-The production CSP permits `frame-src 'self' https:` while script and network
-authority for INSCAPE itself retain their existing restrictions.
-
-Microphone uses the browser's default policy and explicit iframe delegation.
-Both the bridge frame and its app frame start with `microphone 'none'`. The Mic
-action reloads only that app and delegates to its exact origin, subject to browser
-permission. Camera, geolocation, payment and USB remain disabled in response
-headers. Function responses still disable microphone as well.
-
-Deploy `mini-app-host.html` alongside `index.html` and the generated assets;
-the generated `_headers` requires revalidation of both HTML entries. Serving
-INSCAPE inside another site's frame can impose stricter microphone restrictions
-that INSCAPE cannot override. This configuration does not authorize deployment.
 
 ### Local transaction recovery
 

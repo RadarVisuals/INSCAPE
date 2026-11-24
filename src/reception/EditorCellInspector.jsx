@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { slideOf, slideIndex, slideCount, swipeOffsets } from './cellSlides.js';
 import LayerThumbnail from '../public/ownerSystemWorkflow/LayerThumbnail.jsx';
 import { Lock, LockOpen, Eye, EyeOff, Image, Type, Link2, CornerDownRight, Grid2X2, SlidersHorizontal } from 'lucide-react';
 import { useEditorCells, editorCellStructureActions } from './EditorCellsContext.jsx';
@@ -23,7 +24,7 @@ export default function EditorCellInspector({ record, change, disabled, historyB
   const blocked = disabled || historyBlocked || Object.keys(view.transforms).length > 0;
   const run = (action, args) => {
     if (blocked) return;
-    try { context.store.editBento(action, args, context.store.getGeneration(), view.getPresentation()); setError(''); }
+    try { context.store.editBento(action, args, context.store.getGeneration(), view.getPresentation()); setError(''); return true; }
     catch (failure) { setError(failure.message); }
   };
   const size = (axis, label) => {
@@ -32,10 +33,13 @@ export default function EditorCellInspector({ record, change, disabled, historyB
       disabled={blocked || !control} title={'Resizes this cell and pushes neighbours without changing their sizes'}
       onChange={value => run('cellSize', [cell.id, { [key]: value, ...(ratio ? axis === 'x' ? { height: Math.round(value / ratio) } : { width: Math.round(value * ratio) } : {}) }])} />;
   };
-  const selectMember = id => { context.store.setEditingCell(cell.id); view.selectLayers([id], false, null); };
+  const selectMember = id => { if (cell.slides) context.store.showSlide(cell.id, slideOf(cell, id)); context.store.setEditingCell(cell.id); view.selectLayers([id], false, null); };
   const members = <div className="workbench-inspector-members">{layerIds(view.layers).filter(id => cell.members.includes(id)).reverse().map(id => {
     const member = records.find(item => item.id === id), hidden = view.editorHiddenIds.includes(id), locked = cell.lockedMembers?.includes(id) || false;
     return <div key={id}><button type="button" className="workbench-inspector-member" aria-label={`Select ${member?.name || 'Untitled'}`} onClick={() => selectMember(id)}><LayerThumbnail items={[member]} /><span>{member?.name || 'Untitled'}</span></button>
+      {cell.slides && <select aria-label={`Slide for ${member?.name || 'layer'}`} value={slideOf(cell, id)} disabled={blocked || locked}
+        onChange={event => run('slides', [cell.id, 'assign', Number(event.target.value), id])}>
+        {Array.from({ length: slideCount(cell) }, (_, i) => <option key={i} value={i}>Slide {i + 1}</option>)}</select>}
       <button type="button" className="workbench-inspector-icon" disabled={blocked} aria-label={`${locked ? 'Unlock' : 'Lock'} ${member?.name || 'layer'}`} aria-pressed={locked}
         onClick={() => { try { context.store.setArtworkLocks([id], !locked); setError(''); } catch (failure) { setError(failure.message); } }}>{locked ? <Lock /> : <LockOpen />}</button>
       <button type="button" className="workbench-inspector-icon" aria-label={`${hidden ? 'Show' : 'Hide'} ${member?.name || 'layer'} in editor`} aria-pressed={hidden}
@@ -56,7 +60,33 @@ export default function EditorCellInspector({ record, change, disabled, historyB
         disabled={blocked} options={action.children.map(item => ({ value: item.id, label: item.label, disabled: item.disabled, reason: item.reason }))}
         onChange={id => { try { action.children.find(item => item.id === id)?.run(); setError(''); } catch (failure) { setError(failure.message); } }} />)}</div>, 'Structure', true)}
   </>;
+  const peers = context.cells.filter(other => cell.swipeLink && other.id !== cell.id && other.swipeLink === cell.swipeLink);
+  const choices = Array.from({ length: slideCount(cell) }, (_, i) => <option key={i} value={i}>Slide {i + 1}</option>);
   const contentsTab = <>
+    {section('Slides', <fieldset disabled={blocked} className="cell-slide-settings">
+      {cell.slides && <label>Editing <select aria-label="Editing slide" value={slideIndex(cell, context.slidePositions)}
+        onChange={event => context.store.showSlide(cell.id, Number(event.target.value))}>{choices}</select></label>}
+      <div className="cell-slide-actions">
+        <button type="button" className="workflow-tactile-control" disabled={slideCount(cell) >= 32}
+          onClick={() => { if (run('slides', [cell.id, 'add'])) context.store.showSlide(cell.id, slideCount(cell)); }}>Add slide</button>
+        <button type="button" className="workflow-tactile-control" disabled={slideCount(cell) >= 32}
+          title={peers.length ? 'Duplicate this slide in all linked cells' : 'Duplicate the current slide'}
+          onClick={() => {
+            const index = slideIndex(cell, context.slidePositions);
+            if (run('duplicateSlide', [cell.id, index])) context.store.showSlide(cell.id, index + 1);
+          }}>Duplicate slide</button>
+      </div>
+      {cell.slides && <button type="button" className="workflow-tactile-control" title="Remove the last slide when empty in every linked cell"
+        disabled={[cell, ...peers].some(item => item.slides.at(-1).length)} onClick={() => run('slides', [cell.id, 'remove'])}>Remove empty last slide</button>}
+      {cell.slides && <label>Swipe to advance <select value={cell.swipeDirection || 'left'}
+        onChange={event => run('slides', [cell.id, 'direction', event.target.value])}>
+        {Object.keys(swipeOffsets).map(dir => <option key={dir} value={dir}>{dir[0].toUpperCase() + dir.slice(1)}</option>)}</select></label>}
+      {context.cells.length > 1 && <label>Link swiping with <select value="" onChange={event => run('slides', [cell.id, 'link', event.target.value])}>
+        <option value="">Choose cell…</option>{context.cells.filter(other => other.id !== cell.id && !peers.some(peer => peer.id === other.id)).map(other =>
+          <option key={other.id} value={other.id}>{records.find(item => item.id === other.id)?.name || 'Cell'}</option>)}</select></label>}
+      {peers.length > 0 && <><span>Linked to {peers.map(other => records.find(item => item.id === other.id)?.name || 'Cell').join(', ')}</span>
+        <button type="button" className="workflow-tactile-control" onClick={() => run('slides', [cell.id, 'unlink'])}>Unlink this cell</button></>}
+    </fieldset>, 'Cell slides', true)}
     {section('Members', <>{members}<div className="workbench-inspector-actions">
       <button type="button" className="workflow-tactile-control" disabled={blocked || Boolean(receptionModuleSizeReason('text:new', frame))} onClick={() => context.addText(cell.id)}><Type />Text</button>
       <button type="button" className="workflow-tactile-control" disabled={blocked || Boolean(receptionModuleSizeReason('image:new', frame))} onClick={() => context.addImage(cell.id)}><Image />Image</button>

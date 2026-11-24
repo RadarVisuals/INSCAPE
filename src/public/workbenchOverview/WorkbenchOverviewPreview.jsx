@@ -77,8 +77,6 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
         {scale > 0 && !native && items.map(item => {
           const frame = projectFrame(item.frame, area, paintScale);
           return item.source.kind === 'text' ? <TextPreview key={item.id} item={item} scale={paintScale} area={area} />
-          : item.source.kind === 'interactive' ? <div key={item.id} className="workbench-overview-interactive" style={contentFrame(item.frame, area, paintScale)}>
-            <span>{item.source.name}</span><small>Interactive artwork</small></div>
           : <WorkbenchMiniature key={item.id} item={{ ...item, scale: paintScale, frame }}
             paint={item.source.kind === 'image' ? workbenchPaintGeometry(frame) : undefined} />;
         })}

@@ -52,8 +52,9 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`unified Te
     assert.deepEqual(await saved(page), original, 'tool geometry never authors article or canvas dimensions');
     assert.equal(await body.evaluate((node, initial) => node === initial, editor), true);
     await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    const trigger = page.locator('.text-window').getByRole('button', { name: 'Text tools', exact: true });
-    await trigger.focus(); await trigger.press('Enter'); await tools.waitFor();
+    const trigger = page.getByRole('button', { name: 'Open text inspector', exact: true });
+    await trigger.focus(); await trigger.press('Enter');
+    await tools.waitFor();
     assert.deepEqual(await tools.boundingBox(), resized, 'reopening retains the session frame');
     assert.equal(await body.evaluate((node, initial) => node === initial, editor), true);
     await page.locator('main.system-workflow').focus();

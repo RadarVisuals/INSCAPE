@@ -27,15 +27,11 @@ try {
     const { createRoot } = client.default || client;
     const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
     const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
-    const { systemWorkflowDraftKey, createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+    const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
     await import('/src/lattice/rendering/latticeMenuSurface.css');
     const storage = fixture.createOwnerSystemWorkflowReviewStorage();
     const profile = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE;
-    // Display is parked and absent from Add. Seed the isolated format-scoping
-    // experiment through its existing domain operation before mounting the UI.
-    const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
-    addDisplayModule(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
     const preferences = await import('/src/public/ownerSystemWorkflow/workbenchPreferences.js');
     preferences.saveWorkbenchPreferences(profile, { ...preferences.DEFAULT_WORKBENCH_PREFERENCES, surfaceId: 'carbon' }, storage);
     const root = createRoot(document.getElementById('root'));
@@ -45,7 +41,7 @@ try {
     review.render = key => root.render(React.createElement(Runtime, { ...props, key }));
     review.render('first');
   });
-  await page.locator('.system-workflow__presentation-board').first().waitFor();
+  await page.locator('main.system-workflow').first().waitFor();
   const desktop = async (x, y) => {
     const host = page.locator('main.system-workflow');
     await host.focus();
@@ -56,7 +52,7 @@ try {
   const menu = () => page.getByRole('menu', { name: 'Workbench commands', exact: true });
   const rootLabels = () => menu().locator(':scope > button').allTextContents();
   await desktop();
-  assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH']);
+  assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'PREVIEW', 'PUBLISH']);
   // A background Workbench render replaces callback props while the menu is
   // still open. It must not cancel the user's pending submenu hover.
   await page.clock.install();
@@ -92,7 +88,7 @@ try {
   assert.equal(await page.locator('.workbench-sidebar').count(), 0);
   assert.equal(await page.evaluate(() => JSON.stringify(review.getDraft())), before);
   await page.evaluate(() => review.render('remounted'));
-  await page.locator('.system-workflow__presentation-board').first().waitFor();
+  await page.locator('main.system-workflow').first().waitFor();
   await desktop();
   await menu().waitFor();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -101,35 +97,20 @@ try {
   await page.keyboard.press('ArrowRight');
   await page.getByRole('menu', { name: 'ADD options' }).waitFor();
   await page.waitForFunction(() => document.activeElement?.closest('[role="menu"]')?.getAttribute('aria-label') === 'ADD options');
+  const addItems = page.getByRole('menu', { name: 'ADD options' }).getByRole('menuitem');
+  const focused = await addItems.evaluateAll(items => items.indexOf(document.activeElement));
+  assert.ok(focused >= 0);
   await page.keyboard.press('ArrowDown');
-  assert.equal(await page.getByRole('menuitem', { name: 'MINI APP', exact: true }).evaluate(node => node === document.activeElement), true);
+  assert.equal(await addItems.evaluateAll(items => items.indexOf(document.activeElement)), (focused + 1) % await addItems.count());
   await page.keyboard.press('ArrowLeft');
   await page.getByRole('menu', { name: 'ADD options' }).waitFor({ state: 'hidden' });
   assert.equal(await page.getByRole('menu', { name: 'ADD options' }).count(), 0);
   await page.keyboard.press('Escape');
-  // Add an ordinary Image, then verify the seeded Display's independent format.
+  // Add an Image from the desktop menu.
   await desktop();
   await page.getByRole('menuitem', { name: 'ADD', exact: true }).click();
   await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).click();
   await page.waitForFunction(() => review.getDraft().imageModules?.length === 1);
-  const second = page.locator('[data-display-instance]').nth(1);
-  const firstGeometry = await page.evaluate(() => review.getDraft().geometry);
-  await second.locator('.system-workflow__identity-strip').focus();
-  await page.keyboard.press('Shift+F10');
-  assert.equal(await page.getByRole('menuitem', { name: 'ADD', exact: true }).count(), 0);
-  await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
-  assert.equal(await page.getByRole('menuitemcheckbox', { name: 'HORIZONTAL 16:9', exact: true }).getAttribute('aria-checked'), 'true');
-  await page.getByRole('menuitemcheckbox', { name: 'VERTICAL 9:16', exact: true }).click();
-  await page.waitForFunction(() => review.getDraft().displays[0].geometry.rows === 32);
-  assert.deepEqual(await page.evaluate(() => review.getDraft().geometry), firstGeometry);
-  await second.locator('.system-workflow__identity-strip').focus();
-  await second.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).press('Enter');
-  await second.locator('.system-workflow__desktop-shortcut').press('Shift+F10');
-  await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
-  assert.equal(await page.getByRole('menuitemcheckbox', { name: 'VERTICAL 9:16', exact: true }).getAttribute('aria-checked'), 'true');
-  await page.screenshot({ path: `${output}/display-format-menu.png` });
-  await page.getByRole('menuitemcheckbox', { name: 'HORIZONTAL 16:9', exact: true }).click();
-  await page.waitForFunction(() => review.getDraft().displays[0].geometry.columns === 32);
   // Narrow and edge-opening menus remain inside the viewport and traversable.
   await page.setViewportSize({ width: 390, height: 844 });
   await desktop(380, 12);
@@ -143,5 +124,5 @@ try {
   assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), 844);
   await page.screenshot({ path: `${output}/workbench-hidden-dock-narrow.png` });
   assert.deepEqual(errors, []);
-  console.log('Workbench menu: gap traversal, menu remount/layout, keyboard, scoped Display formats and narrow bounds passed.');
+  console.log('Workbench menu: gap traversal, menu remount/layout, keyboard and narrow bounds passed.');
 } finally { await browser.close(); }

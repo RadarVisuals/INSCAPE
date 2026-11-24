@@ -1,11 +1,10 @@
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createReceptionEditorScope } from '../src/reception/receptionEditorScope.js';
 import { createReceptionEditorDocument, projectReceptionEditorDocument } from '../src/reception/receptionEditorDocument.js';
 import { createReceptionExample } from '../design-system/lab/receptionExample.js';
 import ReceptionOverview from '../src/reception/ReceptionOverview.jsx';
-import ReceptionEditorPreview from '../src/reception/ReceptionEditorPreview.jsx';
 import { interfaceTheme } from '../src/interfaceTheme.js';
 import '../src/index.css';
 
@@ -29,15 +28,11 @@ const model = { address, profile: { displayName: 'nomad', avatarUrl: '/assets/ac
 window.atmosphereFixture = { root, store, fail: value => { failing = value; } };
 interfaceTheme.setMode(query.get('theme') === 'light' ? 'light' : 'dark');
 function Fixture() {
-  const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  const [preview, setPreview] = useState(!query.has('public'));
+  useSyncExternalStore(store.subscribe, store.getSnapshot);
   const reception = store.getReception();
   return <div className="system-workflow" style={{ position: 'fixed', inset: 0, pointerEvents: 'auto' }}>
-    {preview ? <ReceptionEditorPreview key={state.profileAddress} reception={reception} model={model} store={store}
-      workspaceDestinations={{ Reception: () => setPreview(false) }}
-      history={store.getHistory()} onHistory={direction => store[direction]()} saveState="Saved locally" onClose={() => setPreview(false)} />
-      : <ReceptionOverview reception={projectReceptionEditorDocument(reception)} model={model} address={address}
-        onEdit={() => setPreview(true)} onOpenCanvas={() => {}} />}
+    <ReceptionOverview reception={projectReceptionEditorDocument(reception)} model={model} address={address}
+      onOpenCanvas={() => {}} />
   </div>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

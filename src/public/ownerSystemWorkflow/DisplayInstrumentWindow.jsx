@@ -15,7 +15,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, paintWor
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, objectToolbar = false, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, surfacePreviewFrame, resizeTarget, committedFrame, externalControls = false, cssPixelSurface = false, subpixelEdges = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom, viewportInsets }) {
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, objectToolbar = false, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, surfacePreviewFrame, resizeTarget, committedFrame, externalControls = false, frameControls, controlsGap = 28, cssPixelSurface = false, subpixelEdges = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom, viewportInsets }) {
   const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
   const view = useWorkbenchHostView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
@@ -111,16 +111,18 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       element.style.left = `${x}px`; element.style.top = `${y}px`;
       const screen = { left: x, top: y, width: current.width * localScale * scale, height: current.height * localScale * scale };
       paintWorkbenchResizeControls(element, screen, viewport);
+      element.style.setProperty('--controls-frame-width', `${screen.width}px`);
+      element.style.setProperty('--controls-frame-height', `${screen.height}px`);
       bar.style.setProperty('--toolbar-screen-x', `${x}px`);
       // Keep the header clear of the handles; the artwork retains its own clip.
-      const top = Math.max((view.navigationTop || 0) + 8, Math.min(y - height - 28, viewport.height - height - 8));
+      const top = Math.max((view.navigationTop || 0) + 8, Math.min(y - height - controlsGap, viewport.height - height - 8));
       bar.style.top = `${top - y}px`;
     };
     const update = () => { ({ height } = bar.getBoundingClientRect()); paintControls(getCamera()); };
     const resize = new ResizeObserver(update); resize.observe(bar); update();
     const unsubscribe = subscribeCameraPaint(paintControls);
     return () => { resize.disconnect(); unsubscribe(); };
-  }, [externalControlsHost, getCamera, subscribeCameraPaint, current.left, current.top, current.width, current.height, localScale, local?.x, local?.y, camera.scale, offset.x, offset.y, viewport, view.navigationTop, canResize]);
+  }, [externalControlsHost, controlsGap, getCamera, subscribeCameraPaint, current.left, current.top, current.width, current.height, localScale, local?.x, local?.y, camera.scale, offset.x, offset.y, viewport, view.navigationTop, canResize]);
   const bounds = viewId ? {
     left: (areaBounds.left - (local?.x || 0)) / localScale,
     top: (areaBounds.top - (local?.y || 0)) / localScale,
@@ -294,16 +296,16 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={registerView ? viewId : undefined} active={active} workbenchPan={transformed && !anchored}
     className={`system-workflow__instrument-window ${externalControls ? 'workbench-window--external-controls' : ''} ${className}`} title={`${label} · ${title}`}
     objectToolbar={objectToolbar} headerRef={setHeader} renderChrome={externalControlsHost ? (bar, handles) => createPortal(<div className={externalControlsClassName}>
-      <div ref={externalControlNode} className={`workbench-window--external-controls workbench-window-controls ${className}`} data-window-chrome={chrome}>{bar}{handles}</div>
+      <div ref={externalControlNode} className={`workbench-window--external-controls workbench-window-controls ${className}`} data-window-chrome={chrome}>{bar}{handles}{frameControls}</div>
     </div>, externalControlsHost) : undefined}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': registerView && viewId ? true : undefined,
       'data-workbench-view-id': externalControlsHost ? viewId : undefined,
-      'data-controls-below': !externalControlsHost && externalControls && painted.top < controlsTop + controlsHeight + 28 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
+      'data-controls-below': !externalControlsHost && externalControls && painted.top < controlsTop + controlsHeight + controlsGap || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
       tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome}
     contentPointerProps={moveFromContent ? { 'data-content-move': true, 'data-workbench-selectable': Boolean(viewId) || undefined,
       onPointerDown: event => begin(event, 'content-move'), ...pointerProps } : undefined}
-    style={{ ...surfaceStyle, '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${surfaceFrame.width}px`,
+    style={{ ...surfaceStyle, ...(externalControls && { '--workbench-controls-gap': `${controlsGap}px` }), '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${surfaceFrame.width}px`,
       '--workbench-tool-maximum-height': `${toolMaximumHeight}px`,
       left: current.left, top: current.top, height: current.height, maxHeight: viewId ? 'none' : toolMaximumHeight,
       ...(anchored ? { left: painted.left, top: painted.top, width: painted.width, height: painted.height }
@@ -322,7 +324,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
 }
 
 export default function DisplayInstrumentWindow({ children, instrument, onClose, title, layout, onLayoutChange }) {
-  const label = instrument === 'layers' ? 'Layers' : instrument === 'appearance' ? 'Display appearance' : 'Artwork info';
+  const label = instrument === 'layers' ? 'Layers' : instrument === 'appearance' ? 'Appearance' : 'Artwork info';
   return <WorkbenchWindow chrome="tactile" className="workbench-tool-window"  label={label} title={title}
     width={320} resizable={false} fitContent fitContentFromTop initialHeight={480} minimumHeight={96}
     initialX={layout?.left ?? 18} initialY={layout?.top ?? (instrument === 'metadata' ? 260 : 24)}

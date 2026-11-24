@@ -377,7 +377,7 @@ if (prepareOnly) {
       assert.deepEqual(await entry.page.evaluate(() => window.receptionPerf.snapshot()), beforeDrag, 'One Undo must restore the completed cell resize');
       report.editor.beforePreview = await entry.page.evaluate(() => window.receptionPerformanceProbe.resources());
       await editorCommand(entry.page, 'Canvas', 'Preview');
-      await entry.page.getByRole('region', { name: 'Studio responsive preview', exact: true }).waitFor();
+      await entry.page.getByRole('dialog', { name: 'Composition preview', exact: true }).waitFor();
       report.editor.duringPreview = await entry.page.evaluate(() => window.receptionPerformanceProbe.resources());
       report.editor.phases.push(await measure(entry, 'editor-preview-idle-2s', () => entry.page.waitForTimeout(2000)));
       report.editor.settledPreview = await entry.page.evaluate(() => window.receptionPerformanceProbe.resources());

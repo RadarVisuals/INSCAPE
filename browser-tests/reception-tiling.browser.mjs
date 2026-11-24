@@ -1,4 +1,4 @@
-import { editorDestination, receptionPreviewControls, editorCommand } from './fixtures/editor-menu.mjs';
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -11,17 +11,34 @@ const world = (value, id) => value.workbench.shapes.find(item => item.id === id)
 const surface = (page, id) => page.locator('[data-editor-cell-surface="' + id + '"]');
 async function setup(extra = '') {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
   page.setDefaultTimeout(15000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ path: 'public/' + new URL(route.request().url()).pathname.split('/public/')[1] }));
+  await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  await context.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ path: 'public/' + new URL(route.request().url()).pathname.split('/public/')[1] }));
   try {
     await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID() + extra);
     await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
     await page.evaluate(() => document.fonts.ready);
   } catch (error) { await browser.close(); throw error; }
   return { browser, page, errors };
+}
+// Exercise the responsive public reader at real browser widths. Studio Preview
+// fits one composition on screen and has no authored viewport-size controls.
+async function openResponsiveReader(editor, document) {
+  const reader = await editor.context().newPage();
+  await reader.goto(origin + '/browser-tests/reception-inspect-fixture.html');
+  await reader.waitForFunction(() => window.inspectionFixture?.replace);
+  await reader.evaluate(value => window.inspectionFixture.replace(value), document);
+  await reader.locator('[data-cell-id="shape:tiling-top"]').waitFor();
+  return reader;
+}
+async function resizeReader(reader, width) {
+  // The reader fixture has a 24px inset on both sides.
+  await reader.setViewportSize({ width: width + 48, height: 1000 });
+  await reader.evaluate(() => document.fonts.ready);
+  await reader.waitForFunction(width => Math.abs(document.querySelector('.reception-document-canvas').getBoundingClientRect().width - width) < 1, width);
 }
 async function dragTo(page, id, point) {
   const box = await surface(page, id).boundingBox();
@@ -68,19 +85,18 @@ test('native cell preview, free placement, cancellation, storage failure, Undo a
   } finally { await browser.close(); }
 });
 
-test('preview resizes with automatic article padding settle without a React update loop or document writes', { timeout: 90000 }, async () => {
+test('automatic article padding settles after public reader resizes without a React update loop or document writes', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup('&automaticPadding=1&longText=1');
   try {
     const before = await snapshot(page);
-    await editorDestination(page, 'Preview');
+    const reader = await openResponsiveReader(page, before);
+    reader.on('pageerror', error => errors.push(error.message));
     for (const width of [1080, 768, 641, 640, 390, 320, 768, 1080, 390]) {
-      const field = (await receptionPreviewControls(page)).getByRole('spinbutton', { name: 'Preview width in pixels', exact: true });
-      await field.fill(String(width)); await field.press('Tab');
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      assert.equal(await page.getByRole('region', { name: 'Reception layout', exact: true }).count(), 1);
+      await resizeReader(reader, width);
+      assert.equal(await reader.getByRole('region', { name: 'Reception layout', exact: true }).count(), 1);
       assert.deepEqual(await snapshot(page), before, 'preview resizing is a no-write projection');
     }
-    const samples = await page.evaluate(async () => {
+    const samples = await reader.evaluate(async () => {
       const values = [];
       for (let i = 0; i < 30; i++) {
         await new Promise(resolve => requestAnimationFrame(resolve));
@@ -89,11 +105,12 @@ test('preview resizes with automatic article padding settle without a React upda
       return values;
     });
     assert.equal(new Set(samples.slice(-20)).size, 1, 'content height settles across successive frames');
-    const sizes = await page.locator('.reception-document-layer[data-text]').evaluateAll(nodes => nodes.map(node => {
+    const sizes = await reader.locator('.reception-document-layer[data-text]').evaluateAll(nodes => nodes.map(node => {
       const owner = document.querySelector('[data-cell-id="' + node.dataset.cellMember + '"]');
       return { cell: owner.getBoundingClientRect().height, text: node.getBoundingClientRect().height,
         bottom: node.getBoundingClientRect().bottom, cellBottom: owner.getBoundingClientRect().bottom };
     }));
+    assert.ok(sizes.length > 0, 'the reader rendered text to measure');
     for (const size of sizes) {
       assert.ok(size.cell <= Math.max(240, size.text + 32) + 1, 'bottom-positioned text never multiplies cell height');
       assert.ok(size.bottom <= size.cellBottom - 15, 'automatic phone text retains its bottom margin');
@@ -105,15 +122,12 @@ test('preview resizes with automatic article padding settle without a React upda
 test('fluid quote type follows its text frame and restores authored size without document writes', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup('&fluidText=1');
   try {
-    // Leave room for a genuine 1440px preview, including its surrounding controls.
-    await page.setViewportSize({ width: 1800, height: 1000 });
     const before = await snapshot(page);
-    await editorDestination(page, 'Preview');
+    const reader = await openResponsiveReader(page, before);
+    reader.on('pageerror', error => errors.push(error.message));
     for (const [width, maximum] of [[1440,28],[1080,28],[390,17],[320,17],[1440,28]]) {
-      const field = (await receptionPreviewControls(page)).getByRole('spinbutton', { name: 'Preview width in pixels', exact: true });
-      await field.fill(String(width)); await field.press('Tab');
-      await page.evaluate(() => document.fonts.ready);
-      const size = await page.locator('.reception-document-layer[data-text] article').first().evaluate(node => {
+      await resizeReader(reader, width);
+      const size = await reader.locator('.reception-document-layer[data-text] article').first().evaluate(node => {
         const span = node.querySelector('span') || node;
         return parseFloat(getComputedStyle(span).fontSize) * Number(getComputedStyle(node).zoom);
       });
@@ -153,31 +167,29 @@ test('native Image crop preserves Fit, zooms out, cancels and restores through U
   } finally {await browser.close();}
 });
 
-test('bottom text shrinks proportionally while preserving the minimum reading inset', { timeout: 90000 }, async () => {
+test('unanchored bottom text preserves its authored proportions and inset when the public reader resizes', { timeout: 90000 }, async () => {
   const {browser,page,errors}=await setup('&fluidText=1&positioning=1');
   try {
     const before=await snapshot(page);
-    await page.getByRole('button',{name:'Preview',exact:true}).click();
-    const sample=()=>page.locator('.reception-document-layer[data-text]').first().evaluate(n=>{
+    const reader = await openResponsiveReader(page, before);
+    reader.on('pageerror', error => errors.push(error.message));
+    const sample=()=>reader.locator('.reception-document-layer[data-text]').first().evaluate(n=>{
       const owner=document.querySelector('[data-cell-id="'+n.dataset.cellMember+'"]');
       const cell=owner.getBoundingClientRect(),text=n.getBoundingClientRect();
       return {height:text.height,gap:cell.bottom-text.bottom,offset:text.top-cell.top,
         width:document.querySelector('.reception-document-canvas').getBoundingClientRect().width};
     });
     const at=async width=>{
-      const field=(await receptionPreviewControls(page)).getByRole('spinbutton',{name:'Preview width in pixels',exact:true});
-      await field.fill(String(width));await field.press('Tab');
-      await page.evaluate(()=>document.fonts.ready);
-      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      await resizeReader(reader, width);
       return sample();
     };
     const full=await at(1440);
     for(const width of [1080,768,672]) {
       const small=await at(width),factor=small.width/full.width;
-      const gap=Math.max(24,full.gap*factor);
-      assert.ok(Math.abs(small.height-((full.height+full.gap)*factor-gap))<2, 'the reading inset bounds the text frame');
-      assert.ok(Math.abs(small.offset-full.offset*factor)<2, 'the authored top offset follows the actual canvas width');
-      assert.ok(Math.abs(small.gap-gap)<2, 'bottom spacing never falls below the 24px reading inset');
+      const gap=full.gap*factor;
+      assert.ok(Math.abs(small.height-full.height*factor)<1, 'the authored text height scales with the cell');
+      assert.ok(Math.abs(small.offset-full.offset*factor)<1, 'the authored top offset follows the actual canvas width');
+      assert.ok(Math.abs(small.gap-gap)<1, 'the free text keeps its authored bottom spacing in proportion');
     }
     assert.deepEqual(await at(1440),full);
     assert.deepEqual(await snapshot(page),before);assert.deepEqual(errors,[]);

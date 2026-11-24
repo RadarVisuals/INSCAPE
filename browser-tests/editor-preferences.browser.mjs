@@ -16,8 +16,8 @@ const prefs = page => page.evaluate(key => JSON.parse(localStorage.getItem(key))
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
 const library = page => page.getByRole('region', { name: 'Library workspace', exact: true });
 const showDisplayOptions = async page => {
-  if (!await page.getByRole('dialog', { name: 'Library display options', exact: true }).isVisible())
-    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+  if (!await page.getByRole('dialog', { name: 'Library view options', exact: true }).isVisible())
+    await page.getByRole('button', { name: 'Library view options', exact: true }).click();
 };
 const libraryHost = page => page.locator('.workbench-tool-dock').filter({ has: page.getByRole('tab', { name: 'Library', exact: true }) });
 const closeLibrary = page => libraryHost(page).getByRole('button', { name: 'Close Library', exact: true });
@@ -318,7 +318,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await search.fill('');
     assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     assert.equal(await panel.evaluate(node => getComputedStyle(node).boxShadow), 'none');
-    for (const control of [search, panel.getByRole('button', { name: 'Library display options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'All Assets', exact: true }), page.getByRole('button', { name: 'Folders', exact: true })]) {
+    for (const control of [search, panel.getByRole('button', { name: 'Library view options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'All Assets', exact: true }), page.getByRole('button', { name: 'Folders', exact: true })]) {
       assert.equal(await control.evaluate(node => { const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)); }), true);
     }
     await showDisplayOptions(page);

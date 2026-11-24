@@ -52,7 +52,7 @@ test('System Workflow publication opens the canonical v9 rack without external m
     assert.notEqual(presentation.backgroundColor, 'rgba(0, 0, 0, 0)', 'publication rack has an opaque menu surface');
     assert.notEqual(presentation.color, presentation.backgroundColor, 'publication controls retain visible contrast');
     assert.doesNotMatch(await rack.innerText(), /PROFILE\s+PUBLISH/u);
-    assert.match(await rack.innerText(), /What goes live[\s\S]+Public Grids[\s\S]+What stays private/u);
+    assert.match(await rack.innerText(), /What goes live[\s\S]+public images, text and shapes[\s\S]+What stays private/u);
     assert.deepEqual([presentation.headingFontSize, presentation.bodyFontSize, presentation.actionFontSize], ['11px', '11px', '11px']);
     assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
 
@@ -62,7 +62,7 @@ test('System Workflow publication opens the canonical v9 rack without external m
     await trigger.click();
     await rack.waitFor();
     await page.waitForFunction(() => document.querySelector('.owner-lattice-publication-rack')?.dataset.panelPhase === 'open');
-    await page.locator('[data-system-workflow-artboard]').click({ position: { x: 900, y: 300 } });
+    await page.locator('main.system-workflow').click({ position: { x: 900, y: 300 } });
     await page.waitForFunction(() => document.querySelector('.owner-lattice-publication-rack')?.dataset.panelPhase === 'closing');
     await rack.waitFor({ state: 'detached' });
     await trigger.click();

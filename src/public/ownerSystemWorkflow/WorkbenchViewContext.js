@@ -100,8 +100,7 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
   const savedLayout = resizeTarget?.store?.getSnapshot().workbench;
   /** @type {{window?: import('../../contracts/workbench.js').Frame | import('../../contracts/workbench.js').Position, position?: import('../../contracts/workbench.js').Position} | undefined} */
   const savedEntry = resizeTarget?.parentTextId ? savedLayout?.texts?.find(item => item.id === resizeTarget.parentTextId)?.frames?.find(item => item.id === id)
-    : resizeTarget?.layoutKey === 'display' ? savedLayout?.display
-    : savedLayout?.[/** @type {Exclude<import('../../contracts/workbench.js').ResizeTarget['layoutKey'], 'display' | undefined>} */ (resizeTarget?.layoutKey)]?.find(item => item.id === id);
+    : resizeTarget ? savedLayout?.[resizeTarget.layoutKey]?.find(item => item.id === id) : undefined;
   const savedFrame = savedEntry?.window || savedEntry?.position;
   const savedKey = JSON.stringify(savedFrame ?? null);
   // Remember the local frame for an older draft without a saved entry. Undoing

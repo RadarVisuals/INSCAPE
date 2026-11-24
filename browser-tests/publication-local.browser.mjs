@@ -36,8 +36,8 @@ for (const width of [1440, 390]) test(`local publication prepares 30 canvases wi
     assert.equal(entries.length, 30);
     assert.deepEqual(publishedCompositionEntries(document, 'profile').map(item => item.name), ['Canvas 2']);
     assert.equal(publishedCompositionEntries(document, 'gallery').length, 29);
-    for (const entry of entries) for (const placement of entry.content.grids[0].placements) {
-      assert.match(placement.asset.name, /^Current /, 'current canvas records win over overlapping reference records');
+    for (const entry of entries) {
+      assert.deepEqual(entry.content.imageModules.map(image => image.artwork.asset.name), ['ABYSSAL STUDY', 'MOUNTAIN SIGNAL II']);
     }
     assert.ok(state.requests.filter(request => request.method === 'POST').every(request => new URL(request.url).origin === DEVELOPMENT_PUBLICATION_SERVICE && request.origin === origin));
     assert.equal(await rack.evaluate(node => node.scrollWidth <= node.clientWidth), true);

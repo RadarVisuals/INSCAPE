@@ -25,8 +25,6 @@ export default function useWorkbenchController(profileAddress, { storage, shared
     catch (error) { setFailure({ authority, message: error.message }); return false; }
   }, [authority]);
   const clearError = useCallback(() => setFailure(current => current === failure ? null : current), [failure]);
-  // Rendering reads the accepted immutable document. A Display navigation must
-  // not clone every sibling module or invalidate their content identities.
   const draft = authority.store.getSnapshot();
   return { draft, store: authority.store, storage: selectedStorage, run, clearError, error: failure?.authority === authority ? failure.message : null,
     saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),

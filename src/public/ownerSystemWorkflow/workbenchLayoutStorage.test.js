@@ -9,11 +9,13 @@ const profile = `0x${'1'.repeat(40)}`;
 const storage = () => { const map = new Map(); return { getItem: k => map.get(k) ?? null, setItem: (k, v) => map.set(k, v) }; };
 
 test('local layout survives reload without mutating authored content or publication layout', () => {
-  const store = storage(), draft = createEmptySystemWorkflowDraft(profile), before = structuredClone(draft);
-  const layout = createDefaultWorkbenchPresentation(); layout.display.window.left = 211; layout.display.open = false;
-  const views = { 'display:primary': { gridId: draft.grids[1].id, locked: true } };
+  const store = storage(), draft = createEmptySystemWorkflowDraft(profile);
+  draft.texts = [{ id: 'text:one', article: createArticle(), visibility: 'PRIVATE' }];
+  const before = structuredClone(draft);
+  const layout = createDefaultWorkbenchPresentation(); layout.identity.window.left = 211;
+  const views = { 'text:one': { mode: 'write' } };
   assert.deepEqual(loadWorkbenchLayout(profile, draft, store), { layout: null, views: {} });
-  assert.equal(saveWorkbenchLayout(profile, draft, layout, views, store), true);
+  assert.equal(saveWorkbenchLayout(profile, draft, layout, { ...views, 'display:primary': { gridId: 'grid:second', locked: true } }, store), true);
   assert.deepEqual(loadWorkbenchLayout(profile, draft, store), { layout, views });
   assert.deepEqual(draft, before);
   assert.equal(loadWorkbenchLayout(`0x${'2'.repeat(40)}`, draft, store).layout, null);

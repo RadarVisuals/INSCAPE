@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
-import { buildProfileDocumentV9, projectSystemWorkflowPublicGrids } from './profileDocumentV9Builder.js';
+import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import {
   canonicalSerializeProfileDocumentV9,
   profileDocumentV9CanonicalHash,
@@ -20,50 +21,6 @@ import { SYSTEM_WORKFLOW_LIMITS } from '../../systemWorkflow/domain/systemWorkfl
 import { isValidIdentityCard, resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
-import { createSystemWorkflowResizeCandidate, createSystemWorkflowResizeGesture, updateSystemWorkflowResizeGesture } from '../../systemWorkflow/systemWorkflowResize.js';
-import { placementMediaRectangle } from '../../lattice/rendering/placementMediaRectangle.js';
-
-test('side resizing changes one axis and preserves fitted image height, saved source, crop and public restoration', () => {
-  const input = draft(); const original = input.grids[0].placements[0]; original.locked = false;
-  const changed = createSystemWorkflowResizeCandidate(input, { gridId: input.grids[0].id,
-    placementId: original.id, expectedPlacement: original, corner: 'e',
-    destination: { column: original.column, row: original.row, columnSpan: 4, rowSpan: original.rowSpan } });
-  const resized = changed.grids[0].placements[0];
-  assert.equal(original.columnSpan, 8);
-  assert.equal(resized.rowSpan, original.rowSpan);
-  assert.deepEqual(resized.crop, original.crop);
-  assert.equal(resized.stableAssetId, original.stableAssetId);
-  const dimensions = { width: 300, height: 800 };
-  for (const crop of [null, { x: .5, y: .5, zoom: 2 }]) {
-    const before = placementMediaRectangle({ left: 0, top: 0, width: 8, height: 6 }, dimensions, crop);
-    const after = placementMediaRectangle({ left: 0, top: 0, width: 4, height: 6 }, dimensions, crop, resized.mediaFrameRatio);
-    assert.equal(after.height, before.height); assert.equal(after.width, before.width / 2);
-    assert.equal(after.top, before.top); assert.equal(after.left, before.left / 2);
-  }
-  const published = document({ systemWorkflowDraft: changed });
-  const parsed = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(published));
-  assert.equal(createOwnerDraftFromPublishedProfile(parsed).grids[0].placements[0].mediaFrameRatio, 8 / 6);
-  for (const bad of [null, 0, -1, '2', 513]) {
-    const invalid = structuredClone(published); invalid.grids[0].placements[0].mediaFrameRatio = bad;
-    assert.equal(validateProfileDocumentV9(invalid).valid, false);
-  }
-  assert.throws(() => createSystemWorkflowResizeCandidate(changed, { gridId: input.grids[0].id,
-    placementId: original.id, expectedPlacement: original, corner: 'e', destination: original }), /changed/);
-});
-
-test('side pointer gestures ignore the other axis and keep their opposite edge', () => {
-  const original = { id: 'beam', column: 4, row: 3, columnSpan: 8, rowSpan: 6 };
-  const field = { left: 0, top: 0, width: 320, height: 180, cellSize: 10 };
-  for (const side of ['n', 'e', 's', 'w']) {
-    const gesture = createSystemWorkflowResizeGesture(original, side, field, { x: 60, y: 60 });
-    const next = updateSystemWorkflowResizeGesture(gesture, { x: 80, y: 80 }, field, 0, { preserveRatio: true }).previewGeometry;
-    if (side === 'e' || side === 'w') { assert.equal(next.rowSpan, 6); assert.equal(next.row, 3); }
-    else { assert.equal(next.columnSpan, 8); assert.equal(next.column, 4); }
-    if (side === 'w') assert.equal(next.column + next.columnSpan, 12);
-    if (side === 'n') assert.equal(next.row + next.rowSpan, 9);
-  }
-});
-import { createSystemWorkflowInspectionCandidate } from '../../systemWorkflow/systemWorkflowInspection.js';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
 const ASSET = `42:${CONTRACT}:0x01`;
 const asset = () => ({
@@ -73,36 +30,7 @@ const asset = () => ({
   imageWidth: 1600, imageHeight: 900, creators: [{ address: PROFILE, name: 'Creator' }], attributes: [],
   fieldProvenance: { creators: { source: 'LUKSO INDEXER / LSP4 CREATORS', scope: 'tokenId' } },
 });
-const placement = (id, order, overrides = {}) => ({
-  id, stableAssetId: ASSET, column: order % 20, row: 0, columnSpan: 1, rowSpan: 1,
-  layer: order, navigationOrder: order, crop: null, frameId: 'NONE',
-  mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
-  backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: 'PUBLIC', locked: true,
-  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
-  ...overrides,
-});
-
-function draft() {
-  const value = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
-  value.grids[0].placements = [placement('public-placement', 1, {
-    column: 4, row: 3, columnSpan: 8, rowSpan: 6, layer: 9, navigationOrder: 3,
-    crop: { x: 0.25, y: 0.75, zoom: 2 }, frameId: 'DOSSIER',
-    backing: { enabled: true, color: '#654321' }, transparencyMode: 'PRESERVE_ALPHA',
-    transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
-  })];
-  value.grids.push({
-    ...structuredClone(value.grids[0]), id: 'grid:private', title: 'PRIVATE GRID', visibility: 'PRIVATE',
-    placements: [placement('private-grid-placement', 0)],
-  });
-  value.grids.push({
-    ...structuredClone(value.grids[0]), id: 'grid:second', title: 'SECOND', placements: [
-      placement('private-placement', 0, { visibility: 'PRIVATE', locked: false }),
-      placement('second-public', 1, { locked: false }),
-    ],
-  });
-  return value;
-}
+function draft() { return createEmptySystemWorkflowDraft(PROFILE); }
 
 function document(overrides = {}) {
   return buildProfileDocumentV9({
@@ -111,35 +39,6 @@ function document(overrides = {}) {
     revision: 4, systemWorkflowDraft: draft(), ...overrides,
   });
 }
-
-test('inspection choice round-trips through public bytes while older documents stay unchanged', () => {
-  const original = document();
-  const oldBytes = canonicalSerializeProfileDocumentV9(original);
-  assert.equal(canonicalSerializeProfileDocumentV9(parseProfileDocumentV9Json(oldBytes)), oldBytes);
-  assert.equal(Object.hasOwn(original.grids[0].placements[0], 'inspectionMode'), false);
-  const input = draft(); input.grids[0].placements[0].inspectionMode = 'LIFT';
-  const published = document({ systemWorkflowDraft: input });
-  const parsed = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(published));
-  assert.equal(parsed.grids[0].placements[0].inspectionMode, 'LIFT');
-  const recovered = createOwnerDraftFromPublishedProfile(parsed);
-  assert.equal(recovered.grids[0].placements[0].inspectionMode, 'LIFT');
-  assert.notEqual(profileDocumentV9ContentFingerprint(original), profileDocumentV9ContentFingerprint(published));
-  for (const bad of ['ZOOM', null, true, {}]) {
-    const invalid = structuredClone(published); invalid.grids[0].placements[0].inspectionMode = bad;
-    assert.equal(validateProfileDocumentV9(invalid).valid, false);
-  }
-});
-
-test('inspection edits reject stale placement snapshots and preserve unrelated content', () => {
-  const input = draft(); const placement = input.grids[0].placements[0];
-  placement.locked = false; placement.inspectionMode = 'LIFT';
-  const request = { gridId: input.grids[0].id, placementId: placement.id, expectedPlacement: placement, inspectionMode: 'LIFT' };
-  assert.equal(createSystemWorkflowInspectionCandidate(input, request), null, 'no-op does not create a revision');
-  const changed = createSystemWorkflowInspectionCandidate(input, { ...request, inspectionMode: 'IN_PLACE' });
-  assert.equal(changed.grids[0].placements[0].inspectionMode, 'IN_PLACE');
-  const stale = structuredClone(placement); stale.inspectionMode = 'IN_PLACE';
-  assert.throws(() => createSystemWorkflowInspectionCandidate(input, { ...request, expectedPlacement: stale }), /changed/);
-});
 
 test('Identity chosen image survives the existing public avatar envelope and draft restoration', () => {
   const input = draft();
@@ -150,7 +49,6 @@ test('Identity chosen image survives the existing public avatar envelope and dra
   assert.deepEqual(Object.keys(published.identityPresentation.avatar), ['mode', 'asset', 'shape']);
   assert.equal(published.identityPresentation.avatar.asset.media.url, selectedMedia.url);
   assert.equal(published.identityPresentation.avatar.asset.media.width, 2000);
-  assert.equal(published.grids[0].placements[0].asset.media.url, asset().imageUrl);
   assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published).identityPresentation.avatar,
     input.identityPresentation.avatar);
   assert.deepEqual(createOwnerDraftFromPublishedProfile(published).identityPresentation.avatar,
@@ -204,6 +102,8 @@ test('Identity card boundaries reject executable settings, invalid values and un
     { ...card, fields: [{ ...validField, value: 'x'.repeat(2001) }] },
     { ...card, fields: [{ ...validField, type: 'list', value: Array(17).fill('x') }] },
     { ...card, fields: Array.from({ length: 17 }, (_, index) => ({ ...validField, id: `field:${index}` })) },
+    (value) => { value.grids = []; },
+    (value) => { value.displays = []; },
   ]) {
     assert.equal(isValidIdentityCard(invalid), false);
     const candidate = document(); candidate.identityPresentation.card = invalid;
@@ -241,75 +141,15 @@ test('optional Identity categories round-trip while cards without categories sta
   assert.deepEqual(published.identityPresentation.card, card);
 });
 
-test('v9 builder emits only the clean INSCAPE envelope and ordered public Grids', () => {
-  const value = document();
-  assert.deepEqual(Object.keys(value), [
-    'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
-    'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'grids', 'metadata',
-  ]);
-  assert.equal(value.documentType, 'INSCAPE_PROFILE');
-  assert.equal(value.version, 9);
-  assert.deepEqual(value.grids.map(({ id }) => id), ['grid:home', 'grid:second']);
-  assert.deepEqual(value.grids.map(({ title }) => title), ['HOME', 'SECOND']);
-  assert.deepEqual(value.grids[1].placements.map(({ id }) => id), ['second-public']);
-  for (const forbidden of ['lattice', 'tables', 'presentation', 'spaces', 'canvasObjects', 'keeper', 'stage', 'environment', 'signals', 'systemModules']) {
-    assert.equal(Object.hasOwn(value, forbidden), false, forbidden);
-  }
-  assert.equal(validateProfileDocumentV9(value).valid, true);
-});
-
-test('public placement projection preserves canonical asset and presentation while omitting owner lock state', () => {
-  const input = draft();
-  const projected = projectSystemWorkflowPublicGrids(input, [asset()]);
-  const value = projected[0].placements[0];
-  assert.equal(value.asset.stableAssetId, ASSET);
-  assert.equal(value.asset.media.url, 'https://assets.example/work.png');
-  assert.deepEqual(value.asset.creators, [{ address: PROFILE, name: 'Creator',
-    source: 'LUKSO INDEXER / LSP4 CREATORS', scope: 'tokenId' }]);
-  assert.deepEqual({
-    column: value.column, row: value.row, columnSpan: value.columnSpan, rowSpan: value.rowSpan,
-    crop: value.crop, layer: value.layer,
-    navigationOrder: value.navigationOrder, transform: value.transform,
-  }, {
-    column: 4, row: 3, columnSpan: 8, rowSpan: 6,
-    crop: { x: 0.25, y: 0.75, zoom: 2 }, layer: 9,
-    navigationOrder: 3, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
-  });
-  assert.equal(Object.hasOwn(value, 'locked'), false);
-  for (const key of ['mat', 'frameId', 'backing', 'transparencyMode']) assert.equal(Object.hasOwn(value, key), false);
-  assert.equal(Object.hasOwn(value, 'stableAssetId'), false);
-  assert.deepEqual(input, draft(), 'projection must not mutate the canonical draft');
-});
-
-test('an authored World Cover is published separately from visitor Grids at the canonical 16:9 size', () => {
-  const systemWorkflowDraft = draft();
-  systemWorkflowDraft.grids.find(({ id }) => id === 'grid:world-cover').placements = [
-    placement('world-cover-placement', 0, { locked: false }),
-  ];
-  const value = document({ systemWorkflowDraft });
-  assert.deepEqual(value.grids.map(({ id }) => id), ['grid:home', 'grid:second']);
-  assert.equal(value.metadata.worldCover.width, 768);
-  assert.equal(value.metadata.worldCover.height, 432);
-  assert.equal(value.metadata.worldCover.grid.id, 'grid:world-cover');
-  assert.deepEqual(value.metadata.worldCover.grid.placements.map(({ id }) => id), ['world-cover-placement']);
-  assert.equal(validateProfileDocumentV9(value).valid, true);
-});
-
-test('publication fails closed when public filtering leaves no Grid', () => {
-  const value = draft();
-  value.grids.filter(({ id }) => id !== 'grid:world-cover').forEach((grid) => { grid.visibility = 'PRIVATE'; });
-  assert.throws(() => buildProfileDocumentV9({
-    assetRecords: [], createdAt: 1, exportedAt: 2, profileAddress: PROFILE, systemWorkflowDraft: value,
-  }), { code: 'INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED' });
-});
-
 test('builder rejects explicit invalid revisions and strips creators without canonical LSP4 provenance', () => {
   for (const revision of [0, -1, 1.5, '2', NaN]) {
     assert.throws(() => document({ revision }), { code: 'INSCAPE_PROFILE_REVISION_INVALID' });
   }
   const unproven = asset(); delete unproven.fieldProvenance;
-  const value = document({ assetRecords: [unproven] });
-  assert.deepEqual(value.grids[0].placements[0].asset.creators, []);
+  const input = draft();
+  input.identityPresentation.avatar = { mode: 'inscape', stableAssetId: ASSET, shape: 'square' };
+  const value = document({ assetRecords: [unproven], systemWorkflowDraft: input });
+  assert.deepEqual(value.identityPresentation.avatar.asset.creators, []);
 });
 
 test('malformed identity presentation returns structured validation errors without throwing', () => {
@@ -328,37 +168,14 @@ test('v9 validation is exact, v9-only, quantity bounded, and rejects private or 
     (value) => { value.version = 8; },
     (value) => { value.documentType = 'OS_UNDERNEATH_PROFILE'; },
     (value) => { value.lattice = {}; },
-    (value) => { value.grids[0].coordinate = { x: 0, y: 0 }; },
-    (value) => { value.grids[0].visibility = 'PRIVATE'; },
-    (value) => { value.grids[0].placements[0].locked = false; },
+    (value) => { value.miniApps = []; },
+    (value) => { value.workbench = { ...createDefaultWorkbenchPresentation(), miniApps: [] }; },
   ]) {
     const candidate = structuredClone(source);
     mutate(candidate);
     assert.equal(validateProfileDocumentV9(candidate).valid, false);
   }
 
-  const tooManyGrids = structuredClone(source);
-  tooManyGrids.grids = Array.from({ length: 25 }, (_, index) => ({
-    ...structuredClone(source.grids[0]), id: `grid:g-${index}`, placements: [],
-  }));
-  assert.ok(validateProfileDocumentV9(tooManyGrids).errors.some(({ code }) => code === 'invalid_grid_count'));
-
-  const tooManyPlacements = structuredClone(source);
-  tooManyPlacements.grids = [{ ...structuredClone(source.grids[0]), placements: Array.from({ length: 201 }, (_, index) => ({
-    ...structuredClone(source.grids[0].placements[0]), id: `p-${index}`, layer: index, navigationOrder: index,
-  })) }];
-  assert.ok(validateProfileDocumentV9(tooManyPlacements).errors.some(({ code }) => code === 'invalid_placements'));
-
-  const tooManyReferences = structuredClone(source);
-  tooManyReferences.identityPresentation.avatar = { mode: 'official', asset: null, shape: 'square' };
-  tooManyReferences.grids = Array.from({ length: 6 }, (_, gridIndex) => ({
-    ...structuredClone(source.grids[0]), id: `grid:r-${gridIndex}`,
-    placements: Array.from({ length: gridIndex < 5 ? 200 : 1 }, (_, index) => ({
-      ...structuredClone(source.grids[0].placements[0]), id: `p-${gridIndex}-${index}`,
-      layer: index, navigationOrder: index,
-    })),
-  }));
-  assert.ok(validateProfileDocumentV9(tooManyReferences).errors.some(({ code }) => code === 'too_many_asset_references'));
 });
 
 test('v9 raw byte boundary accepts 512 KiB and rejects limit plus one', () => {
@@ -383,27 +200,12 @@ test('canonical serialization and hash input are stable while content/reconcilia
   assert.throws(() => parseProfileDocumentV9Json(JSON.stringify({ ...first, version: 8 })));
 });
 
-test('removed animation fields are outside the draft and public placement schema', () => {
-  for (const key of ['animation', 'layeredArtwork']) {
-    const source = draft(); source.grids[0].placements[0][key] = {};
-    assert.throws(() => document({ systemWorkflowDraft: source }));
-    const published = document(); published.grids[0].placements[0][key] = {};
-    assert.equal(validateProfileDocumentV9(published).valid, false);
+test('publications and restored drafts omit the retired Display schema', () => {
+  const snapshot = document();
+  for (const key of ['artboard', 'geometry', 'appearance', 'grids', 'displays']) {
+    assert.equal(Object.hasOwn(snapshot, key), false);
   }
-  const published = document();
-  assert.deepEqual(assertValidProfileDocumentV9(published), published);
-});
-
-test('v9-only reconciliation restores public draft-v4 state and preserves unrelated private Grids', () => {
-  const published = document();
-  const current = draft();
-  current.grids = current.grids.filter(({ visibility, id }) => visibility === 'PRIVATE' || id === 'grid:world-cover');
-  current.grids.find(({ id }) => id === 'grid:private').placements[0].locked = true;
-  const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(published, current);
-  assert.equal(restored.draftVersion, 4);
-  assert.deepEqual(restored.grids.map(({ id }) => id), ['grid:home', 'grid:second', 'grid:private', 'grid:world-cover']);
-  assert.equal(restored.grids[0].placements[0].stableAssetId, ASSET);
-  assert.equal(restored.grids[0].placements[0].locked, false);
-  assert.equal(restored.grids[2].placements[0].locked, true);
-  assert.deepEqual(assertValidProfileDocumentV9(published), published);
+  const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(snapshot);
+  assert.equal(Object.hasOwn(restored, 'grids'), false);
+  assert.deepEqual(restored.identityPresentation.alias, snapshot.identityPresentation.alias);
 });

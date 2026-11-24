@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import ReceptionEditorPreview from '../src/reception/ReceptionEditorPreview.jsx';
+import ReceptionRestorePreview from '../src/reception/ReceptionRestorePreview.jsx';
 import ReceptionDocumentCanvas from '../src/reception/ReceptionDocumentCanvas.jsx';
 import { createReceptionEditorDocument, withReceptionModuleWindow } from '../src/reception/receptionEditorDocument.js';
 import { createReceptionExample } from '../design-system/lab/receptionExample.js';
 import { createArticle } from '../src/text/domain/article.js';
-import { TextContentPage } from '../src/text/SceneTextContent.jsx';
+import { TextContentPage } from '../src/text/TextContentPage.jsx';
 import '../src/index.css';
 import '../src/text/text.css';
 import '../src/public/ownerSystemWorkflow/workflowTokens.css';
@@ -106,7 +106,7 @@ function Fixture() {
         right: 1000 - current.workbench.texts[0].window.left, bottom: current.workbench.shapes[0].window.height - current.workbench.texts[0].window.top,
       } }} />
     </div>
-  </div> : query.has('preview') ? <ReceptionEditorPreview reception={current} onClose={() => {}} /> : <ReceptionDocumentCanvas reception={current} />}
+  </div> : query.has('preview') ? <ReceptionRestorePreview label="Profile Bento restore preview" reception={current} onClose={() => {}} /> : <ReceptionDocumentCanvas reception={current} />}
   {!query.has('native') && <LiveIdentityProbe />}
 </div>;
 }

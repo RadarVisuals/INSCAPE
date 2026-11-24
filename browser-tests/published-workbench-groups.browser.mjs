@@ -9,7 +9,7 @@ const arrived = page => page.waitForFunction(() => !document.querySelector('[dat
 const camera = page => page.locator('main.system-workflow').first().evaluate(node => [node.dataset.workbenchCameraScale || '1', node.dataset.workbenchCameraX || '0', node.dataset.workbenchCameraY || '0']);
 const groups = [
   { id: 'workbench-group:study', name: 'Public study', memberIds: ['image:motion-0', 'text:overflow', 'image:motion-1'], visibility: 'PUBLIC', position: { left: 80, top: 300 } },
-  { id: 'workbench-group:second', name: 'Second chapter', memberIds: ['display:primary', 'image:motion-2'], visibility: 'PUBLIC', position: { left: 200, top: 300 } },
+  { id: 'workbench-group:second', name: 'Second chapter', memberIds: ['shape:motion', 'image:motion-2'], visibility: 'PUBLIC', position: { left: 200, top: 300 } },
   { id: 'workbench-group:private', name: 'Secret notebook', memberIds: ['image:motion-3'] },
   { id: 'workbench-group:empty', name: 'Private members only', memberIds: ['image:motion-4'], visibility: 'PUBLIC' },
 ];
@@ -22,7 +22,7 @@ test('published groups share browsing, reading and Back without owner tools or p
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: width === 390 ? 2 : 1, reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor: true, count: 1, displayWidth: 480, heavy: true, textModes: true,
+      await mountGridMotionFixture(page, { origin, visitor: true, count: 1, shapeWidth: 480, heavy: true, textModes: true,
         workbenchGroups: groups, privateModuleIds: ['image:motion-1', 'image:motion-4'] });
       const routes = page.getByRole('navigation', { name: 'Workbench destinations', exact: true }); await routes.waitFor();
       await page.waitForFunction(() => document.querySelectorAll('[data-workbench-group-hidden]').length === 4);
@@ -84,7 +84,7 @@ test('owner group publication is explicit and undoable without changing content 
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 400,
+    await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 400,
       workbenchGroups: [{ ...groups[0], visibility: 'PRIVATE', memberIds: ['image:motion-0'] }] });
     await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
     await page.getByRole('button', { name: 'Manage Public study group', exact: true }).click();

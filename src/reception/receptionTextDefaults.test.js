@@ -32,3 +32,8 @@ test('transparent frame fill chooses new text ink from the page background', () 
     assert.equal(receptionTextDefaults({ ...base, backgroundColor: '#ffffff' }, null, mode).appearance.color, '#000000');
   }
 });
+
+test('free text starts with independently adjustable insets', () => {
+  assert.deepEqual(receptionTextDefaults({ shapes: [] }, null, 'dark').appearance.padding,
+    { top: 24, right: 24, bottom: 24, left: 24 });
+});

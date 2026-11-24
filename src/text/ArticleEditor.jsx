@@ -22,7 +22,7 @@ import ArticleFocusWriting from './ArticleFocusWriting.jsx';
 import { ArticleSearchExtension, setArticleSearch } from './articleSearch.js';
 import { ArticleFlowFocus, createArticleFlowEditor } from './articleFlowEditor.js';
 import { insertArticleArtwork, moveArticleArtwork } from './articleArtworkEditing.js';
-import { Bold, Italic, MoveHorizontal, Underline, Strikethrough, Quote, List, ListOrdered, Link, Undo2 as Undo, Redo2 as Redo, AlignLeft, AlignCenter, AlignRight, X } from 'lucide-react';
+import { Bold, Italic, MoveHorizontal, Underline, Strikethrough, Quote, List, ListOrdered, Link, Undo2 as Undo, Redo2 as Redo, AlignLeft, AlignCenter, AlignRight, AlignJustify, X } from 'lucide-react';
 const formattingIcons = { Bold, Italic, Underline, Strikethrough, Quote, Bullets: List, Numbered: ListOrdered, Link, Undo, Redo, 'Align left': AlignLeft, 'Align center': AlignCenter, 'Align right': AlignRight };
 
 export function ContinuationEditor({ controller, article, range, index }) {
@@ -215,12 +215,28 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     {command('Bold', () => editor.chain().focus().toggleBold().run(), editor.isActive('bold'), className)}
     {command('Italic', () => editor.chain().focus().toggleItalic().run(), editor.isActive('italic'), className)}
   </>;
+  const alignmentOptions = ['left', 'center', 'right'];
+  const alignmentButtons = alignmentOptions.map(value => command(`Align ${value}`, () => editor.chain().focus().setArticleAlignment(value).run(), alignmentActive(value)));
+  const AlignmentIcon = justification ? AlignJustify : alignmentActive('center') ? AlignCenter : alignmentActive('right') ? AlignRight : AlignLeft;
   const editingTitle = Boolean(article.title && (focusedPart === 'title' || (!focusedPart && editor.isEmpty)));
   return <>
     {quickToolsHost && !disabled && !focusWriting && createPortal(<>
       {editingTitle ? <TitleTypographyInput {...{ article, onChange, disabled }} compact /> : <>
         {fontMenu(true)}{sizeField(true)}{emphasis('editor-object-toolbar-button')}
+        {command('Underline', () => editor.chain().focus().toggleUnderline().run(), editor.isActive('underline'), 'editor-object-toolbar-button')}
       </>}
+      {!editingTitle && <EditorToolbarPopover label="Paragraph alignment" panelClassName="text-alignment-picker" trigger={<AlignmentIcon aria-hidden="true" />}>
+        <div className="text-alignment-options">{[...alignmentOptions, 'justify-left'].map((value, index) => {
+          const Icon = [AlignLeft, AlignCenter, AlignRight, AlignJustify][index];
+          const label = value === 'justify-left' ? 'Justify' : `Align ${value}`;
+          return <button key={value} type="button" className="editor-object-toolbar-button" aria-label={label} title={label}
+            aria-pressed={value === 'justify-left' ? Boolean(justification) : alignmentActive(value)}
+            onMouseDown={event => event.preventDefault()} onClick={event => {
+              event.currentTarget.closest('[popover]').hidePopover();
+              editor.chain().focus().setArticleAlignment(value).run();
+            }}><Icon /></button>;
+        })}</div>
+      </EditorToolbarPopover>}
       {quickColor(editingTitle ? 'title' : 'body')}
       <EditorToolbarPopover label="Text spacing" trigger={<MoveHorizontal aria-hidden="true" />}>
         <strong>Spacing</strong><div className="bento-text-spacing">
@@ -261,7 +277,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
       <section className="text-tool-group" aria-label="Paragraph formatting"><h3>Paragraph</h3>
       {lineHeightField}
       <div className="text-paragraph-alignment">
-        <div className="text-toolbar-icons">{['left', 'center', 'right'].map(value => command(`Align ${value}`, () => editor.chain().focus().setArticleAlignment(value).run(), alignmentActive(value)))}</div>
+        <div className="text-toolbar-icons">{alignmentButtons}</div>
         <OwnerSystemWorkflowSelectMenu flat compact palette="editor" className="workflow-tactile-control" label="Paragraph justification" disabled={disabled} value={justification}
           options={[{ value: '', label: 'Justify: off' }, { value: 'justify-left', label: 'Justify Left' }, { value: 'justify-center', label: 'Justify Center' }, { value: 'justify-right', label: 'Justify Right' }, { value: 'justify-all', label: 'Justify All' }]}
           onChange={value => editor.chain().focus().setArticleAlignment(value || 'left').run()} />

@@ -11,7 +11,7 @@ for (const visitor of [false, true]) test(`focus keeps painted geometry in sync 
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
+    await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, shapeWidth: 600 });
     await page.locator('[data-workbench-view-id="image:motion-0"] .image-module__artwork[data-media-state="ready"]').waitFor();
     await page.evaluate(() => document.fonts.ready);
     const host = page.locator('main.system-workflow').first();

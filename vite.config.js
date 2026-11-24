@@ -24,7 +24,7 @@ export default defineConfig(({ mode, command }) => {
       narrowLuksoWalletImportsPlugin(), providerArtworkCompressionPlugin(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
     build: { manifest: true, minify: 'terser', terserOptions: { maxWorkers: 4, compress: { passes: 2 } }, rollupOptions: {
-      input: { app: 'index.html', miniAppHost: 'mini-app-host.html' },
+      input: { app: 'index.html' },
       output: {
         // One shared icon family should not become dozens of tiny shared files.
         // Keep module/editor dependencies in their existing lazy boundaries.
@@ -44,7 +44,7 @@ export default defineConfig(({ mode, command }) => {
       // Scan only the lab entry. Full Editor artboards also need their transitive
       // CommonJS dependencies optimized when those lazy components are opened.
       ? { entries: ['design-lab.html'], include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'lucide-react', '@tiptap/react', '@tiptap/core', '@tiptap/extension-text-style', 'buffer', 'qrcode-generator'] }
-      : { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
+      : { entries: ['index.html', 'browser-tests/*.html'] },
     preview: { headers: productionResponseSecurityHeaders(productionEnvironment, { localPreview: true }) },
     server: {
       watch: {

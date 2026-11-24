@@ -15,7 +15,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(`${ROOT}/development/owner/system-workflow`, { waitUntil: 'networkidle' });
     await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__workflowWrites += 1; }); });
-    const compositionBefore = await page.locator('.system-workflow__presentation-board').boundingBox();
+    const compositionBefore = await page.locator('.image-module__window').first().boundingBox();
     // Exercise Library's own tree; the expanded desktop sidebar otherwise hosts it.
     await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     const trigger = page.getByRole('button', { name: 'Library', exact: true });
@@ -29,7 +29,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     assert.ok(bounds.x >= sidebarBounds.x + sidebarBounds.width, 'Library leaves the workspace sidebar reachable');
     assert.ok(bounds.y >= 0 && bounds.width > 0 && bounds.width < 1440 && bounds.y + bounds.height <= 900,
       'Library is a bounded overlay with Workbench space remaining visible');
-    assert.deepEqual(await page.locator('.system-workflow__presentation-board').boundingBox(), compositionBefore,
+    assert.deepEqual(await page.locator('.image-module__window').first().boundingBox(), compositionBefore,
       'opening Library does not reflow the composition');
     const sidebarResize = workspace.getByRole('button', { name: 'Resize Browser navigation' });
     assert.equal(await sidebarResize.evaluate((node) => getComputedStyle(node, '::after').width), '1px');
@@ -136,15 +136,15 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
 
     await page.evaluate(() => { window.__workflowWrites = 0; });
     const firstCard = workspace.locator('.lattice-browser-asset').first();
-    const placementCount = await page.locator('.system-workflow__placement').count();
+    const placementCount = await page.locator('.image-module__window').count();
     await firstCard.dblclick();
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
-    assert.equal(await page.locator('.system-workflow__placement').count(), placementCount + 1);
+    assert.equal(await page.locator('.image-module__window').count(), placementCount + 1);
 
     await page.evaluate(() => { window.__workflowWrites = 0; });
     await workspace.getByLabel('Search').fill('MOUNTAIN SIGNAL II');
     const secondCard = workspace.locator('.lattice-browser-asset').first(); const cardBox = await secondCard.boundingBox();
-    const canvasBox = await page.locator('.system-workflow__canvas').boundingBox();
+    const canvasBox = await page.locator('main.system-workflow').boundingBox();
     await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
     await page.mouse.down(); await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2, { steps: 6 });
     assert.equal(await workspace.getAttribute('data-placing'), 'true');
@@ -160,9 +160,9 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'review-library-drag-1440x900.png') });
     await page.mouse.up();
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
-    assert.equal(await page.locator('.system-workflow__placement').count(), placementCount + 2);
+    assert.equal(await page.locator('.image-module__window').count(), placementCount + 2);
     assert.equal(await page.locator('.system-workflow__placement-preview').count(), 0);
-    const placedBox = await page.locator('.system-workflow__placement').last().boundingBox();
+    const placedBox = await page.locator('.image-module__window').last().boundingBox();
     assert.ok(Math.abs(placedBox.width / placedBox.height - 1) < 0.01, 'square source keeps its ratio after placement');
 
     // Cards own dragging and suppress text selection. Native search input keeps
@@ -181,30 +181,16 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
 
     await trigger.click(); await workspace.waitFor();
     assert.equal(await workspace.getByLabel('Card size').inputValue(), '220', 'Library remembers card size across close and reopen');
-    const libraryQueryBeforeDiscover = await workspace.getByLabel('Search').inputValue();
+    const savedLibraryQuery = await workspace.getByLabel('Search').inputValue();
     assert.equal(await workspace.locator('.system-workflow__workspace-labels input').isChecked(), true, 'Library remembers label visibility across close and reopen');
     for (let index = 0; index < 4 && await workspace.count(); index += 1) await page.keyboard.press('Escape');
     await workspace.waitFor({ state: 'detached' });
 
-    const discoverTrigger = page.getByRole('button', { name: 'Discover', exact: true });
-    await discoverTrigger.click();
-    const discover = page.locator('.public-entry-portal');
-    await discover.getByRole('region', { name: 'Published worlds' }).waitFor();
-    const worldSearch = discover.getByLabel('Search published worlds', { exact: true });
-    await worldSearch.fill('no such published world');
-    assert.equal(await workspace.count(), 0, 'Discover does not reopen the Library workspace');
     await page.setViewportSize({ width: 390, height: 720 });
-    const directoryBounds = await discover.boundingBox();
-    assert.ok(directoryBounds.x >= 0 && directoryBounds.width <= 390 && directoryBounds.y >= 0,
-      'Discover fits the narrow viewport');
-    await discover.getByRole('button', { name: 'Return to workspace', exact: true }).click();
-    await discover.waitFor({ state: 'detached' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Discover');
-    assert.equal(await discoverTrigger.evaluate(node => node === document.activeElement), true);
     await trigger.click(); await workspace.waitFor();
     await page.waitForFunction(() => document.querySelector('[aria-label="Library workspace"]')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
-    assert.equal(await workspace.getByLabel('Search').inputValue(), libraryQueryBeforeDiscover, 'Discover search does not change the Library query');
-    assert.equal(await workspace.getByLabel('Card size').inputValue(), '220', 'Discover does not change Library density');
+    assert.equal(await workspace.getByLabel('Search').inputValue(), savedLibraryQuery, 'a narrow reopen preserves the Library query');
+    assert.equal(await workspace.getByLabel('Card size').inputValue(), '220', 'a narrow reopen preserves Library density');
     const narrowBounds = await workspace.boundingBox();
     assert.ok(narrowBounds.x >= 0 && narrowBounds.y >= 0 && narrowBounds.width > 0 && narrowBounds.height > 0
       && narrowBounds.x + narrowBounds.width <= 390 && narrowBounds.y + narrowBounds.height <= 720,
@@ -220,7 +206,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'review-library-390x720.png') });
 
     await page.setViewportSize({ width: 1440, height: 900 });
-    assert.equal(await workspace.locator('.system-workflow__library-tree-category').count(), 3, 'category creation survived Library and Discover roundtrips');
+    assert.equal(await workspace.locator('.system-workflow__library-tree-category').count(), 3, 'category creation survived reopening Library');
     while (await workspace.locator('.system-workflow__library-tree-category').count()) {
       const category = workspace.locator('.system-workflow__library-tree-category > button').first();
       const name = await category.getAttribute('aria-label');

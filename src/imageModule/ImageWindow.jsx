@@ -1,6 +1,6 @@
 import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, GripVertical } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchPlacement, useWorkbenchMovementSnap } from '../public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
 import { imageWindowGeometry, imageWindowPosition, imagePaintGeometry, resizeImageGeometry } from './imageWindowGeometry.js';
@@ -12,7 +12,7 @@ import ImageEditingControls from './ImageEditingControls.jsx';
 // Image owns a borderless surface. Workbench owns the camera, placement bounds
 // and snapping. No instrument-window sizing, chrome or content gutter is used.
 export default function ImageWindow({ id, title, position, size, viewport = { width: innerWidth, height: innerHeight }, editable, active, suspended, movable = true, placementModule,
-  applyPosition, onBeginMove, onResize, onClose, resizeTarget, quickTools, children }) {
+  applyPosition, onBeginMove, onResize, resizeTarget, quickTools, children }) {
   const { editingBounds: areaBounds, canvasHost } = useWorkbenchArea();
   const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
   const [preview, setPreview] = useState(null);
@@ -176,7 +176,6 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
       transformOrigin: '0 0', transform: `matrix(${1 / density},0,0,${1 / density},${paint.left / density},${paint.top / density})` }}>
     {content}
     {!controlsHost && editable && <div className="image-module__bounds" aria-hidden="true" />}
-    {!view.store && <button type="button" data-workbench-recovery-control className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>}
     {controlsHost ? <ImageEditingControls host={controlsHost} source={node} id={id} viewport={viewport} navigationTop={view.navigationTop}
       frame={{ left: (currentPosition.left * camera.scale + camera.x) / view.scale, top: (currentPosition.top * camera.scale + camera.y) / view.scale,
         width: currentSize.width * camera.scale / view.scale, height: currentSize.height * camera.scale / view.scale }}

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { normalizeProfileAddress, resolveWorkspaceProfile } from '../../library/config.js';
+import { normalizeProfileAddress } from '../../library/config.js';
 import { useWalletStore } from '../../store/useWalletStore.js';
 import { fixtureActivityRepository } from '../data/fixtureActivityRepository.js';
 import { luksoActivityRepository } from '../data/luksoActivityRepository.js';
@@ -8,7 +8,7 @@ import { addReactionsToQueue, mergeSignalSnapshot } from './signalState.js';
 import { loadSignalDocument, saveSignalDocument } from '../storage/signalStorage.js';
 import { getProfileIdentityCache, primeProfileIdentities } from '../../profileIdentity/state/profileIdentityService.js';
 
-const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
+const profileAddress = normalizeProfileAddress(useWalletStore.getState().hostProfileAddress);
 export const REACTION_IDENTITY_WAIT_MS = 450;
 let signalStorage = typeof window === 'undefined' ? null : window.localStorage;
 function initialDocument(profile) { return loadSignalDocument(signalStorage, profile); }

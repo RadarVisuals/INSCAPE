@@ -6,7 +6,7 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const address = '0x' + '1'.repeat(40);
 
-test('one published composition keeps free layers and Bento cells in Profile, Gallery and Writing', { timeout: 60000 }, async () => {
+test('published composition text stays with the work in Profile and Gallery and is absent from Writing', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
@@ -19,8 +19,10 @@ test('one published composition keeps free layers and Bento cells in Profile, Ga
     const dialog = page.getByRole('dialog', { name: 'View Mixed study' });
     const assertMixed = async host => {
       const layout = host.locator('.reception-document-canvas');
-      await layout.locator('[data-layer-id="text:free-caption"]').waitFor();
-      assert.equal(await layout.locator('[data-layer-id="text:free-caption"]').count(), 1);
+      const caption = layout.locator('[data-layer-id="text:free-caption"]');
+      await caption.waitFor();
+      assert.equal(await caption.count(), 1);
+      await caption.getByText('Free caption', { exact: true }).first().waitFor();
       assert.ok(await layout.locator('[data-cell-group]').count() > 0);
       assert.equal(await layout.locator('[data-cell-group] [data-layer-id="text:free-caption"]').count(), 0);
     };
@@ -42,8 +44,9 @@ test('one published composition keeps free layers and Bento cells in Profile, Ga
     await page.setViewportSize({ width: 900, height: 720 });
     await open('Writing').click();
     const writing = page.locator('.published-writing');
-    await writing.locator('summary').filter({ hasText: 'Free caption' }).click();
-    await writing.getByRole('heading', { name: 'Free caption' }).waitFor();
+    await writing.getByText('No published writing yet.', { exact: true }).waitFor();
+    assert.equal(await writing.getByText('Free caption', { exact: true }).count(), 0);
+    assert.equal(await writing.getByText('Mixed study', { exact: true }).count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -60,7 +63,9 @@ test('The shared Studio header resumes the active document from Profile and Writ
     await page.locator('.editor-menu-bar[data-document="workbench:mixed"]').waitFor();
     await page.goto(profile);
     await button('Writing').click();
-    await page.locator('.published-writing summary').filter({ hasText: 'Free caption' }).click();
+    const writing = page.locator('.published-writing');
+    await writing.getByText('No published writing yet.', { exact: true }).waitFor();
+    assert.equal(await writing.getByText('Free caption', { exact: true }).count(), 0);
     await button('Studio').click();
     await page.locator('.editor-menu-bar[data-document="workbench:mixed"]').waitFor();
   } finally { await browser.close(); }

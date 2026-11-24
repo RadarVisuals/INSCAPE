@@ -9,6 +9,8 @@ const EditorCellLayoutContext = createContext(null);
 const NO_CELLS = Object.freeze([]);
 const noSubscription = () => () => {};
 const noEditingCell = () => null;
+const noSlides = () => EMPTY_POSITIONS;
+const EMPTY_POSITIONS = Object.freeze({});
 export const useEditorCells = () => useContext(EditorCellsContext);
 export const useEditorCellLayout = () => useContext(EditorCellLayoutContext);
 export function editorCellStructureActions(store, id, view) {
@@ -42,6 +44,7 @@ export function EditorCellsProvider({ store, selection, children }) {
   const addText = useCallback(id => contentActions.current?.addText(id), []);
   const addImage = useCallback(id => contentActions.current?.addImage(id), []);
   const editingCellId = useSyncExternalStore(store?.subscribe || noSubscription, store?.getEditingCell || noEditingCell, noEditingCell);
+  const slidePositions = useSyncExternalStore(store?.subscribe || noSubscription, store?.getSlidePositions || noSlides, noSlides);
   const nativeCells = store?.getCells?.() || NO_CELLS, transforms = useWorkbenchView()?.transforms;
   const innerLines = visibleReceptionInnerLines(store?.getReception?.()?.innerLines);
   const [linePreview, setLinePreview] = useState(null), generation = store?.getGeneration();
@@ -80,9 +83,9 @@ export function EditorCellsProvider({ store, selection, children }) {
     setBentoOpen(true);
   }, [cells, selection]);
   useEffect(() => () => store?.setEditingCell?.(null), [store]);
-  const value = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell, moveLayers, openSettings,
+  const value = useMemo(() => store?.getCells ? { cells, slidePositions, editingCellId, enterCell, leaveCell, moveLayers, openSettings,
     bentoOpen, setBentoOpen, store, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage } : null,
-  [store, cells, editingCellId, enterCell, leaveCell, moveLayers, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage]);
+  [store, cells, slidePositions, editingCellId, enterCell, leaveCell, moveLayers, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage]);
   const layout = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell } : null,
     [store, cells, editingCellId, enterCell, leaveCell]);
   return <EditorCellsContext.Provider value={value}><EditorCellLayoutContext.Provider value={layout}>

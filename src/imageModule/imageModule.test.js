@@ -15,7 +15,6 @@ import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDoc
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
-import { createDisplayModuleSession, addDisplayModule } from '../systemWorkflow/displayModuleSession.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { projectLatticeProductionFocusMediaMotion } from '../lattice/rendering/latticeProductionFocusArtworkMotion.js';
 import { resolveImageLibraryArtwork } from './imageLibraryArtwork.js';
@@ -212,10 +211,9 @@ test('public Image preserves crop, transforms and provenance; older publication 
   const broken = structuredClone(doc); broken.workbench.imageModules[0].id = 'image:missing';
   assert.throws(() => assertValidProfileDocumentV9(broken));
 });
-test('Image survives Display edits and module deletion is atomic with its saved layout', () => {
-  const { store } = fixture(); addImageModule(store, profile); const id = addDisplayModule(store);
+test('Image deletion is atomic with its saved layout', () => {
+  const { store } = fixture(); addImageModule(store, profile);
   const image = store.getDraft().imageModules[0];
-  createDisplayModuleSession(store, id).createGrid();
   assert.deepEqual(store.getDraft().imageModules[0], image);
   const draft = store.getDraft(); draft.workbench = { ...createDefaultWorkbenchPresentation(), imageModules: [createImagePresentation(image.id)] };
   assert.ok(store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }));

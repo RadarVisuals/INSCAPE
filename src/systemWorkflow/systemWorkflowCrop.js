@@ -1,14 +1,9 @@
 import { exact } from '../text/domain/article.js';
-import {
-  isSystemWorkflowGridCoordinate,
-  SYSTEM_WORKFLOW_VISIBILITY,
-  assertValidSystemWorkflowDraft,
-} from './domain/systemWorkflowDraft.js';
+import { isSystemWorkflowGridCoordinate } from './domain/systemWorkflowDraft.js';
 import {
   cropFocusBounds,
   normalizeCropForMask,
 } from '../lattice/rendering/latticeCrop.js';
-import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop } from './systemWorkflowTransform.js';
 
 export const SYSTEM_WORKFLOW_CROP_DEAD_ZONE = 10;
@@ -186,51 +181,4 @@ export function reframeSystemWorkflowCropForMask(crop, mediaInput, previousMask,
     y: (nextMask.top + (nextMask.height / 2) - (previousTop - originDelta.y)) / nextBounds.renderedSize.height,
     zoom,
   }, nextMask, media);
-}
-
-export function createSystemWorkflowCropCandidate(draftInput, {
-  crop,
-  expectedMedia,
-  expectedPlacement,
-  media: mediaInput,
-  placementId,
-  gridId,
-} = {}) {
-  const draft = assertValidSystemWorkflowDraft(draftInput);
-  const grid = draft.grids.find((candidate) => candidate.id === gridId);
-  if (!grid) throw cropError('SYSTEM_WORKFLOW_CROP_GRID_UNKNOWN', 'The active canonical grid does not exist');
-  if (grid.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC) {
-    throw cropError('SYSTEM_WORKFLOW_CROP_GRID_PRIVATE', 'Crop authoring is unavailable on a private grid');
-  }
-  const placement = grid.placements.find((candidate) => candidate.id === placementId);
-  if (!placement) throw cropError('SYSTEM_WORKFLOW_CROP_PLACEMENT_UNKNOWN', 'The canonical placement does not exist');
-  if (!sameSystemWorkflowPlacementSnapshot(placement, expectedPlacement)) {
-    throw cropError('SYSTEM_WORKFLOW_CROP_PLACEMENT_STALE', 'The canonical placement changed before crop authoring completed');
-  }
-  if (placement.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC) {
-    throw cropError('SYSTEM_WORKFLOW_CROP_PLACEMENT_PRIVATE', 'Private placements cannot be cropped through the public owner projection');
-  }
-  if (placement.locked) throw cropError('SYSTEM_WORKFLOW_CROP_PLACEMENT_LOCKED', 'The canonical placement is locked');
-
-  const media = requireMedia(mediaInput);
-  const expected = requireMedia(expectedMedia);
-  if (media.stableAssetId !== placement.stableAssetId
-    || expected.stableAssetId !== placement.stableAssetId
-    || media.stableAssetId !== expected.stableAssetId
-    || media.width !== expected.width || media.height !== expected.height) {
-    throw cropError('SYSTEM_WORKFLOW_CROP_MEDIA_STALE', 'The canonical crop media identity or native dimensions changed');
-  }
-  if (sameSystemWorkflowCrop(placement.crop, crop)) return null;
-  if (crop !== null) {
-    if (!exactCrop(crop)) throw cropError('SYSTEM_WORKFLOW_CROP_VALUE_INVALID', 'The completed crop is not canonical');
-    const projected = projectSystemWorkflowTransform(placement.transform, media, crop);
-    const bounds = cropFocusBounds(systemWorkflowCropMask(placement), projected.dimensions, crop.zoom);
-    const epsilon = 1e-12;
-    if (projected.crop.x < bounds.x.minimum - epsilon || projected.crop.x > bounds.x.maximum + epsilon
-      || projected.crop.y < bounds.y.minimum - epsilon || projected.crop.y > bounds.y.maximum + epsilon) {
-      throw cropError('SYSTEM_WORKFLOW_CROP_COVERAGE_INVALID', 'The completed crop would expose an edge of the media opening');
-    }
-  }
-  placement.crop = crop === null ? null : { ...crop };
-  return assertValidSystemWorkflowDraft(draft);
 }

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { changeWorkbenchSelection as change, initialWorkbenchSelection as initial, reconcileWorkbenchSelection as reconcile, workbenchSelectionTarget as target } from './workbenchSelection.js';
 
 const content = () => ({
-  grids: [{ id: 'grid:a' }], displays: [{ id: 'display:b' }],
   imageModules: [{ id: 'image:a' }, { id: 'image:b' }], shapes: [{ id: 'shape:a' }], texts: [{ id: 'text:a' }],
   workbench: { texts: [{ id: 'text:a', frames: [{ id: 'text-frame:a' }] }] },
   artworkLayers: ['image:a', 'image:b', 'shape:a', 'text:a'],
@@ -57,17 +56,10 @@ test('entering and leaving a composition block changes its editing scope and sel
   state = change(state, { type: 'leave' }, draft);
   assert.deepEqual(state.ids, ['image:a', 'image:b']); assert.equal(state.blockId, null); assert.equal(target(state, draft), null);
 });
-test('invalid restored targets and removed blocks are discarded; Display placement content is untouched', () => {
-  const draft = content(); draft.grids[0].placements = [{ id: 'placement:a' }];
-  assert.equal(target(initial(draft, 'image:absent'), draft), null);
-  const state = initial(draft, 'display:primary'), before = structuredClone(draft);
-  assert.equal(target(state, draft), 'display:primary');
-  assert.deepEqual(state.ids, [], 'placement editing does not select the Display window');
-  const explicit = change(state, { type: 'replace', ids: ['display:primary'] }, draft);
-  assert.deepEqual(explicit.ids, ['display:primary'], 'explicit window selection remains distinct');
-  assert.equal(target(explicit, draft), 'display:primary');
-  assert.equal(target(change(state, { type: 'clear' }, draft), draft), null);
-  assert.deepEqual(draft, before);
+test('a missing target and a removed block are discarded', () => {
+  const draft = content(), state = initial(draft, 'image:gone');
+  assert.deepEqual(state.ids, []);
+  assert.equal(target(state, draft), null);
   assert.equal(reconcile({ ...state, blockId: 'composition:gone' }, draft).blockId, null);
 });
 test('a new session has no old selection, and the read-only model requires no owner store', () => {
@@ -86,8 +78,6 @@ test('camera return preserves selection intent and cannot restore a deleted modu
   assert.deepEqual(change(empty, { type: 'restore', state: solo }, draft), solo);
   assert.equal(change(empty, { type: 'restore', state: solo }, draft).mode, 'module');
   assert.deepEqual(change(empty, { type: 'restore', state: group }, draft), group);
-  const display = initial(draft, 'display:primary');
-  assert.deepEqual(change(empty, { type: 'restore', state: display }, draft), display);
   const deleted = { ...draft, imageModules: draft.imageModules.filter(item => item.id !== 'image:a') };
   const restored = change(empty, { type: 'restore', state: solo }, deleted);
   assert.deepEqual(restored.ids, []); assert.equal(target(restored, deleted), null);
@@ -139,10 +129,8 @@ test('Back can restore an arrival target, a continuation window and explicit mem
   assert.deepEqual(empty.ids, []); assert.equal(empty.mode, null); assert.equal(target(empty, removed), null);
   assert.equal(reconcile(empty, draft), empty);
 });
-test('multi-destination arrival clears selection and Display arrival keeps its placement target', () => {
+test('multi-destination arrival clears selection', () => {
   const draft = content(), group = change(initial(draft), { type: 'replace', ids: ['image:a', 'image:b'] }, draft);
   const empty = change(group, { type: 'arrive', id: null }, draft);
   assert.deepEqual(empty.ids, []); assert.equal(empty.mode, null); assert.equal(target(empty, draft), null);
-  const display = change(group, { type: 'arrive', id: 'display:primary' }, draft);
-  assert.deepEqual(display.ids, []); assert.equal(display.mode, null); assert.equal(target(display, draft), 'display:primary');
 });
