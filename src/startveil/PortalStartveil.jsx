@@ -1,17 +1,17 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { STARTVEIL_STATES, STARTVEIL_REVEAL_MS, STARTVEIL_RETURN_REVEAL_MS } from './startveilMachine.js';
 import { useStartveil } from './useStartveil.js';
 import '../lattice/rendering/latticeMenuSurface.css';
+import ProfileSignIn from './ProfileSignIn.jsx';
 import './startveil.css';
 
-const PublicEntryPortal = lazy(() => import('./PublicEntryPortal.jsx'));
 const INTRO_MS = 720;
 
-export default function PortalStartveil({ connectedProfile, ownerDestinations, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, onExplore, ...props }) {
+export default function PortalStartveil({ portal = false, onConnect, ready: destinationReady, onRevealInterface, onComplete }) {
   const [sequenceReady, setSequenceReady] = useState(false);
   const { state, enter, reducedMotion, shortened, canEnter } = useStartveil({
-    ...props,
-    entryReady: sequenceReady && props.ready,
+    ready: destinationReady, onRevealInterface, onComplete,
+    entryReady: sequenceReady && destinationReady,
   });
 
   const dormant = state === STARTVEIL_STATES.DORMANT;
@@ -19,10 +19,10 @@ export default function PortalStartveil({ connectedProfile, ownerDestinations, p
   const exiting = state === STARTVEIL_STATES.REVEALING_INTERFACE;
 
   useEffect(() => {
-    if (shortened) { setSequenceReady(true); return undefined; }
+    if (portal || shortened) { setSequenceReady(true); return undefined; }
     const timer = window.setTimeout(() => setSequenceReady(true), INTRO_MS);
     return () => window.clearTimeout(timer);
-  }, [shortened]);
+  }, [portal, shortened]);
 
   useEffect(() => {
     if (!portal && ready) enter();
@@ -30,14 +30,9 @@ export default function PortalStartveil({ connectedProfile, ownerDestinations, p
 
   if (state === STARTVEIL_STATES.COMPLETE) return null;
 
-  const visitProfile = (address) => {
-    if (!ready || !address) return;
-    onVisitProfile?.(address);
-  };
-
   const intro = <div className="startveil__intro">
-    <span aria-hidden="true" className="startveil__intro-wordmark" />
-    <small>{props.ready ? 'PUBLIC NETWORK · LUKSO MAINNET' : 'PREPARING INSCAPE'}</small>
+    {destinationReady && !portal && <span aria-hidden="true" className="startveil__intro-wordmark" />}
+    <small>Preparing Inscape</small>
   </div>;
 
   return <section aria-busy={!ready && !exiting} aria-label="INSCAPE entry" className="startveil"
@@ -45,12 +40,10 @@ export default function PortalStartveil({ connectedProfile, ownerDestinations, p
     data-portal={portal || undefined} data-ready={ready || undefined}
     data-reduced-motion={reducedMotion || undefined} data-sequence={shortened ? 'short' : 'full'}
     data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface >
-    {portal && ready ? <Suspense fallback={intro}><PublicEntryPortal ownerDestinations={ownerDestinations} connectedProfile={connectedProfile} onConnect={onConnect} onExplore={onExplore}
-      onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld} onVisitProfile={visitProfile} /></Suspense>
-      : intro}
+    {portal && ready ? <ProfileSignIn onConnect={onConnect} /> : intro}
     <span aria-live="polite" className="startveil__status">
-      {exiting ? 'Opening INSCAPE.' : portal && ready ? 'Choose Discover or Connect Profile.'
-        : ready ? 'INSCAPE ready.' : props.ready ? 'Resolving INSCAPE.' : 'Preparing INSCAPE.'}
+      {exiting ? 'Opening INSCAPE.' : portal && ready ? 'Connect your profile to continue.'
+        : ready ? 'INSCAPE ready.' : destinationReady ? 'Resolving INSCAPE.' : 'Preparing INSCAPE.'}
     </span>
   </section>;
 }

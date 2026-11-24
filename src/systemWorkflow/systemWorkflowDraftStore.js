@@ -19,7 +19,6 @@ import {
 import {
   createBlankWorkbenchDraft,
   createEmptySystemWorkflowDraft,
-  ensureSystemWorkflowWorldCoverGrid,
   validateSystemWorkflowDraft,
 } from './domain/systemWorkflowDraft.js';
 
@@ -100,7 +99,7 @@ function reuseUnchanged(previous, next) {
 
 /** @param {unknown} candidate @param {string} profileAddress @returns {{value: WorkflowDraft | null, errors: {path: string, code: string, message?: string}[]}} */
 function validateStoredDraft(candidate, profileAddress) {
-  const validation = validateSystemWorkflowDraft(ensureSystemWorkflowWorldCoverGrid(candidate));
+  const validation = validateSystemWorkflowDraft(candidate);
   if (!validation.valid) return validation;
   return validation.value.profileAddress === profileAddress ? validation : {
     value: null, errors: [{ path: 'profileAddress', code: 'profile_mismatch' }],
@@ -108,11 +107,10 @@ function validateStoredDraft(candidate, profileAddress) {
 }
 
 /**
- * @param {{generateGridId?: () => string, profileAddress?: import('../contracts/workbench.js').ProfileAddress,
+ * @param {{profileAddress?: import('../contracts/workbench.js').ProfileAddress,
  * storage?: import('../contracts/workbench.js').DraftStorage, requireEditor?: boolean, initialStudio?: boolean}} [options]
  */
 export function createSystemWorkflowDraftStore({
-  generateGridId,
   profileAddress,
   storage,
   requireEditor = false,
@@ -158,7 +156,7 @@ export function createSystemWorkflowDraftStore({
   /** @param {string} profile @returns {WorkflowDraft} */
   const createEmpty = profile => {
     if (initialStudio) return deepFreeze({ ...createBlankWorkbenchDraft(profile), composition: createStudioComposition('canvas') });
-    return deepFreeze(createEmptySystemWorkflowDraft(profile, generateGridId ? { generateId: generateGridId } : undefined));
+    return deepFreeze(createEmptySystemWorkflowDraft(profile));
   };
 
   /** @param {string} profile @returns {LoadedDraft} */
@@ -371,7 +369,6 @@ export function createSystemWorkflowDraftStore({
         fresh.composition = createStudioComposition(layout);
       } else {
         fresh.workbench = { ...createDefaultWorkbenchPresentation(), area: { ...DEFAULT_WORKBENCH_AREA } };
-        fresh.workbench.display.open = false;
       }
       /** @type {import('../contracts/workbench.js').WorkbenchId} */
       const id = `workbench:${generateId()}`;

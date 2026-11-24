@@ -1,5 +1,5 @@
 import { resolveWorkbenchDestination } from '../../systemWorkflow/domain/workbenchIndex.js';
-import { createProfileDocumentV9AssetDossier } from '../../profileDocument/components/profileDocumentV9FocusViewModel.js';
+import { createProfileDocumentV9AssetDossier } from '../../profileDocument/components/profileDocumentV9AssetDossier.js';
 export const canvasDestinations = draft => (draft.workbenchIndex?.destinations || []).map(item => ({
   id: item.id, name: item.name, view: resolveWorkbenchDestination(item, draft),
 }));

@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from 'react';
 // The keyed Workbench session discards every registration on activation changes.
 export default function useWorkbenchModuleRegistry() {
   const [textViews, registerTextView] = useModuleReports();
-  const [miniAppPresentations, registerMiniAppPresentation] = useModuleReports();
   const [textPresentations, registerTextPresentation] = useModuleReports();
   const [imagePresentations, registerImagePresentation] = useModuleReports();
   const [shapePresentations, registerShapePresentation] = useModuleReports();
@@ -36,7 +35,6 @@ export default function useWorkbenchModuleRegistry() {
       presentations: textPresentations,
       onPresentation: registerTextPresentation,
     },
-    miniApps: { presentations: miniAppPresentations, onPresentation: registerMiniAppPresentation },
     images: { presentations: imagePresentations, onPresentation: registerImagePresentation },
     shapes: { presentations: shapePresentations, onPresentation: registerShapePresentation },
     targets: {

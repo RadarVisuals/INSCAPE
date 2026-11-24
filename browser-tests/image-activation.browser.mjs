@@ -14,10 +14,10 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
   try {
     const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320, seamReview: 'single' });
+    await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 320, seamReview: 'single' });
     await page.evaluate(() => {
       const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
-      draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+      draft.shapes = []; draft.workbench.shapes = [];
       draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:activation-${index}`, name: `Activation ${index}`,
         width: 200, height: 180 }));
       draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: 900, top: 780 + index * 250 } }));

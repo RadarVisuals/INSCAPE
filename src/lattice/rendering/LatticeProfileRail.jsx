@@ -1,7 +1,6 @@
 import {
   Activity as ActivityIcon,
   ChevronRight,
-  Compass,
   FolderTree,
   Images,
   PanelLeftClose,
@@ -14,7 +13,6 @@ const ENTRY_ICONS = Object.freeze({
   categories: FolderTree,
   creations: Images,
   activity: ActivityIcon,
-  discover: Compass,
 });
 
 function OfficialIdentitySummary({ identity, active, collapsed, disabled, expanded, identityControlRef, onActivate, sourceHidden }) {

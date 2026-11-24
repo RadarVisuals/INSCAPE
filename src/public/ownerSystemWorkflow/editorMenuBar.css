@@ -32,7 +32,6 @@
 /* Destination windows remain below the measured header after retiring the
    navigation sidebar. Their content and lifetimes still belong to panels. */
 .system-workflow[data-editor-menu] .system-workflow__panel-presence { z-index: 90; }
-.system-workflow[data-editor-menu] .public-entry-portal[data-embedded] { inset: calc(var(--workspace-navigation-top, var(--workspace-header-height)) + 8px) 12px 12px; }
 .system-workflow[data-editor-menu] .system-workflow__workspace-window:not([data-library-embedded]) { top: calc(var(--workspace-navigation-top, var(--workspace-header-height)) + 4px); left: 12px; max-width: calc(100vw - 24px); min-width: 0; }
 .editor-menu-form, .editor-menu-error { position: absolute; top: 100%; left: 8px; box-sizing: border-box; width: min(300px, calc(100vw - 16px)); padding: 12px; margin: 0; border: 1px solid var(--tactile-edge); border-radius: var(--editor-control-radius); background: var(--tactile-face); }
 .editor-menu-form { display: grid; gap: 12px; }

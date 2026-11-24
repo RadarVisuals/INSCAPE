@@ -106,7 +106,7 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef,
       if (!canSwim() || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
       // Match the host's empty-space surfaces. Editing, controls and dragging
       // keep their input; background clicks and right-button holds steer swimming.
-      if (event.target !== host && !event.target.matches?.('.system-workflow__workbench, .system-workflow__display-instance')) return;
+      if (event.target !== host && !event.target.matches?.('.system-workflow__workbench')) return;
       if (event.button === 2 && event.pointerType === 'mouse') {
         following = event.pointerId; contextPointer = event.pointerId;
         heldPoint = point(event);

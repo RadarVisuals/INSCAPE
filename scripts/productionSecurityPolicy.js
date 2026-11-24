@@ -14,14 +14,17 @@ const DEFAULT_ENDPOINTS = Object.freeze({
 // The locked @lukso/up-modal standalone path enables WalletConnect. These are
 // the exact retained service origins in that production chunk, not the much
 // broader generic allowlist published for every Reown/AppKit feature.
+const WALLET_VERIFY_ORIGINS = Object.freeze([
+  'https://verify.walletconnect.com',
+  'https://verify.walletconnect.org'
+]);
 const WALLET_CONNECT_ORIGINS = Object.freeze([
   'https://api.web3modal.org',
   'https://echo.walletconnect.com',
   'https://explorer-api.walletconnect.com',
   'https://pulse.walletconnect.org',
   'https://rpc.walletconnect.org',
-  'https://verify.walletconnect.com',
-  'https://verify.walletconnect.org',
+  ...WALLET_VERIFY_ORIGINS,
   'wss://relay.walletconnect.org'
 ]);
 
@@ -91,7 +94,7 @@ export function createProductionContentSecurityPolicy(env = {}, { localPreview =
     `connect-src 'self' ${connectOrigins.join(' ')}`,
     // Bundled Image paint worker; remote and blob worker scripts stay excluded.
     "worker-src 'self'",
-    "frame-src 'self' https:",
+    `frame-src 'self' ${WALLET_VERIFY_ORIGINS.join(' ')}`,
     `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`,
     "form-action 'self'",
     "manifest-src 'self'",
@@ -104,10 +107,7 @@ export function productionResponseSecurityHeaders(env = {}, options) {
   return Object.freeze({
     'Content-Security-Policy': createProductionContentSecurityPolicy(env, options),
     'Referrer-Policy': 'no-referrer',
-    // Microphone uses the browser default plus explicit per-frame delegation.
-    // Both iframe levels start at microphone 'none'; enabling Mic delegates
-    // only to that app's exact origin, subject to browser permission.
-    'Permissions-Policy': 'camera=(), geolocation=(), payment=(), usb=()',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
     'X-Content-Type-Options': 'nosniff'
   });
 }
@@ -137,9 +137,6 @@ export function createNetlifyHeaders({ env = {}, manifest = {} } = {}) {
     '  Cache-Control: public, max-age=0, must-revalidate',
     '',
     '/index.html',
-    '  Cache-Control: public, max-age=0, must-revalidate',
-    '',
-    '/mini-app-host.html',
     '  Cache-Control: public, max-age=0, must-revalidate'
   ];
   for (const file of manifestFiles(manifest)) {

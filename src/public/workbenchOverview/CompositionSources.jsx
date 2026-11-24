@@ -15,10 +15,13 @@ export default function CompositionSources({ snapshot, profile, children }) {
   const model = useMemo(() => target && workbenchOverviewModel(target.draft), [target]);
   const openSource = useCallback((ref, button) => { trigger.current = button; setLink(ref); }, []);
   const close = () => { setLink(null); restoreFocus(trigger.current); };
-  return <ReceptionPresentation scenes={false} snapshot={snapshot} profile={profile} onOpenSource={openSource}>
+  return <ReceptionPresentation snapshot={snapshot} profile={profile} onOpenSource={openSource}>
     {children}
     {target && <Suspense fallback={null}><CanvasPresentation key={target.id} selected={target} model={model}
       initialDestinationId={link.destinationId} onClose={close} /></Suspense>}
-    {link && !target && <p role="alert" className="visitor-notice">This linked work is unavailable. <button type="button" onClick={close}>Close</button></p>}
+    {link && !target && <p role="alert" className="visitor-notice"
+      onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
+      This linked work is unavailable. <button autoFocus type="button" onClick={close}>Close</button>
+    </p>}
   </ReceptionPresentation>;
 }

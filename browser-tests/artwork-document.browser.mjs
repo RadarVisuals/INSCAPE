@@ -13,7 +13,7 @@ test('vector-editor SVG declarations load without fetching DTDs; custom entities
     const declaration = '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">';
     const drawing = '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 3000 2500"><path d="M0 0H3000V2500H0Z" fill="#237b93"/></svg>';
     const requests = []; page.on('request', request => requests.push(request.url()));
-    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 600, seamReview: 'single',
+    await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 600, seamReview: 'single',
       artwork: { url: 'https://motion.invalid/export.svg', width: 180, height: 150, body: declaration + drawing } });
     const image = page.locator('.image-module__canvas').first();
     await image.locator('.artwork-svg-document').waitFor();

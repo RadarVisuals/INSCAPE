@@ -4,23 +4,19 @@ import { createTextEditSession } from './textEditSession.js';
 import { readTextRecovery, textRecoveryScope } from './textEditRecovery.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { addTextModule, saveTextModuleResult } from './textSession.js';
-import { addArticleToDisplay, saveDisplayArticleResult } from './textTransfer.js';
-import { displayTextArticle } from '../systemWorkflow/domain/displayText.js';
 const profile = `0x${'1'.repeat(40)}`;
 
-for (const embedded of [false, true]) test(`${embedded ? 'Display article' : 'standalone Text'} shares save, recovery and disposal behavior`, () => {
+test('standalone Text retains save, recovery and disposal behavior', () => {
   const entries = new Map(); let broken = false;
   const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => { if (broken) throw Error('full'); entries.set(key, value); } };
   const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
-  const gridId = store.getSnapshot().grids.find(grid => grid.visibility === 'PUBLIC').id;
-  const id = embedded ? addArticleToDisplay(store, profile, { gridId }) : addTextModule(store, profile);
-  const read = () => embedded ? store.getSnapshot().grids.find(grid => grid.id === gridId).placements.find(item => item.id === id) : store.getSnapshot().texts.find(item => item.id === id);
-  const valueOf = record => embedded ? displayTextArticle(record.text) : record;
-  const scope = textRecoveryScope(profile, id, embedded ? 'display:primary' : undefined, embedded ? gridId : undefined);
-  const saveRecord = embedded ? (store, scope, expected, article, options) => saveDisplayArticleResult(store, scope.profile, { moduleId: scope.moduleId, gridId: scope.gridId, expected, article }, options)
-    : (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
+  const id = addTextModule(store, profile);
+  const read = () => store.getSnapshot().texts.find(item => item.id === id);
+  const valueOf = record => record;
+  const scope = textRecoveryScope(profile, id);
+  const saveRecord = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
   const open = () => createTextEditSession({ store, scope, record: read(), valueOf, saveRecord });
-  const changeTitle = (value, title) => embedded ? { ...value, title } : { ...value, article: { ...value.article, title } };
+  const changeTitle = (value, title) => ({ ...value, article: { ...value.article, title } });
   let session = open();
   const original = read(), next = changeTitle(session.getSnapshot().value, 'Unsaved');
   broken = true;

@@ -15,14 +15,14 @@ test('Owner Image Retry remains reachable beside Image settings on pointer and t
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: width === 390 ? 1.25 : 1, reducedMotion: 'reduce', hasTouch: touch });
       page.setDefaultTimeout(6000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320, seamReview: 'single' });
+      await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 320, seamReview: 'single' });
       let fail = true, requests = 0;
       await page.route('https://recovery.test/failed.webp', route => { requests++; return fail
         ? route.fulfill({ status: 404, body: 'Unavailable' })
         : route.fulfill({ contentType: 'image/webp', path: 'public/assets/actors/abyssal_eye/full.webp' }); });
       await page.evaluate(({ width, size }) => {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey));
-        draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+        draft.shapes = []; draft.workbench.shapes = [];
         draft.imageModules = [{ ...draft.imageModules[0], name: 'Recovery image', width: size || 320, height: size || (width === 390 ? 200 : 280),
           artwork: { ...draft.imageModules[0].artwork, asset: { ...draft.imageModules[0].artwork.asset,
             media: { ...draft.imageModules[0].artwork.asset.media, url: 'https://recovery.test/failed.webp' } } } }];

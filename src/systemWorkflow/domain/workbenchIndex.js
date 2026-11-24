@@ -22,8 +22,7 @@ export function workbenchDestinationAnchor(content, follow, getFrame) {
   const live = getFrame?.(follow.anchorId);
   if (live) return { left: live.left, top: live.top };
   const layout = content.workbench;
-  if (follow.anchorId === 'display:primary') return layout?.display?.window || layout?.display?.position || null;
-  for (const key of ['shapes', 'imageModules', 'texts', 'displays']) {
+  for (const key of ['shapes', 'imageModules', 'texts']) {
     for (const item of Array.isArray(layout?.[key]) ? layout[key] : []) {
       if (!record(item)) continue;
       if (item.id === follow.anchorId) return item.window || item.position || null;

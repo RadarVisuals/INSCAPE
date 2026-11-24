@@ -15,10 +15,10 @@ const camera = page => page.locator('main.system-workflow').first().evaluate(nod
 }));
 
 async function fixture(page, visitor) {
-  await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320, seamReview: 'single' });
+  await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 320, seamReview: 'single' });
   await page.evaluate(async visitor => {
     const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
-    draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+    draft.shapes = []; draft.workbench.shapes = [];
     draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:toggle-${index}`, name: `Toggle ${index}`, width: 200, height: 180 }));
     // Owner starts with the canvas fitted at 25%; old origin coordinates put
     // the first Image above the viewport. Keep both test targets in that view.

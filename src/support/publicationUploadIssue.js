@@ -2,7 +2,7 @@
 // labels can reach the UI or the copyable support report.
 const messages = {
   DOCUMENT_TOO_LARGE: 'The publication is larger than the upload service accepts.',
-  INVALID_PROFILE_DOCUMENT: 'The publication service could not validate the document.',
+  INVALID_PROFILE_DOCUMENT: 'The upload service rejected this prepared document before a transaction could be requested. Check that the app and upload service use the same document format, then reopen Publish.',
   INVALID_UPLOAD_CHALLENGE: 'The service could not validate the upload authorization request.',
   INVALID_UPLOAD_RESPONSE: 'The service returned an invalid IPFS content identifier.',
   IPFS_UPLOAD_REJECTED: 'The IPFS service rejected the upload. Check the service configuration.',
@@ -12,7 +12,7 @@ const messages = {
   ORIGIN_NOT_ALLOWED: 'The publication service does not accept this site’s origin.',
   PREFLIGHT_NOT_ALLOWED: 'The publication endpoint does not allow this upload request.',
   PUBLICATION_FUNCTION_UNAVAILABLE: 'The publication endpoint did not return a service response.',
-  PUBLICATION_SERVICE_UPDATE_REQUIRED: 'The hosted publication service needs an update to support this Gallery change.',
+  PUBLICATION_SERVICE_UPDATE_REQUIRED: 'The publication service must be updated for this document format. No wallet signature was requested.',
   UNSUPPORTED_MEDIA_TYPE: 'The service could not read the publication format.',
   UPLOAD_AUTH_INVALID: 'Upload authorization is invalid or expired. Authorize the upload again.',
   UPLOAD_AUTH_NOT_COMPLETED: 'Upload authorization was not completed in the wallet.',

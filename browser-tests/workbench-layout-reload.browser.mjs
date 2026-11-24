@@ -43,7 +43,8 @@ async function mount(page, visitor = false) {
     if (store.getRecordState().status === 'absent') {
       const draft = store.getDraft(), asset = buildProfileDocumentV9Asset(assets[0], assets[0].id);
       draft.workbench = createDefaultWorkbenchPresentation();
-      draft.workbench.display.window = { left:400, top:100, width:640, height:360 };
+      draft.shapes = [{ id: 'shape:motion', name: 'Shape', color: '#343d42', opacity: 1, visibility: 'PUBLIC' }];
+      draft.workbench.shapes = [{ id: 'shape:motion', open: true, window: { left:400, top:100, width:640, height:360 } }];
       draft.workbench.identity.open = false;
       draft.imageModules = ['one','two','three'].map((id, index) => ({ id:`image:${id}`, name:`Image ${index + 1}`,
         width:240, height:135, visibility:'PUBLIC', artwork: { id:`artwork:${id}`, asset, crop:{ x:.5,y:.5,zoom:1 }, transform:{ quarterTurns:0,mirrorX:false,mirrorY:false } },
@@ -83,7 +84,7 @@ test('owner module placement survives real reload after individual, zoomed and g
     await page.goto(`${origin}/__layout_reload__`); await mount(page);
     const image = index => page.locator('.image-module__window').nth(index);
     const geometry = () => page.locator('[data-workbench-view-id]').evaluateAll(nodes => Object.fromEntries(nodes
-      .filter(node => node.matches('.image-module__window,.text-window,.system-workflow__presentation-board'))
+      .filter(node => node.matches('.image-module__window,.text-window,aside.shape-window'))
       .map(node => [node.dataset.workbenchViewId, node.getBoundingClientRect().toJSON()])));
     const drag = async (target, dx, dy) => {
       await target.focus(); const start = await dragPoint(target);
@@ -125,7 +126,7 @@ test('owner module placement survives real reload after individual, zoomed and g
     assert.deepEqual(moduleContent(afterMove), moduleContent(draftBeforeMove), 'arrangement never changes module content');
     assert.notDeepEqual(afterMove.workbench, draftBeforeMove.workbench, 'completed placement saves its canonical presentation');
     const selectMixed = async () => {
-      for (const target of [page.locator('.system-workflow__presentation-board header[data-workbench-selectable]'),
+      for (const target of [page.locator('aside.shape-window header[data-workbench-selectable]'),
         page.locator('.text-window header[data-workbench-selectable]'), image(0)]) {
         await target.focus(); await page.keyboard.press('Shift+Enter');
       }
@@ -134,11 +135,11 @@ test('owner module placement survives real reload after individual, zoomed and g
     const mixed = await selectMixed(); await mixed.focus();
     await page.keyboard.press('Alt+Shift+ArrowRight'); await page.keyboard.press('Alt+ArrowDown'); await settle(page);
     const keyboard = await geometry();
-    for (const id of ['display:primary','text:one','image:one']) {
+    for (const id of ['shape:motion','text:one','image:one']) {
       assert.equal(keyboard[id].x, zoomed[id].x + 10);
       assert.equal(keyboard[id].y, zoomed[id].y + 1);
     }
-    await page.waitForFunction(() => readLayout()?.layout.display.window.left === 410);
+    await page.waitForFunction(() => readLayout()?.layout.shapes[0].window.left === 410);
     const savedBeforeCancel = await page.evaluate(() => readLayout());
     const handle = await dragPoint(mixed);
     await page.mouse.move(handle.x,handle.y); await page.mouse.down();
@@ -157,9 +158,9 @@ test('owner module placement survives real reload after individual, zoomed and g
     await page.keyboard.press('Alt+Shift+ArrowRight'); await settle(page);
     const resized = await geometry();
     assert.equal(resized['image:one'].width, movedBeforeResize['image:one'].width + 10);
-    for (const id of ['display:primary','text:one','image:two','image:three']) assert.deepEqual(resized[id], movedBeforeResize[id]);
+    for (const id of ['shape:motion','text:one','image:two','image:three']) assert.deepEqual(resized[id], movedBeforeResize[id]);
     await reload(); assert.deepEqual(await geometry(), resized, 'resizing one Image retains every recently moved module after reload');
-    await page.waitForFunction(() => readLayout()?.layout.display.window.left === 442);
+    await page.waitForFunction(() => readLayout()?.layout.shapes[0].window.left === 442);
     await selectMixed();
     // Selection legitimately clears the Inspector target. Finish that view save
     // before injecting the next placement-save failure.
@@ -202,47 +203,5 @@ test('Visitor group movement remains temporary and reload restores the published
     assert.deepEqual(await page.evaluate(() => ({ ...localStorage })), stored, 'Visitor never writes the maker layout');
     await page.reload(); await mount(page, true);
     assert.deepEqual(await geometry(), before, 'Visitor reload restores the published positions');
-  } finally { await browser.close(); }
-});
-
-test('Display fitting follows the current viewport within one layout mode without resizing its saved window', { timeout: 30000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-  const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
-  try {
-    await mkdir(output, { recursive: true });
-    const page = await browser.newPage({ viewport: { width: 640, height: 900 }, reducedMotion: 'reduce' });
-    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.route('https://reload.test/art.jpg', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
-    await page.route(`${origin}/__layout_reload__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
-    await page.goto(`${origin}/__layout_reload__`); await mount(page);
-    const measurements = [];
-    const measure = async width => {
-      await page.setViewportSize({ width, height: 900 }); await settle(page);
-      const value = await page.evaluate(async () => {
-        const geometry = await import('/src/public/ownerSystemWorkflow/presentationBoardGeometry.js');
-        const board = document.querySelector('[data-display-instance="display:primary"] .system-workflow__presentation-board');
-        const host = board.closest('[data-presentation-workbench]');
-        const viewport = { width: host.clientWidth, height: host.clientHeight };
-        const inset = geometry.presentationBoardResponsiveMetrics(viewport.width).inset;
-        const documentGeometry = readDraft().geometry;
-        const expected = geometry.fitPresentationBoard(viewport, { inset, identityStripHeight: 0, sidecarWidth: 0,
-          aspectRatio: documentGeometry.columns / documentGeometry.rows });
-        const windowWidth = parseFloat(board.style.width) / Number(board.dataset.workbenchScale);
-        return { viewport, inset, windowWidth, actualFitWidth: windowWidth / Number(board.dataset.boardScale), expectedFitWidth: expected.stage.width };
-      });
-      measurements.push(value);
-      await writeFile(`${output}/display-responsive-fit.json`, JSON.stringify(measurements, null, 2));
-      assert.ok(Math.abs(value.actualFitWidth - value.expectedFitWidth) < .01,
-        `at ${width}px the current viewport must determine fitting: ${value.actualFitWidth} vs ${value.expectedFitWidth}`);
-      return value;
-    };
-    const initial = await measure(640);
-    const sameMode = await measure(720);
-    assert.ok(Math.abs(sameMode.windowWidth - initial.windowWidth) < .01, 'more space is not a request to resize the existing window');
-    const nextMode = await measure(800);
-    assert.ok(Math.abs(nextMode.windowWidth - initial.windowWidth) < .01);
-    await page.screenshot({ path: `${output}/display-responsive-fit-800.png` });
-    await measure(600);
-    await page.screenshot({ path: `${output}/display-responsive-fit-600.png` });
   } finally { await browser.close(); }
 });

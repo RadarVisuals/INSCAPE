@@ -75,7 +75,6 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
       const { useLibraryStore } = await import('/src/library/state/useLibraryStore.js');
       const { projectLibraryAssetUnion } = await import('/src/lattice/browser/libraryAssetUnion.js');
       const draft = JSON.parse(fixture.createOwnerSystemWorkflowReviewStorage().getItem(systemWorkflowDraftKey(profile)));
-      draft.grids[0].visibility = 'PUBLIC';
       const records = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => ({ ...asset, ownerAddress: profile }));
       useLibraryStore.getState().setProfileAddress(profile);
       useLibraryStore.setState({ assets: records, referencedAssets: [], status: 'ready' });

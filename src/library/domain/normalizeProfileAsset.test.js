@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createStableAssetId, normalizeProfileAsset } from './normalizeProfileAsset.js';
 import { buildProfileDocumentV9Asset, validateProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
-import { createProfileDocumentV9FocusViewModel } from '../../profileDocument/components/profileDocumentV9FocusViewModel.js';
+import { createProfileDocumentV9AssetDossier } from '../../profileDocument/components/profileDocumentV9AssetDossier.js';
 
 const owner = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
 const contract = '0x1111111111111111111111111111111111111111';
@@ -39,8 +39,8 @@ test('resolved creators survive publication and Visitor metadata independently o
     const published = buildProfileDocumentV9Asset(asset, asset.id);
     assert.equal(validateProfileDocumentV9Asset(published), true);
     assert.deepEqual(published.creators, [{ address: owner, name: 'Creator', source: 'LSP4Creators[]', scope }]);
-    const visitor = createProfileDocumentV9FocusViewModel({ asset: published });
-    assert.deepEqual(visitor.dossier.creators, published.creators);
+    const dossier = createProfileDocumentV9AssetDossier(published);
+    assert.deepEqual(dossier.creators, published.creators);
   }
 });
 

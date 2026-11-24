@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { lukso } from 'viem/chains';
-import { applicationRouteUrl } from '../profileDiscovery/applicationNavigation.js';
+import { applicationRouteUrl } from '../navigation/applicationNavigation.js';
 import WorkbenchDestinationPanel from './ownerSystemWorkflow/WorkbenchDestinationPanel.jsx';
 import './ownerSystemWorkflow/ownerSystemWorkflow.css';
 import '../lattice/rendering/latticeMenuSurface.css';

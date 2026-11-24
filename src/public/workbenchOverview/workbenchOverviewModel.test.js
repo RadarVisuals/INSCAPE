@@ -10,7 +10,6 @@ test('preview uses saved origin, open frames, artwork and authored layer order w
   draft.shapes = [{ id: 'shape:a' }, { id: 'shape:closed' }];
   draft.imageModules = [{ id: 'image:a', width: 120, height: 80, artwork: { crop: { x: .3, y: .6, zoom: 2 } } }];
   draft.texts = [{ id: 'text:a', article: createArticle('Title') }];
-  draft.miniApps = [{ id: 'miniapp:a', name: 'Interactive study', url: 'https://example.com/' }];
   draft.artworkLayers = ['image:a', { id: 'composition:a', name: 'A block', children: ['shape:a', 'text:a'] }, 'shape:closed'];
   draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { left: -100, top: -50, width: 800, height: 600 },
     shapes: [{ id: 'shape:a', open: true, window: { left: -80, top: 0, width: 200, height: 100 } }, { id: 'shape:closed', open: false }],
@@ -19,12 +18,11 @@ test('preview uses saved origin, open frames, artwork and authored layer order w
   const before = structuredClone(draft), result = workbenchOverviewModel(draft);
   assert.doesNotMatch(result.contains, /Display/);
   assert.deepEqual(result.area, draft.workbench.area);
-  assert.deepEqual(result.items.map(item => item.id), ['miniapp:a', 'image:a', 'shape:a', 'text:a']);
-  assert.deepEqual(result.items[1].frame, { left: 100, top: 80, width: 120, height: 80 });
-  assert.deepEqual(result.items[1].source.crop, draft.imageModules[0].artwork.crop);
-  assert.deepEqual(result.items[3].source.frames, draft.workbench.texts[0].frames);
-  assert.equal(result.items[0].source.url, undefined, 'interactive previews have no execution destination');
-  assert.equal(result.items[3].source.article, draft.texts[0].article);
+  assert.deepEqual(result.items.map(item => item.id), ['image:a', 'shape:a', 'text:a']);
+  assert.deepEqual(result.items[0].frame, { left: 100, top: 80, width: 120, height: 80 });
+  assert.deepEqual(result.items[0].source.crop, draft.imageModules[0].artwork.crop);
+  assert.deepEqual(result.items[2].source.frames, draft.workbench.texts[0].frames);
+  assert.equal(result.items[2].source.article, draft.texts[0].article);
   assert.deepEqual(draft, before);
 });
 

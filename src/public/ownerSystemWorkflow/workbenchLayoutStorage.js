@@ -1,6 +1,5 @@
 import { validSharedTools } from './sharedDisplayToolsState.js';
 import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
-import { displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
 import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
 
 // A local view of existing modules, not authored content. An explicit restore of
@@ -13,21 +12,15 @@ export function loadWorkbenchLayout(profile, draft, storage, workbenchId, cells)
     if (value.version !== 1 || typeof value.baseline !== 'string' || !value.views || typeof value.views !== 'object' || Array.isArray(value.views)) throw Error('invalid');
     if (value.baseline !== JSON.stringify(draft.workbench || null)) return { layout: null, views: {} };
     if (!isValidWorkbenchPresentation(value.layout, cells)) throw Error('invalid');
-    const ids = new Set(displayModuleIds(draft));
     const layout = { ...value.layout,
-      displays: value.layout.displays?.filter(item => ids.has(item.id)),
       texts: value.layout.texts?.filter(item => draft.texts?.some(text => text.id === item.id)),
       shapes: value.layout.shapes?.filter(item => draft.shapes?.some(shape => shape.id === item.id)),
       imageModules: value.layout.imageModules?.filter(item => draft.imageModules?.some(image => image.id === item.id)),
-      miniApps: value.layout.miniApps?.filter(item => draft.miniApps?.some(app => app.id === item.id)),
     };
     delete layout.keeperDocks;
-    for (const name of ['displays', 'texts', 'miniApps', 'imageModules', 'shapes']) if (layout[name] === undefined) delete layout[name];
+    for (const name of ['texts', 'imageModules', 'shapes']) if (layout[name] === undefined) delete layout[name];
     const views = Object.fromEntries(Object.entries(value.views).flatMap(([id, view]) => {
       if (id === 'workbench:tools' && validSharedTools(view)) return [[id, view]];
-      if (ids.has(id) && view && typeof view.gridId === 'string' && typeof view.locked === 'boolean') return [[id, {
-        gridId: view.gridId, locked: view.locked,
-      }]];
       if (draft.texts?.some(text => text.id === id) && view && ['read', 'write'].includes(view.mode)) return [[id, { mode: view.mode }]];
       return [];
     }));

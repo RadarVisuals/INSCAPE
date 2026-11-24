@@ -68,7 +68,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       assert.equal(await notification.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'pointer does not add a focus ring');
       await notification.press('Tab'); await page.keyboard.press('Shift+Tab');
       assert.notEqual(await notification.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'keyboard focus remains visible');
-      const background = panel.getByRole('button', { name: /^Workbench grid display:/ });
+      const background = panel.getByRole('button', { name: /^Workbench grid style:/ });
       await background.scrollIntoViewIfNeeded();
       // A user can scroll a selector to the top of the panel; its popup must flip.
       await background.evaluate(node => {
@@ -111,7 +111,7 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     await panel.getByLabel('Workbench grid cell size', { exact: true }).fill('41'); await page.keyboard.press('Tab');
     await panel.getByLabel('Space between modules', { exact: true }).fill('12');
     await panel.getByLabel('Workbench grid color', { exact: true }).fill('#8d73c2');
-    await panel.getByRole('button', { name: /^Workbench grid display:/ }).click();
+    await panel.getByRole('button', { name: /^Workbench grid style:/ }).click();
     await page.getByRole('option', { name: 'Dots', exact: true }).click();
     assert.deepEqual(await saved(page), before, 'local Workbench and signal controls do not author the composition');
     await panel.getByRole('button', { name: 'DARK', exact: true }).click();
@@ -127,7 +127,7 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     assert.equal(await panel.getByLabel('Workbench grid cell size', { exact: true }).inputValue(), '41');
     assert.equal(await panel.getByLabel('Space between modules', { exact: true }).inputValue(), '12');
     assert.equal(await panel.getByLabel('Workbench grid color', { exact: true }).inputValue(), '#8d73c2');
-    assert.equal(await panel.getByRole('button', { name: 'Workbench grid display: Dots', exact: true }).count(), 1);
+    assert.equal(await panel.getByRole('button', { name: 'Workbench grid style: Dots', exact: true }).count(), 1);
     assert.equal(await panel.getByRole('button', { name: 'DARK', exact: true }).getAttribute('aria-pressed'), 'true');
     await openEditorMenu(page, 'Backup');
     const backup = page.getByRole('dialog', { name: 'Backup', exact: true });

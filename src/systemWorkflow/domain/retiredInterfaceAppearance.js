@@ -7,15 +7,13 @@ export function withoutRetiredInterfaceAppearance(input) {
   return stripRetiredInterfaceAppearance(structuredClone(input));
 }
 
-// Only call on an owned, detached value. Draft validation already created its
-// protective copy while removing artwork presentation fields.
+// Only call on an owned, detached value.
 export function stripRetiredInterfaceAppearance(result) {
   const clean = value => {
     if (!value || typeof value !== 'object') return;
     for (const key of RETIRED_INTERFACE_APPEARANCE_KEYS) if (value.appearance) delete value.appearance[key];
     if (value.identityPresentation) delete value.identityPresentation.dossierSurface;
     if (value.reception?.branding) delete value.reception.branding.theme;
-    for (const display of value.displays || []) clean(display);
   };
   clean(result);
   if (result.shared) { delete result.shared.menuSurfaceId; clean(result.shared); }

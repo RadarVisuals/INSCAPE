@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
-import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringSession.js';
+import { addShape } from '../shapes/shapeSession.js';
 
 const profileA = '0x1111111111111111111111111111111111111111';
 const profileB = '0x2222222222222222222222222222222222222222';
@@ -15,28 +15,29 @@ function setup() {
   const store = createSystemWorkflowDraftStore({ profileAddress: profileA, storage });
   const editSubtitle = (index, subtitle) => {
     const draft = store.getDraft();
-    draft.grids[index].subtitle = subtitle;
+    if (draft.shapes?.length) draft.shapes[index].name = subtitle;
+    else draft.identityPresentation.alias = subtitle;
     assert.equal(store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }), true);
   };
   return { records, storage, store, editSubtitle };
 }
 
-test('returning to externally reordered Display Grids discards history instead of editing the wrong Grid', () => {
+test('returning to externally reordered Shapes discards history instead of editing the wrong Shape', () => {
   const { storage, store, editSubtitle } = setup();
-  createSystemWorkflowAuthoringSession({ store }).createGrid();
+  addShape(store, profileA); addShape(store, profileA);
   editSubtitle(1, 'Edited');
   store.reload();
   editSubtitle(0, 'Edited');
-  const editedGridId = store.getDraft().grids[0].id;
+  const editedShapeId = store.getDraft().shapes[0].id;
   store.setProfileAddress(profileB);
 
   const otherTab = createSystemWorkflowDraftStore({ profileAddress: profileA, storage });
   const reordered = otherTab.getDraft();
-  [reordered.grids[0], reordered.grids[1]] = [reordered.grids[1], reordered.grids[0]];
+  [reordered.shapes[0], reordered.shapes[1]] = [reordered.shapes[1], reordered.shapes[0]];
   assert.equal(otherTab.commitCompletedOperation(reordered, { expectedGeneration: otherTab.getGeneration() }), true);
   const saved = storage.getItem(keyA);
   store.setProfileAddress(profileA);
-  assert.notEqual(store.getDraft().grids[0].id, editedGridId);
+  assert.notEqual(store.getDraft().shapes[0].id, editedShapeId);
   assert.deepEqual(store.getHistory(), { undo: null, redo: null });
   assert.equal(store.undo(), false);
   assert.deepEqual(store.getDraft(), reordered);
@@ -66,6 +67,7 @@ test('unchanged profiles retain independent undo and redo across switches', () =
 
 for (const change of ['missing', 'corrupt', 'unavailable']) test(`a ${change} returning profile clears only its obsolete history without writing`, () => {
   const { records, storage, store, editSubtitle } = setup();
+  const beforeAlias = store.getDraft().identityPresentation.alias;
   editSubtitle(0, 'A edits');
   store.setProfileAddress(profileB);
   editSubtitle(0, 'B edits');
@@ -86,5 +88,5 @@ for (const change of ['missing', 'corrupt', 'unavailable']) test(`a ${change} re
   store.setProfileAddress(profileB);
   assert.deepEqual(store.getDraft(), savedB);
   assert.equal(store.undo(), true, 'another profile retains its own history');
-  assert.equal(store.getDraft().grids[0].subtitle, '');
+  assert.equal(store.getDraft().identityPresentation.alias, beforeAlias);
 });

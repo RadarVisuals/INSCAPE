@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { editorDestination, editorMenu } from './fixtures/editor-menu.mjs';
 import { chromium } from 'playwright-core';
-import { openDisplayTool } from './fixtures/display-controls.mjs';
 import { routeOfflineWorkflowReview } from './fixtures/legacy-workflow-artwork.mjs';
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
@@ -14,78 +14,19 @@ test('panel controller phases, dismisses and restores exact trigger focus', { ti
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
     await prepare(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
-    const gridsTrigger = page.getByRole('button', { name: /^Grids$/i });
-    await gridsTrigger.click();
-    const grids = page.locator('.system-workflow__grid-switcher');
-    await grids.waitFor();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__grid-switcher')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
-    assert.equal(await page.locator('.system-workflow__inspector').count(), 0, 'inspector is structurally absent while Grid switcher owns the overlay layer');
-    await grids.getByRole('button', { name: 'New Grid' }).click();
-    assert.equal(await page.locator('.system-workflow__selection-chrome').count(), 0,
-      'creating and entering a Grid discards selection chrome from the previous Grid');
-    const regularGridOptions = grids.locator('.system-workflow__grid-row:not([data-world-cover]) .system-workflow__grid-activate');
-    await regularGridOptions.first().click();
-    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
-    await gridsTrigger.click();
-    await grids.waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
-    await gridsTrigger.click();
-    await grids.waitFor();
-    await regularGridOptions.nth(1).click();
-    assert.equal(await page.locator('.system-workflow__selection-chrome').evaluateAll((nodes) => nodes.every((node) =>
-      getComputedStyle(node).opacity === '0' && getComputedStyle(node).transitionDuration === '0s')),
-    true, 'switching Grids hides any retained selection chrome immediately');
-    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
-    await regularGridOptions.first().click();
-    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
-    await gridsTrigger.click();
-    await grids.waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
-    const canvasBox = await page.locator('.system-workflow__canvas').boundingBox();
-    const cameraX = await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraX));
-    await page.keyboard.down('Space');
-    await page.mouse.move(canvasBox.x + canvasBox.width * .7, canvasBox.y + canvasBox.height * .7);
-    await page.mouse.down();
-    await page.mouse.move(canvasBox.x + canvasBox.width * .7 - 160, canvasBox.y + canvasBox.height * .7, { steps: 4 });
-    assert.equal(await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraX)), cameraX - 160,
-      'Space-drag over the Display moves the Workbench camera');
-    assert.equal(await page.locator('.system-workflow__selection-chrome[data-navigating]').count(), 0);
-    await page.mouse.up();
-    await page.keyboard.up('Space');
-    await page.waitForFunction(() => !document.querySelector('.system-workflow__canvas')?.dataset.swiping);
-    await gridsTrigger.click();
-    await grids.waitFor();
-    await regularGridOptions.first().click();
-    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
-    await gridsTrigger.click();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__grid-switcher')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'closing');
-    assert.equal(await grids.locator('..').getAttribute('data-panel-phase'), 'closing');
-    await grids.waitFor({ state: 'detached' });
-    assert.equal(await gridsTrigger.evaluate((node) => node === document.activeElement), true);
-
-    const settingsTrigger = page.getByRole('button', { name: /^Settings$/i });
-    await settingsTrigger.click();
+    const settingsTrigger = await editorDestination(page, 'Settings');
     await page.getByRole('dialog', { name: 'Settings' }).waitFor();
     await page.mouse.click(8, 300);
     await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'detached' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label')?.toLowerCase() === 'settings');
     assert.equal(await settingsTrigger.evaluate((node) => node === document.activeElement), true);
 
-    const libraryTrigger = page.getByRole('button', { name: /^Library$/i });
-    await libraryTrigger.click();
+    const libraryTrigger = await editorDestination(page, 'Library');
     const library = page.getByRole('region', { name: 'Library workspace' });
     await library.waitFor();
     await library.getByRole('button', { name: 'Close workspace' }).click();
     await library.waitFor({ state: 'detached' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label')?.toLowerCase() === 'library');
     assert.equal(await libraryTrigger.evaluate((node) => node === document.activeElement), true);
 
-    await page.setViewportSize({ width: 390, height: 720 });
-    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
-    await gridsTrigger.click();
-    await grids.waitFor();
-    assert.equal(await page.locator('.system-workflow__inspector').count(), 0);
   } finally {
     await browser.close();
   }
@@ -97,18 +38,19 @@ test('reduced motion keeps lifecycle semantics without transition delay', { time
     const page = await browser.newPage({ viewport: { width: 390, height: 720 }, reducedMotion: 'reduce' });
     await prepare(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
-    const trigger = page.getByRole('button', { name: /^Grids$/i });
-    await trigger.click();
-    await page.locator('.system-workflow__grid-switcher').waitFor();
-    await page.keyboard.press('Escape');
-    await page.locator('.system-workflow__grid-switcher').waitFor({ state: 'detached' });
+    const trigger = editorMenu(page);
+    await editorDestination(page, 'Settings');
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    await settings.waitFor();
+    await settings.getByRole('button', { name: 'Close Settings' }).click();
+    await settings.waitFor({ state: 'detached' });
     assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
   } finally {
     await browser.close();
   }
 });
 
-test('normal motion preserves Profile, Activity, and contained inspection source continuity', { timeout: 60_000 }, async () => {
+test('normal motion preserves Profile and Activity focus continuity', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
@@ -139,58 +81,6 @@ test('normal motion preserves Profile, Activity, and contained inspection source
     await drawer.waitFor({ state: 'detached' });
     assert.equal(await activityTrigger.evaluate((node) => node === document.activeElement), true);
 
-    const placementTrigger = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-    const placement = page.locator('.system-workflow__placement').first();
-    const camera = await page.locator('main.system-workflow').evaluate(node => [node.dataset.workbenchCameraX, node.dataset.workbenchCameraY, node.dataset.workbenchCameraScale]);
-    await page.evaluate(() => {
-      window.__inspectionWrites = 0;
-      addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__inspectionWrites++; });
-    });
-    await placementTrigger.click();
-    await placement.evaluate(node => { window.__inspectionSource = node; });
-    assert.equal(await placementTrigger.evaluate(node => node === document.activeElement), true, 'click transfers keyboard focus from the sidebar to artwork');
-    assert.equal(await placementTrigger.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'pointer focus adds no keyboard outline');
-    await page.keyboard.press('i');
-    const viewer = page.getByRole('group', { name: 'Artwork inspection', exact: true });
-    await viewer.waitFor();
-    assert.equal(await placement.getAttribute('data-inspection-context'), 'selected');
-    await page.getByRole('button', { name: 'Close artwork viewer' }).click();
-    await viewer.waitFor({ state: 'detached' });
-    assert.equal(await placement.evaluate(node => node === window.__inspectionSource), true, 'inspection retains the source node');
-    assert.equal(await placement.getAttribute('data-inspection-context'), null);
-    assert.equal(await placementTrigger.evaluate((node) => node === document.activeElement), true);
-    assert.deepEqual(await page.locator('main.system-workflow').evaluate(node => [node.dataset.workbenchCameraX, node.dataset.workbenchCameraY, node.dataset.workbenchCameraScale]), camera);
-    assert.equal(await page.evaluate(() => window.__inspectionWrites), 0, 'inspection does not write authored content');
-
-  } finally {
-    await browser.close();
-  }
-});
-
-test('Display Layers suspends authoring during inspection and restores its arrangement', { timeout: 60_000 }, async () => {
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-    await prepare(page);
-    await page.goto(URL, { waitUntil: 'networkidle' });
-    const placement = page.locator('.system-workflow__placement').first();
-    await placement.click();
-    await openDisplayTool(page, page.locator('.system-workflow__presentation-board'), 'LAYERS');
-    const inspector = page.getByRole('region', { name: 'Layers inspector', exact: true });
-    await inspector.waitFor();
-    const window = page.locator('[data-shared-tool="layers"]').locator('xpath=ancestor::aside');
-    const before = await window.boundingBox();
-    const rows = await inspector.locator('.system-workflow__layer-row').allTextContents();
-    await placement.focus(); await page.keyboard.press('i');
-    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
-    assert.equal(await window.isVisible(), false, 'Display authoring tools yield to artwork inspection');
-    assert.equal(await inspector.count(), 0, 'inspection suspends authoring controls');
-    await page.getByRole('button', { name: 'Close artwork viewer' }).click();
-    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor({ state: 'detached' });
-    await inspector.waitFor();
-    assert.deepEqual(await inspector.locator('.system-workflow__layer-row').allTextContents(), rows,
-      'returning restores the exact targeted Grid layers');
-    assert.deepEqual(await window.boundingBox(), before);
   } finally {
     await browser.close();
   }

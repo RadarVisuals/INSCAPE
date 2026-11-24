@@ -3,8 +3,7 @@ import { createWorkbenchMoveOperation } from '../src/public/ownerSystemWorkflow/
 import { createWorkbenchResizeOperation } from '../src/public/ownerSystemWorkflow/workbenchResizeOperation.js';
 import { createWorkbenchGestures } from '../src/public/ownerSystemWorkflow/workbenchGestures.js';
 import { moveWorkbenchSelection } from '../src/systemWorkflow/moveWorkbenchSelection.js';
-import { commitWorkbenchSelectionResize, prepareWindowResize } from '../src/systemWorkflow/resizeWorkbenchSelection.js';
-import { DISPLAY_WINDOW_LIMITS } from '../src/profileDocument/domain/workbenchPresentation.js';
+import { commitWorkbenchSelectionResize } from '../src/systemWorkflow/resizeWorkbenchSelection.js';
 import { useWorkbenchViewRegistration } from '../src/public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import type { MoveOperationInput, ResizeOperationInput, WorkbenchOperationOrigin, VisitorOperationOrigin,
   WorkbenchResizeTarget, SelectionResizeChange, MountedWorkbenchStore, WorkbenchPresentation,
@@ -33,14 +32,6 @@ createWorkbenchResizeOperation({ ...resizeInput, registry: mounted, transforms: 
 if (mounted.store) createWorkbenchResizeOperation({ ...resizeInput, registry: mounted,
   origin: { ...origin, store: mounted.store } });
 useWorkbenchViewRegistration('image:one', node, true, frame, target);
-// PresentationBoardDefinitive supplies this window-only capability: it has no
-// expected content record, and uses the existing no-content-change preparer.
-const displayTarget: WorkbenchResizeTarget = { enabled: true, continuousGeometry: true,
-  store, profileAddress: '0x123', layoutKey: 'display', commit: commitWorkbenchSelectionResize,
-  prepare: prepareWindowResize, applyFrame() {}, reportError() {}, ...DISPLAY_WINDOW_LIMITS };
-useWorkbenchViewRegistration('display:primary', node, true, frame, displayTarget);
-useWorkbenchViewRegistration('display:other', node, true, frame, { ...displayTarget, layoutKey: 'displays' });
-commitWorkbenchSelectionResize([{ ...displayTarget, store, id: 'display:primary', ...frame }]);
 type IsUnchecked<T> = 0 extends (1 & T) ? true : false;
 const moveChecked: IsUnchecked<NonNullable<typeof move>> = false;
 const resizeChecked: IsUnchecked<NonNullable<typeof resize>> = false;
@@ -106,6 +97,6 @@ visitor.getPresentation();
 // @ts-expect-error The live registry cannot accept a restoration-only target without preparation/commit/limits.
 useWorkbenchViewRegistration('image:one', node, true, frame, { store, layoutKey: 'imageModules', applyFrame() {} });
 // @ts-expect-error Content-module preparation still requires its opaque expected record.
-const missingImageSnapshot: WorkbenchResizeTarget = { enabled: true, store, profileAddress: '0x123', layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: prepareWindowResize, applyFrame() {}, minimumSize: 32, maximumWidth: 4096, maximumHeight: 4096 };
+const missingImageSnapshot: WorkbenchResizeTarget = { enabled: true, store, profileAddress: '0x123', layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: draft => draft, applyFrame() {}, minimumSize: 32, maximumWidth: 4096, maximumHeight: 4096 };
 
 void [moveChecked, resizeChecked, gesturesChecked, minimumSize, minimumWidth, minimumHeight, removedWriter];

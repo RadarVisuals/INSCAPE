@@ -2,7 +2,7 @@ import React from 'react';
 import { fixtureAsset } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { commitWorkspaceRows } from '../src/workspace/database.js';
-import { workspaceSession } from '../src/workspace/profileWorkspace.js';
+import { authoredStorage, workspaceSession } from '../src/workspace/profileWorkspace.js';
 import { createRoot } from 'react-dom/client';
 import Boundary from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
@@ -19,7 +19,7 @@ const params = new URLSearchParams(location.search);
 const profile = params.get('profile') || `0x${'1'.repeat(40)}`, key = systemWorkflowDraftKey(profile);
 if (params.has('seed') && localStorage.getItem(key) === null) {
   const draft = createEmptySystemWorkflowDraft(profile);
-  if (!params.has('legacyDisplay')) draft.grids = [];
+
   draft.texts = [{ id: 'text:private', article: createArticle('Private draft'), visibility: 'PRIVATE' }];
   draft.workbench = createDefaultWorkbenchPresentation();
   draft.workbench.texts = [createTextPresentation('text:private', 0)];
@@ -43,6 +43,14 @@ window.externalWorkbenchWrite = raw => {
   return commitWorkspaceRows(session.db, session.scope, [['workbenches', { before: session.committed.workbenches, after: raw }]]);
 };
 window.committedRaw = () => workspaceSession(profile)?.committed?.workbenches;
+const draftStorage = authoredStorage(localStorage);
+const writeDraft = draftStorage.setItem.bind(draftStorage);
+window.failWorkbenchWrites = fail => {
+  draftStorage.setItem = fail ? (name, value) => {
+    if (name === key) throw new DOMException('Full', 'QuotaExceededError');
+    return writeDraft(name, value);
+  } : writeDraft;
+};
 window.savedDraft = () => JSON.parse(workspaceSession(profile)?.committed?.workbenches ?? localStorage.getItem(key));
 window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage, requireEditor: true });
 const root = createRoot(document.getElementById('root'));

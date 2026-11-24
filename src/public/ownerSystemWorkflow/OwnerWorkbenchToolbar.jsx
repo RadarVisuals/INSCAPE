@@ -1,6 +1,6 @@
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Grid2X2, Grid3X3, Image, Info, Redo2, Settings2, RectangleHorizontal, SquarePlus, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
+import { Grid2X2, Grid3X3, Image, Info, Redo2, Settings2, RectangleHorizontal, SquarePlus, Type, Undo2, User, Folder } from 'lucide-react';
 import WorkbenchToolbar from './WorkbenchToolbar.jsx';
 import './workbenchCreation.css';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -14,11 +14,11 @@ import { createReceptionCellDrawGesture } from '../../reception/receptionCellDra
 import { receptionLayoutCountRange } from '../../reception/receptionLayoutGenerator.js';
 import { useEditorCells, isEditorCellSurface } from '../../reception/EditorCellsContext.jsx';
 
-const ICONS = { cell: SquarePlus, 'workbench-index': Folder, 'mini-app': AppWindow, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
-const LABELS = { cell: 'Cell', 'workbench-index': 'Index', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
+const ICONS = { cell: SquarePlus, 'workbench-index': Folder, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
+const LABELS = { cell: 'Cell', 'workbench-index': 'Index', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
   'shape-grid': 'Grid' };
 const isCreationTool = tool => tool === 'cell' || tool === 'text' || isShapeCommand(tool);
-const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-mini-app-id],[data-immersive]';
+const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-immersive]';
 const OVERLAYS = '[data-workbench-toolbar],[data-system-workflow-overlay],[data-system-workflow-panel],[data-shared-display-tools],[data-shared-text-tools],[data-context-tools],.workbench-view-controls,[data-workbench-group-tools],[data-workbench-selection-tools]';
 const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 
@@ -170,7 +170,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
   const inspector = (id, reason) => ({ enabled: tools.isAvailable(id), open: tools.isAvailable(id) && Boolean(tools.state[id]), reason: tools.isAvailable(id) ? undefined : reason,
     onToggle: () => tools.command(id, undefined, document.activeElement) });
   const layers = onToggleArtworkLayers ? { enabled: true, open: artworkLayersOpen, onToggle: onToggleArtworkLayers }
-    : inspector('layers', 'Select a Display to see its layers.');
+    : inspector('layers', 'Select a composition to see its layers.');
   const info = inspector('metadata', 'Select an artwork to see its information.');
   const adapt = command => ({ ...command, label: LABELS[command.id] || command.label, icon: ICONS[command.id],
     reason: command.disabled ? 'Module limit reached.' : undefined,
@@ -193,8 +193,6 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       icon: Settings2, group: 'Selection', onSelect: () => onOpenSharedTool(section),
     })) : []),
     { id: 'metadata', label: 'Artwork info', icon: Info, group: 'Selection', disabled: !info.enabled, reason: info.reason, selected: info.open, onSelect: info.onToggle },
-    ...(!cells ? [{ id: 'appearance', label: 'Display appearance', icon: Settings2, group: 'Selection', disabled: !tools.isAvailable('appearance'), reason: 'Select a Display first.',
-      onSelect: () => tools.command('appearance', undefined, document.activeElement) }] : []),
     ...['undo', 'redo'].map(id => ({ id, label: id === 'undo' ? 'Undo' : 'Redo', icon: id === 'undo' ? Undo2 : Redo2, group: 'Editing',
       shortcut: id === 'undo' ? 'Ctrl / ⌘ Z' : 'Ctrl / ⌘ ⇧ Z', disabled: Boolean(historyBlocked || !history[id]), reason: historyBlocked || `Nothing to ${id}.`, onSelect: () => onHistory(id) })),
     ...(cells ? [{ id: 'bento', label: 'Bento settings', icon: Grid3X3, group: 'View', onSelect: cells.openSettings }] : [{ id: 'grid', label: 'Workbench grid', icon: Grid3X3, group: 'View', selected: preferences.gridMode !== 'NONE',
@@ -208,7 +206,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       shapeCommands={shapeCommands} layers={layers} searchScopeRef={hostRef} searchEnabled={searchEnabled && !camera.locked}
       onOpenLibrary={trigger => { chooseTool('select'); onOpenLibrary(trigger); }} libraryOpen={libraryOpen} hidden={hidden && !exiting} searchRequest={searchRequest} />
     {!hidden && creating && <p className="workbench-creation-hint" role="status" data-system-workflow-overlay>
-      {view.interactionTool === 'cell' ? 'Drag to draw a cell. Hold Alt to skip snapping.' : view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
+      {view.interactionTool === 'cell' ? 'Drag to draw a cell. Hold Alt to skip snapping.' : view.interactionTool === 'text' ? 'Click the Workbench to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
     </p>}
     {!hidden && ghost && <div className="workbench-creation-ghost" style={ghost} aria-hidden="true" />}
   </>;

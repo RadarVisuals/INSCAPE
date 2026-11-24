@@ -63,20 +63,12 @@
 
 @media (forced-colors: active) { .reception-region { border: 1px solid CanvasText; } }
 
-/* Linked sources keep the region's geometry; Display owns gestures and media. */
 .reception-region[data-linked] .reception-region-content { width: 100%; height: 100%; }
-.reception-linked-content, .reception-linked-content > .published-display { position: relative; width: 100%; height: 100%; min-height: 160px; }
-.reception-display { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: inherit; }
-.reception-display-scene { position: relative; flex: 1; min-height: 0; }
-.reception-display-controls { display: flex; align-items: center; justify-content: space-between; flex: none; gap: 4px; min-height: var(--control-target-touch); padding: 4px; }
-.reception-display-controls button, .reception-open-source { min-height: var(--control-target-touch); font: var(--workflow-type-control); }
+.reception-linked-content { position: relative; width: 100%; height: 100%; min-height: 160px; }
+.reception-open-source { min-height: var(--control-target-touch); font: var(--workflow-type-control); }
 .reception-linked-content > .reception-open-source.workflow-tactile-control { position: absolute; bottom: 8px; right: 8px; z-index: 3; font: var(--workflow-type-control); padding: 8px; }
-.reception-linked-content .reception-display-controls .workflow-tactile-control { font: var(--workflow-type-control); padding: 8px; }
-.reception-canvas[data-mobile] .reception-region[data-linked]:has([data-linked-kind="display"], [data-linked-kind="image"]) { overflow: hidden; }
+.reception-canvas[data-mobile] .reception-region[data-linked]:has([data-linked-kind="image"]) { overflow: hidden; }
 
-.reception-display-controls .visitor-grid-world__navigation { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.reception-display-controls .visitor-grid-world__navigation button { min-width: var(--control-target-touch); }
-.reception-display-controls .visitor-grid-world__navigation span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--workflow-type-control); }
 .reception-region:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
 
 .reception-window-main::-webkit-scrollbar { display: none; }

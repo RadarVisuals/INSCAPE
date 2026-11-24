@@ -33,6 +33,11 @@ export function receptionCellMerge(value, id, direction) {
   const visibility = value.shapes.find(item => item.id === id).visibility;
   if (cells.some(cell => value.shapes.find(item => item.id === cell.id).visibility !== visibility))
     return { reason: 'Cells must have the same publication visibility before merging.' };
+  if (new Set(cells.map(cell => cell.swipeLink).filter(Boolean)).size > 1)
+    return { reason: 'Unlink the two swipe groups before merging their cells.' };
+  const linkedCell = cells.find(cell => cell.swipeLink);
+  if (linkedCell && cells.some(cell => (cell.slides?.length || 0) > linkedCell.slides.length))
+    return { reason: 'Add slides to the linked cell before merging the longer sequence.' };
   if (cells.filter(cell => cell.content).length > 1)
     return { reason: 'These cells contain separate profile or linked-canvas content. Keep them in separate cells.' };
   let aligned = value;
@@ -81,7 +86,12 @@ export function mergeReceptionCells(original, id, direction) {
       height: w.height / cell.mobile.height * r.height / frame.height * selected.mobile.height,
     } }));
   });
-  const merged = { ...selected, members: cells.flatMap(cell => cell.members),
+  const extraSlides = Math.max(...cells.map(cell => cell.slides?.length || 0));
+  const linked = cells.find(cell => cell.swipeLink);
+  const merged = { ...selected,
+    ...(linked && { swipeLink: linked.swipeLink }),
+    ...(extraSlides && { slides: Array.from({ length: extraSlides }, (_, i) => cells.flatMap(cell => cell.slides?.[i] || [])) }),
+    members: cells.flatMap(cell => cell.members),
     ...(locked.length ? { lockedMembers: locked } : {}),
     ...(anchors.length ? { memberAnchors: anchors } : {}),
     ...(fitText.length ? { fitText } : {}),

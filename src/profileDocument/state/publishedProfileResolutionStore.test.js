@@ -19,7 +19,7 @@ test('initial transient failure is ERROR while a same-session refresh failure re
   assert.equal(stale.status, PUBLISHED_PROFILE_STATUS.STALE); assert.strictEqual(stale.document, documentA);
 });
 
-test('different profile addresses resolve concurrently without cancelling neighbouring world cards', async () => {
+test('concurrent profile requests retain independent results for each address', async () => {
   let finishA; let signalA;
   const repository = { resolve(address, { signal }) {
     if (address === PROFILE_A) { signalA = signal; return new Promise((resolve) => { finishA = resolve; }); }

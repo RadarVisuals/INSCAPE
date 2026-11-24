@@ -267,6 +267,13 @@ test('offline restore into empty origin storage preserves a complete portable wo
   assert.equal(copy.workspace.library.folders[1].parentId, copy.workspace.library.folders[0].id);
   assert.equal(copy.workspace.library.curatedImageSelections.length, 2);
   assert.equal(copy.workspace.workbenches.workbenches.length, 2);
+  assert.equal(copy.schemaVersion, 2);
+  for (const record of [copy.workspace.workbenches, copy.workspace.receptionRecovery.draft]) {
+    for (const { content } of record.workbenches || [{ content: record }]) {
+      assert.equal('grids' in content || 'displays' in content, false);
+      assert.equal('display' in (content.workbench || {}) || 'displays' in (content.workbench || {}), false);
+    }
+  }
   // Close the writer, then clear this disposable origin exactly as DevTools does.
   const clean = page.context(), fixtureUrl = page.url();
   await page.close();

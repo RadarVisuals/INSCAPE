@@ -4,23 +4,18 @@ import test from 'node:test';
 
 const runtimeSource = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
 const reconciliationSource = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx', import.meta.url), 'utf8');
-const controllerSource = readFileSync(new URL('../../public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js', import.meta.url), 'utf8');
+const controllerSource = readFileSync(new URL('../../public/ownerSystemWorkflow/useWorkbenchController.js', import.meta.url), 'utf8');
 const publicationSource = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx', import.meta.url), 'utf8');
 const appSource = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
 
-test('Preview builds directly from the current isolated System Workflow draft', () => {
-  const preparationSource = readFileSync(new URL('../../public/ownerSystemWorkflow/prepareWorkbenchPreview.js', import.meta.url), 'utf8');
-  assert.match(runtimeSource, /prepareWorkbenchPreview\(\{[\s\S]*draft: workbenchController\.draft/u);
-  assert.match(preparationSource, /buildOwnerSystemWorkflowPreviewDocument\(\{[\s\S]*systemWorkflowDraft: draft/u);
-  assert.match(runtimeSource, /<ProfileDocumentV9Preview\s+document=\{preview\}/u);
-  assert.doesNotMatch(runtimeSource, /ProfileDocumentPanel|enterPreview\(|ProfileDocumentPreview/u);
+test('Studio opens the selected composition in its read-only viewer', () => {
+  assert.match(runtimeSource, /<CompositionPreview\b/u);
+  assert.doesNotMatch(runtimeSource, /<ProfileDocumentV9Preview\b|<ReceptionEditorPreview\b/u);
 });
 
 test('System Workflow persistence uses the profile-isolated draft v4 store', () => {
   assert.match(controllerSource, /createSystemWorkflowDraftStore/u);
-  assert.match(controllerSource, /createDisplayModuleSession/u);
-  const moduleSessionSource = readFileSync(new URL('../../systemWorkflow/displayModuleSession.js', import.meta.url), 'utf8');
-  assert.match(moduleSessionSource, /createSystemWorkflowAuthoringSession/u);
+  assert.match(controllerSource, /createWorkbenchSession/u);
   assert.doesNotMatch(controllerSource, /lattice-production-draft|profileDocumentStorage|useProfileDocumentStore/u);
 });
 
@@ -35,9 +30,9 @@ test('owner entry reconciles its origin-scoped draft before mounting the Keeper-
 
 test('publication preparation remains explicit and CID verification is snapshot-bound', () => {
   assert.match(publicationSource, /Prepare publication/u);
-  assert.match(publicationSource, /publication\.verifyCid\(snapshot, uploaded\.cid/u);
+  assert.match(publicationSource, /cidRef\.current = uploaded\.cid;[\s\S]*publication\.verifyCid\(snapshot, cidRef\.current/u);
   assert.match(publicationSource, /publication\.publish\(\)/u);
-  assert.match(publicationSource, /Your public Images, Text and Shapes, <strong>Public Grids<\/strong>, Keeper content, custom Identity card and prepared Workbench setup/u);
+  assert.match(publicationSource, /Your public images, text and shapes, composition layout, Keeper content and custom identity card/u);
   assert.doesNotMatch(publicationSource, /CID \/ MANUAL FALLBACK|PUBLISH VERSION 9/u);
   assert.doesNotMatch(publicationSource, /OwnerRackBoard|profileRackPresentation|buildProfileDocumentV8/u);
 });

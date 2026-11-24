@@ -240,20 +240,6 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     assert.deepEqual((await page.evaluate(() => window.readDraft())).workbench.imageModules, dropped.workbench.imageModules, 'replacement retains the frame and layer');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    // Display remains the placement target; a locked Display is not empty space.
-    // Move the Display below the screen navigation before targeting its artboard.
-    await page.locator('main.system-workflow').dispatchEvent('wheel', {deltaY:-250,bubbles:true,cancelable:true}); await settle(page);
-    const stage = page.locator('[data-system-workflow-artboard]').first();
-    const stageRect = await stage.boundingBox(), stagePoint = { x: stageRect.x + stageRect.width * .2, y: stageRect.y + stageRect.height * .7 };
-    const priorCount = (await page.evaluate(() => window.readDraft())).grids.reduce((sum, grid) => sum + grid.placements.length, 0);
-    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
-    await startDrag(page, () => exposedModulePoint(page, stage, stagePoint, `${width}-unlocked`)); await page.getByText('Release to add layer', { exact: true }).waitFor(); await page.mouse.up();
-    await page.waitForFunction(count => window.readDraft().grids.reduce((sum, grid) => sum + grid.placements.length, 0) === count + 1, priorCount);
-    assert.equal((await page.evaluate(() => window.readDraft())).imageModules.length, 1);
-    await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
-    const locked = await page.evaluate(() => window.readDraft());
-    await startDrag(page, () => exposedModulePoint(page, stage, stagePoint, `${width}-locked`)); assert.equal(await preview.count(), 0); await page.mouse.up(); await settle(page);
-    assert.deepEqual(await page.evaluate(() => window.readDraft()), locked, 'a locked Display never creates an Image behind itself');
     // A cancelled or failed empty-space drop leaves both content and layout alone.
     const unchanged = await page.evaluate(() => window.readDraft());
     const empty = await startDrag(page, null); await page.getByText('Release to place Image', { exact: true }).waitFor();

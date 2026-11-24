@@ -36,18 +36,12 @@ test('module edges, appearance, keyboard controls and public rendering', async (
       const { createDefaultWorkbenchPresentation, createTextPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
       const profileAddress = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE;
       const store = createSystemWorkflowDraftStore({ profileAddress, storage: localStorage });
-      const { createSystemWorkflowAuthoringSession } = await import('/src/systemWorkflow/systemWorkflowAuthoringSession.js');
-      const session = createSystemWorkflowAuthoringSession({ store });
-      session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[6].id, destination: { column: 0, row: 0, columnSpan: 32, rowSpan: 18 } });
-      session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0].id, destination: { column: 8, row: 0, columnSpan: 18, rowSpan: 18 } });
       addTextModule(store, profileAddress);
       const draft = store.getDraft(), text = draft.texts[0];
       text.visibility = 'PUBLIC'; text.article.title = 'A mouthful of almost';
       text.article.appearance.background = '#000000';
       text.article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: 'I lift my head. A rope of spit pulls the dirt up with me before it snaps. My throat dumps something thick between my hands.' }] }];
-      draft.appearance.guideMode = 'NONE';
       draft.workbench = createDefaultWorkbenchPresentation();
-      draft.workbench.display.window = { left: 440, top: 100, width: 800, height: 450 };
       draft.workbench.texts = [{ ...createTextPresentation(text.id, 0), window: { left: 90, top: 130, width: 300, height: 400 } }];
       store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
       window.readSurfaceDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage: localStorage }).getDraft();
@@ -55,7 +49,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
         reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Module composition' } }));
     });
-    const text = page.locator('.text-window'), board = page.getByRole('article', { name: 'Display Module', exact: true });
+    const text = page.locator('aside.text-window');
     const tools = sharedToolPanel(page);
     await openTextToolSection(tools, 'Background & edges');
     await tools.getByLabel('Module corners', { exact: true }).selectOption('custom');
@@ -65,79 +59,10 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     assert.deepEqual(await page.evaluate(() => window.readSurfaceDraft().texts[0].article.appearance.edges), { corners: [12, 0, 0, 12], shadow: false, grain: .25 });
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     await tools.waitFor({ state: 'detached' });
-    const textHeader = page.getByLabel('Move Text window', { exact: true });
-    const drag = async (handle, dx, dy, alt = false) => {
-      await handle.focus();
-      const { x, y } = await handle.evaluate(node => {
-        const b = node.getBoundingClientRect(), y = b.top + b.height / 2;
-        for (let x = b.left + 16; x < b.right - 8; x += 8) {
-          const hit = document.elementFromPoint(x, y);
-          if (hit === node || (node.contains(hit) && !hit.closest('button,input,[role="separator"]'))) return { x, y };
-        }
-        throw new Error('No unobstructed drag surface');
-      });
-      await page.mouse.move(x, y);
-      if (alt) await page.keyboard.down('Alt');
-      await page.mouse.down(); await page.mouse.move(x + dx, y + dy, { steps: 5 }); await page.mouse.up();
-      if (alt) await page.keyboard.up('Alt');
-    };
-    const near = (a, b, message) => assert.ok(Math.abs(a - b) < 1, `${message}: ${a} != ${b}`);
-    let t = await text.boundingBox(), b = await board.boundingBox();
-    await drag(textHeader, b.x - t.x - t.width + 3, b.y - t.y + 3);
-    t = await text.boundingBox(); b = await board.boundingBox();
-    near(t.x + t.width, b.x, 'zero gap'); near(t.y, b.y, 'top alignment');
-    await drag(textHeader, 5, 5, true); t = await text.boundingBox();
-    near(t.x + t.width, b.x + 5, 'Alt bypass');
-    await drag(textHeader, -5, -5);
-    const resize = page.getByRole('separator', { name: 'Resize Text window', exact: true });
-    t = await text.boundingBox();
-    await drag(resize, 0, b.y + b.height - t.y - t.height + 3);
-    t = await text.boundingBox(); near(t.y + t.height, b.y + b.height, 'bottom resize');
-    await board.click({ button: 'right', position: { x: 200, y: 120 } });
-    await page.getByRole('menuitem', { name: 'APPEARANCE', exact: true }).click();
-    const appearance = page.getByRole('complementary', { name: /Display appearance/ });
-    await appearance.getByLabel('Module corners', { exact: true }).selectOption('square');
-    await appearance.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
-    await appearance.getByRole('checkbox', { name: 'Show shadow', exact: true }).uncheck();
-    await appearance.getByLabel('Grain strength', { exact: true }).fill('0.2');
-    assert.deepEqual(await page.evaluate(() => window.readSurfaceDraft().appearance.edges), { corners: [0, 0, 0, 0], shadow: false, grain: .2 });
-    await page.getByRole('button', { name: 'Close Display appearance', exact: true }).click();
-    const surfaceStyles = async () => ({
-      board: await board.evaluate(el => { const s = getComputedStyle(el); return [s.borderRadius, s.boxShadow, getComputedStyle(el.querySelector('.system-workflow__stage-viewport')).borderRadius]; }),
-      text: await text.evaluate(el => [getComputedStyle(el).borderRadius, getComputedStyle(el.querySelector('.module-surface-grain')).opacity]),
-    });
-    let styles = await surfaceStyles();
-    assert.deepEqual(styles.board, ['0px', 'none', '0px']);
-    assert.equal(await board.evaluate(el => getComputedStyle(el, '::before').borderTopWidth), '0px');
-    const loadedImages = await board.locator('img').evaluateAll(images => images.filter(img => img.complete && img.naturalWidth > 0).length);
-    assert.ok(loadedImages > 0, 'artwork is loaded for the visual check');
-    assert.deepEqual(styles.text, ['12px 0px 0px 12px', '0.075']);
-    // Join the final output rectangles; companion tools do not reserve space.
-    t = await text.boundingBox(); b = await board.boundingBox();
-    await drag(textHeader, b.x - t.x - t.width + 3, b.y - t.y + 3);
-    t = await text.boundingBox(); near(t.x + t.width, b.x, 'final output joins flush');
-    const boardHeader = page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true });
-    await drag(boardHeader, 4, 4, true);
-    await drag(boardHeader, -4, -4);
-    b = await board.boundingBox(); near(t.x + t.width, b.x, 'Display snaps to Text too');
-    await textHeader.focus(); await page.keyboard.press('Alt+ArrowLeft');
-    near((await text.boundingBox()).x, t.x - 8, 'keyboard movement bypass');
-    await drag(textHeader, 8, 0);
-    await page.screenshot({ path: join(screenshots, 'joined-wide.png') });
-    await editorCommand(page, 'Edit', 'Settings');
-    await page.getByLabel('Space between modules', { exact: true }).fill('12');
-    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
-    await page.getByRole('button', { name: 'Close Settings', exact: true }).waitFor({ state: 'detached' });
-    // Approach the new gap from outside the retained edge snap distance.
-    await drag(textHeader, -40, 0, true);
-    t = await text.boundingBox(); b = await board.boundingBox();
-    await drag(textHeader, b.x - 12 - t.width - t.x + 2, 0);
-    t = await text.boundingBox(); near(b.x - t.x - t.width, 12, 'custom gap');
+    assert.deepEqual(await text.evaluate(el => [getComputedStyle(el).borderRadius,
+      getComputedStyle(el.querySelector('.module-surface-grain')).opacity]), ['12px 0px 0px 12px', '0.075']);
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.waitForSelector('.visitor-grid-world .system-workflow__presentation-board');
-    const publicBoard = page.locator('.visitor-grid-world .system-workflow__presentation-board').first();
-    assert.equal(await publicBoard.evaluate(el => getComputedStyle(el).borderRadius), '0px');
-    assert.equal(await publicBoard.getAttribute('data-module-frame'), 'off');
+    await page.locator('.visitor-grid-world').getByText('A mouthful of almost', { exact: true }).first().waitFor();
     await page.screenshot({ path: join(screenshots, 'preview-wide.png') });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: join(screenshots, 'preview-narrow.png') });

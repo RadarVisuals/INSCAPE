@@ -26,7 +26,7 @@ const asset = await resolveLibraryImageAsset({ ...OWNER_SYSTEM_WORKFLOW_REVIEW_A
   selectedMedia: { url: 'https://keeper-octopus.inscape.test/artwork.svg', width: 2048, height: 2048 } });
 draft.keeperDocks = [{ id: 'keeper:octopus-preview', name: 'Goo Keeper', asset, faces: 'right', movement: 'svg', size: 384, visibility: 'PRIVATE' }];
 draft.workbench = createDefaultWorkbenchPresentation();
-draft.workbench.display.open = false;
+
 draft.workbench.keeperDocks = [{ id: 'keeper:octopus-preview', position: { left: 180, top: 200 } }];
 storage.setItem(key, JSON.stringify(draft));
 createRoot(document.getElementById('root')).render(<>

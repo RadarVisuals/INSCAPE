@@ -5,7 +5,6 @@ import { editWorkbenchGroups } from './workbenchGroupSession.js';
 import { validWorkbenchGroups, workbenchMemberIds, workbenchGroupWindowIds } from './domain/workbenchGroups.js';
 import { validateSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { addShape } from '../shapes/shapeSession.js';
-import { addDisplayModule, createDisplayModuleSession } from './displayModuleSession.js';
 import { removeWorkbenchModule } from './removeWorkbenchModule.js';
 import { moveWorkbenchSelection } from './moveWorkbenchSelection.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -89,12 +88,11 @@ test('group movement commits positions together, preserves module content and un
   assert.deepEqual(f.store.getDraft(), moved);
 });
 
-test('additional Displays still validate and edit; local group names and membership never enter public snapshots', () => {
+test('local group names stay private and restoration retains existing members', () => {
   const f = fixture(), old = publish(f.store.getDraft());
-  const display = addDisplayModule(f.store, 'LANDSCAPE');
-  f.create([display, f.a], 'Private grouping title');
+  const extraShape = addShape(f.store, profile);
+  f.create([extraShape, f.a], 'Private grouping title');
   assert.equal(validateSystemWorkflowDraft(f.store.getDraft()).valid, true);
-  const session = createDisplayModuleSession(f.store, display); session.createGrid();
   const current = f.store.getDraft(), published = publish(current);
   assert.equal(JSON.stringify(published).includes('Private grouping title'), false);
   assert.equal(Object.hasOwn(published, 'workbenchGroups'), false);

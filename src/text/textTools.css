@@ -99,8 +99,8 @@
   .workbench-text-inspector label:has(> input[type=checkbox]) { min-height: var(--tool-touch-target, 44px); }
 }
 .bento-text-toolbar, .editor-object-toolbar .system-workflow__detached-window-controls:has(> .bento-text-toolbar) { display: contents; }
-.editor-object-toolbar:has(.bento-text-toolbar) { gap: 5px; }
-.editor-object-toolbar .bento-text-font { flex: none; width: 112px; justify-content: space-between; }
+.editor-object-toolbar:has(.bento-text-toolbar) { gap: 2px; }
+.editor-object-toolbar .bento-text-font { flex: none; width: auto; max-width: 15ch; gap: 4px; }
 .bento-text-font > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bento-text-toolbar .text-selection-number input, .bento-text-spacing input {
   box-sizing: border-box; min-width: 0; border: 1px solid var(--tactile-control-edge);
@@ -108,6 +108,10 @@
 }
 .bento-text-toolbar .text-selection-number label { display: grid; align-items: center; min-height: var(--tool-control-size); }
 .bento-text-toolbar .text-selection-number input { width: 5ch; height: calc(var(--tool-control-size) - 4px); padding: 0 2px; text-align: center; appearance: textfield; }
+.bento-text-toolbar .text-selection-number input:enabled::placeholder { color: var(--editor-ink); opacity: 1; }
+.editor-toolbar-popover.text-alignment-picker { width: max-content; padding: 4px; }
+.text-alignment-options { display: flex; gap: 2px; }
+.text-alignment-options .editor-object-toolbar-button { width: 28px; height: 28px; }
 .bento-text-toolbar .text-selection-number input:hover:enabled { background: var(--editor-selection); }
 .bento-text-toolbar .text-selection-number input:focus-visible { outline: 1px solid var(--editor-accent); outline-offset: -1px; }
 .bento-text-toolbar .text-selection-number input::-webkit-inner-spin-button { appearance: none; }

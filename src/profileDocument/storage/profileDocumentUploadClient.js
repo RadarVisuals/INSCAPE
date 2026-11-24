@@ -1,7 +1,7 @@
 import { assertPublicationContext, createCanonicalPublication, normalizeProfileDocumentCid } from '../domain/profileDocumentPublication.js';
 import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
 import { assertUploadPermit, uploadAuthorizationMessage, PUBLICATION_UPLOAD_PATH } from '../domain/uploadAuthorization.js';
-import { GALLERY_PUBLICATION_CAPABILITY, requiresGalleryPublicationCapability } from '../domain/constants.js';
+import { PROFILE_PUBLICATION_FORMAT } from '../domain/constants.js';
 import { isLocalPublicationOrigin } from '../domain/publicationOrigin.js';
 import { publicationUploadEndpoint } from './publicationUploadEndpoint.js';
 
@@ -94,9 +94,8 @@ export async function uploadProfileDocument(snapshot, {
       || permit.bytes !== artifact.bytes.byteLength || challenge.message !== uploadAuthorizationMessage(permit)
       || typeof challenge.authorization !== 'string' || challenge.authorization.length > 2048) throw Error();
   } catch { throw new ProfileDocumentUploadError('The service returned invalid upload authorization. Nothing was signed.', 'UPLOAD_CHALLENGE_INVALID'); }
-  if (requiresGalleryPublicationCapability(snapshot)
-    && !(Array.isArray(challenge.capabilities) && challenge.capabilities.includes(GALLERY_PUBLICATION_CAPABILITY))) {
-    throw new ProfileDocumentUploadError('The hosted publication service needs an update to support this Gallery change.', 'PUBLICATION_SERVICE_UPDATE_REQUIRED');
+  if (!Array.isArray(challenge.capabilities) || !challenge.capabilities.includes(PROFILE_PUBLICATION_FORMAT)) {
+    throw new ProfileDocumentUploadError('The publication service must be updated for this document format.', 'PUBLICATION_SERVICE_UPDATE_REQUIRED');
   }
   onPhase('AUTHORIZING');
   const current = assertFresh();

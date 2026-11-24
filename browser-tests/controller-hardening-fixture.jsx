@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import useController from '../src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js';
+import useController from '../src/public/ownerSystemWorkflow/useWorkbenchController.js';
 import { createOwnerSystemWorkflowReviewStorage, OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE as profile } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
-import { systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
+import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 
 const other = '0x2222222222222222222222222222222222222222';
-const draft = JSON.parse(createOwnerSystemWorkflowReviewStorage().getItem(systemWorkflowDraftKey(profile)));
-for (const address of [profile, other]) localStorage.setItem(systemWorkflowDraftKey(address), JSON.stringify({ ...draft, profileAddress: address }));
 const root = createRoot(document.getElementById('root'));
 window.hardening = { profile, other, unmount: () => root.unmount() };
 function Fixture() {
   const [address, setAddress] = useState(profile);
-  const controller = useController(address);
+  const sharedStore = useMemo(() => createSystemWorkflowDraftStore({ profileAddress: address, storage: createOwnerSystemWorkflowReviewStorage() }), [address]);
+  const controller = useController(address, { sharedStore });
   Object.assign(window.hardening, { controller, setAddress });
   return <output>{controller.draft.profileAddress}</output>;
 }

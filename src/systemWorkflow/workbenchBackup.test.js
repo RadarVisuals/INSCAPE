@@ -26,10 +26,15 @@ test('private Workbench backup restores complete content and geometry into empty
   draft.texts[0].article.content.content[0].content = [{ type: 'text', text: 'Keep this unpublished.' }];
   assert.equal(draft.texts[0].visibility, 'PRIVATE');
   const source = serializeWorkbenchBackup(draft), backup = parseWorkbenchBackup(source, profile);
+  const file = JSON.parse(source).draft;
+  assert.equal(Object.hasOwn(file, 'grids'), false);
+  assert.equal(Object.hasOwn(file, 'displays'), false);
+  assert.equal(Object.hasOwn(file.workbench, 'display'), false);
+  assert.equal(Object.hasOwn(file.workbench, 'displays'), false);
   assert.deepEqual(backup.draft, draft);
   const target = setup();
   assert.equal(target.store.restoreBackup(backup.draft, { expectedGeneration: 0 }), true);
-  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: target.storage }).getDraft(), draft);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: target.storage }).getDraft(), backup.draft);
   assert.deepEqual(target.store.getHistory(), { undo: null, redo: null });
   assert.deepEqual(Object.keys(JSON.parse(source)), ['type', 'version', 'createdAt', 'draft']);
 });

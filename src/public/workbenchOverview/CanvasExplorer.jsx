@@ -23,7 +23,6 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
       {visitorHeader && <small className="gallery-detail-label">Description</small>}{selected.introduction}
     </p>}
     <div className="composition-explorer-secondary"><span>{visitorHeader && <small className="gallery-detail-label">Dimensions</small>}{model.area.width} × {model.area.height}{visitorHeader && ' px'}</span>{onDetails && <button type="button" onClick={onDetails}>Edit details</button>}</div>
-    {model.interactive && <p className="workbench-overview-preview-note">Interactive apps are shown as previews here.</p>}
   </div>;
   const artworkSources = sources.length > 0 && <details className="composition-explorer-sources"><summary>Artwork sources <span>{sources.length}</span></summary>
     <label>Artwork<select aria-label="Artwork source" value={sourceId} onChange={event => setSourceId(event.target.value)}>

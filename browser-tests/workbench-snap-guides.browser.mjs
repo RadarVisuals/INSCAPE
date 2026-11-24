@@ -13,15 +13,9 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.route(`${origin}/__snap_guides__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
-    await page.goto(`${origin}/__snap_guides__`);
-    await page.evaluate(async width => {
-      const refresh = (await import('/@react-refresh')).default;
-      refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
-      (await import('/browser-tests/workbench-snap-guides-fixture.jsx')).mount(width);
-    }, width);
-    const board = page.locator('[data-display-instance="moving"] article');
-    const target = page.locator('[data-display-instance="target"] article');
+    await page.goto(origin + '/browser-tests/workbench-snap-guides-fixture.html');
+    const board = page.locator('[data-workbench-view-id="moving"]');
+    const target = page.locator('[data-workbench-view-id="target"]');
     await board.waitFor(); await settle(page);
     const guide = page.locator('.workbench-snap-guides');
     const beginDrag = async node => {
@@ -39,11 +33,10 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     await moveTo(start, t.x - start.b.width - 7, t.y + 35);
     near((await board.boundingBox()).x + start.b.width, t.x, 'edge captures inside 10px');
     assert.equal(await guide.locator('[data-snap-axis="x"] text').textContent(), 'Flush');
-    await moveTo(start, t.x - start.b.width - 17, t.y + 35);
-    near((await board.boundingBox()).x + start.b.width, t.x, 'edge remains held at 17px');
-    await moveTo(start, t.x - start.b.width - 20, t.y + 35);
-    near((await board.boundingBox()).x + start.b.width, t.x - 20, 'edge releases beyond 18px');
-    assert.equal(await guide.count(), 0);
+    const outside = t.x - start.b.width - 17;
+    await moveTo(start, outside, t.y + 35);
+    near((await board.boundingBox()).x, Math.round(outside / 24) * 24, 'outside edge capture the grid takes over');
+    assert.equal(await guide.locator('[data-snap-axis="x"][data-snap-kind="grid"]').count(), 1);
     await moveTo(start, t.x - start.b.width - 7, t.y + 35);
     await page.keyboard.down('Alt'); await settle(page);
     assert.equal(await guide.count(), 0, 'Alt hides feedback immediately');
@@ -97,25 +90,21 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     await page.locator('main').focus(); await page.keyboard.press('Control+0'); await settle(page);
     await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
 
+    const originX = Number(await page.locator('[data-grid-left]').getAttribute('data-grid-left'));
+    const step = Number(await page.locator('.lattice-pixel-grid').getAttribute('data-guide-spacing'));
     const text = page.locator('[data-workbench-view-id="text"]');
     start = await beginDrag(text); await moveTo(start, 103, 653);
-    near((await text.boundingBox()).x, 96, 'Text uses same visible grid');
+    near((await text.boundingBox()).x, originX + Math.round((103 - originX) / step) * step, 'Text uses same visible grid');
     assert.equal(await guide.locator('[data-snap-kind="grid"]').count(), 2);
     await page.mouse.up(); await settle(page);
-    const grip = await board.getByRole('button', { name: 'Resize Display Module from se', exact: true }).boundingBox();
+    await page.evaluate(() => snapFixture.setMovingActive(true)); await settle(page);
+    const grip = await board.locator('[role=separator].is-se').boundingBox();
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2); await page.mouse.down();
     await page.mouse.move(grip.x + 60, grip.y + 30); await settle(page);
     const resized = await board.boundingBox();
-    near((resized.x + resized.width) / 24, Math.round((resized.x + resized.width) / 24), 'resize reaches grid line');
+    near(resized.x + resized.width, originX + Math.round((resized.x + resized.width - originX) / step) * step, 'resize reaches grid line');
     assert.ok(await guide.locator('[data-snap-kind="grid"]').count() >= 1);
     await page.mouse.up(); await settle(page);
-
-    const shortcut = page.locator('[data-display-instance="moving"] .system-workflow__desktop-shortcut');
-    start = await beginDrag(shortcut); await moveTo(start, 305, 53);
-    near((await shortcut.boundingBox()).x, 312, 'shortcut shares grid snapping');
-    assert.equal(await guide.locator('[data-snap-kind="grid"]').count(), 2);
-    await page.mouse.up(); await settle(page);
-    assert.equal(await guide.count(), 0, 'shortcut release clears its guides');
 
     await page.evaluate(() => snapFixture.setSettings(true));
     const gap = page.getByRole('spinbutton', { name: 'Space between modules', exact: true });

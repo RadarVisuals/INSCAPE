@@ -1,51 +1,67 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
-import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5194';
-test('Image and Display dimming follow Lift progress in both directions', { timeout: 90000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
+
+async function sampleBackdrop(page, action) {
+  await page.evaluate(() => {
+    window.fadeSamples = [];
+    let seen = false;
+    function record() {
+      const host = document.querySelector('.image-lift');
+      if (!host && seen) return;
+      if (host) {
+        seen = true;
+        const style = getComputedStyle(host);
+        window.fadeSamples.push({
+          progress: Number(style.getPropertyValue('--inspection-lift-progress')),
+          alpha: Number(style.backgroundColor.match(/,\s*([\d.]+)\)$/)?.[1] || 0),
+        });
+      }
+      window.fadeFrame = requestAnimationFrame(record);
+    }
+    record();
+  });
+  await action();
+  return page.evaluate(() => {
+    cancelAnimationFrame(window.fadeFrame);
+    return window.fadeSamples;
+  });
+}
+
+test('Image dimming follows Lift progress when opening and returning', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
-    for (const visitor of [false, true]) for (const width of [1440, 390]) {
-      const page = await browser.newPage({ viewport: { width, height: 1000 } });
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: 600 });
+    for (const owner of [true, false]) for (const width of [1440, 390]) {
+      const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'no-preference' });
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.route('https://image.fit.test/source.png', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
+      await page.goto(origin + '/browser-tests/image-fit-fixture.html');
       await page.locator('.image-module__canvas').first().waitFor();
-      for (const kind of ['image', 'display']) {
-        if (kind === 'image') { await page.locator('.image-module__canvas').first().focus(); await page.keyboard.press('Enter'); }
-        else { await page.locator('.system-workflow__presentation-board').locator('.system-workflow__placement[tabindex="0"], .lattice-production-placement[tabindex="0"]').first().dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }); }
-        await page.locator('.system-workflow__lift-artwork').waitFor();
-        const sample = () => page.evaluate(async kind => {
-          const samples = [];
-          for (let i = 0; i < 20; i++) {
-            const lift = document.querySelector('.system-workflow__lift-artwork'); if (!lift) break;
-            const host = lift.parentElement;
-            const progressTarget = kind === 'image' ? host : document.querySelector('[data-inspection-context="background"]');
-            const p = Number(getComputedStyle(progressTarget).getPropertyValue('--inspection-lift-progress'));
-            const backdrop = kind === 'image' ? getComputedStyle(host).backgroundColor
-              : getComputedStyle(document.querySelector('[data-inspection-context="background"]')).filter;
-            samples.push({ p, backdrop }); await new Promise(requestAnimationFrame);
-          }
-          return samples;
-        }, kind);
-        const opening = await sample();
-        await page.waitForTimeout(480);
-        await page.screenshot({ path: `.browser-test-runtime/inspect-fade-${kind}-${visitor}-${width}.png` });
-        await page.keyboard.press('Escape'); const closing = await sample();
-        assert.ok(opening.some(s => s.p > 0 && s.p < 1), `${kind} opening has intermediate progress`);
-        assert.ok(closing.some(s => s.p > 0 && s.p < 1), `${kind} return has intermediate progress`);
-        for (const s of [...opening, ...closing]) {
-          const value = kind === 'image' ? Number(s.backdrop.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/)?.[1] || 0)
-            : Number(s.backdrop.match(/brightness\(([\d.]+)\)/)?.[1]);
-          assert.ok(Math.abs(value - (kind === 'image' ? .65 * s.p : 1 - .82 * s.p)) < .01, `${kind} backdrop shares animation progress`);
-        }
-        await page.locator('.system-workflow__lift-artwork').waitFor({ state: 'detached' });
-        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-        assert.equal(await page.locator('[data-inspection-lift]').count(), 0);
+      await page.evaluate(owner => { imageFitFixture.owner(owner); imageFitFixture.single(true); }, owner);
+      const canvas = page.locator('.image-module__canvas').first();
+      const dialog = page.getByRole('dialog', { name: 'Inspect Image' });
+      const open = async () => {
+        await canvas.focus(); await canvas.press('i'); await dialog.waitFor();
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('.image-lift')).getPropertyValue('--inspection-lift-progress').trim() === '1');
+      };
+      const close = async () => {
+        await page.keyboard.press('Escape');
+        await dialog.waitFor({ state: 'detached' });
+        assert.equal(await canvas.evaluate(node => document.activeElement === node), true);
+        assert.equal(await page.locator('[data-inspection-lift], [data-lift-source]').count(), 0);
+      };
+      for (const action of [open, close]) {
+        const samples = await sampleBackdrop(page, action);
+        assert.ok(samples.some(s => s.progress > 0 && s.progress < 1), 'the transition has intermediate frames');
+        for (const { progress, alpha } of samples) assert.ok(Math.abs(alpha - .65 * progress) < .01);
       }
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.locator('.image-module__canvas').first().focus(); await page.keyboard.press('Enter');
-      await page.waitForFunction(() => getComputedStyle(document.querySelector('.image-lift')).getPropertyValue('--inspection-lift-progress') === '1');
-      await page.keyboard.press('Escape'); await page.locator('.image-lift').waitFor({ state: 'detached' });
+      await open(); await close();
+      assert.deepEqual(errors, []);
       await page.close();
     }
   } finally { await browser.close(); }

@@ -31,10 +31,7 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin, { textCount: 2 });
     await exposeText(page);
-    const display = page.locator('[data-display-instance="display:primary"]').first();
-    await display.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).focus();
-    await page.keyboard.press('Enter');
-    const tools = sharedToolPanel(page), texts = page.locator('.text-window');
+    const tools = sharedToolPanel(page), texts = page.locator('aside.text-window');
     const first = texts.nth(0), second = texts.nth(1);
     const body = module => module.getByRole('textbox', { name: 'Article text', exact: true });
     await body(first).focus(); await tools.waitFor(); assert.equal(await tools.count(), 1);
@@ -104,48 +101,6 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     const narrow = await tools.boundingBox(); assert.ok(narrow.x >= 0 && narrow.x + narrow.width <= 390);
     assert.equal(await tools.getByRole('separator').count(), 0);
     await page.screenshot({ path: '.browser-test-runtime/shared-text-tools-narrow.png' });
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
-
-test('Text tools switch between standalone articles and selected Text layers in Display', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
-    page.setDefaultTimeout(10000);
-    const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await mountTextToolsFixture(page, origin, { displayTextCount: 2 });
-    const tools = sharedToolPanel(page), standalone = page.locator('.text-window');
-    const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
-    if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
-    const first = page.getByRole('button', { name: 'Select Display article 1', exact: true });
-    const second = page.getByRole('button', { name: 'Select Display article 2', exact: true });
-    await first.focus(); await page.keyboard.press('Enter');
-    await first.getByRole('textbox', { name: 'Article text', exact: true }).fill('First embedded article.');
-    await tools.waitFor();
-    assert.equal(await tools.count(), 1); assert.match(await sharedToolTab(page, 'Inspector').innerText(), /Display article 1/);
-    await openTextToolSection(sharedToolPanel(page), 'Default text style');
-    await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).fill('19');
-    await second.click();
-    await second.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
-    assert.equal(await tools.count(), 1); assert.match(await sharedToolTab(page, 'Inspector').innerText(), /Display article 2/);
-    await openTextToolSection(sharedToolPanel(page), 'Default text style');
-    assert.equal(await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).inputValue(), '16');
-    await second.getByRole('textbox', { name: 'Article text', exact: true }).fill('Second embedded article.');
-    for (const width of [390, 1600]) {
-      await page.setViewportSize({ width, height: 900 });
-      await second.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
-      assert.equal(await second.getByRole('textbox', { name: 'Article text', exact: true }).innerText(), 'Second embedded article.', 'responsive hosting preserves Display Text while its ancestor ref reattaches');
-      assert.equal(await tools.count(), 1);
-    }
-    await standalone.getByRole('textbox', { name: 'Article text', exact: true }).focus();
-    assert.equal(await tools.count(), 1); assert.match(await sharedToolTab(page, 'Inspector').innerText(), /Titel kan rechtstreeks/);
-    const saved = await page.evaluate(() => savedDraft());
-    const placements = saved.grids.flatMap(grid => grid.placements).filter(item => item.kind === 'text');
-    assert.equal(placements[0].text.article.appearance.fontSize, 19);
-    assert.equal(placements[0].text.article.content.content[0].content[0].text, 'First embedded article.');
-    assert.equal(placements[1].text.article.content.content[0].content[0].text, 'Second embedded article.');
-    assert.equal(saved.texts[0].article.appearance.fontSize, 16);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

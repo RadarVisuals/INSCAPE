@@ -4,8 +4,8 @@ import { useStartupDestinationReady } from '../../startveil/StartupDestinationCo
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
 import { publishedCompositionEntries } from '../domain/publishedCanvases.js';
 import { createPublishedIdentityRackViewModel } from './publishedIdentityRackViewModel.js';
-import { GalleryStudioMotion } from '../../profileDiscovery/galleryStudioMotion.js';
-import { readGalleryView, rememberGalleryView } from '../../profileDiscovery/galleryViewMemory.js';
+import { GalleryStudioMotion } from '../../navigation/galleryStudioMotion.js';
+import { readGalleryView, rememberGalleryView } from '../../navigation/galleryViewMemory.js';
 import PublicWorkspaceHeader from './PublicWorkspaceHeader.jsx';
 import VisitorProfile from './VisitorProfile.jsx';
 import VisitorLightField from './VisitorLightField.jsx';
@@ -16,12 +16,12 @@ const ReceptionOverview = lazy(() => import('../../reception/ReceptionOverview.j
 const PublishedWriting = lazy(() => import('./PublishedWriting.jsx'));
 
 export default function ProfileOverview({ document: publication, works, writing, reception, account, ownerDestinations,
-  onReturnToWorkbench, onEditReception, onEditComposition, unavailableTarget, onOpenDirectory, onOpenCanvas, onOpenOverview,
+  onReturnToWorkbench, onEditReception, onEditComposition, unavailableTarget, onOpenCanvas, onOpenOverview,
   onOpenWriting, onManageWorks, onNewComposition, onRemoveFromGallery, onConnect, onDisconnect, onReturn }) {
   useStartupDestinationReady();
   const identity = useProfileIdentity(publication.profile.address);
   const model = useMemo(() => createPublishedIdentityRackViewModel({ document: publication, identity }), [publication, identity]);
-  const snapshot = useMemo(() => publishedPresentationSnapshot(publication), [publication]);
+  const snapshot = useMemo(() => writing ? null : publishedPresentationSnapshot(publication), [publication, writing]);
   const address = publication.profile.address;
   const [gallery, setGallery] = useState(() => ({
     layout: 'list', wrap: true, quickView: false, selectedId: null, cardSize: 2, viewportSize: 65,
@@ -37,7 +37,7 @@ export default function ProfileOverview({ document: publication, works, writing,
   const [cameraMemory] = useState(() => onReturnToWorkbench && motion?.galleryMemory.current?.address === address
     ? motion.galleryMemory.current.memory : { cameras: new Map() });
   const destination = works ? 'gallery' : 'profile';
-  const entries = useMemo(() => publishedCompositionEntries(publication, destination), [publication, destination]);
+  const entries = useMemo(() => writing ? [] : publishedCompositionEntries(publication, destination), [publication, destination, writing]);
   const explicitBento = !works && !writing && reception === true && publication.reception;
   const current = writing ? 'Writing' : works ? 'Gallery' : 'Profile';
   const selectedId = works ? gallery.selectedId : profileWork;
@@ -50,12 +50,12 @@ export default function ProfileOverview({ document: publication, works, writing,
     <VisitorLightField />
     <PublicWorkspaceHeader model={model} account={account} current={current} toolbarRef={works && !writing ? setToolbarHost : undefined} onProfile={onOpenOverview} onWorks={onOpenCanvas}
       onWriting={onOpenWriting} ownerDestinations={ownerDestinations}
-      onDiscover={onOpenDirectory} onConnect={onConnect} onDisconnect={onDisconnect} />
+      onConnect={onConnect} onDisconnect={onDisconnect} />
     {unavailableTarget && <p role="status" className="visitor-notice">That destination is no longer in this publication.</p>}
     <Suspense fallback={<p role="status">Opening {current}.</p>}>
-      {writing ? <PublishedWriting snapshot={snapshot} reception={publication.reception} /> : explicitBento
+      {writing ? <PublishedWriting /> : explicitBento
         ? <ReceptionOverview embedded snapshot={snapshot} reception={publication.reception} model={model}
-            address={publication.profile.address} onOpenCanvas={onOpenCanvas} onOpenDirectory={onOpenDirectory} onCloseBento={onOpenOverview} onReturn={onReturn} />
+            address={publication.profile.address} onOpenCanvas={onOpenCanvas} onCloseBento={onOpenOverview} onReturn={onReturn} />
         : <>{!works && <VisitorProfile model={model} />}
           {(works || entries.length > 0) && <PublishedCanvasGallery entries={entries} snapshot={snapshot} persona={model}
             toolbarHost={toolbarHost} profileLinks={!works} onManageWorks={works ? onManageWorks : undefined} onRemoveFromGallery={works ? onRemoveFromGallery : undefined} onNewComposition={onNewComposition} selectedId={selectedId} onSelect={works ? id => changeGallery({ selectedId: id }) : setProfileWork}

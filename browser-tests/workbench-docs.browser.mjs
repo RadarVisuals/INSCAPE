@@ -12,7 +12,6 @@ test('Docs tabs explain the current modules and remain usable at wide and narrow
     await page.route('**/*', route => new URL(route.request().url()).origin === (process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173') ? route.continue() : route.abort());
     await page.goto(`${process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173'}/browser-tests/workbench-storage-fixture.html?seed=1&legacyDisplay=1`);
     await page.locator('.text-window').waitFor();
-    assert.ok((await page.evaluate(() => window.savedDraft())).grids.length > 0);
     assert.equal(await page.locator('[data-display-instance]').count(), 0);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 780 });

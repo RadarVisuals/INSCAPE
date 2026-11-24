@@ -1,4 +1,4 @@
-import { editorCommand, editorOverview, selectEditorDocument, editSelectedWork } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorOverview, editSelectedWork } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -22,13 +22,7 @@ const camera = page => page.locator('.composition-explorer-viewport').evaluate(n
   scale: Number(node.dataset.cameraScale), x: Number(node.dataset.cameraX), y: Number(node.dataset.cameraY), width: node.clientWidth, height: node.clientHeight,
 }));
 async function failWrites(page, fail) {
-  await page.evaluate(fail => {
-    window.normalSetItem ||= Storage.prototype.setItem;
-    Storage.prototype.setItem = fail ? function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw new DOMException('Full', 'QuotaExceededError');
-      return window.normalSetItem.call(this, key, value);
-    } : window.normalSetItem;
-  }, fail);
+  await page.evaluate(fail => window.failWorkbenchWrites(fail), fail);
 }
 const near = (a, b, message) => assert.ok(Math.abs(a - b) < .02, `${message}: ${a} / ${b}`);
 
@@ -149,7 +143,7 @@ test('desktop owner index keeps browsing separate from activation and save failu
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
     await failWrites(page, false);
     await editSelectedWork(page);
-    await page.locator('.text-window').waitFor();
+    await page.locator('aside.text-window').waitFor();
     assert.equal(await page.evaluate(() => window.savedDraft().activeId), originalId);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await editorOverview(page);
@@ -171,7 +165,7 @@ test('desktop owner index keeps browsing separate from activation and save failu
   } finally { await browser.close(); }
 });
 
-test('the Studio manager opens the Profile Bento without changing other compositions', { timeout: 90000 }, async () => {
+test('the Studio manager edits the selected composition and preserves the others', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -184,26 +178,22 @@ test('the Studio manager opens the Profile Bento without changing other composit
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/works-reception-entry.png`, fullPage: true });
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
-    await selectEditorDocument(page, 'reception');
-    await page.locator('[data-reception-editor]').waitFor();
+    await page.locator('.editor-menu-bar[data-document]').waitFor();
     await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const saved = await page.evaluate(() => window.savedDraft());
-    assert.equal(saved.activeId, before.activeId, 'Reception editing never activates another canvas');
-    assert.deepEqual(saved.workbenches, before.workbenches, 'Reception editing preserves all canvas content');
+    assert.equal(saved.activeId, before.activeId, 'Opening the selected composition preserves the active document');
+    assert.deepEqual(saved.workbenches, before.workbenches, 'Opening Settings preserves all compositions');
     await editorOverview(page);
     await page.locator('.composition-index').waitFor();
-    await page.getByRole('button', { name: 'Grid', exact: true }).click();
-    await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await page.screenshot({ path: `${output}/works-reception-entry-390.png`, fullPage: true });
-    await selectEditorDocument(page, 'reception');
-    await page.locator('[data-reception-editor]').waitFor();
-    assert.equal(await page.getByRole('alert').count(), 0, 'returning reacquires the Reception scope without losing the editor lease');
+    await page.locator('.editor-menu-bar[data-document]').waitFor();
+    assert.equal(await page.getByRole('alert').count(), 0, 'returning reacquires the selected composition without losing the editor lease');
     await editorOverview(page);
-    await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
+    await page.locator('.composition-index').waitFor();
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches), before.workbenches);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

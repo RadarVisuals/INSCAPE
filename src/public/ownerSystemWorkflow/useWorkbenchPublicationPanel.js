@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useOwnerSystemWorkflowPanelPresence } from './useOwnerSystemWorkflowPanels.js';
+import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 // Owns only the publication surface. Preparation, signing and persistence stay
 // with the existing publication rack and its scoped publication controller.
-export default function useWorkbenchPublicationPanel({ closePanel }) {
-  const [open, setOpen] = useState(false);
+export default function useWorkbenchPublicationPanel({ closePanel, initialPublicationReview = false, onPublicationReviewOpened }) {
+  const [open, setOpen] = useState(initialPublicationReview);
+  useEffect(() => {
+    if (initialPublicationReview) onPublicationReviewOpened?.();
+  }, [initialPublicationReview, onPublicationReviewOpened]);
   const presence = useOwnerSystemWorkflowPanelPresence(open);
   const focusReturn = useRef(null);
   const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
@@ -42,7 +46,8 @@ export default function useWorkbenchPublicationPanel({ closePanel }) {
   useEffect(() => {
     if (!open) return undefined;
     const dismissFromCanvas = event => {
-      if (event.target?.closest?.('[data-system-workflow-artboard]')) close({ returnFocus: false });
+      const host = event.target?.closest?.('main.system-workflow');
+      if (host && isWorkbenchBackground(event.target, host)) close({ returnFocus: false });
     };
     globalThis.addEventListener?.('pointerdown', dismissFromCanvas, true);
     return () => globalThis.removeEventListener?.('pointerdown', dismissFromCanvas, true);

@@ -59,7 +59,6 @@ const draft = JSON.parse(storage.getItem(key));
 draft.keeperDocks = [{ id: 'keeper:snake-preview', name: `${variant === 'big' ? 'Broad' : 'Fine'} snake`, asset,
   faces: 'right', movement: 'swim', size: 384, visibility: 'PRIVATE' }];
 draft.workbench = createDefaultWorkbenchPresentation();
-draft.workbench.display.open = false;
 draft.workbench.keeperDocks = [{ id: 'keeper:snake-preview', position: { left: 520, top: 240 } }];
 storage.setItem(key, JSON.stringify(draft));
 

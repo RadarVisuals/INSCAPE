@@ -33,7 +33,7 @@ test('owner and Visitor have free camera movement without custom-frame controls,
     for (const visitor of [false, true]) {
       const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'no-preference' });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, shapeWidth: 600 });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).waitFor();
       await page.evaluate(() => document.fonts.ready); await settle(page);
@@ -132,7 +132,7 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await mountGridMotionFixture(page, { origin, heavy: true, count: 2, displayWidth: 600 });
+    await mountGridMotionFixture(page, { origin, heavy: true, count: 2, shapeWidth: 600 });
     await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
     await page.locator('[data-workbench-view-id="image:motion-0"]').waitFor();
     await page.waitForTimeout(200);

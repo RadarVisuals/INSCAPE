@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
-import { GALLERY_PUBLICATION_CAPABILITY } from '../src/profileDocument/domain/constants.js';
+import { PROFILE_PUBLICATION_FORMAT } from '../src/profileDocument/domain/constants.js';
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { createPinProfileDocumentHandler } from '../netlify/functions/pin-profile-document.mjs';
 import { readUploadPolicy } from '../netlify/lib/publicationUploadAuth.mjs';
@@ -46,7 +46,7 @@ test('server challenge uses its own deployment, immutable byte hash, expiry and 
   const response = await state.handler(request(metadata(challenge.permit)));
   assert.equal(response.status, 200);
   const returned = await response.json();
-  assert.deepEqual(returned.capabilities, [GALLERY_PUBLICATION_CAPABILITY]);
+  assert.deepEqual(returned.capabilities, [PROFILE_PUBLICATION_FORMAT]);
   assert.equal(Object.hasOwn(returned.permit, 'capabilities'), false);
   assert.equal(returned.permit.origin, UPLOAD_TEST_ORIGIN);
   assert.equal(returned.permit.expiresAt, UPLOAD_TEST_NOW + 300_000);

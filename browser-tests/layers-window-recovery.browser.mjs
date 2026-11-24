@@ -15,8 +15,8 @@ test('Layers recovers an offscreen saved window and remains reachable after view
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
       function Fixture() {
         const [value, onChange] = React.useState({ layers: true, metadata: false, windows: { layers: { left: 3000, top: 1900, width: 320, height: 480 } } });
-        return React.createElement(SharedDisplayToolsProvider, { value, onChange }, React.createElement(SharedDisplayToolWindows),
-          React.createElement(SharedDisplayToolContent, { id: 'layers', targetId: 'display:primary', label: 'Display / Grid' }, React.createElement('div', { 'aria-label': 'Layers, front to back' }, 'Artwork 2\nArtwork 1')));
+        return React.createElement(SharedDisplayToolsProvider, { value, onChange, targetId: 'image:layers' }, React.createElement(SharedDisplayToolWindows),
+          React.createElement(SharedDisplayToolContent, { id: 'layers', targetId: 'image:layers', label: 'Image' }, React.createElement('div', { 'aria-label': 'Layers, front to back' }, 'Artwork 2\nArtwork 1')));
       }
       createRoot(document.getElementById('root')).render(React.createElement('main', { className: 'system-workflow' }, React.createElement(Fixture)));
     });

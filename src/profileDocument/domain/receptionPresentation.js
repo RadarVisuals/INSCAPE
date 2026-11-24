@@ -32,7 +32,7 @@ export function validReception(value, published = false) {
     || value.version !== 2 || !number(value.radius, 0, 160) || !number(value.gutter, 0, 64) || !number(value.padding, 0, 128)
     || !integer(value.height, 480, 2400) || !validImageModules(value.imageModules, published, { minimumCropZoom: RECEPTION_IMAGE_MIN_ZOOM }) || !validTextModules(value.texts, published)
     || Object.hasOwn(value, 'shapes') && (!validShapes(value.shapes, published) || value.shapes.some(item => item.kind))
-    || value.texts.some(text => text.sceneLink || text.pagination)
+    || value.texts.some(text => text.pagination)
     || !exact(value.branding, ['name', 'logo', ...Object.hasOwn(value.branding || {}, 'theme') ? ['theme'] : []]) || typeof value.branding.name !== 'string'
     || value.branding.name.length > 64 || /[\u0000-\u001f\u007f]/u.test(value.branding.name) || Object.hasOwn(value.branding || {}, 'theme') && !['carbon', 'mist'].includes(value.branding.theme)
     || value.branding.logo !== null && !value.imageModules.some(item => item.id === value.branding.logo)

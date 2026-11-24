@@ -18,12 +18,6 @@ export async function openEditorMenu(page, name) {
   await root.getByRole('menuitem', { name: direct[name] || name, exact: true }).click();
   return direct[name] ? trigger : page.getByRole('menu', { name: `${name} options`, exact: true });
 }
-export async function receptionPreviewControls(page) {
-  const panel = page.getByRole('dialog', { name: 'Studio preview controls', exact: true });
-  if (!await panel.isVisible()) await page.getByRole('button', { name: 'Studio preview controls', exact: true }).click();
-  await panel.waitFor();
-  return panel;
-}
 export const activeEditorDocument = page => page.locator('.editor-menu-bar[data-document]').getAttribute('data-document');
 export async function editorCommand(page, menu, name, role = 'menuitem') {
   if (menu === 'Studio') {
@@ -75,16 +69,16 @@ export async function setEditorSidebarOpen(page, open) {
   if (await trigger.getAttribute('aria-expanded') !== String(open)) await trigger.click();
 }
 export async function editorDestination(page, name) {
-  if (['Profile', 'Gallery', 'Writing', 'Studio', 'Discover'].includes(name)) return workspaceDestination(page, name);
+  if (['Profile', 'Gallery', 'Writing', 'Studio'].includes(name)) return workspaceDestination(page, name);
   const trigger = editorMenu(page);
   await trigger.waitFor();
   if (['Publish', 'Preview'].includes(name) && await page.locator('.editor-menu-bar:visible').count()) {
     const control = page.locator('.editor-menu-bar:visible').getByRole('button', { name, exact: true });
     await control.click(); return control;
   }
-  if (['Library', 'Grids', 'Layers', 'Inspector'].includes(name) && await page.locator('.editor-menu-bar:visible').count()) {
+  if (['Library', 'Layers', 'Inspector'].includes(name) && await page.locator('.editor-menu-bar:visible').count()) {
     const menu = await openEditorMenu(page, 'Tools');
-    await menu.getByRole(['Library', 'Layers', 'Inspector'].includes(name) ? 'menuitemcheckbox' : 'menuitem', { name, exact: true }).click();
+    await menu.getByRole('menuitemcheckbox', { name, exact: true }).click();
   } else {
     const menu = await openEditorMenu(page);
     await menu.getByRole('menuitem', { name: name === 'Docs' ? 'Help & Docs' : name, exact: true }).click();

@@ -22,7 +22,7 @@ const colors = { dark: { environment: 'rgb(23, 23, 23)', panel: 'rgb(8, 8, 8)', 
 async function open(page, path) { await page.goto(origin + path, { waitUntil: 'domcontentloaded' }); }
 async function capture(page, name) { await page.mouse.move(1435, 5); await page.screenshot({ path: `${output}/${name}.png` }); }
 
-test('one Settings choice governs owner controls, portal menus, reception, overview, login and Discover', { timeout: 120000 }, async () => {
+test('one Settings choice governs owner controls, portal menus, reception, overview and login', { timeout: 120000 }, async () => {
  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
  try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -45,7 +45,7 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
    assert.deepEqual(await palette(page, '.interface-theme-toggle [aria-pressed=true]'), { background: expected.ink, color: expected.panel });
    assert.equal((await palette(page, '.system-workflow')).background, mode === 'dark' ? 'rgb(20, 20, 20)' : 'rgb(244, 243, 239)');
    assert.equal(await page.getByRole('button', { name: /Menu theme|Workbench background/ }).count(), 0);
-   await page.getByRole('button', { name: /Workbench grid display/ }).click();
+   await page.getByRole('button', { name: /Workbench grid style/ }).click();
    assert.deepEqual(await palette(page, '[role=listbox]'), { background: expected.panel, color: expected.ink });
    await page.keyboard.press('Escape');
    await capture(page, `settings-${mode}`);
@@ -78,20 +78,10 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
    assert.deepEqual(await palette(publicPage, '.reception-page'), { background: colors[mode].environment, color: colors[mode].ink });
    assert.equal((await palette(publicPage, '.reception-document-canvas')).background, colors[mode].environment);
    await capture(publicPage, `public-reception-${mode}`);
-   for (const path of ['/', '/?discover=']) {
-    await open(publicPage, path); await publicPage.locator('.public-entry-portal').waitFor();
-    await publicPage.locator('.startveil[data-exiting]').waitFor({state:'detached'});
-    await publicPage.waitForFunction(() => !document.querySelector('.startveil') || document.querySelector('.startveil[data-ready]'));
-    const expected = colors[mode];
-    assert.deepEqual(await palette(publicPage, '.public-entry-portal'), { background: expected.environment, color: expected.ink });
-    await capture(publicPage, `${path === '/' ? 'login' : 'discover'}-${mode}`);
-   }
-   await open(publicPage, '/browser-tests/discover-style-fixture.html');
-   await button(publicPage, 'Open Discover').click();
-   await publicPage.locator('.public-entry-portal__world-card').first().waitFor();
-   assert.equal((await palette(publicPage, '.public-entry-portal__world-card')).background, colors[mode].panel);
-   await publicPage.locator('.public-entry-portal__world-card').first().locator('img.is-ready').first().waitFor();
-   await capture(publicPage, `discover-filled-${mode}`);
+   await open(publicPage, '/');
+   await publicPage.locator('.profile-sign-in').waitFor();
+   assert.deepEqual(await palette(publicPage, '.profile-sign-in'), { background: colors[mode].environment, color: colors[mode].ink });
+   await capture(publicPage, `login-${mode}`);
    await publicPage.close();
   }
   assert.deepEqual(errors, []);

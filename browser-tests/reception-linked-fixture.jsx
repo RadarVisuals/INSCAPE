@@ -24,21 +24,12 @@ import '../src/index.css';
 
 const profileAddress = '0x' + '1'.repeat(40), draft = createEmptySystemWorkflowDraft(profileAddress, { generateId: () => 'first' });
 const article = (title, text) => ({ ...createArticle(title), content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] } });
-draft.grids[0].title = 'Night';
-draft.appearance.guideMode = 'NONE';
-draft.appearance.surfaceId = 'carbon';
-draft.grids.push({ ...structuredClone(draft.grids[0]), id: 'grid:second', title: 'Dawn' });
-draft.grids.forEach((grid, index) => { grid.placements = [{ id: `placement:${index}`, stableAssetId: assets[index].id,
-  column: 4, row: 1, columnSpan: 24, rowSpan: 16, layer: 0, navigationOrder: 0, crop: null, visibility: 'PUBLIC', locked: false,
-  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }]; });
-draft.texts = [{ id: 'text:story', article: article('Night', 'A quiet world, held in the dark.'), visibility: 'PUBLIC',
-  sceneLink: { displayId: 'display:primary', gridId: 'grid:first', passages: [{ gridId: 'grid:second', article: article('Dawn', 'A new light changes the scene.') }] } }];
+draft.texts = [{ id: 'text:story', article: article('Night', 'A quiet world, held in the dark.'), visibility: 'PUBLIC' }];
 const resolve = createProfileDocumentV9AssetResolver(assets);
 draft.imageModules = [0, 1].map(index => ({ id: `image:study-${index}`, name: `Study ${index + 1}`, width: 400, height: 400, visibility: 'PUBLIC', artwork: { id: `artwork:${index}`, asset: resolve(assets[index].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }));
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { left: 0, top: 0, width: 1200, height: 800 },
   imageModules: draft.imageModules.map(image => ({ id: image.id, open: true, position: { left: 700, top: 320 } })),
   texts: [{ ...createTextPresentation('text:story'), window: { left: 700, top: 30, width: 400, height: 280 } }] };
-draft.workbench.display.window = { left: 0, top: 0, width: 640, height: 400 };
 draft.workbenchIndex = { ...createWorkbenchIndex(), destinations: [{ id: 'workbench-view:detail', name: 'Artwork detail', view: { left: 700, top: 320, width: 400, height: 400 }, visibility: 'PUBLIC' }] };
 let reception = createReception();
 const first = reception.regions[0].id;
@@ -46,12 +37,10 @@ reception = splitReception(reception, first, 'x', 'region:right');
 reception = splitReception(reception, first, 'y', 'region:lower-left');
 reception = splitReception(reception, 'region:right', 'y', 'region:lower-right');
 const ref = moduleId => ({ profileAddress, canvasId: 'workbench:main', moduleId });
-reception = placeReceptionLink(reception, first, { id: 'link:display', kind: 'source', source: ref('display:primary'), destination: null });
 reception = placeReceptionLink(reception, 'region:right', { id: 'link:story', kind: 'source', source: ref('text:story'), destination: null });
-reception = placeReceptionLink(reception, 'region:lower-left', { id: 'link:image', kind: 'scene', controller: ref('display:primary'),
-  sources: { 'grid:first': ref('image:study-0'), 'grid:second': ref('image:study-1') },
+reception = placeReceptionLink(reception, 'region:lower-left', { id: 'link:image', kind: 'source', source: ref('image:study-1'),
   destination: { profileAddress, canvasId: 'workbench:main', destinationId: 'workbench-view:detail' } });
-reception.texts = [{ id: 'text:welcome', article: article('Small worlds.', 'Swipe the Display to move between scenes. Choose Canvases to explore the collection.'), visibility: 'PUBLIC' }];
+reception.texts = [{ id: 'text:welcome', article: article('Small worlds.', 'Two studies from the same collection.'), visibility: 'PUBLIC' }];
 reception.regions = reception.regions.map(region => ({ ...region, content: region.id === 'region:lower-right' ? 'text:welcome' : region.content,
   padding: [first, 'region:lower-left'].includes(region.id) ? 0 : 24 }));
 reception.branding.name = 'Open studio';
@@ -65,7 +54,6 @@ if (!storage.getItem(systemWorkflowDraftKey(profileAddress))) storage.setItem(sy
 const root = createSystemWorkflowDraftStore({ profileAddress, storage });
 const reviewProfile = { status: 'RESOLVED', normalizedAddress: profileAddress, name: 'Open studio', description: 'Studies and small worlds.', tags: [], links: [] };
 const model = { profile: { displayName: 'Open studio' }, officialProfile: { name: 'Open studio' }, links: [], card: { fields: [] } };
-const assetMap = new Map(assets.map(asset => [asset.id, asset]));
 const publish = () => buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: JSON.parse(storage.getItem(systemWorkflowDraftKey(profileAddress))), assetRecords: assets, profile: reviewProfile }),
   selectedIds: [...root.listWorkbenches().map(item => item.id), 'reception'], includeShared: true });
 globalThis.linkedFixture = { root, publish, writes: () => writes, fail: value => { fail = value; } };
@@ -89,7 +77,7 @@ function App() {
   return surface === 'edit' ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
     receptionEditorRequested onOpenReception={() => setSurface('reception')}
     reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />
-    : <ReceptionOverview reception={root.getSnapshot().reception} model={model} address={profileAddress} snapshot={snapshot} assets={assetMap}
+    : <ReceptionOverview reception={publicView ? publish().reception : root.getSnapshot().reception} model={model} address={profileAddress} snapshot={snapshot}
       onEdit={publicView ? undefined : () => setSurface('edit')} onOpenCanvas={() => setSurface('canvases')} />;
 }
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
