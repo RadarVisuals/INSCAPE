@@ -13,11 +13,15 @@ export async function routeOpaqueWorkflowArtwork(page) {
 
 // Review workflows use local media and no live data services. Keep unrelated
 // network availability out of panel lifecycle and focus assertions.
-export async function routeOfflineWorkflowReview(page, origin) {
+export async function routeLocalWorkflowArtwork(page, origin) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => {
     const source = new URL(route.request().url()).pathname.split('/public/')[1];
     return source ? route.fulfill({ path: `public/${decodeURIComponent(source)}` }) : route.abort();
   });
+}
+
+export async function routeOfflineWorkflowReview(page, origin) {
+  await routeLocalWorkflowArtwork(page, origin);
   await routeOpaqueWorkflowArtwork(page);
 }

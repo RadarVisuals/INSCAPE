@@ -6,6 +6,7 @@ import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { separateLayers, openSharedTool, sharedToolPanel, sharedToolTab, chooseSharedColorTarget, openSharedColorPicker } from './fixtures/shared-tools.mjs';
 import { settlePlaywrightAnimationFrames } from './playwright-browser-adapter.mjs';
+import { routeLocalWorkflowArtwork } from './fixtures/legacy-workflow-artwork.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-shared-tools';
 const saved = page => page.evaluate(() => window.readCommittedDraft());
@@ -20,11 +21,7 @@ async function beginColourDrag(page) {
 }
 async function fixture(page, options = {}) {
   page.setDefaultTimeout(12000);
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
-    const file = new URL(route.request().url()).pathname.split('/public/')[1];
-    await route.fulfill({ response: await route.fetch({ url: `${origin}/${file}` }) });
-  });
+  await routeLocalWorkflowArtwork(page, origin);
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
   await editorMenu(page, 'Canvas').waitFor();
   await page.evaluate(async options => {
