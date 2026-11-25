@@ -9954,7 +9954,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "8c4a3488f35129f213897919de852c5d86b5c174218b49b68631da635e709e57",
+      "sha256": "57da1c388838c1882ef0349c799da6e957119a9058a1ef83cfc39f41a74a8c83",
       "definitions": [
         {
           "name": "--gallery-columns",
