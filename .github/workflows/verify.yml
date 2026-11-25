@@ -20,7 +20,12 @@ jobs:
     name: Source checks (partial)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      host: ${{ steps.host.outputs.host }}
     steps:
+      - name: Record the test runner
+        id: host
+        run: echo "host=$(uname -r)|$ImageOS|$ImageVersion" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -46,7 +51,12 @@ jobs:
     name: Production build and startup (partial)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      host: ${{ steps.host.outputs.host }}
     steps:
+      - name: Record the test runner
+        id: host
+        run: echo "host=$(uname -r)|$ImageOS|$ImageVersion" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -82,11 +92,19 @@ jobs:
     name: Browser shard ${{ matrix.shard }} of 4 (partial)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      host_1: ${{ steps.host.outputs.host_1 }}
+      host_2: ${{ steps.host.outputs.host_2 }}
+      host_3: ${{ steps.host.outputs.host_3 }}
+      host_4: ${{ steps.host.outputs.host_4 }}
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
     steps:
+      - name: Record the shard runner
+        id: host
+        run: echo "host_${{ matrix.shard }}=$(uname -r)|$ImageOS|$ImageVersion" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
