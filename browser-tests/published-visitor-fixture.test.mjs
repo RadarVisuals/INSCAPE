@@ -11,14 +11,13 @@ test('published visitor fixture enters the production Visitor with one exact v9 
   assert.match(fixture, /ProfileDocumentV9Preview/);
   assert.match(fixture, /buildProfileDocumentV9/);
   assert.match(fixture, /createEmptySystemWorkflowDraft/);
-  assert.match(fixture, /systemWorkflowDraft\.grids/);
+  assert.match(fixture, /systemWorkflowDraft\.imageModules/);
   assert.doesNotMatch(fixture, /buildProfileDocumentV[1-8]|createEmptyLatticeProductionDraft|runtime === 'legacy'/);
   assert.doesNotMatch(fixture, /<PublishedHomeWorld/);
 });
 
-test('published visitor bootstrap waits on semantic fixture and ordered v9 projection signals', () => {
+test('published visitor bootstrap waits on semantic fixture and Image layer signals', () => {
   assert.match(fixture, /ready: true/);
-  assert.match(fixture, /data-runtime=\{runtime\}/);
   assert.match(harness, /window\.__fixture\?\.ready === true/);
   assert.doesNotMatch(harness, /published-home-world__header/);
 });

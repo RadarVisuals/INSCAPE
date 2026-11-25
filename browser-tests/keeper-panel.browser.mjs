@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/keeper-panel';
@@ -28,10 +28,10 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) test(`Keeper uses
     assert.equal(await dock.getByText('Dock placement preview', { exact: true }).count(), 0);
     assert.ok(Math.abs((await dock.boundingBox()).width - Math.min(176, (width - 44) / 2)) < 1);
     const trigger = page.getByRole('button', { name: 'Keeper settings', exact: true });
+    await editorCommand(page, 'Edit', 'Settings');
+    const editorMaterial = await page.getByRole('dialog', { name: 'Settings', exact: true }).evaluate(material);
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     await trigger.click(); await settings.waitFor();
-    const editorMaterial = theme === 'light'
-      ? ['rgb(250, 249, 246)', 'rgb(37, 43, 39)', '9px', 'rgb(218, 219, 214)', 'none']
-      : ['rgb(52, 54, 53)', 'rgb(236, 238, 235)', '9px', 'rgb(70, 74, 72)', 'none'];
     assert.deepEqual(await settings.evaluate(material), editorMaterial, 'Keeper settings use the compact Editor finish');
     assert.equal(await settings.locator('.system-workflow__resize-handle').count(), 0);
     const move = settings.getByLabel('Move Keeper settings window', { exact: true });

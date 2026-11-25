@@ -25,11 +25,11 @@ const selection: WorkbenchSelection = ['image:one', 'text-frame:two', 'workbench
 const activation: ModuleActivation = 'image:one';
 useWorkbenchToolSource('shape:one', { color: 'module-owned control', shape: ({ transform }) => transform });
 useArtworkOpener('image:one', () => {});
-useWorkbenchInspectionAction('display:primary', () => true);
+useWorkbenchInspectionAction('image:one', () => true);
 workbenchModuleTransform(view, 'text-frame:two');
 const captured = captureWorkbenchPresentation({ layout: presentation, identityOpen: false,
-  imageModules: [{ id: 'image:one' }], displayPresentations: { 'display:primary': null } });
-if (captured.value) captured.value.display.open;
+  imageModules: [{ id: 'image:one' }] });
+if (captured.value) captured.value.identity.open;
 else captured.error.toUpperCase();
 const snapshot = scope.getSnapshot();
 if (snapshot) snapshot.workbench?.identity.open;
@@ -70,6 +70,6 @@ scope.getSnapshot().workbench;
 // @ts-expect-error Capture membership preserves Image ID meaning.
 captureWorkbenchPresentation({ layout: presentation, identityOpen: false, imageModules: [{ id: 'text:one' }] });
 // @ts-expect-error Capture can fail; the value must be narrowed first.
-captured.value.display;
+captured.value.identity;
 
 void [scopeIsChecked, scopeContract, selection, activation, frameActivation, indexActivation];

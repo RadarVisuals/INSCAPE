@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { setFolderAssets, setFolderImage, moveCategory } from '../../library/domain/libraryWorkspace.js';
+import { setFolderAssets, setFolderImage, moveFolderAssets, moveCategory } from '../../library/domain/libraryWorkspace.js';
 
 const cleanName = (value) => String(value || '').trim().replace(/\s+/gu, ' ').slice(0, 80);
 const createId = (prefix) => `${prefix}:${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`;
@@ -44,6 +44,10 @@ function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, enabled }) {
     renameCategory(id, name) {
       const value = cleanName(name); if (!value) return false;
       setReviewCategories((current) => current.map((entry) => entry.id === id ? { ...entry, name: value } : entry)); return true;
+    },
+    moveCategoryAssets(fromId, toId, ids, imageUrl) {
+      setReviewCategories(folders => moveFolderAssets({ folders }, fromId, toId, ids, imageUrl).folders);
+      return true;
     },
     setCategoryAssets(id, assetIds, included) {
       setReviewCategories(folders => setFolderAssets({ folders }, id, assetIds, included).folders); return true;

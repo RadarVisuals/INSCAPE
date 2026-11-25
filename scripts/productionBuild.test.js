@@ -5,7 +5,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
-  assertProductionFontContract, measureReceptionRoutes, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
+  assertProductionFontContract, measureWorkspaceRoutes, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 
 const removeTree = (path) => rm(path, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
 
@@ -103,28 +103,28 @@ test('wallet measurement rejects missing source metadata and unreachable or eage
   } finally { await removeTree(root); }
 });
 
-test('Reception route costs deduplicate startup and shared files and exclude unopened tools', async () => {
-  const root = resolve(tmpdir(), `reception-route-costs-${process.pid}`);
+test('Composition route costs deduplicate startup and shared files and exclude unopened tools', async () => {
+  const root = resolve(tmpdir(), `composition-route-costs-${process.pid}`);
   try {
     await fixture(root, 'route');
     const manifest = JSON.parse(await readFile(resolve(root, '.vite/manifest.json'), 'utf8'));
     const publicKey = 'src/profileDocument/components/ProfileOverview.jsx';
-    const ownerKey = 'src/reception/OwnerReception.jsx';
     const editorKey = 'src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
-    manifest[publicKey] = { file: 'assets/public.js', imports: ['_shared.js'], css: ['assets/app-route.css'] };
-    manifest[ownerKey] = { file: 'assets/reader.js', imports: [publicKey, '_shared.js'] };
+    manifest['C:/work/' + publicKey] = { file: 'assets/public.js', imports: ['_shared.js'], css: ['assets/app-route.css'] };
+    manifest['gallery-facade'] = { src: 'R:\\work\\src\\profileDocument\\components\\PublishedCanvasGallery.jsx', file: 'assets/reader.js' };
     manifest[editorKey] = { file: 'assets/editor.js', imports: ['_shared.js'] };
     for (const name of ['public', 'reader', 'editor']) await writeFile(resolve(root, 'assets', name + '.js'), name);
-    const routes = await measureReceptionRoutes(root, manifest, new Set(['index.html', '_shared.js']));
-    assert.equal(routes.ownerAbout.additionalJavaScript.raw, 'publicreader'.length);
-    assert.equal(routes.ownerAbout.additionalCss.raw, 0);
-    assert.equal(routes.ownerAbout.files.filter(file => file.includes('shared')).length, 1);
-    assert.ok(!routes.ownerAbout.files.includes('assets/editor.js'));
-    assert.equal(routes.receptionEditing.additionalJavaScript.raw, 'editor'.length);
-    assert.equal(routes.receptionEditing.entryFile, 'assets/editor.js');
+    const routes = await measureWorkspaceRoutes(root, manifest, new Set(['index.html', '_shared.js']));
+    assert.equal(routes.publicAbout.additionalJavaScript.raw, 'public'.length);
+    assert.equal(routes.publicAbout.additionalCss.raw, 0);
+    assert.equal(routes.publicGallery.entryFile, 'assets/reader.js');
+    assert.equal(routes.publicAbout.files.filter(file => file.includes('shared')).length, 1);
+    assert.ok(!routes.publicAbout.files.includes('assets/editor.js'));
+    assert.equal(routes.studioEditing.additionalJavaScript.raw, 'editor'.length);
+    assert.equal(routes.studioEditing.entryFile, 'assets/editor.js');
     manifest['_shared-editor-hash.js'] = manifest[editorKey];
     delete manifest[editorKey];
-    const merged = await measureReceptionRoutes(root, manifest, new Set(['index.html', '_shared.js']), {
+    const merged = await measureWorkspaceRoutes(root, manifest, new Set(['index.html', '_shared.js']), {
       ownerChunks: [{ file: 'assets/editor.js', modules: ['C:\\workspace\\' + editorKey.replaceAll('/', '\\')] }],
     });
     assert.deepEqual(merged, routes, 'a shared internal Editor chunk measures the same route without a separate editor facade');
@@ -405,11 +405,11 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await writeFile(resolve(alternate, 'owner-runtime-graph.json'), 'stale');
     await writeFile(resolve(alternate, 'bundle-report.json'), 'stale');
     const { build } = await import('vite');
-    await build({ configFile: resolve(project, 'vite.config.js'), root: project, logLevel: 'silent',
+    await build({ configLoader: 'native', configFile: resolve(project, 'vite.config.js'), root: project, logLevel: 'silent',
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
-    assert.deepEqual(Object.keys(report.receptionRoutes).sort(), ['ownerAbout', 'publicAbout', 'receptionEditing']);
-    assert.ok(report.receptionRoutes.receptionEditing.javaScript.raw > report.receptionRoutes.ownerAbout.javaScript.raw);
+    assert.deepEqual(Object.keys(report.workspaceRoutes).sort(), ['publicAbout', 'publicGallery', 'studioEditing']);
+    assert.ok(report.workspaceRoutes.studioEditing.javaScript.raw > report.workspaceRoutes.publicAbout.javaScript.raw);
     const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
     assert.equal(report.ownerRuntimeGraph.leaks.length, 0); assert.ok(report.initialJavaScript.length);
     assert.match(netlifyHeaders, /Content-Security-Policy: default-src 'self'/u);

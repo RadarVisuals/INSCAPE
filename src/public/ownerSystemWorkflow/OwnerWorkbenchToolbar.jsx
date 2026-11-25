@@ -10,8 +10,9 @@ import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreat
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import { artworkModuleId, artworkRecords } from '../../systemWorkflow/domain/artworkLayers.js';
 import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
-import { receptionLayoutCountRange } from '../../reception/receptionLayoutGenerator.js';
-import { useEditorCells, isEditorCellSurface } from '../../reception/EditorCellsContext.jsx';
+import { createCompositionCellDrawGesture } from '../../composition/compositionCellDrawing.js';
+import { compositionLayoutCountRange } from '../../composition/compositionLayoutGenerator.js';
+import { useEditorCells, isEditorCellSurface } from '../../composition/EditorCellsContext.jsx';
 
 const ICONS = { cell: SquarePlus, 'workbench-index': Folder, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
 const LABELS = { cell: 'Cell', 'workbench-index': 'Index', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
@@ -23,14 +24,14 @@ const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 
 // Adapts Workbench commands to the toolbar. It does not own module content,
 // camera state, tool windows, or a second command/persistence implementation.
-export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shapePreference, commands, onCommand, onOpenLibrary, libraryOpen,
+export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePreference, commands, onCommand, onOpenLibrary, libraryOpen,
   preferences, onPreferencesChange, hidden, onRevealCreationTools, exiting = false, onHistory, history, historyBlocked, onNotice, artworkLayersOpen, onToggleArtworkLayers, onOpenSharedTool, showIdentity = true, searchRequest, searchEnabled = true }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera(), tools = useSharedDisplayTools();
   const cells = useEditorCells();
   const [ghost, setGhost] = useState(null);
   const gesture = useRef(null), space = useRef(false), latest = useRef(null), suppressedPointer = useRef(null);
-  latest.current = { view, camera, hidden, onCommand, onNotice, areaBounds, cells };
+  latest.current = { view, camera, hidden, onCommand, onNotice, areaBounds, cells, beginFirstCell, preferences, historyBlocked };
   const cancel = useCallback(() => {
     const active = gesture.current;
     gesture.current = null;
@@ -61,10 +62,10 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       if (event.code === 'Space' && !event.ctrlKey && !event.metaKey && !event.altKey) { space.current = true; cancel(); return; }
       if (event.defaultPrevented) return;
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.repeat) return;
-      const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape', ...(latest.current.cells ? { c: 'cell' } : {}) }[event.key.toLowerCase()];
+      const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape', ...(latest.current.cells || latest.current.beginFirstCell ? { c: 'cell' } : {}) }[event.key.toLowerCase()];
       if (tool || event.key === 'Escape' && latest.current.view.interactionTool !== 'select') {
         event.preventDefault(); event.stopPropagation(); cancel();
-        if (tool === 'cell') latest.current.cells.leaveCell(false);
+        if (tool === 'cell') latest.current.cells?.leaveCell(false);
         latest.current.view.setInteractionTool(tool || 'select');
       }
     };
@@ -73,18 +74,26 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
     const visibility = () => { if (document.hidden) blur(); };
     const down = event => {
       const current = latest.current, tool = current.view.interactionTool;
-      if (tool === 'cell' || gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
+      if ((tool === 'cell' && (!current.beginFirstCell || current.historyBlocked)) || gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
         || host.hasAttribute('data-workbench-pan-ready') || event.button !== 0 || event.isPrimary === false
-        || event.ctrlKey || event.metaKey || event.altKey || event.target.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
+        || event.ctrlKey || event.metaKey || (event.altKey && tool !== 'cell') || event.target.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       const point = { x: event.clientX, y: event.clientY };
-      // Never fall back from a rejected Display (locked, minimized, private,
-      // etc.) to a standalone Text hidden underneath it.
       const background = (!current.cells?.editingCellId && isWorkbenchBackground(event.target, host)) || isEditorCellSurface(event.target, current.cells);
-      const insideDisplay = !background && event.target.closest('[data-display-instance]');
-      const target = tool === 'text' && insideDisplay ? placementTargets.current?.targetAt(point) : null;
-      if (insideDisplay ? !target?.createTextAt : !background) return;
+      if (!background) return;
       event.preventDefault(); event.stopPropagation();
-      gesture.current = { tool, start: point, pointerId: event.pointerId, target, host, camera: current.camera.getCamera(), cellId: current.cells?.editingCellId };
+      gesture.current = { tool, start: point, pointerId: event.pointerId, host, camera: current.camera.getCamera(), cellId: current.cells?.editingCellId };
+      if (tool === 'cell') {
+        const active = gesture.current, { scale, offset } = active.camera;
+        try {
+          const first = current.beginFirstCell(current.view.getPresentation());
+          const start = { x: (point.x - offset.x) / scale, y: (point.y - offset.y) / scale };
+          const draw = createCompositionCellDrawGesture(first.composition, 'shape:' + crypto.randomUUID(), start,
+            scale, undefined, current.preferences.gridSpacing);
+          active.propose = pointer => draw({ x: pointer.clientX - point.x, y: pointer.clientY - point.y },
+            current.preferences.shortcutSnap === pointer.altKey);
+          active.place = first.place;
+        } catch (error) { cancel(); current.onNotice(error.message); return; }
+      }
       suppressedPointer.current = event.pointerId;
       host.setPointerCapture(event.pointerId);
       host.focus({ preventScroll: true });
@@ -92,10 +101,17 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
     const move = event => {
       const active = gesture.current;
       if (!active || active.pointerId !== event.pointerId) return;
-      if (!(event.buttons & 1) || !sameCreationCamera(active.camera, latest.current.camera.getCamera())
-        || active.target && !active.target.isCurrent()) { cancel(); return; }
+      if (!(event.buttons & 1) || !sameCreationCamera(active.camera, latest.current.camera.getCamera())) { cancel(); return; }
       event.preventDefault(); event.stopPropagation();
-      if (isShapeCommand(active.tool)) setGhost({ left: Math.min(active.start.x, event.clientX), top: Math.min(active.start.y, event.clientY),
+      if (active.propose) {
+        try {
+          const proposal = active.propose(event);
+          if (!proposal) { setGhost(null); return; }
+          const frame = proposal.args[1], { scale, offset } = active.camera;
+          setGhost({ left: frame.left * scale + offset.x, top: frame.top * scale + offset.y,
+            width: frame.width * scale, height: frame.height * scale });
+        } catch (error) { cancel(); latest.current.onNotice(error.message); }
+      } else if (isShapeCommand(active.tool)) setGhost({ left: Math.min(active.start.x, event.clientX), top: Math.min(active.start.y, event.clientY),
         width: Math.abs(event.clientX - active.start.x), height: Math.abs(event.clientY - active.start.y) });
     };
     const finish = event => {
@@ -105,18 +121,20 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       const current = latest.current;
       if (current.hidden || current.camera.locked || active.tool !== current.view.interactionTool || active.cellId !== current.cells?.editingCellId || !sameCreationCamera(active.camera, current.camera.getCamera())) return;
       const point = { x: event.clientX, y: event.clientY }, hit = document.elementFromPoint(point.x, point.y);
+      if (active.propose) {
+        if (!current.beginFirstCell || current.historyBlocked || !host.contains(hit) || hit.closest(OVERLAYS)) return;
+        try {
+          const proposal = active.propose(event);
+          if (!proposal) return;
+          if (!active.place(proposal.next)) throw Error('Could not save the cell. Draw it again.');
+          current.view.setInteractionTool('select');
+        } catch (error) { current.onNotice(error.message); }
+        return;
+      }
       const placed = workbenchCreationPlacement(active.start, point, active.camera, isShapeCommand(active.tool), current.areaBounds);
       if (!placed || !host.contains(hit) || hit?.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
-      if (active.target) {
-        const currentTarget = placementTargets.current?.targetAt(point);
-        // React may replace the capability object without changing its scoped
-        // Display/Grid. The originating capability still validates that scope.
-        if (!active.target.isCurrent() || currentTarget?.id !== active.target.id || currentTarget?.node !== active.target.node) return;
-        if (!active.target.createTextAt(point)) return;
-      } else {
-        if (active.tool === 'text' && !isWorkbenchBackground(hit, host) && !isEditorCellSurface(hit, current.cells)) return;
-        current.onCommand(active.tool, { ...placed, workbench: current.view.getPresentation() });
-      }
+      if (active.tool === 'text' && !isWorkbenchBackground(hit, host) && !isEditorCellSurface(hit, current.cells)) return;
+      current.onCommand(active.tool, { ...placed, workbench: current.view.getPresentation() });
       current.view.setInteractionTool('select');
     };
     const pointerCancel = event => { if (gesture.current?.pointerId === event.pointerId) cancel(); };
@@ -147,12 +165,12 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       window.removeEventListener('keyup', up); window.removeEventListener('blur', blur);
       document.removeEventListener('visibilitychange', visibility); space.current = false; cancel();
     };
-  }, [hostRef, placementTargets, hidden, cancel]);
+  }, [hostRef, hidden, cancel]);
 
   const inspector = (id, reason) => ({ enabled: tools.isAvailable(id), open: tools.isAvailable(id) && Boolean(tools.state[id]), reason: tools.isAvailable(id) ? undefined : reason,
     onToggle: () => tools.command(id, undefined, document.activeElement) });
   const layers = onToggleArtworkLayers ? { enabled: true, open: artworkLayersOpen, onToggle: onToggleArtworkLayers }
-    : inspector('layers', 'Select a Display to see its layers.');
+    : inspector('layers', 'Select a composition to see its layers.');
   const info = inspector('metadata', 'Select an artwork to see its information.');
   const adapt = command => ({ ...command, label: LABELS[command.id] || command.label, icon: ICONS[command.id],
     reason: command.disabled ? 'Module limit reached.' : undefined,
@@ -160,8 +178,8 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       if (isCreationTool(command.id)) chooseTool(command.id);
       else { chooseTool('select'); onCommand(command.id); }
     } });
-  const addCommands = [...(cells ? [{ id: 'cell', label: 'Cell', shortcut: 'C',
-    disabled: cells.cells.length >= receptionLayoutCountRange(cells.store.getReception()).max }] : []), ...commands].map(adapt);
+  const addCommands = [...(cells || beginFirstCell ? [{ id: 'cell', label: 'Cell', shortcut: 'C',
+    disabled: cells ? cells.cells.length >= compositionLayoutCountRange(cells.store.getComposition()).max : Boolean(historyBlocked) }] : []), ...commands].map(adapt);
   const shapeCommands = addCommands.filter(command => isShapeCommand(command.id))
     .map(command => command.id === 'shape' ? { ...command, shortcut: 'R' } : command);
   const selectedId = view.selection.length === 1 ? artworkModuleId(view.content, view.selection[0]) : null;
@@ -175,8 +193,6 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       icon: Settings2, group: 'Selection', onSelect: () => onOpenSharedTool(section),
     })) : []),
     { id: 'metadata', label: 'Artwork info', icon: Info, group: 'Selection', disabled: !info.enabled, reason: info.reason, selected: info.open, onSelect: info.onToggle },
-    ...(!cells ? [{ id: 'appearance', label: 'Display appearance', icon: Settings2, group: 'Selection', disabled: !tools.isAvailable('appearance'), reason: 'Select a Display first.',
-      onSelect: () => tools.command('appearance', undefined, document.activeElement) }] : []),
     ...['undo', 'redo'].map(id => ({ id, label: id === 'undo' ? 'Undo' : 'Redo', icon: id === 'undo' ? Undo2 : Redo2, group: 'Editing',
       shortcut: id === 'undo' ? 'Ctrl / ⌘ Z' : 'Ctrl / ⌘ ⇧ Z', disabled: Boolean(historyBlocked || !history[id]), reason: historyBlocked || `Nothing to ${id}.`, onSelect: () => onHistory(id) })),
     ...(cells ? [{ id: 'bento', label: 'Bento settings', icon: Grid3X3, group: 'View', onSelect: cells.openSettings }] : [{ id: 'grid', label: 'Workbench grid', icon: Grid3X3, group: 'View', selected: preferences.gridMode !== 'NONE',
@@ -190,7 +206,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       shapeCommands={shapeCommands} layers={layers} searchScopeRef={hostRef} searchEnabled={searchEnabled && !camera.locked}
       onOpenLibrary={trigger => { chooseTool('select'); onOpenLibrary(trigger); }} libraryOpen={libraryOpen} hidden={hidden && !exiting} searchRequest={searchRequest} />
     {!hidden && creating && <p className="workbench-creation-hint" role="status" data-system-workflow-overlay>
-      {view.interactionTool === 'cell' ? 'Drag to draw a cell. Hold Alt to skip snapping.' : view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
+      {view.interactionTool === 'cell' ? 'Drag to draw a cell. Hold Alt to skip snapping.' : view.interactionTool === 'text' ? 'Click the Workbench to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
     </p>}
     {!hidden && ghost && <div className="workbench-creation-ghost" style={ghost} aria-hidden="true" />}
   </>;

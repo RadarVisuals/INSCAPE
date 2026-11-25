@@ -25,7 +25,7 @@ test('Library shared-window resizing preserves artwork, browsing and scroll posi
     const trigger = page.getByRole('button', { name: 'Artwork library', exact: true });
     await trigger.click(); await detachTool(page, 'Library');
     const panel = sharedToolPanel(page, 'Library'), library = page.getByRole('region', { name: 'Library workspace', exact: true });
-    const board = page.getByRole('article', { name: 'Display Module', exact: true });
+    const board = page.locator('.image-module__window').first();
     const boardBefore = await board.boundingBox();
     await page.evaluate(() => { window.__libraryDraftWrites = 0; addEventListener('inscape:review-storage-write', event => {
       if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__libraryDraftWrites++;
@@ -86,7 +86,7 @@ for (const width of [1440, 800]) test(`Library detaches, moves, resizes and dock
     await trigger.click();
     const library = page.getByRole('region', { name: 'Library workspace', exact: true });
     await library.waitFor();
-    const board = page.getByRole('article', { name: 'Display Module', exact: true });
+    const board = page.locator('.image-module__window').first();
     const boardBefore = await board.boundingBox();
     await page.evaluate(() => { window.libraryWindowWrites = 0; addEventListener('inscape:review-storage-write', event => {
       if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.libraryWindowWrites++;

@@ -3,12 +3,11 @@ import type { Dispatch, MutableRefObject, ReactNode, SetStateAction } from 'reac
 /** Prefixes distinguish targets; existing runtime validators still check syntax/length. */
 export type ProfileAddress = `0x${string}`;
 export type WorkbenchId = `workbench:${string}`;
-export type DisplayId = `display:${string}`;
 export type ImageId = `image:${string}`;
 export type ShapeId = `shape:${string}`;
 export type TextId = `text:${string}`;
 export type KeeperId = `keeper:${string}`;
-export type ModuleId = DisplayId | ImageId | ShapeId | TextId | KeeperId;
+export type ModuleId = ImageId | ShapeId | TextId | KeeperId;
 export type TextFrameId = `text-frame:${string}`;
 export type SelectionId = ModuleId | TextFrameId | 'workbench:index';
 export type WindowId = SelectionId;
@@ -20,17 +19,11 @@ export interface Frame extends Position { width: number; height: number }
 export interface ImagePresentation { id: ImageId; open: boolean; position: Position }
 export interface ShapePresentation { id: ShapeId; open: boolean; window: Frame }
 export interface TextPresentation { id: TextId; open: boolean; window: Frame; frames?: { id: TextFrameId; window: Frame }[] }
-export interface DisplayPresentation {
-  name: string; open: boolean; window: Frame;
-  shortcut: { position: Position; visible: boolean; icon: unknown;
-    iconPresentation: { labelSize: number; offsetX: number; offsetY: number; scale: number; size: number } };
-}
 export interface WorkbenchPresentation {
+  lockedLayerIds?: string[];
   version: number;
-  display: DisplayPresentation;
   identity: { open: boolean; window: Position & { width: number; height?: number } };
   area?: { width: number; height: number };
-  displays?: (DisplayPresentation & { id: DisplayId })[];
   texts?: TextPresentation[];
   imageModules?: ImagePresentation[];
   shapes?: ShapePresentation[];
@@ -42,7 +35,6 @@ export interface WorkflowDraft {
   draftVersion: number;
   workbench?: WorkbenchPresentation;
   identityPresentation: { alias: string; [field: string]: unknown };
-  grids: unknown[];
   workbenchGroups?: { memberIds: ModuleId[] }[];
   [domainField: string]: unknown;
 }
@@ -63,7 +55,7 @@ export interface CommitOptions {
   historyLabel?: string;
   recordHistory?: boolean;
   historyPresentation?: WorkbenchPresentation;
-  historyReception?: unknown;
+  historyComposition?: unknown;
 }
 export interface RestoreOptions { expectedGeneration?: number; expectedFingerprint?: string }
 export type SaveResult = boolean;
@@ -72,6 +64,7 @@ export type TransitionGuard = () => string | null;
 export interface RecordState { status: 'absent' | 'valid' | 'corrupt' | 'unavailable'; reason?: string; fingerprint?: string; issues?: unknown[] }
 /** Current unreadable snapshots throw. An old scope created without a draft can retain null. */
 export interface WorkbenchScope {
+  whenCommitted?(): boolean | Promise<boolean>;
   hasWriteAccess(): boolean;
   isCurrent(): boolean;
   getProfileAddress(): string;
@@ -92,7 +85,7 @@ export interface WorkbenchScope {
   undo(): SaveResult;
   redo(): SaveResult;
   commitCompletedOperation(candidate: WorkflowDraft, options?: CommitOptions): SaveResult;
-  /** Reception capability: new native layers and their cell membership commit together. Does not change editing focus. */
+  /** Composition capability: new native layers and their cell membership commit together. Does not change editing focus. */
   commitInCell?(cellId: ShapeId, candidate: WorkflowDraft, options?: CommitOptions): SaveResult;
   retryCompletedOperation(createCandidate: (draft: WorkflowDraft) => WorkflowDraft | null | false, options?: CommitOptions): SaveResult;
   restoreBackup(candidate: WorkbenchBackup, options?: RestoreOptions): SaveResult;
@@ -121,7 +114,7 @@ export interface ToolSource {
   actions?: { disabled?: boolean; duplicate: { disabled?: boolean; reason?: string; run: () => void }; items?: ArtworkMenuAction[] };
 }
 export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame; gridScale?: number; cellRadius?: number }
-export type ResizeLayoutKey = 'display' | 'displays' | 'texts' | 'imageModules' | 'shapes';
+export type ResizeLayoutKey = 'texts' | 'imageModules' | 'shapes';
 /** The registration hook and operation adapters use the same complete capability. */
 export type ResizeTarget = WorkbenchResizeTarget;
 export interface WorkbenchActionsValue {
@@ -164,12 +157,9 @@ export type WorkbenchViewValue = MountedWorkbenchViewValue | StandaloneWorkbench
 export interface CapturePresentationInput {
   layout: WorkbenchPresentation;
   identityOpen: boolean;
-  hasPrimaryDisplay?: boolean;
-  displays?: { id: DisplayId }[];
   texts?: { id: TextId }[];
   imageModules?: { id: ImageId }[];
   shapes?: { id: ShapeId }[];
-  displayPresentations?: Partial<Record<DisplayId, DisplayPresentation | null>>;
   textPresentations?: Partial<Record<TextId, TextPresentation>>;
   imagePresentations?: Partial<Record<ImageId, ImagePresentation>>;
   shapePresentations?: Partial<Record<ShapeId, ShapePresentation>>;
@@ -211,6 +201,7 @@ export interface OperationGeometry {
 export interface MoveOperationInput {
   origin: WorkbenchOperationOrigin;
   selection: {
+    authoredPositions?: boolean;
     ids: readonly WindowId[];
     selectedIds: readonly WindowId[];
     content: WorkflowDraft;
@@ -233,10 +224,7 @@ export interface WorkbenchMoveOperation {
   preview(delta: Vector, bypass?: boolean): WorkbenchTransforms | null;
   commit(): boolean;
 }
-/** Window-only Display preparation has no content snapshot; content modules do. */
-export type ResizeContentExpectation =
-  | { layoutKey: 'display' | 'displays'; expected?: unknown }
-  | { layoutKey: Exclude<ResizeLayoutKey, 'display' | 'displays'>; expected: unknown };
+export type ResizeContentExpectation = { layoutKey: ResizeLayoutKey; expected: unknown };
 /** Module data is deliberately opaque to the host; only module preparers interpret it. */
 export interface SelectionResizeCandidate extends Frame {
   id: WindowId;

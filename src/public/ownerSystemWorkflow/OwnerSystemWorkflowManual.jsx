@@ -6,13 +6,7 @@ const chapters = [
     ['Compose', 'Arrange Image, Text and Shape on your Workbench. Layers controls their order and visibility. Color changes text and shape colors; Transform changes the selected item’s dimensions.'],
     ['Starting layouts', 'Choose Canvas for a blank composition or Bento to start with cells. Place artwork freely or add it to a cell in the same composition.'],
     ['Your tools', 'Tool tabs can share a dock or detach into separate windows. Text stays in its own window. Keeper and Navigator stay on screen as you move around the canvas.'],
-    ['Your workspace', 'Library settings and tool-window layouts are saved in this browser for your profile. Settings controls your local workspace preferences. Discover lets you visit other profiles.'],
-  ] },
-  { id: 'display', label: 'Display · Experimental', summary: 'Experimental composition module. Creating new Displays is currently unavailable.', sections: [
-    ['Grids', 'Use Grids to create, name and order scenes within Display. Mark each Grid public or private. Visitors can navigate the public scenes.'],
-    ['Arrange artwork', 'Drag an asset from Library onto the Stage. Select a placement to move or resize it. Shift-click or drag a selection rectangle to select several. Crop adjusts the visible area of the artwork.'],
-    ['Layers', 'Open Layers from Display to reorder, duplicate, lock or remove placements. Removing a placement leaves the source asset in your Library.'],
-    ['Stage and window', 'The Stage keeps its composition proportions when the Display window changes size. Moving the window changes its position on the Workbench; it does not move artwork within a Grid.'],
+    ['Your workspace', 'Library settings and tool-window layouts are saved in this browser for your profile. Settings controls your local workspace preferences.'],
   ] },
   { id: 'identity', label: 'Identity', summary: 'Give your profile its own presentation.', sections: [
     ['Edit on the card', 'Use the cogwheel to edit the card in place. Choose its artwork and background, write your bio and tags, and add text or list cells. Save applies your changes; Cancel discards that edit.'],
@@ -21,16 +15,16 @@ const chapters = [
     ['Share an address', 'The copy and QR controls share your profile address. The QR currently contains the address itself, rather than a link that opens your INSCAPE page.'],
   ] },
   { id: 'library', label: 'Library', summary: 'Find and organise the assets you work with.', sections: [
-    ['Place assets', 'Drag an asset onto the Workbench to create an Image. In an existing Display, drop it on the Stage to create a placement. The placement preview shows where it will land.'],
+    ['Place assets', 'Drag an asset onto the Workbench to create an Image.'],
     ['Categories and sections', 'Categories organise assets without changing ownership. An asset may belong to several categories. Sections group related categories in the sidebar.'],
     ['Browse', 'Search, filters, sorting and thumbnail size change the Library view. Your Library organisation stays private when you publish.'],
   ] },
   { id: 'publish', label: 'Publish', summary: 'Review the experience visitors will enter.', sections: [
-    ['Preview', 'Preview shows your public composition and custom Identity card, with the current window arrangement. Check both expanded content and smaller screens.'],
+    ['Preview', 'Preview shows the current composition as a visitor would see it. Choose Back to editing to return to your work.'],
     ['Destinations', 'Choose Gallery, Profile or both for each composition you publish.'],
-    ['Prepare', 'Arrange the windows and decide which should start open. Prepare Publication saves that starting setup and freezes a snapshot for review, including the Display name and shortcut. Preparing does not upload or ask your wallet to publish.'],
+    ['Prepare', 'Arrange the windows and decide which should start open. Prepare Publication saves that starting setup and freezes a snapshot for review. Preparing does not upload or ask your wallet to publish.'],
     ['Make it public', 'The next action uploads and verifies the prepared presentation. Publishing the verified result to your profile is a separate wallet action. Later edits need a new preparation and publication.'],
-    ['What visitors receive', 'Public Images, Text, Shapes, Grids and Keeper content, the Identity card and the prepared Workbench setup are included. Private Grids, Library organisation, Layers tools and Activity stay private. Visitors can explore and rearrange their session without changing your saved work.'],
+    ['What visitors receive', 'Public Images, Text, Shapes and Keeper content, the Identity card and the prepared Workbench setup are included. Library organisation, Layers tools and Activity stay private. Visitors can explore and rearrange their session without changing your saved work.'],
   ] },
 ];
 

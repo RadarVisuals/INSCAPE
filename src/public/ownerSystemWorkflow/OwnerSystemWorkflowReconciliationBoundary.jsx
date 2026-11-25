@@ -8,7 +8,7 @@ import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 const OwnerSystemWorkflowRuntime = lazy(() => import('./OwnerSystemWorkflowRuntime.jsx'));
 
 export default function OwnerSystemWorkflowReconciliationBoundary(props) {
-  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenReception && (() => props.onOpenReception('published'))} viewLabel="View published profile">
+  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenProfile} viewLabel="View published profile">
     <ReconciliationSession key={props.profileAddress} {...props} />
   </ProfileEditingBoundary>;
 }
@@ -32,7 +32,7 @@ function ReconciliationSession(props) {
     import('../../profileDocument/storage/ownerDraftReconciliation.js')
       .then(({ reconcileOwnerDraftWithPublishedProfile }) => {
         if (!active) return null;
-        store = createSystemWorkflowDraftStore({ profileAddress, storage: reviewStorage ?? globalThis.localStorage, requireEditor: true });
+        store = createSystemWorkflowDraftStore({ profileAddress, storage: reviewStorage ?? globalThis.localStorage, requireEditor: true, initialStudio: true });
         bindWorkbenchTextRecovery(store);
         const record = store.getRecordState();
         if (!['absent', 'valid'].includes(record.status)) return { ...record, status: 'LOCAL_DRAFT_UNAVAILABLE' };
@@ -64,7 +64,7 @@ function ReconciliationSession(props) {
     let active = true;
     import('../../systemWorkflow/systemWorkflowDraftStore.js').then(({ createSystemWorkflowDraftStore }) => {
       if (!active) return;
-      const store = createSystemWorkflowDraftStore({ profileAddress, storage: reviewStorage ?? globalThis.localStorage, requireEditor: true });
+      const store = createSystemWorkflowDraftStore({ profileAddress, storage: reviewStorage ?? globalThis.localStorage, requireEditor: true, initialStudio: true });
       const reset = store.resetCorruptDraft({ expectedFingerprint: failure.fingerprint, profileAddress });
       setResetting(false);
       if (reset) { setState('LOADING'); setAttempt(value => value + 1); }

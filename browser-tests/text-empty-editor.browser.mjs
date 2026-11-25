@@ -32,7 +32,7 @@ for (const width of [1600, 390]) test(`empty writing area is discoverable withou
       if (await write.count()) { await write.focus(); await page.keyboard.press('Enter'); }
       const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
       if (await close.isVisible()) await close.click();
-      const win = page.locator('.text-window'), body = win.getByRole('textbox', { name: 'Article text', exact: true });
+      const win = page.locator('aside.text-window'), body = win.getByRole('textbox', { name: 'Article text', exact: true });
       const hint = win.getByText('Start writing…', { exact: true });
       await page.locator('main.system-workflow').focus(); await settle(page);
       const before = await saved(page);
@@ -66,34 +66,5 @@ for (const width of [1600, 390]) test(`empty writing area is discoverable withou
       assert.equal(await page.getByText('Start writing…', { exact: true }).count(), 0, 'public presentation contains no editing hint');
     }
     assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
-
-test('empty Display text and Focus writing share the same temporary writing guide', { timeout: 60000 }, async () => {
-  const browser = await launch();
-  try {
-    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
-    page.setDefaultTimeout(10000);
-    await mountTextToolsFixture(page, origin, { displayTextCount: 1 });
-    const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
-    if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
-    const target = page.getByRole('button', { name: 'Select Display article 1', exact: true });
-    await target.focus(); await page.keyboard.press('Enter');
-    const body = target.getByRole('textbox', { name: 'Article text', exact: true }); await body.waitFor();
-    await page.locator('main.system-workflow').focus();
-    assert.equal(await target.getByText('Start writing…', { exact: true }).isVisible(), true);
-    const before = await saved(page);
-    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Focus writing', exact: true }).click();
-    const dialog = page.getByRole('dialog'); await dialog.waitFor();
-    await dialog.getByRole('button', { name: 'Return to composition', exact: true }).focus();
-    assert.equal(await dialog.getByText('Start writing…', { exact: true }).isVisible(), true);
-    assert.deepEqual(await saved(page), before);
-    await dialog.getByRole('textbox', { name: 'Article text', exact: true }).fill('A Display story');
-    assert.equal(await dialog.getByText('Start writing…', { exact: true }).count(), 0);
-    await dialog.getByRole('button', { name: 'Return to composition', exact: true }).click();
-    await dialog.waitFor({ state: 'detached' });
-    assert.equal(await body.innerText(), 'A Display story');
-    assert.deepEqual((await saved(page)).workbench, before.workbench);
-    assert.deepEqual((await saved(page)).texts, before.texts);
   } finally { await browser.close(); }
 });

@@ -1,10 +1,10 @@
 // Historical design-system artboard only. Production uses OwnerEditorMenuBar.
-import { Bell, ChevronDown, ChevronRight, Compass, Eye, FileText, Grid3X3, Home, Images, Layers, List,
+import { Bell, ChevronDown, ChevronRight, Eye, FileText, Home, Images, Layers, List,
   PanelsTopLeft, Settings2, Upload, UserRound } from 'lucide-react';
 import './referenceWorkspaceNavigation.css';
 
 // Presentation only. The host owns destinations, panel lifetimes and authority.
-export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onLayers, onOverview, onReception,
+export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onLayers, onOverview,
   openPanels = [], onOpen, onPreview, onPublish, publicationOpen = false, unreadCount = 0,
   navigationHost, onNavigate, reference = false, documentControls = false, destination = 'editor', className = '', style }) {
   const editor = documentControls && destination === 'editor';
@@ -16,7 +16,7 @@ export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onColl
     {label === 'Activity' && unreadCount > 0 && <i aria-label={`${unreadCount} unread`}>{unreadCount}</i>}
     {label === 'Library' && (libraryOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
   </button>;
-  const panel = (id, label, Icon) => link(label, Icon, onOpen && (!reference || id === 'grids') ? (event => onOpen(id, event.currentTarget)) : null,
+  const panel = (id, label, Icon) => link(label, Icon, onOpen && !reference ? (event => onOpen(id, event.currentTarget)) : null,
     { 'aria-expanded': openPanels.includes(id), 'data-active': openPanels.includes(id) || undefined });
   return <aside hidden={hidden} className={`workspace-navigation ${className}`} style={style}
     data-workflow-material="tactile" data-workflow-finish="flat" data-collapsed={collapsed || undefined}
@@ -31,7 +31,6 @@ export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onColl
     </div>}
     <div className="workspace-navigation-scroll">
       <nav aria-label="Workspace navigation">
-        {!editor && link('Reception', Home, onReception)}
         {!editor && onOverview && link('My Inscape', List, onOverview, { 'aria-current': destination === 'overview' && !openPanels.length && !publicationOpen ? 'page' : undefined })}
         {!editor && link('Editor', PanelsTopLeft, onWorkbench, { 'aria-current': destination === 'editor' && !openPanels.length && !publicationOpen ? 'page' : undefined })}
         {editor && link('Layers', Layers, onLayers)}
@@ -39,12 +38,10 @@ export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onColl
         <div ref={navigationHost} className="workspace-library-navigation system-workflow__browser-workspace"
           data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette={documentControls ? 'editor' : undefined}
           hidden={!libraryOpen || collapsed} />
-        {panel('grids', 'Grids', Grid3X3)}
         {panel('activity', 'Activity', Bell)}
       </nav>
       <div className="workspace-navigation-footer">
-        <nav aria-label="Discover and sharing" className="workspace-navigation-group">
-          {panel('discover', 'Discover', Compass)}
+        <nav aria-label="Sharing" className="workspace-navigation-group">
           {!documentControls && link('Preview', Eye, onPreview)}{!editor && link('Publish', Upload, onPublish, { 'aria-expanded': publicationOpen })}
         </nav>
         {reference && !collapsed && <small className="workspace-navigation-note">Account & sharing: available in the app</small>}

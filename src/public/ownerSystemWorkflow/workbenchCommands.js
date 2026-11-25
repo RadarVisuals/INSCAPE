@@ -1,7 +1,7 @@
 import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
 import { addTextModule } from '../../text/textSession.js';
 import { interfaceTheme } from '../../interfaceTheme.js';
-import { receptionTextDefaults } from '../../reception/receptionTextDefaults.js';
+import { compositionTextDefaults } from '../../composition/compositionTextDefaults.js';
 import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
 import { addImageModule } from '../../imageModule/imageModuleSession.js';
 import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
@@ -9,8 +9,6 @@ import { MAX_SHAPES, isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/sh
 import { addShape } from '../../shapes/shapeSession.js';
 import { MAX_KEEPER_DOCKS } from '../../keeper/keeper.js';
 import { addKeeperDock } from '../../keeper/keeperSession.js';
-import { removeWorkbenchModule } from '../../systemWorkflow/removeWorkbenchModule.js';
-import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecovery.js';
 
 // Receives the active composition's scoped writer and explicit host actions.
 // Module sessions keep validation, persistence and undo authority.
@@ -26,27 +24,11 @@ export default function workbenchCommands({
   changeTool,
   openLibrary,
   openIdentity,
-  openDockPanel,
   openPreview,
   togglePublication,
   setWorkspaceMenu,
-  reception = false,
+  composition = false,
 }) {
-  const deleteDisplay = expected => {
-    try {
-      if (textRecoveries(store, profileAddress).length) {
-        setNotice(TEXT_RECOVERY_MESSAGE);
-        return;
-      }
-      if (!removeWorkbenchModule(store, profileAddress, 'display', expected)) {
-        setNotice('Could not delete this Display. Reopen its menu and try again.');
-        return;
-      }
-      requestAnimationFrame(() => workspaceRef.current?.focus());
-    } catch (error) {
-      setNotice(error.message || 'Could not delete this Display');
-    }
-  };
   // One creation menu/dispatcher serves both the context menu and toolbar.
   const addCommands = [
     { id: 'workbench-index', label: draft.workbenchIndex ? 'OPEN INDEX' : 'INDEX' },
@@ -71,17 +53,17 @@ export default function workbenchCommands({
       id: 'keeper',
       label: 'KEEPER DOCK',
     },
-  ].filter(command => !reception || ['text', 'image', 'shape', 'shape-grid'].includes(command.id));
+  ].filter(command => !composition || ['text', 'image', 'shape', 'shape-grid'].includes(command.id));
   const runCommand = (id, placement) => {
-    if (reception && ['workbench-index', 'keeper', 'identity', 'publish'].includes(id)) return;
+    if (composition && ['workbench-index', 'keeper', 'identity'].includes(id)) return;
     try {
       switch (id) {
         case 'workbench-index':
           openWorkbenchIndex(store, profileAddress);
           break;
         case 'text':
-          activateArtwork(addTextModule(store, profileAddress, placement, reception
-            ? receptionTextDefaults(store.getReception(), store.getEditingCell(), interfaceTheme.getSnapshot().mode) : undefined));
+          activateArtwork(addTextModule(store, profileAddress, placement, composition
+            ? compositionTextDefaults(store.getComposition(), store.getEditingCell(), interfaceTheme.getSnapshot().mode) : undefined));
           setTextToolsOpen(true);
           break;
         case 'keeper':
@@ -108,12 +90,11 @@ export default function workbenchCommands({
     }
     if (id === 'library') openLibrary();
     if (id === 'identity') openIdentity(workspaceRef.current);
-    if (id === 'discover') openDockPanel('discover', workspaceRef.current);
     if (id === 'preview') openPreview(workspaceRef.current);
     if (id === 'publish') togglePublication(workspaceRef.current);
     if (id.startsWith('shape:')) activateArtwork(id);
     setWorkspaceMenu(null);
   };
 
-  return { addCommands, runCommand, deleteDisplay };
+  return { addCommands, runCommand };
 }

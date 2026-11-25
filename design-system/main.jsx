@@ -424,7 +424,7 @@ function ComponentExamples({ theme }) {
       <details className="ds-studio-baseline">
         <summary>Existing Properties controls · full reference</summary>
         <p>
-          The existing Image, Display artwork and Shape controls remain here while we review their
+          The Image and Shape controls remain here while we review their
           new homes in the shared tabs.
         </p>
         <PropertiesPreview
@@ -594,7 +594,7 @@ function Patterns() {
       <p>
         Reflow the interface while preserving authored geometry. At 520 px and below, creation uses
         two centred rows. Companion tools reserve room above the measured bottom controls. Long copy
-        wraps; the owning surface scrolls. Reception uses its own rectangular partition and mobile flow, with shared Image and Text content tools.
+        wraps; the owning surface scrolls. Composition uses its own rectangular partition and mobile flow, with shared Image and Text content tools.
       </p>
       <aside className="ds-note">
         One device preference controls the entire interface. Authored artwork and module colours remain part of the composition.

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { interfaceTheme } from '../../interfaceTheme.js';
 
 const columns = 49, rows = 33;
 const assets = '/assets/visitor/';
@@ -10,10 +9,11 @@ const vertex = `
   attribute vec2 position;
   attribute vec4 tones;
   uniform vec2 viewport;
-  uniform float seconds, lightTheme;
+  uniform float seconds, lightTheme, distanceScale;
+  uniform vec4 tint, glow, shade, fieldLow, fieldHigh;
   varying highp vec3 colour;
   float travel(float period, float phase) {
-    return .5 - .5 * cos((seconds + phase) * 3.14159265 / period);
+    return .5 - .5 * distanceScale * cos((seconds + phase) * 3.14159265 / period);
   }
   float pool(vec2 p, vec2 centre) {
     return 1. - smoothstep(0., 1., length((p-centre)/vec2(.46,.38)));
@@ -26,13 +26,17 @@ const vertex = `
     vec2 a = vec2(.18,.15) + vec2(.34,.19)*scale*travel(43.,11.);
     vec2 b = vec2(.46,.38) + vec2(.22,.03)*scale - vec2(.40,.32)*scale*travel(61.,34.);
     vec2 c = vec2(scale.x-.10,.10) + vec2(-.31,.42)*scale*travel(53.,24.);
-    vec3 glow = mix(vec3(191.,190.,181.), vec3(249.,239.,218.), lightTheme)/255.;
-    vec3 shade = lightTheme * vec3(57.,61.,57.)/255.;
     colour = mix(tones.rrr, tones.gba, lightTheme);
-    float strength = mix(.11,.27,lightTheme);
-    colour = mix(colour, glow, strength*pool(p,a));
-    colour = mix(colour, glow, strength*pool(p,c));
-    colour = mix(colour, shade, mix(.30,.18,lightTheme)*pool(p,b));
+    colour = mix(colour, tint.rgb, tint.a);
+    if (fieldLow.a > 0.) {
+      // The neutral reference mesh spans 18..52 in sRGB. Preserve its full relief
+      // between the palette endpoints.
+      float tone = clamp((tones.r * 255. - 18.) / 34., 0., 1.);
+      colour = mix(fieldLow.rgb, fieldHigh.rgb, tone);
+    }
+    colour = mix(colour, glow.rgb, glow.a*pool(p,a));
+    colour = mix(colour, glow.rgb, glow.a*pool(p,c));
+    colour = mix(colour, shade.rgb, shade.a*pool(p,b));
     gl_Position = vec4((p/scale*2.-1.)*vec2(1.,-1.), 0., 1.);
   }`;
 const fragment = `
@@ -40,7 +44,7 @@ const fragment = `
   uniform sampler2D noiseTile;
   varying highp vec3 colour;
   void main() {
-    float grain = (texture2D(noiseTile, gl_FragCoord.xy / 128.).r - .5) * (3.0/255.);
+    float grain = (texture2D(noiseTile, gl_FragCoord.xy / 128.).r - .5) * (6.0/255.);
     gl_FragColor = vec4(colour + grain, 1.);
   }`;
 
@@ -94,14 +98,43 @@ function prepareField(gl, tones, tile) {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tile);
     const viewport = gl.getUniformLocation(program, 'viewport');
     const time = gl.getUniformLocation(program, 'seconds'), theme = gl.getUniformLocation(program, 'lightTheme');
-    return { release, draw(width, height, seconds, light) {
+    const distance = gl.getUniformLocation(program, 'distanceScale');
+    const tint = gl.getUniformLocation(program, 'tint'), glow = gl.getUniformLocation(program, 'glow'), shade = gl.getUniformLocation(program, 'shade');
+    const low = gl.getUniformLocation(program, 'fieldLow'), high = gl.getUniformLocation(program, 'fieldHigh');
+    return { release, configure(settings) {
+      gl.uniform4fv(low, settings.low);
+      gl.uniform4fv(high, settings.high);
+      gl.uniform1f(theme, settings.light ? 1 : 0);
+      gl.uniform1f(distance, settings.travel);
+      gl.uniform4fv(tint, settings.tint);
+      gl.uniform4fv(glow, settings.glow);
+      gl.uniform4fv(shade, settings.shade);
+    }, draw(width, height, seconds) {
       gl.viewport(0, 0, width, height);
       gl.uniform2f(viewport, width, height);
       gl.uniform1f(time, seconds);
-      gl.uniform1f(theme, light ? 1 : 0);
       gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
     }};
   } catch (error) { release(); throw error; }
+}
+
+// Resolve CSS colours in sRGB only when the palette changes.
+function readFieldSettings(canvas, sample) {
+  const style = getComputedStyle(canvas);
+  const value = name => style.getPropertyValue('--field-' + name).trim();
+  const number = (name, maximum) => Math.min(maximum, Math.max(0, Number(value(name)) || 0));
+  const colour = (name, strength = 1) => {
+    sample.fillStyle = 'transparent';
+    sample.fillStyle = value(name) || 'transparent';
+    sample.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = sample.getImageData(0, 0, 1, 1).data;
+    return [r / 255, g / 255, b / 255, a / 255 * strength];
+  };
+  return { light: document.documentElement.dataset.interfaceTheme === 'light',
+    speed: number('speed', Infinity), travel: number('travel', Infinity),
+    low: colour('low'), high: colour('high'),
+    tint: colour('tint'), glow: colour('glow', number('glow-strength', 1)),
+    shade: colour('shade', number('shade-strength', 1)) };
 }
 
 // Only the background needs this context. Its static FigCraft image stays
@@ -111,10 +144,16 @@ export default function VisitorLightField({ paused = false }) {
   useEffect(() => { pausedRef.current = paused; refresh.current?.(); }, [paused]);
   useEffect(() => {
     const canvas = ref.current, abort = new AbortController();
+    const swatch = document.createElement('canvas');
+    swatch.width = swatch.height = 1;
+    const sample = swatch.getContext('2d', { willReadFrequently: true });
+    if (!sample) return;
+    sample.globalCompositeOperation = 'copy';
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     const tile = new Image();
     tile.src = assets + 'output-dither.png';
     let tones, field, context, timer, last, seconds = 0;
+    let settings = readFieldSettings(canvas, sample);
     function paint() {
       clearTimeout(timer);
       if (!field || document.hidden || pausedRef.current) { last = undefined; return; }
@@ -123,17 +162,18 @@ export default function VisitorLightField({ paused = false }) {
       if (canvas.width !== width) canvas.width = width;
       if (canvas.height !== height) canvas.height = height;
       const now = performance.now();
-      if (last !== undefined && !motion.matches) seconds += (now-last)/1000;
+      const animating = !motion.matches && settings.speed > 0 && settings.travel > 0;
+      if (last !== undefined && animating) seconds += (now-last)/1000 * settings.speed;
       last = now;
-      field.draw(width, height, seconds, interfaceTheme.getSnapshot().mode === 'light');
+      field.draw(width, height, seconds);
       canvas.dataset.ready = 'true';
-      if (!motion.matches) timer = setTimeout(paint, 1000/24);
+      if (animating) timer = setTimeout(paint, 1000/24);
     }
     function start() {
       if (!tones || abort.signal.aborted) return;
       context = canvas.getContext('webgl', { alpha:false, antialias:false, depth:false, stencil:false, powerPreference:'low-power' });
       if (!context || context.isContextLost()) return;
-      try { field = prepareField(context, tones, tile); paint(); }
+      try { field = prepareField(context, tones, tile); field.configure(settings); paint(); }
       catch { delete canvas.dataset.ready; }
     }
     const events = { signal:abort.signal };
@@ -149,7 +189,14 @@ export default function VisitorLightField({ paused = false }) {
     window.addEventListener('resize', paint, events);
     const observer = new ResizeObserver(paint);
     observer.observe(canvas);
-    const unsubscribe = interfaceTheme.subscribe(paint);
+    const palette = new MutationObserver(() => {
+      settings = readFieldSettings(canvas, sample);
+      field?.configure(settings);
+      resetClock();
+    });
+    const paletteAttributes = { attributes: true, attributeFilter: ['data-interface-theme', 'data-palette', 'class', 'style'] };
+    palette.observe(document.documentElement, paletteAttributes);
+    palette.observe(canvas.parentElement, paletteAttributes);
     Promise.all([fetch(assets+'field-tones.bin', { signal:abort.signal }).then(response => {
       if (!response.ok) throw Error('Field unavailable');
       return response.arrayBuffer();
@@ -159,7 +206,7 @@ export default function VisitorLightField({ paused = false }) {
     }).catch(() => {});
     return () => {
       refresh.current = null;
-      abort.abort(); observer.disconnect(); unsubscribe(); clearTimeout(timer);
+      abort.abort(); observer.disconnect(); palette.disconnect(); clearTimeout(timer);
       field?.release();
       context?.getExtension('WEBGL_lose_context')?.loseContext();
     };

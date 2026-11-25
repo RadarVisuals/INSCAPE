@@ -1,3 +1,4 @@
+import { curatedSnapshot } from '../curatedSnapshots.js';
 import { normalizeProfileAddress } from '../config.js';
 import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace, normalizeCategoryImageSelections } from '../domain/libraryWorkspace.js';
 import { normalizeCanvasObjects } from '../domain/canvasObjects.js';
@@ -52,7 +53,16 @@ export function normalizeWorkspace(candidate, profileAddress) {
     if (!validCategoryIds.has(id) || organized.has(id)) return false; organized.add(id); return true;
   });
   for (const { id } of folders) if (!organized.has(id)) rootCategoryIds.push(id);
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders,
+  const members = new Set([...(Array.isArray(candidate.curatedAssetIds) ? candidate.curatedAssetIds : []), ...folders.flatMap(folder => folder.assetIds)]);
+  const snapshots = Object.entries(candidate.curatedSnapshots || {}).flatMap(([id, record]) => {
+    const snapshot = members.has(id) && id === record?.id && curatedSnapshot(record, { existing: true });
+    return snapshot ? [[id, snapshot]] : [];
+  });
+  return { ...(snapshots.length && { curatedSnapshots: Object.fromEntries(snapshots) }), version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders,
+    ...(Array.isArray(candidate.curatedAssetIds) && { curatedAssetIds: [...new Set(candidate.curatedAssetIds.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 300))] }),
+    ...(candidate.curatedImageSelections && { curatedImageSelections: normalizeCategoryImageSelections({
+      assetIds: candidate.curatedAssetIds || [], imageSelections: candidate.curatedImageSelections,
+    }).imageSelections }),
     categoryOrganization: { rootCategoryIds, sections }, canvas: { launchers: [], objects }, tables: { placements } };
 }
 

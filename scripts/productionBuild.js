@@ -73,7 +73,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // the measured gzip-boundary shift caused by that shared chunk.
   // Phase 8B adds only the lazy-module activation and explicit snapshot inputs
   // to the owner graph; the writer implementation remains in its own lazy chunk.
-  // Phase 9 activates the already isolated Creations, Activity, Discovery, and
+  // Phase 9 activates the already isolated Creations, Activity, and
   // Settings boundaries. The measured owner graph grows only at the activation
   // seam; each substantial surface remains independently lazy.
   // The prior owner presentation stayed within a measured allowance. The extra rollback
@@ -154,8 +154,8 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // live public LSP3/RPC read boundary; the RACK itself remains lazy/reused.
   // Phase 8B adds one owner-triggered lazy publication module around the
   // existing canonical IPFS/wallet/read-back pipeline. MODUL-8R Task 4 adds
-  // shared headless controllers to the existing lazy Activity and Discovery
-  // surfaces while its adapters remain development-only. Initial entry stays
+  // shared headless controllers to lazy Activity while its adapters remain
+  // development-only. Initial entry stays
   // unchanged; bound the measured aggregate production graph explicitly.
   // Task 8 prunes the old Browser/Rack owner branch at build selection time.
   // The remaining measured growth is the accepted complete MODUL-8R
@@ -170,10 +170,6 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Local grid snapping and the optional saved-view Index add validation,
   // publication filtering and a lazy editor. Measured aggregate gzip: 776,432.
   // Keep raw, initial-entry, owner-static and wallet limits unchanged.
-  // Reception adds an explicitly opened owner crop/selection editor and optional
-  // compatibility fields. Measured before: 778,922 gzip; first complete editor:
-  // 784,180 gzip (+5,258 bytes). Bound that feature plus a small build margin;
-  // raw, initial-entry, owner-static and wallet limits remain unchanged.
   // Shared Transform/Color adds the reusable hue ring/triangle and module-owned
   // color gestures. Measured first complete implementation: 789,828 gzip;
   // removal of superseded Image/Shape fields reduces that further. Bound the
@@ -228,29 +224,15 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Hosted builds inject a 40-character commit instead of the 11-character
   // development label. Reserve those 29 raw bytes; feature/gzip headroom stays
   // unchanged. Exact-SHA preview build: 2,572,016 raw / 830,333 gzip.
-  // Reception's existing canvas action is now connected through the public
+  // Composition's existing canvas action is now connected through the public
   // boundaries: 2,572,154 raw / 830,349 gzip before the event-argument guard.
   // Bound this small route addition; all compressed/loading budgets stay fixed.
   // Published collections, explicit selection and reuse of the lazy gallery:
   // measured 2,584,282 raw / 836,967 gzip with a 40-character release ID.
   // Initial-load, owner, wallet, CSS and asset ceilings remain unchanged.
-  // Static Reception adds its separate lazy editor, canonical partition and
-  // shared public renderer. Shared Image/Text/Library implementations remain
-  // single modules. Measured 2,641,147 raw / 862,169 gzip before final recovery
-  // guards. This bounds the aggregate addition; initial, owner, wallet, CSS
-  // and asset ceilings remain unchanged.
-  // Approved direct cell editing, crop gestures and reusable-content management
-  // replace the Reception sidebar. Measured aggregate: 2,651,292 raw / 865,404
-  // gzip. This includes lazy routes, not just startup. Bound the raw addition
-  // by 2 kB; compressed, initial-load, owner and wallet ceilings stay unchanged.
-  // Saved owner Reception viewing reuses the editor's content resolver and the
-  // public presentation. Measured: 2,652,486 raw / 865,503 gzip; allow 1 kB raw
-  // for this optional route. Startup and every other limit remain unchanged.
-  // Linked Reception: persisted references, shared scene scopes, source editing
-  // and the finite gallery add 19 kB raw / 8 kB gzip across lazy routes.
   // Measured 2,671,487 raw / 873,871 gzip before final controls and checks.
   // Startup, owner-runtime, wallet and CSS budgets are unchanged.
-  // Unified Reception Settings, persistent colour tools with scoped eyedropper,
+  // Unified Composition Settings, persistent colour tools with scoped eyedropper,
   // and exact Library image selection: final measured aggregate 2,682,359 raw.
   // Add 7 kB to the aggregate raw allowance; compressed/startup limits stay fixed.
   // Restoring the separate public overview shares WorkbenchOverview with its
@@ -266,14 +248,14 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Founder approved +3 kB raw / +1 kB gzip on 29 October; other limits stay fixed.
   // Individual category images add about 2.6 kB raw / 0.7 kB gzip. Founder
   // approved a further +3 kB raw / +1 kB gzip on 29 October for this behavior.
-  // Reception scenes, free/coupled frames and mobile geometry are new authored
+  // Composition scenes, free/coupled frames and mobile geometry are new authored
   // behavior. The filled implementation measured 2,697,137 raw / 889,855 gzip;
   // bound the final controls and projection at +7 kB raw / +7 kB gzip.
   // Startup, owner, wallet, CSS and isolation checks remain unchanged.
   // Detachable Library and movable Workbench selector reuse ToolPanel. Native
   // core measures 2,701,193 raw / 890,900 gzip; bound the raw excess by 2 kB.
   // Compressed, initial-load, owner, wallet, CSS and asset ceilings stay fixed.
-  // Reception's requested cell-layout generator adds a lazy dialog and bounded
+  // Composition's requested cell-layout generator adds a lazy dialog and bounded
   // geometry/apply helpers. First measurement: 2,709,585 raw / 893,939 gzip.
   // Allow +10 kB raw / +3 kB gzip for the aggregate; all loading-boundary,
   // wallet, CSS and asset limits stay unchanged.
@@ -478,11 +460,11 @@ function cssFiles(manifest, keys) {
 
 // Route cost includes startup once and static dependencies only. Optional tools
 // remain excluded until opened; aggregate core budgets still cover all of them.
-export async function measureReceptionRoutes(outputDirectory, manifest, initialKeys, ownerRuntimeGraph) {
+export async function measureWorkspaceRoutes(outputDirectory, manifest, initialKeys, ownerRuntimeGraph) {
   const routes = {
     publicAbout: 'src/profileDocument/components/ProfileOverview.jsx',
-    ownerAbout: 'src/reception/OwnerReception.jsx',
-    receptionEditing: 'src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx',
+    publicGallery: 'src/profileDocument/components/PublishedCanvasGallery.jsx',
+    studioEditing: 'src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx',
   };
   const startupJs = new Set([...initialKeys].map(key => manifest[key].file));
   const startupCss = new Set(cssFiles(manifest, initialKeys));
@@ -490,9 +472,10 @@ export async function measureReceptionRoutes(outputDirectory, manifest, initialK
   for (const [name, source] of Object.entries(routes)) {
     // The shared Editor can be an internal Rollup chunk without a src facade.
     // Resolve its actual module membership rather than reviving a separate
-    // Reception editor chunk or depending on a generated chunk name.
-    const chunk = ownerRuntimeGraph?.ownerChunks.find(chunk => chunk.modules.some(id => id.replaceAll('\\', '/').endsWith('/' + source)));
-    const key = Object.keys(manifest).find(key => key === source || manifest[key].src === source || chunk && manifest[key].file === chunk.file);
+    // Composition editor chunk or depending on a generated chunk name.
+    const matchesSource = id => typeof id === 'string' && (normalize(id) === source || normalize(id).endsWith('/' + source));
+    const chunk = ownerRuntimeGraph?.ownerChunks.find(chunk => chunk.modules.some(matchesSource));
+    const key = Object.keys(manifest).find(key => matchesSource(key) || matchesSource(manifest[key].src) || chunk && manifest[key].file === chunk.file);
     if (!key) continue;
     const keys = new Set([...initialKeys, ...manifestClosure(manifest, key)]);
     const js = await Promise.all([...new Set([...keys].map(k => manifest[k].file))].sort().map(file => measure(outputDirectory, file)));
@@ -582,7 +565,7 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
   return {
     version: 2, budgets, utilizationPercent: utilization(totals, budgets), totals,
     standaloneWalletEntry: ownerRuntimeGraph.standaloneWallet,
-    receptionRoutes: await measureReceptionRoutes(outputDirectory, manifest, initialKeys, ownerRuntimeGraph),
+    workspaceRoutes: await measureWorkspaceRoutes(outputDirectory, manifest, initialKeys, ownerRuntimeGraph),
     initialJavaScript: initialJs, ownerJavaScript: ownerJs, standaloneWalletJavaScript: walletJs,
     lazyJavaScript, initialCss, ownerCss,
     publicAssetCount: publicAssets.length, largestPublicAssets: publicAssets.slice(0, 10),

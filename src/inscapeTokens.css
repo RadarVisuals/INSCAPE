@@ -38,22 +38,26 @@
   --interface-hover: color-mix(in srgb, var(--interface-ink) 10%, var(--interface-panel));
   --interface-line: color-mix(in srgb, var(--interface-ink) 18%, var(--interface-panel));
   /* Accepted Editor finish; consumed only by migrated tool surfaces. */
-  --editor-default-panel: #2a2c2b;
-  --editor-default-workspace: #121413;
-  --editor-default-accent: #aad5ae;
-  --editor-default-ink: #eceeeb;
-  --editor-default-on-accent: #242527;
-  --editor-panel: var(--editor-custom-panel, var(--editor-default-panel));
+  --editor-default-panel: #2b2b2b;
+  --editor-default-workspace: #141414;
+  --editor-default-accent: #c4c4c4;
+  --editor-default-ink: #eeeeee;
+  --editor-default-on-accent: #222222;
+  --editor-panel: var(--editor-default-panel);
   --editor-header: color-mix(in srgb, var(--editor-ink) 4%, var(--editor-panel));
-  --editor-surround: var(--editor-custom-workspace, var(--editor-default-workspace));
-  --editor-ink: var(--editor-custom-ink, var(--editor-default-ink));
-  --editor-muted: color-mix(in srgb, var(--editor-ink) 65%, var(--editor-panel));
-  --editor-field: color-mix(in srgb, var(--editor-ink) 6%, var(--editor-panel));
+  --editor-surround: var(--editor-default-workspace);
+  --editor-ink: var(--editor-default-ink);
+  --editor-muted: color-mix(in srgb, var(--editor-ink) 76%, var(--editor-panel));
+  --editor-field: color-mix(in srgb, var(--editor-ink) 11%, var(--editor-panel));
+  --editor-menu-face: color-mix(in srgb, var(--editor-ink) 8%, var(--editor-panel));
+  --editor-menu-heading: color-mix(in srgb, #468edc 50%, var(--editor-ink));
+  --editor-menu-edge: color-mix(in srgb, var(--editor-ink) 56%, var(--editor-panel));
+  --editor-menu-shadow: 0 2px 5px rgb(0 0 0 / .22), 0 8px 18px rgb(0 0 0 / .24);
   --editor-header-control: var(--editor-field);
   --editor-line: color-mix(in srgb, var(--editor-ink) 20%, var(--editor-panel));
-  --editor-accent: var(--editor-custom-accent, var(--editor-default-accent));
+  --editor-accent: var(--editor-default-accent);
   --editor-selection: color-mix(in srgb, var(--editor-accent) 18%, var(--editor-panel));
-  --editor-on-accent: var(--editor-custom-on-accent, var(--editor-default-on-accent));
+  --editor-on-accent: var(--editor-default-on-accent);
   --editor-control-radius: 7px;
   --color-world: var(--interface-environment);
   --color-surface: var(--interface-panel);
@@ -155,10 +159,61 @@
   --interface-ink: #171717;
   --editor-default-panel: #faf9f6;
   --editor-default-workspace: #f4f3ef;
-  --editor-default-accent: #007a50;
-  --editor-default-ink: #252b27;
+  --editor-default-accent: #484844;
+  --editor-default-ink: #292927;
   --editor-default-on-accent: #ffffff;
+  --editor-menu-shadow: 0 2px 5px rgb(0 0 0 / .10), 0 8px 18px rgb(0 0 0 / .13);
 }
+
+:root[data-palette='charcoal'][data-interface-theme='light'] {
+  --editor-surround: var(--interface-environment);
+  --editor-panel: var(--interface-panel);
+  --editor-ink: #292927;
+}
+
+/* Field endpoints sampled from the light and shadow in the FigCraft palette board. */
+:root[data-palette='oxblood'] {
+  --field-low: #201418; --field-high: #563138;
+  --palette-canvas: #352126; --palette-glass: #43282d; --palette-ink: #f0e4dc; --palette-accent: #e3a5a2;
+}
+:root[data-palette='saffron'] {
+  --field-low: #282316; --field-high: #605039;
+  --palette-canvas: #3d3323; --palette-glass: #493f2c; --palette-ink: #f5e9ce; --palette-accent: #e8c565;
+}
+:root[data-palette='storm-glass'] {
+  --field-low: #19212c; --field-high: #455765;
+  --palette-canvas: #28323f; --palette-glass: #343f4b; --palette-ink: #e4eaf1; --palette-accent: #b2c9da;
+}
+:root[data-palette='brass-ink'] {
+  --field-low: #182123; --field-high: #404b4f;
+  --palette-canvas: #263133; --palette-glass: #2c383a; --palette-ink: #ece9df; --palette-accent: #d4b783;
+}
+:root[data-palette='oxblood'][data-interface-theme='light'] {
+  --field-low: #b6a697; --field-high: #e8decb;
+  --palette-canvas: #d1c2b0; --palette-glass: #dccebb; --palette-ink: #392628; --palette-accent: #762f3b;
+}
+:root[data-palette='saffron'][data-interface-theme='light'] {
+  --field-low: #c3b491; --field-high: #ece3c6;
+  --palette-canvas: #dccdaa; --palette-glass: #e5d8b7; --palette-ink: #382f20; --palette-accent: #73520b;
+}
+:root[data-palette='storm-glass'][data-interface-theme='light'] {
+  --field-low: #a6b6c3; --field-high: #d6e1e7;
+  --palette-canvas: #beccd5; --palette-glass: #ccd7dd; --palette-ink: #29313c; --palette-accent: #425b73;
+}
+:root[data-palette='brass-ink'][data-interface-theme='light'] {
+  --field-low: #aeaaa0; --field-high: #e1decf;
+  --palette-canvas: #cbc6ba; --palette-glass: #d5cec1; --palette-ink: #313431; --palette-accent: #70532b;
+}
+:root[data-palette]:not([data-palette='charcoal']) {
+  --interface-environment: var(--palette-canvas); --interface-panel: var(--palette-glass); --interface-ink: var(--palette-ink);
+  --editor-panel: var(--palette-glass); --editor-surround: var(--palette-canvas); --editor-ink: var(--palette-ink);
+  --editor-accent: var(--palette-accent); --editor-on-accent: var(--palette-canvas);
+  --editor-menu-heading: var(--palette-accent);
+}
+.interface-palette { display: inline-flex; align-items: center; gap: 8px; color: inherit; }
+.interface-palette select { color: inherit; background: var(--interface-panel); border: 1px solid var(--interface-line); border-radius: var(--control-radius); padding: 4px 6px; font: inherit; cursor: pointer; }
+.interface-palette select option { background: var(--interface-panel); color: var(--interface-ink); }
+.interface-palette:focus-within { outline: 2px solid currentColor; outline-offset: 2px; border-radius: var(--control-radius); }
 
 .interface-theme-toggle { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid var(--interface-line); border-radius: var(--control-radius); background: var(--interface-panel); }
 .interface-theme-toggle button { border: 0; border-radius: 3px; padding: 8px 14px; background: transparent; color: var(--interface-ink); font: 12px var(--font-interface); cursor: pointer; }

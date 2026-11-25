@@ -42,7 +42,7 @@ test('Keeper dock accepts Library artwork, releases/returns, persists, undoes an
     await drop(page);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
     assert.equal((await page.evaluate(() => window.savedDraft().keeperDocks)).length, 1);
-    assert.equal(await page.locator('.image-module').count(), 0, 'dock consumes drop instead of creating Image');
+    assert.deepEqual(await page.evaluate(() => window.savedDraft().imageModules), beforeMove.imageModules, 'dock consumes drop instead of creating Image');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     const sizeInput = page.getByRole('spinbutton', { name: 'Keeper size', exact: true });
     await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
@@ -153,6 +153,7 @@ test('Keeper reduced motion is stationary, failed saves retain the inhabitant, a
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
     });
     await page.reload(); await mountTextToolsFixture(page, origin);
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.getByRole('button', { name: 'Retry Keeper artwork', exact: true }).waitFor();
     await page.route('https://keepers.inscape.test/art.webp', route => route.fulfill({ contentType: 'image/webp', path: 'public/assets/actors/abyssal_eye/full.webp' }));
     await page.getByRole('button', { name: 'Retry Keeper artwork', exact: true }).click();

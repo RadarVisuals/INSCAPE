@@ -149,15 +149,6 @@ function decodePointer(value) {
   }
 }
 
-export function isPublishedProfilePointerValue(value) {
-  try {
-    const pointer = decodePointer(value);
-    resolvePublishedContentUrl(pointer.url, 'https://directory.invalid/ipfs/');
-    return true;
-  }
-  catch { return false; }
-}
-
 function availabilityCode(error, fallback) {
   return error instanceof PublishedProfileAvailabilityError ? error.code : fallback;
 }

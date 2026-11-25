@@ -19,7 +19,7 @@ export function createOwnerRuntimeGraph(bundle) {
   if (walletChunks.length > 1) throw new Error('The production graph contains multiple standalone wallet source chunks');
   const entryChunks = Object.values(chunks).filter((chunk) => chunk.isEntry);
   const readerChunks = Object.values(chunks).filter(chunk => Object.keys(chunk.modules).some(id =>
-    ['/src/reception/OwnerReception.jsx', '/src/profileDocument/components/ProfileOverview.jsx'].some(path => normalize(id).endsWith(path))));
+    normalize(id).endsWith('/src/profileDocument/components/ProfileOverview.jsx')));
   const staticFiles = (entry) => {
     const visited = new Set();
     const visit = (fileName) => {
@@ -61,7 +61,7 @@ export function createOwnerRuntimeGraph(bundle) {
 export function assertOwnerRuntimeGraph(graph) {
   if (!graph.ownerChunks.length) throw new Error('The production graph did not contain an owner runtime chunk');
   if (graph.leaks.length) {
-    throw new Error(`Owner runtime leaked into an initial entry or Reception reader: ${graph.leaks
+    throw new Error(`Owner runtime leaked into an initial entry or Composition reader: ${graph.leaks
       .map(({ entry, ownerChunk }) => `${entry} -> ${ownerChunk}`).join(', ')}`);
   }
   if (graph.standaloneWallet?.source !== STANDALONE_WALLET_SOURCE || !graph.standaloneWallet.file) {

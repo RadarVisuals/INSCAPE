@@ -1,6 +1,6 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { createArticle, MAX_TEXT_MODULES } from './domain/article.js';
-import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS, MIN_RECEPTION_CELL_SIZE } from '../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS, MIN_COMPOSITION_CELL_SIZE } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
 export function prepareTextResize(draft, { expected }) {
@@ -13,7 +13,7 @@ export function changeTextFrames(store, profile, expected, presentation, frames,
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
   prepareTextResize(draft, { expected });
-  if (expected.sceneLink || expected.pagination) throw new Error('Unlink Follow Display and turn off Read as pages before adding linked frames.');
+  if (expected.pagination) throw new Error('Turn off Read as pages before adding linked frames.');
   const next = { ...presentation };
   if (frames.length) next.frames = frames; else delete next.frames;
   const layout = workbench || draft.workbench || createDefaultWorkbenchPresentation();
@@ -24,30 +24,6 @@ export function changeTextFrames(store, profile, expected, presentation, frames,
   return next;
 }
 
-// Unlink is explicit and atomic. Legacy passages become private standalone
-// Texts so their distinct typography and content are never flattened or lost.
-export function unlinkTextModuleResult(store, profile, expected) {
-  if (store.getProfileAddress() !== profile) return textSaveFailure('profile');
-  const draft = store.getDraft(), generation = store.getGeneration();
-  const current = draft.texts?.find(item => item.id === expected.id);
-  if (!current) return textSaveFailure('missing');
-  if (JSON.stringify(current) !== JSON.stringify(expected)) return textSaveFailure('conflict');
-  if (!current.sceneLink) return { saved: true, record: current };
-  const { sceneLink, ...record } = current;
-  const passages = sceneLink.mode === 'sections' ? [] : sceneLink.passages;
-  if (draft.texts.length + passages.length > MAX_TEXT_MODULES) return { saved: false, reason: 'capacity',
-    message: `Unlinking needs ${passages.length} additional Text windows to preserve all passages. The Workbench limit is ${MAX_TEXT_MODULES}. Nothing was changed.` };
-  try {
-    const extras = passages.map(({ article }) => ({ ...record, id: `text:${crypto.randomUUID()}`, article: structuredClone(article), visibility: 'PRIVATE' }));
-    const texts = [...draft.texts.map(item => item.id === record.id ? record : item), ...extras];
-    const workbench = draft.workbench || createDefaultWorkbenchPresentation();
-    const next = { ...draft, texts, ...(extras.length ? { workbench: { ...workbench,
-      texts: [...(workbench.texts || []), ...extras.map((item, index) => createTextPresentation(item.id, draft.texts.length + index))] } } : {}) };
-    const saved = store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Unlink Text from Display' });
-    return saved ? { saved: true, record: store.getDraft().texts.find(item => item.id === record.id) }
-      : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
-  } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
-}
 export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance } = {}) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
@@ -62,8 +38,8 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
       const cellId = placed.cellId ?? store.getEditingCell?.();
       const inCell = cellId && store.getCells?.().some(cell => cell.id === cellId);
       const limits = inCell ? CELL_TEXT_WINDOW_LIMITS : TEXT_WINDOW_LIMITS;
-      const minimumWidth = inCell ? MIN_RECEPTION_CELL_SIZE.width : limits.minimumWidth;
-      const minimumHeight = inCell ? MIN_RECEPTION_CELL_SIZE.height : limits.minimumHeight;
+      const minimumWidth = inCell ? MIN_COMPOSITION_CELL_SIZE.width : limits.minimumWidth;
+      const minimumHeight = inCell ? MIN_COMPOSITION_CELL_SIZE.height : limits.minimumHeight;
       if (!Number.isFinite(width) || !Number.isFinite(height) || width < minimumWidth || height < minimumHeight
         || width > limits.maximumWidth || height > limits.maximumHeight)
         throw new Error(`Text needs at least ${minimumWidth} × ${minimumHeight} px. Enlarge the cell before adding Text.`);
@@ -78,7 +54,8 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
   return item.id;
 }
 export function saveTextModule(store, profile, expected, next) {
-  return saveTextModuleResult(store, profile, expected, next).saved;
+  const result = saveTextModuleResult(store, profile, expected, next);
+  return result.committed ?? result.saved;
 }
 
 export function duplicateTextModule(store, profile, expected, workbench) {
@@ -105,7 +82,7 @@ export function duplicateTextModule(store, profile, expected, workbench) {
 
 const messages = {
   locked: 'Unlock this layer before editing it. Your unsaved text is still here.',
-  reception_command: 'This command is unavailable in this Bento composition. Your unsaved text is still here.',
+  composition_command: 'This command is unavailable in this Bento composition. Your unsaved text is still here.',
   editor_unavailable: 'This tab no longer has editing access. Your unsaved text is still here.',
   profile: 'This profile is no longer active. Your unsaved text is still here.',
   conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',
@@ -118,6 +95,10 @@ const messages = {
   write_failed: 'Browser storage could not save your changes. It may be full or blocked. Your unsaved text is still here.',
 };
 export const textSaveFailure = code => ({ saved: false, reason: code, message: messages[code] || messages.write_failed });
+export function acceptedTextRecord(store, record) {
+  const committed = store.whenCommitted?.() ?? true;
+  return committed === true ? { saved: true, record } : { accepted: true, saved: false, record, committed };
+}
 const workbenchTexts = { read: draft => draft.texts, replace: (draft, texts) => ({ ...draft, texts }) };
 export function saveTextModuleResult(store, profile, expected, next, options) {
   return saveTextRecordResult(store, profile, expected, next, options, workbenchTexts);
@@ -133,7 +114,7 @@ export function saveTextRecordResult(store, profile, expected, next, { retry = f
     const current = collection.read(draft)?.find(item => item.id === expected.id);
     if (!current) { reason = 'missing'; return null; }
     const value = { ...current };
-    for (const key of ['article', 'visibility', 'sceneLink', 'pagination']) {
+    for (const key of ['article', 'visibility', 'pagination']) {
       if (JSON.stringify(expected[key]) === JSON.stringify(next[key])) continue;
       if (JSON.stringify(current[key]) !== JSON.stringify(expected[key]) && JSON.stringify(current[key]) !== JSON.stringify(next[key]) && !replace) {
         reason = 'conflict'; return null;
@@ -152,7 +133,7 @@ export function saveTextRecordResult(store, profile, expected, next, { retry = f
     // the edited record. The store still validates and detaches before accepting.
     const nextDraft = retry ? null : candidate(store.getSnapshot());
     const saved = retry ? store.retryCompletedOperation(candidate, options) : nextDraft && store.commitCompletedOperation(nextDraft, options);
-    return saved ? { saved: true, record: structuredClone(collection.read(store.getSnapshot()).find(item => item.id === expected.id)) }
+    return saved ? acceptedTextRecord(store, structuredClone(collection.read(store.getSnapshot()).find(item => item.id === expected.id)))
       : failed(reason || store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }

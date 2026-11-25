@@ -202,7 +202,7 @@ describe('Playwright browser lifecycle', () => {
     } });
     assert.deepEqual(result, entries.slice(1).map(entry => ({ pid: entry.ProcessId, parentPid: entry.ParentProcessId, identity: entry.CreationDate })));
     assert.equal(calls[0][0], 'powershell.exe');
-    assert.equal(calls[0][2].timeoutMs, 6000);
+    assert.equal(calls[0][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs);
     assert.match(calls[0][1].at(-1), /-ErrorAction Stop/u);
     const single = await listWindowsProcesses({ runtime: mockWindowsRuntime, run: async () => ({ code: 0, stdout: JSON.stringify(entries[1]), stderr: '' }) });
     assert.deepEqual(single, [result[0]]);
@@ -231,7 +231,7 @@ describe('Playwright browser lifecycle', () => {
     assert.deepEqual(runtime, { executable: resolve(root, 'pwsh.exe'), version: '7.6.5', sha256: createHash('sha256').update('fixture-modern').digest('hex') });
     assert.equal(await resolveWindowsProcessRuntime(environment, dependencies), runtime);
     assert.equal(await resolveWindowsProcessRuntime({ ...environment, INSCAPE_PROCESS_POWERSHELL: runtime.executable }, dependencies), runtime);
-    assert.equal(calls.length, 1); assert.equal(calls[0][2].timeoutMs, 6000);
+    assert.equal(calls.length, 1); assert.equal(calls[0][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs);
     assert.equal(await resolveWindowsProcessRuntime(environment, { platform: 'linux', run: () => assert.fail('POSIX must not probe PowerShell') }), null);
   });
 

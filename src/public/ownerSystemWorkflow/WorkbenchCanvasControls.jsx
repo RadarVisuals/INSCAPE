@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Frame, Maximize, Scan, Eye, X } from 'lucide-react';
+import { Frame, Maximize, Eye, X } from 'lucide-react';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -15,7 +15,8 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
   const [localOpen, setLocalOpen] = useState(false), [error, setError] = useState('');
   const open = controlledOpen ?? localOpen;
   const setOpen = onOpenChange || setLocalOpen;
-  const [projection, setProjection] = useState(camera.getCamera);
+  const { getCamera, subscribeCameraPaint, scale, offset } = camera;
+  const [projection, setProjection] = useState(getCamera);
   const [viewport, setViewport] = useState(null);
   const drag = useRef(null), trigger = useRef(null), panel = useRef(null), latest = useRef(null);
   useLayoutEffect(() => { if (open && controlledOpen !== undefined) panel.current?.querySelector('button')?.focus(); }, [open, controlledOpen]);
@@ -56,14 +57,14 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
     if (!open || !hostRef.current) return;
     const measure = () => { finish(true); setViewport(hostRef.current.getBoundingClientRect()); };
     const observer = new ResizeObserver(measure); observer.observe(hostRef.current); measure();
-    const unsubscribe = camera.subscribeCameraPaint(next => {
+    const unsubscribe = subscribeCameraPaint(next => {
       const active = drag.current;
       if (active && (next.scale !== active.camera.scale || next.offset.x !== active.camera.offset.x || next.offset.y !== active.camera.offset.y)) finish(true);
       setProjection(next);
     });
     return () => { observer.disconnect(); unsubscribe(); };
-  }, [open, hostRef, camera.subscribeCameraPaint, finish]);
-  useLayoutEffect(() => { if (open) setProjection(camera.getCamera()); }, [open, camera.scale, camera.offset, camera.getCamera]);
+  }, [open, hostRef, subscribeCameraPaint, finish]);
+  useLayoutEffect(() => { if (open) setProjection(getCamera()); }, [open, scale, offset, getCamera]);
 
   const blocked = Boolean(historyBlocked || navigation.locked && !drag.current);
   const commit = area => {
@@ -139,9 +140,6 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
         <Eye />Show outside canvas</button>
       <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={fit}
         title="Fit to the object edges without extra margin"><Maximize />Fit canvas to content</button>
-      <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={() => navigation.focusDestination({
-        getBounds: () => ({ left: area.left + area.width - 300, top: area.top + area.height - 200, width: 600, height: 400 }),
-      })}><Scan />Find resize corner</button>
       {(error || historyBlocked) && <p role="alert">{error || historyBlocked}</p>}
     </div>}
     {open && !blocked && hostRef.current && createPortal(<>

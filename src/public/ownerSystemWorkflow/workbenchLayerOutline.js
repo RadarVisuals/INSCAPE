@@ -24,3 +24,23 @@ export function workbenchLayerOutline(layers, groups, owners) {
   for (const group of groups) folder(group);
   return outline;
 }
+
+export function cellLayerOutline(layers, cellOwners) {
+  // Each block has one selectable row. A block spanning cells lives at the
+  // root; its contained artwork is also reachable through its owning cell.
+  const blockOwners = new Map(), outline = new Map();
+  const append = (cellId, layer) => {
+    if (!outline.has(cellId)) outline.set(cellId, []);
+    outline.get(cellId).push(layer);
+  };
+  for (const layer of layers) {
+    const members = layerMembers(layer), owner = cellOwners.get(members[0]);
+    const sharedOwner = members.every(id => cellOwners.get(id) === owner);
+    append(sharedOwner ? owner : undefined, layer);
+    if (typeof layer !== 'string') for (const id of members) {
+      blockOwners.set(id, layer.id);
+      if (!sharedOwner && cellOwners.has(id)) append(cellOwners.get(id), id);
+    }
+  }
+  return { outline, blockOwners };
+}

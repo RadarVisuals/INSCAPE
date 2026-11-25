@@ -22,7 +22,7 @@ export function useWorkbenchLayoutSession({ profileAddress, draft, storage, work
   );
   const initialWorkbench = useRef(restoredWorkspace.layout || draft.workbench || null);
   const [workbenchLayout, setWorkbenchLayout] = useState(() => {
-    const { area, ...layout } = initialWorkbench.current || createDefaultWorkbenchPresentation();
+    const { area, lockedLayerIds, ...layout } = initialWorkbench.current || createDefaultWorkbenchPresentation();
     return layout;
   });
   const changeIdentityWindow = useCallback(
@@ -61,22 +61,18 @@ export default function useWorkbenchPresentation({
 }) {
   const { restoredWorkspace, workbenchLayout, sharedTools } = layoutSession;
   const { views: textViews, presentations: textPresentations } = modules.text;
-  const { records: instanceRecords, presentations: instancePresentations } = modules.display;
   const { presentations: imagePresentations } = modules.images;
   const { presentations: shapePresentations } = modules.shapes;
-  const hasPrimaryDisplay = draft.grids.length > 0;
   const workbenchProjection = useMemo(
     () =>
       captureWorkbenchPresentation({
         layout: {
           ...workbenchLayout,
+          ...(draft.workbench?.lockedLayerIds ? { lockedLayerIds: draft.workbench.lockedLayerIds } : {}),
           ...(draft.workbench?.area ? { area: draft.workbench.area } : {}),
         },
-        hasPrimaryDisplay,
         identityOpen,
-        displays: draft.displays,
         texts: draft.texts,
-        displayPresentations: instancePresentations,
         textPresentations,
         imageModules: draft.imageModules,
         imagePresentations,
@@ -87,11 +83,9 @@ export default function useWorkbenchPresentation({
       }),
     [
       draft.workbench?.area,
-      hasPrimaryDisplay,
+      draft.workbench?.lockedLayerIds,
       workbenchLayout,
       identityOpen,
-      instancePresentations,
-      draft.displays,
       draft.texts,
       textPresentations,
       draft.imageModules,
@@ -105,10 +99,6 @@ export default function useWorkbenchPresentation({
   const workbench = workbenchProjection.value;
   const workspaceViews = Object.fromEntries([
     ['workbench:tools', { ...sharedTools, targetId: activeModuleId }],
-    ...Object.entries(instanceRecords).map(([id, record]) => [
-      id,
-      { gridId: record.controller.selectedGridId, locked: record.locked },
-    ]),
     ...Object.entries(textViews),
   ]);
   const layoutPersistence = useWorkbenchLayoutPersistence({

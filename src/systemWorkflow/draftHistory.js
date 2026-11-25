@@ -34,5 +34,5 @@ export function draftChangeLabel(changes) {
   const key = changes[0]?.path[0];
   return ({ texts: 'Edit · Text', imageModules: 'Edit · Image', shapes: 'Edit · Shape', keeperDocks: 'Edit · Keeper',
     identityPresentation: 'Edit · Identity', workbench: 'Edit · Workbench',
-    grids: 'Edit · Display', appearance: 'Edit · Display', displays: 'Edit · Display' })[key] || 'Edit';
+    appearance: 'Edit appearance' })[key] || 'Edit';
 }

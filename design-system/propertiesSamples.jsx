@@ -6,14 +6,9 @@ import {
   Crop,
   Trash2,
   ZoomIn,
-  ChevronDown,
-  ChevronUp,
-  ChevronsDown,
-  ChevronsUp,
 } from 'lucide-react';
 import DetachedWindow from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowDetachedWindow.jsx';
 import ArtworkTransformTools from '../src/public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
-import PlacementSizeControls from '../src/public/ownerSystemWorkflow/PlacementSizeControls.jsx';
 import '../src/public/ownerSystemWorkflow/displayInstruments.css';
 import '../src/imageModule/imageModule.css';
 import '../src/shapes/shapes.css';
@@ -22,7 +17,6 @@ import '../src/shapes/shapes.css';
 // artwork rendering, module sessions and persistence remain in the production app.
 const owners = {
   image: 'src/imageModule/ImageWorkbench.jsx',
-  display: 'src/public/ownerSystemWorkflow/OwnerSystemWorkflowSelectionInspector.jsx',
   shape: 'src/shapes/ShapeWorkbench.jsx',
 };
 const examples = {
@@ -31,26 +25,12 @@ const examples = {
     ['empty', 'Empty Image'],
     ['busy', 'Editing an image'],
   ],
-  display: [
-    ['single', 'One artwork'],
-    ['multiple', 'Multiple artworks'],
-    ['group', 'Grouped artworks'],
-    ['locked', 'Locked artwork'],
-    ['text', 'Text selection'],
-    ['empty', 'Nothing selected'],
-  ],
   shape: [
     ['rectangle', 'Rectangle'],
     ['grid', 'Grid'],
     ['texture', 'Retained texture'],
   ],
 };
-const orderActions = [
-  ['back', 'Send to back', ChevronsDown],
-  ['backward', 'Move backward', ChevronDown],
-  ['forward', 'Move forward', ChevronUp],
-  ['front', 'Bring to front', ChevronsUp],
-];
 const control = 'workflow-tactile-control';
 function IconButton({ label, icon: Icon, ...props }) {
   return (
@@ -235,194 +215,6 @@ function ImageSample({ example, report, setTitle }) {
         />
         Include Image in publication
       </label>
-    </>
-  );
-}
-function DisplaySample({ example, report, setTitle }) {
-  const [grouped, setGrouped] = useState(example === 'group'),
-    [inspection, setInspection] = useState('IN_PLACE');
-  const [layer, setLayer] = useState(1),
-    [cropping, setCropping] = useState(false);
-  const [placement, setPlacement] = useState({
-    id: 'example-artwork',
-    column: 2,
-    row: 2,
-    columnSpan: 12,
-    rowSpan: 8,
-  });
-  const cropButton = useRef(null),
-    empty = example === 'empty',
-    text = example === 'text',
-    locked = example === 'locked';
-  const multiple = example === 'multiple' || example === 'group';
-  useEffect(
-    () =>
-      setTitle(
-        `Display / ${empty ? 'No selection' : text ? 'Text' : multiple ? '2 artworks' : 'Artwork'}`,
-      ),
-    [empty, text, multiple, setTitle],
-  );
-  const controller = {
-    selectedGridId: 'example-grid',
-    run: (action) =>
-      action({
-        resizePlacement: ({ destination }) => {
-          setPlacement((current) => ({ ...current, ...destination }));
-          report(`Artwork size · ${destination.columnSpan} × ${destination.rowSpan} canvas units`);
-        },
-      }),
-  };
-  if (empty)
-    return <p className="system-workflow__layer-hint">Select a layer to edit its properties.</p>;
-  if (cropping)
-    return (
-      <CropSample
-        onFinish={(action, zoom) => {
-          setCropping(false);
-          report(
-            action === 'cancel'
-              ? 'Crop cancelled'
-              : action === 'native'
-                ? 'Native fit selected'
-                : `Crop applied at ${Math.round(zoom * 100)}%`,
-          );
-          requestAnimationFrame(() => cropButton.current?.focus());
-        }}
-      />
-    );
-  return (
-    <>
-      <nav className="system-workflow__selection-actions" aria-label="Selection actions">
-        {!text && (
-          <IconButton
-            label="Inspect artwork"
-            icon={ZoomIn}
-            disabled={multiple}
-            onClick={() => report('Inspect artwork opens the selected artwork in the app')}
-          />
-        )}
-        {!text && <ArtworkTransformTools disabled={locked} onTransform={report} />}
-        <IconButton
-          label="Duplicate"
-          icon={Copy}
-          disabled={locked}
-          onClick={() =>
-            report(multiple ? 'Duplicate selected artworks' : 'Duplicate selected layer')
-          }
-        />
-        {orderActions.map(([direction, label, Icon]) => (
-          <IconButton
-            key={direction}
-            label={label}
-            icon={Icon}
-            disabled={locked || (direction.startsWith('back') ? layer === 0 : layer === 2)}
-            onClick={() => {
-              setLayer(
-                direction === 'back'
-                  ? 0
-                  : direction === 'front'
-                    ? 2
-                    : layer + (direction === 'backward' ? -1 : 1),
-              );
-              report(label);
-            }}
-          />
-        ))}
-        {!text && (
-          <button
-            ref={cropButton}
-            type="button"
-            className={control}
-            aria-label="Crop"
-            title="Crop artwork"
-            disabled={locked || multiple}
-            onClick={() => setCropping(true)}
-          >
-            <Crop />
-          </button>
-        )}
-      </nav>
-      <section className="system-workflow__layer-controls" aria-label="Selection properties">
-        {multiple && (
-          <button
-            type="button"
-            className={`${control} system-workflow__add-text`}
-            onClick={() => {
-              setGrouped(!grouped);
-              report(grouped ? 'Ungroup layers' : 'Group layers');
-            }}
-          >
-            {grouped ? 'Ungroup' : 'Group layers'}
-          </button>
-        )}
-        {grouped && (
-          <p className="system-workflow__layer-hint">
-            Moves and animates together. Ungroup to edit individual layers. Ungroup removes group
-            effects and restores individual effects.
-          </p>
-        )}
-        {!multiple && (
-          <details className="workbench-dimensions">
-            <summary>Dimensions…</summary>
-            <PlacementSizeControls
-              placement={placement}
-              controller={controller}
-              disabled={locked}
-            />
-          </details>
-        )}
-        {!multiple && !text && (
-          <div
-            className="system-workflow__inspection-selector"
-            role="group"
-            aria-label="Artwork inspection mode"
-          >
-            <span>Inspect</span>
-            {[
-              ['IN_PLACE', 'In place'],
-              ['LIFT', 'Lift'],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={control}
-                disabled={locked}
-                aria-pressed={inspection === value}
-                onClick={() => setInspection(value)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
-        {!multiple && !text && !locked && (
-          <>
-            <button
-              type="button"
-              className={`${control} system-workflow__add-text`}
-              onClick={() => report('Artwork info opens the source and metadata in the app')}
-            >
-              Artwork info
-            </button>
-            <nav className="system-workflow__placement-actions" aria-label="Artwork placement">
-              {['Fit inside Display', 'Cover Display', 'Centre'].map((label) => (
-                <button key={label} type="button" className={control} onClick={() => report(label)}>
-                  {label}
-                </button>
-              ))}
-            </nav>
-          </>
-        )}
-        {text && (
-          <button
-            type="button"
-            className={`${control} system-workflow__add-text`}
-            onClick={() => report('Edit Text opens the complete Text inspector in the app')}
-          >
-            Edit Text
-          </button>
-        )}
-      </section>
     </>
   );
 }
@@ -671,7 +463,7 @@ export function PropertiesPreview({ onAction, status }) {
     )?.focus();
   }, [open]);
   const Sample =
-    variant === 'image' ? ImageSample : variant === 'display' ? DisplaySample : ShapeSample;
+    variant === 'image' ? ImageSample : ShapeSample;
   const reset = () => {
     setRevision((value) => value + 1);
     setMessage('Example reset.');
@@ -684,7 +476,7 @@ export function PropertiesPreview({ onAction, status }) {
         {status}
       </div>
       <p className="ds-caption">
-        The controls for each selection, including crop, grouping and shape variants. Changes stay
+        The controls for each selection, including crop and shape variants. Changes stay
         in the example; artwork actions report what they do.
       </p>
       <div className="ds-properties-switcher">
@@ -702,7 +494,6 @@ export function PropertiesPreview({ onAction, status }) {
             }}
           >
             <option value="image">Image</option>
-            <option value="display">Display artwork</option>
             <option value="shape">Shape</option>
           </select>
         </label>
@@ -770,14 +561,12 @@ export function PropertiesPreview({ onAction, status }) {
       <p className="ds-caption">
         {variant === 'image'
           ? 'Image keeps its actions, direct Fit choices, exact size and publication setting.'
-          : variant === 'display'
-            ? 'Selection changes the available actions. Grouping, locked layers, text and no selection each have their own state.'
             : 'Rectangle has grain; Grid has snapping and line settings. Retained texture represents existing saved work; it is not a new creation option.'}
       </p>
       <div className="ds-properties-links">
         <a
           className="ds-source"
-          href={`/browser-tests/tool-chrome-fixture.html?sample=${variant === 'display' ? 'layers' : variant}`}
+          href={`/browser-tests/tool-chrome-fixture.html?sample=${variant}`}
           target="_blank"
           rel="noreferrer"
         >

@@ -8,22 +8,21 @@ import './publishedCompositions.css';
 
 const CanvasPresentation = lazy(() => import('../../public/workbenchOverview/CanvasPresentation.jsx'));
 
-export default function PublishedCanvasGallery({ entries, snapshot, persona, profileLinks = false, view, onViewChange,
-  selectedId, onSelect, cardSize, onCardSize, cameraMemory, onEdit, onNewComposition, onRemoveFromGallery }) {
+export default function PublishedCanvasGallery({ toolbarHost, entries, snapshot, persona, profileLinks = false, view, onViewChange,
+  selectedId, onSelect, cardSize, onCardSize, cameraMemory, onEdit, onManageWorks, onNewComposition, onRemoveFromGallery }) {
   const [openId, setOpenId] = useState(null);
   const trigger = useRef(null);
   const { restoreFocus } = useDeferredFocusReturn();
   const previews = useMemo(() => {
     const byId = new Map(snapshot.entries.map(entry => [entry.id, entry]));
     return entries.map(item => {
-      const entry = item.reception ? { ...item, draft: { profileAddress: snapshot.profileAddress, grids: [], composition: item.reception } }
-        : byId.get(item.id);
+      const entry = byId.get(item.id);
       return { ...entry, model: workbenchOverviewModel(entry.draft) };
     });
   }, [entries, snapshot]);
   const selected = previews.find(item => item.id === selectedId) || previews[0];
   const opened = previews.find(item => item.id === openId);
-  if (!selected) return <main className="published-work-list"><h1>Gallery</h1><p>No compositions in Gallery yet.</p>{onNewComposition && <button type="button" onClick={() => onNewComposition()}>+ New</button>}</main>;
+  if (!selected) return <main className="published-work-list"><h1>Gallery</h1><p>No compositions in Gallery yet.</p>{onNewComposition && <button type="button" onClick={() => onNewComposition()}>New composition</button>}{onManageWorks && <button type="button" onClick={onManageWorks}>Manage works</button>}</main>;
   return <CompositionSources snapshot={snapshot} profile={persona}>
     {profileLinks ? <section className="published-work-list profile-linked-works" aria-label="Linked compositions">
       <h2>Compositions</h2>
@@ -35,8 +34,8 @@ export default function PublishedCanvasGallery({ entries, snapshot, persona, pro
       {opened && <Suspense fallback={null}><CanvasPresentation publishedWorks selected={opened} model={opened.model}
         origin={trigger.current?.previousElementSibling} onEdit={onEdit}
         onClose={() => { setOpenId(null); restoreFocus(trigger.current); }} /></Suspense>}
-    </section> : <WorkbenchOverview visitorHeader items={previews} previews={previews} selected={selected} model={selected.model}
+    </section> : <WorkbenchOverview toolbarHost={toolbarHost} visitorHeader galleryAddress={onEdit ? snapshot.profileAddress : undefined} items={previews} previews={previews} selected={selected} model={selected.model}
       profile={{ name: persona.profile.displayName, avatarUrl: persona.profile.avatarUrl }} onEdit={onEdit} onRequestNew={onNewComposition && (() => onNewComposition())}
-      onRemoveFromGallery={onRemoveFromGallery} onSelect={onSelect} view={view} onViewChange={onViewChange} cardSize={cardSize} onCardSize={onCardSize} cameraMemory={cameraMemory} />}
+      onManageWorks={onManageWorks} onRemoveFromGallery={onRemoveFromGallery} onSelect={onSelect} view={view} onViewChange={onViewChange} cardSize={cardSize} onCardSize={onCardSize} cameraMemory={cameraMemory} />}
   </CompositionSources>;
 }

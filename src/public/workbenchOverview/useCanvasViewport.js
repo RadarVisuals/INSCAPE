@@ -5,24 +5,25 @@ import { interpolateWorkbenchCamera, restoreWorkbenchCamera, workbenchDestinatio
 
 // A presentation has no editor store. Camera memory belongs to the surrounding
 // collection session, keyed by composition, and never enters authored content.
-export default function useCanvasViewport({ hostRef, area, destinations, memory, disabled }) {
+export default function useCanvasViewport({ hostRef, area, destinations, memory, disabled, smoothZoom }) {
   const [camera, setCamera] = useState(null), [destinationId, setDestinationId] = useState(memory.current?.destinationId ?? null);
   const live = useRef(null), size = useRef(null), motion = useRef(null), fitTarget = useRef(memory.current ? memory.current.fitTarget : 'all');
+  const zoomTarget = useRef(null);
   const latest = useRef(null); latest.current = { area, destinations, disabled };
   const commit = useCallback(next => {
     if (!next) return;
     live.current = next; setCamera(next);
     memory.current = { camera: next, size: size.current, fitTarget: fitTarget.current, destinationId: fitTarget.current === 'all' ? null : fitTarget.current };
   }, [memory]);
-  const stop = useCallback(() => { if (motion.current !== null) cancelAnimationFrame(motion.current); motion.current = null; }, []);
+  const stop = useCallback(() => { if (motion.current !== null) cancelAnimationFrame(motion.current); motion.current = null; zoomTarget.current = null; }, []);
   const fit = useCallback(region => workbenchDestinationCamera(region, size.current && { ...size.current, left: 0, top: 0 }, .001, 24), []);
-  const travel = useCallback(next => {
+  const travel = useCallback((next, duration = 360) => {
     stop();
     if (!next) return;
     if (!live.current || matchMedia('(prefers-reduced-motion: reduce)').matches) { commit(next); return; }
     const start = live.current, started = performance.now();
     const tick = time => {
-      const progress = Math.min(1, (time - started) / 360);
+      const progress = Math.min(1, (time - started) / duration);
       commit(interpolateWorkbenchCamera(start, next, 1 - (1 - progress) ** 3));
       motion.current = progress < 1 ? requestAnimationFrame(tick) : null;
     };
@@ -49,14 +50,24 @@ export default function useCanvasViewport({ hostRef, area, destinations, memory,
   // Reuse the Workbench's Space/Hand gesture, Escape cancellation and capture
   // cleanup. The artwork surface itself has no editing hit targets.
   const { active: panActive, cancel: cancelPan, releaseAbandonedGesture } = useWorkbenchPan(hostRef, disabled, { getOffset, update: updateOffset, onBegin: stop, hand: true });
-  const zoom = useCallback((factor, anchor) => {
+  const zoom = useCallback((factor, anchor, stepped = true) => {
     if (latest.current.disabled || !live.current || !size.current) return;
-    stop(); releaseAbandonedGesture();
+    releaseAbandonedGesture();
     if (panActive.current) return;
     const current = live.current, minimum = Math.min(.05, fit(latest.current.area).scale / 4);
-    free(zoomWorkbenchCamera(current.scale, current.offset, current.scale * factor,
-      anchor || { x: size.current.width / 2, y: size.current.height / 2 }, { min: minimum, max: 4 }));
-  }, [fit, free, stop, panActive, releaseAbandonedGesture]);
+    const direction = Math.sign(factor - 1);
+    const pending = motion.current !== null && zoomTarget.current;
+    const base = stepped && pending?.direction === direction ? pending.scale : current.scale;
+    const next = zoomWorkbenchCamera(current.scale, current.offset, base * factor,
+      anchor || { x: size.current.width / 2, y: size.current.height / 2 }, { min: minimum, max: 4 });
+    if (smoothZoom && stepped) {
+      fitTarget.current = null; setDestinationId(null);
+      travel(next, 150);
+      if (motion.current !== null) zoomTarget.current = { scale: next.scale, direction };
+    } else {
+      stop(); free(next);
+    }
+  }, [fit, free, stop, travel, smoothZoom, panActive, releaseAbandonedGesture]);
   const choose = useCallback(id => {
     if (latest.current.disabled) return;
     const region = id ? latest.current.destinations.find(item => item.id === id)?.view : latest.current.area;
@@ -71,7 +82,11 @@ export default function useCanvasViewport({ hostRef, area, destinations, memory,
       event.preventDefault(); releaseAbandonedGesture();
       if (panActive.current) return;
       if (event.ctrlKey || event.metaKey) {
-        const rect = host.getBoundingClientRect(); zoom(Math.exp(-event.deltaY * .002), { x: event.clientX - rect.left, y: event.clientY - rect.top });
+        if (!event.deltaY) return;
+        const rect = host.getBoundingClientRect();
+        // Pixel-mode pinches usually arrive as small continuous deltas.
+        const stepped = event.deltaMode !== 0 || Math.abs(event.deltaY) >= 40;
+        zoom(Math.exp(-event.deltaY * .002), { x: event.clientX - rect.left, y: event.clientY - rect.top }, stepped);
       } else {
         stop(); const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1;
         const { offset } = live.current;

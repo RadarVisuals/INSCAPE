@@ -6,14 +6,14 @@ import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 
-test('Keeper chat retains selection and sends fresh selected Image/Display context only when enabled', { timeout: 90000 }, async () => {
+test('Keeper chat retains selection and sends fresh selected Image context only when enabled', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   try {
     for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
       page.setDefaultTimeout(10000);
       const errors = [], messages = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320, seamReview: 'single' });
+      await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 320, seamReview: 'single' });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => document.fonts.ready);
       await page.route(`${origin}/__keeper-chatgpt/**`, route => {
@@ -85,11 +85,6 @@ test('Keeper chat retains selection and sends fresh selected Image/Display conte
       assert.equal(second.scene.artworks[0].title, 'Near study');
       assert.equal(second.scene.artworks.filter(item => item.selected).length, 1);
       await choose([]);
-      const placement = page.locator('.system-workflow__placement[data-system-workflow-placement-id]').first();
-      await placement.focus(); await placement.dispatchEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
-      const display = await send('Describe the selected Display artwork.');
-      assert.deepEqual(display.scene.selection, { kind: 'artworks', count: 1, complete: true });
-      assert.equal(display.scene.artworks[0].selected, true);
       await choose(['image:motion-0', 'image:motion-1']);
       const multi = await send('Compare these.');
       assert.deepEqual(multi.scene.selection, { kind: 'modules', count: 2, complete: true });

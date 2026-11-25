@@ -1,25 +1,16 @@
 import { isRecord as record, hasExactKeys as exactKeys, hasAllowedKeys as allowedKeys } from '../../recordValidation.js';
-import { retiredInterfaceKeys } from '../../systemWorkflow/domain/retiredInterfaceAppearance.js';
-import { validReception, receptionReferenceCount } from './receptionPresentation.js';
-import { receptionLinkProblems } from './receptionLinks.js';
+import { compositionReferenceCount } from '../../composition/compositionReferenceCount.js';
+import { validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
+import { compositionLinkProblems } from './compositionLinks.js';
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
-import { validPublicationDestinations, validatePublishedCanvases } from './publishedCanvases.js';
+import { validatePublishedCanvases } from './publishedCanvases.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { validPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
-import { validPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
-import { DISPLAY_CANVAS_APPEARANCE_KEYS, validDisplayCanvasAppearance } from '../../systemWorkflow/domain/displayAppearance.js';
-import { validModuleEdges } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
-  SYSTEM_WORKFLOW_GRID_DENSITY,
-  SYSTEM_WORKFLOW_GUIDE_MODES,
-  SYSTEM_WORKFLOW_LABEL_ANCHORS,
   SYSTEM_WORKFLOW_LIMITS,
   SYSTEM_WORKFLOW_SURFACE_IDS,
-  SYSTEM_WORKFLOW_VISIBILITY,
-  SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID,
-  isValidSystemWorkflowPlacementGeometry,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import {
   INSCAPE_PROFILE_DOCUMENT_TYPE,
@@ -30,28 +21,17 @@ import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
-import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat } from '../../systemWorkflow/domain/displayModules.js';
 import { validImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { validShapes } from '../../shapes/shapes.js';
 import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { validTextModules, assertArticle, ARTICLE_TYPE } from '../../text/domain/article.js';
-import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from '../../systemWorkflow/domain/displayText.js';
 
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
-  'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation',
-  'grids',
-];
-const APPEARANCE_KEYS = ['surfaceId', 'guideMode', 'guideSize', 'guideColor'];
-const GRID_KEYS = ['id', 'title', 'subtitle', 'visibility', 'labelVisible', 'labelAnchor', 'labelOffset', 'placements'];
-const PLACEMENT_KEYS = [
-  'id', 'asset', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder',
-  'crop', 'visibility', 'transform',
+  'network', 'profile', 'identityPresentation',
 ];
 const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'visibility'];
 const ID = /^[A-Za-z0-9:_-]+$/u;
-const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
-const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
 const safeText = (value, maximum, { empty = true } = {}) => typeof value === 'string'
   && (empty || value.length > 0)
   && value.length <= maximum
@@ -63,8 +43,6 @@ const validIsoTime = (value) => {
   try { return new Date(value).toISOString() === value; } catch { return false; }
 };
 const sets = {
-  anchors: new Set(SYSTEM_WORKFLOW_LABEL_ANCHORS),
-  guides: new Set(SYSTEM_WORKFLOW_GUIDE_MODES),
   surfaces: new Set(SYSTEM_WORKFLOW_SURFACE_IDS),
 };
 
@@ -77,13 +55,6 @@ function depth(value, current = 0) {
   }
   if (current > SYSTEM_WORKFLOW_LIMITS.maxDepth) return current;
   return Object.values(value).reduce((maximum, child) => Math.max(maximum, depth(child, current + 1)), current);
-}
-
-function validCrop(value) {
-  return value === null || exactKeys(value, ['x', 'y', 'zoom'])
-    && Number.isFinite(value.x) && value.x >= 0 && value.x <= 1
-    && Number.isFinite(value.y) && value.y >= 0 && value.y <= 1
-    && Number.isFinite(value.zoom) && value.zoom >= 1 && value.zoom <= 4;
 }
 
 function validateIdentity(value, fail) {
@@ -117,34 +88,6 @@ function validateIdentity(value, fail) {
   }
 }
 
-function validatePlacement(value, path, fail) {
-  if (isTextPlacement(value)) {
-    if (!exactKeys(value, DISPLAY_TEXT_KEYS) || !validDisplayText(value.text)) return fail(path, 'invalid_text_placement', 'Invalid public text layer');
-    if (!safeId(value.id) || !isValidSystemWorkflowPlacementGeometry(value) || !safeInteger(value.layer) || !safeInteger(value.navigationOrder)
-      || value.visibility !== 'PUBLIC' || !exactKeys(value.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
-      || ![0, 1, 2, 3].includes(value.transform.quarterTurns) || typeof value.transform.mirrorX !== 'boolean' || typeof value.transform.mirrorY !== 'boolean') fail(path, 'invalid_text_geometry', 'Invalid public text geometry');
-    return;
-  }
-  if (!exactKeys(value, [...PLACEMENT_KEYS, ...['inspectionMode', 'mediaFrameRatio', ...REMOVED_ARTWORK_PRESENTATION_KEYS].filter(key => Object.hasOwn(value || {}, key))])) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
-  if (Object.hasOwn(value, 'mediaFrameRatio') && (!Number.isFinite(value.mediaFrameRatio) || value.mediaFrameRatio < 1 / 512 || value.mediaFrameRatio > 512)) fail(`${path}.mediaFrameRatio`, 'invalid_media_frame_ratio', 'Invalid media frame ratio');
-  if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
-  if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
-  if (!validateProfileDocumentV9Asset(value.asset)) fail(`${path}.asset`, 'invalid_asset_reference', 'Invalid canonical asset reference');
-  if (!isValidSystemWorkflowPlacementGeometry(value)) {
-    fail(path, 'invalid_placement_geometry', 'Invalid placement geometry');
-  }
-  if (!safeInteger(value.layer)) fail(`${path}.layer`, 'invalid_layer', 'Invalid placement layer');
-  if (!safeInteger(value.navigationOrder)) fail(`${path}.navigationOrder`, 'invalid_navigation_order', 'Invalid placement navigation order');
-  if (!validCrop(value.crop)) fail(`${path}.crop`, 'invalid_crop', 'Invalid placement crop');
-  if (!validRemovedArtworkPresentation(value)) fail(path, 'removed_presentation', 'Unsupported removed artwork presentation');
-  if (value.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC) fail(`${path}.visibility`, 'private_placement', 'Only public placements are allowed');
-  if (!exactKeys(value.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
-    || !Number.isSafeInteger(value.transform?.quarterTurns)
-    || value.transform.quarterTurns < 0 || value.transform.quarterTurns > 3
-    || typeof value.transform?.mirrorX !== 'boolean'
-    || typeof value.transform?.mirrorY !== 'boolean') fail(`${path}.transform`, 'invalid_transform', 'Invalid placement transform');
-}
-
 export class ProfileDocumentV9ValidationError extends Error {
   constructor(errors) {
     super(errors[0]?.message || 'Invalid INSCAPE Profile Document');
@@ -166,7 +109,7 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   // collection envelope must not consume the composition's existing depth budget.
   const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
   if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition', 'canvas', 'canvases'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -190,25 +133,9 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
     || Object.hasOwn(cached || {}, 'avatarUrl') && !(safeText(cached.avatarUrl, SYSTEM_WORKFLOW_LIMITS.maxUrlLength, { empty: false }) && isValidPublishedAssetUrl(cached.avatarUrl))) {
     fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   }
-  if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...retiredInterfaceKeys(input.appearance), ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
-    || !validDisplayCanvasAppearance(input.appearance)
-    || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
-    || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
-    || !sets.surfaces.has(input.appearance.surfaceId)
-    || Object.hasOwn(input.appearance || {}, 'menuSurfaceId') && !sets.surfaces.has(input.appearance.menuSurfaceId)
-    || Object.hasOwn(input.appearance || {}, 'dossierSurfaceId') && !sets.surfaces.has(input.appearance.dossierSurfaceId)
-    || !sets.guides.has(input.appearance.guideMode)
-    || !Number.isSafeInteger(input.appearance.guideSize)
-    || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum
-    || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
-    || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validReception(input.composition, true)))
+  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validCompositionEditorDocument(input.composition, true)))
     fail('composition', 'invalid_composition', 'Invalid published Studio composition');
-  if (Object.hasOwn(input, 'receptionDestinations') && (!input.reception || !validPublicationDestinations(input.receptionDestinations)))
-    fail('receptionDestinations', 'invalid_destinations', 'Choose Gallery, Profile or both for the Bento.');
-  if (Object.hasOwn(input, 'reception') && !validReception(input.reception, true)) fail('reception', 'invalid_reception', 'Invalid published Bento layout');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
@@ -216,107 +143,27 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   if (Array.isArray(input.workbench?.shapes) && input.workbench.shapes.some(item => !Array.isArray(input.shapes) || !input.shapes.some(shape => shape?.id === item?.id))) fail('workbench.shapes', 'unknown_shape', 'Window refers to an unavailable Shape');
   if (Object.hasOwn(input, 'imageModules') && !validImageModules(input.imageModules, true)) fail('imageModules', 'invalid_images', 'Invalid published Image module');
   if (Array.isArray(input.workbench?.imageModules) && input.workbench.imageModules.some(item => !Array.isArray(input.imageModules) || !input.imageModules.some(image => image?.id === item?.id))) fail('workbench.imageModules', 'unknown_image', 'Window refers to an unavailable Image module');
-  if (Array.isArray(input.texts)) for (const text of input.texts) {
-    const link = text?.sceneLink;
-    if (!link) continue;
-    const display = link.displayId === PRIMARY_DISPLAY_ID ? input : Array.isArray(input.displays) ? input.displays.find(d => d?.id === link.displayId) : null;
-    const grids = new Set(Array.isArray(display?.grids) ? display.grids.map(g => g?.id) : []);
-    if (link.mode === 'sections') {
-      if (!grids.size) fail('texts.sceneLink', 'unknown_text_scene', 'Linked Text refers to an unavailable published Display');
-      continue;
-    }
-    if (!grids.has(link.gridId) || !Array.isArray(link.passages) || link.passages.some(p => !grids.has(p?.gridId)))
-      fail('texts.sceneLink', 'unknown_text_scene', 'Text passage refers to an unavailable published Grid');
-  }
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
-  let moduleReferences = 0;
-  if (Object.hasOwn(input, 'displays')) {
-    if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
-      fail('displays', 'invalid_display_count', 'Invalid Display count');
-    } else {
-      const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, receptionDestinations: _receptionDestinations, composition: _composition, canvas: _canvas, canvases: _canvases, ...shared } = input;
-      for (const module of input.displays) {
-        if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
-          fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
-        }
-        ids.add(module.id);
-        const { id, ...content } = module;
-        if (!content.grids?.length) fail('displays', 'invalid_grid_count', 'An additional Display must contain Grids');
-        const result = validateProfileDocumentV9({ ...shared, ...content });
-        result.errors.forEach(error => fail(`displays.${id}.${error.path}`, error.code, error.message));
-        moduleReferences += (module.grids || []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0);
-      }
-      if (input.workbench?.displays?.some(module => !ids.has(module.id))) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
-    }
-  } else if (input.workbench?.displays?.length) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input, true)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid published Workbench Index');
   if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input, true)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid public artwork order');
   if (Object.hasOwn(input, 'workbenchGroups') && !validPublishedWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid public Workbench groups or unavailable members');
-  if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
-  if (!Array.isArray(input.grids) || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
-    fail('grids', 'invalid_grid_count', 'One to 24 public Grids required');
-  } else {
-    const gridIds = new Set();
-    const placementIds = new Set();
-    let totalAssetReferences = input.identityPresentation?.avatar?.asset == null ? 0 : 1;
-    if (input.workbench?.display?.shortcut?.icon) totalAssetReferences += 1;
-    input.grids.forEach((grid, gridIndex) => {
-      const path = `grids[${gridIndex}]`;
-      if (!exactKeys(grid, [...GRID_KEYS, ...(Object.hasOwn(grid || {}, 'groups') ? ['groups'] : [])])) return fail(path, 'invalid_grid_structure', 'Invalid public Grid');
-      if (typeof grid.id !== 'string' || grid.id === SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID || !GRID_ID.test(grid.id) || grid.id.length > SYSTEM_WORKFLOW_LIMITS.maxIdLength) fail(`${path}.id`, 'invalid_grid_id', 'Invalid Grid ID');
-      if (gridIds.has(grid.id)) fail(`${path}.id`, 'duplicate_grid_id', 'Duplicate Grid ID');
-      gridIds.add(grid.id);
-      if (!safeText(grid.title, 80, { empty: false }) || !safeText(grid.subtitle, 160)) fail(path, 'invalid_grid_text', 'Invalid Grid text');
-      if (grid.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC) fail(`${path}.visibility`, 'private_grid', 'Only public Grids are allowed');
-      if (typeof grid.labelVisible !== 'boolean') fail(`${path}.labelVisible`, 'invalid_label_visibility', 'Invalid Grid label visibility');
-      if (!sets.anchors.has(grid.labelAnchor)) fail(`${path}.labelAnchor`, 'invalid_label_anchor', 'Invalid Grid label anchor');
-      if (!exactKeys(grid.labelOffset, ['column', 'row'])
-        || !Number.isSafeInteger(grid.labelOffset.column) || Math.abs(grid.labelOffset.column) > 2
-        || !Number.isSafeInteger(grid.labelOffset.row) || Math.abs(grid.labelOffset.row) > 2) fail(`${path}.labelOffset`, 'invalid_label_offset', 'Invalid Grid label offset');
-      if (!Array.isArray(grid.placements) || grid.placements.length > SYSTEM_WORKFLOW_LIMITS.maxPlacementsPerGrid) {
-        return fail(`${path}.placements`, 'invalid_placements', 'Invalid public placements');
-      }
-      if (!validPlacementGroups(grid)) fail(path, 'invalid_groups', 'Invalid placement groups');
-      totalAssetReferences += grid.placements.length;
-      const layers = new Set();
-      const navigationOrders = new Set();
-      let previousNavigationOrder = -1;
-      grid.placements.forEach((placement, placementIndex) => {
-        const placementPath = `${path}.placements[${placementIndex}]`;
-        validatePlacement(placement, placementPath, fail);
-        if (placementIds.has(placement?.id)) fail(`${placementPath}.id`, 'duplicate_placement_id', 'Duplicate placement ID');
-        placementIds.add(placement?.id);
-        if (layers.has(placement?.layer)) fail(`${placementPath}.layer`, 'duplicate_layer', 'Duplicate placement layer');
-        layers.add(placement?.layer);
-        if (navigationOrders.has(placement?.navigationOrder)) fail(`${placementPath}.navigationOrder`, 'duplicate_navigation_order', 'Duplicate navigation order');
-        navigationOrders.add(placement?.navigationOrder);
-        if (placement?.navigationOrder <= previousNavigationOrder) fail(`${placementPath}.navigationOrder`, 'non_canonical_navigation_order', 'Placements must be sorted by navigation order');
-        previousNavigationOrder = placement?.navigationOrder;
-      });
-    });
-    if (totalAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('grids', 'too_many_asset_references', 'Too many total asset references');
-  }
-  const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
-    + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
-    + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
-    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception) + receptionReferenceCount(input.composition);
+  if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench, [], { published: true })) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
+  const documentAssetReferences = (input.identityPresentation?.avatar?.asset ? 1 : 0)
+    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + compositionReferenceCount(input.composition);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('$', 'too_many_asset_references', 'Too many total asset references');
   }
   validatePublishedCanvases(input, document => validateDocument(document, {}, false), fail);
   if (checkLinks && !errors.length) {
-    const linkedLayouts = [['reception', input.reception, 'Bento'], ['composition', input.composition, input.canvas?.name || 'Canvas'],
+    const linkedLayouts = [['composition', input.composition, input.canvas?.name || 'Canvas'],
       ...(input.canvases || []).map(item => ['canvases.' + item.id + '.composition', item.content.composition, item.name])]
       .filter(([, layout]) => layout?.links?.length);
     if (linkedLayouts.length) {
       const snapshot = publishedPresentationSnapshot(input);
-      for (const [path, layout, compositionName] of linkedLayouts) for (const issue of receptionLinkProblems(layout, snapshot))
-        errors.push({ path: path + '.links.' + issue.id, code: 'unavailable_reception_link', message: issue.reason, compositionName });
+      for (const [path, layout, compositionName] of linkedLayouts) for (const issue of compositionLinkProblems(layout, snapshot))
+        errors.push({ path: path + '.links.' + issue.id, code: 'unavailable_composition_link', message: issue.reason, compositionName });
     }
   }
-  // Published bytes are immutable and hash-verified. Accept legacy fields but
-  // preserve them here; renderers ignore them and draft restoration removes them.
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };
 }
 
@@ -338,4 +185,3 @@ export function parseProfileDocumentV9Json(raw) {
   }
   return assertValidProfileDocumentV9(input, { rawSize: size });
 }
-import { REMOVED_ARTWORK_PRESENTATION_KEYS, validRemovedArtworkPresentation } from '../../systemWorkflow/domain/removedArtworkPresentation.js';

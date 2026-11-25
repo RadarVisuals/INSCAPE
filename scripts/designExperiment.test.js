@@ -10,7 +10,7 @@ test('new studies preserve component imports, refuse overwrite and reject path t
   try {
     const directory = join(root, 'design-system/lab/artboards'); await mkdir(directory, { recursive: true });
     const source = 'import RealComponent from "../../../src/RealComponent.jsx";';
-    await writeFile(join(directory, 'reception.jsx'), source);
+    await writeFile(join(directory, 'workspace.jsx'), source);
     const file = await createExperiment(root, 'first-study');
     assert.equal(await readFile(file, 'utf8'), source);
     await assert.rejects(createExperiment(root, 'first-study'), { code: 'EEXIST' });

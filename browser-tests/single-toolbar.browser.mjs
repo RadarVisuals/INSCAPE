@@ -92,12 +92,12 @@ async function mount(width = 1440, theme = 'carbon') {
 }
 
 for (const [width, theme] of [[1440, 'carbon'], [1000, 'mist']]) {
-  test(`seven tools and Image operations in their panel (${width}px ${theme})`, { timeout: 45000 }, async () => {
+  test(`creation tools and Image operations in their panel (${width}px ${theme})`, { timeout: 45000 }, async () => {
     const { page, errors } = await mount(width, theme);
     try {
       const bar = page.getByRole('toolbar', { name: 'Creation tools', exact: true });
       assert.deepEqual(await bar.getByRole('button').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))),
-        ['Select tool', 'Pointer tools', 'Rectangle tool', 'Shapes', 'Text tool', 'Artwork library', 'Actions']);
+        ['Select tool', 'Pointer tools', 'Cell tool', 'Rectangle tool', 'Shapes', 'Text tool', 'Artwork library', 'Actions']);
       const bounds = await bar.boundingBox();
       assert.ok(bounds.height <= 44 && bounds.x >= 0 && bounds.x + bounds.width <= width);
       const image = await openSharedTool(page, 'Image');
@@ -179,24 +179,6 @@ test('changing target cancels Image crop and exposes Shape actions in its object
     assert.deepEqual((await draft(page)).imageModules, before.imageModules);
     await page.locator('.image-module__canvas').first().focus(); await openSharedTool(page, 'Image');
     assert.equal(await image.getByRole('slider', { name: 'Crop zoom' }).count(), 0, 'returning does not resume the abandoned crop');
-    const source = page.locator('.system-workflow__placement').first();
-    await source.focus(); await source.press('Enter'); await settle(page);
-    const display = page.locator('[data-context-tools]');
-    await button(display, 'In place').click();
-    assert.equal((await draft(page)).grids[0].placements[0].inspectionMode, 'IN_PLACE');
-    const initialRotation = (await draft(page)).grids[0].placements[0].transform.quarterTurns;
-    await button(display, 'Rotate').click();
-    assert.equal((await draft(page)).grids[0].placements[0].transform.quarterTurns, (initialRotation + 1) % 4);
-    const rotated = await draft(page);
-    await button(display, 'Crop').click();
-    const zoom = display.getByRole('slider', { name: 'Crop zoom' }); await zoom.fill('2');
-    await button(display, 'Cancel').click(); assert.deepEqual(await draft(page), rotated);
-    await mkdir(output, { recursive: true }); await settle(page);
-    const bounds = await page.locator('[data-context-tools] .context-toolbar').boundingBox();
-    const controls = await page.locator('[data-context-tools] .artwork-action-controls').boundingBox();
-    assert.ok(controls.y + controls.height <= bounds.y + bounds.height, 'Display actions fit their window after crop');
-    await page.screenshot({ path: `${output}/display-panel-carbon.png` });
-    assert.equal(await page.locator('[data-context-action-bars]').count(), 0);
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });

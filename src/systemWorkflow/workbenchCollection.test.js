@@ -149,7 +149,7 @@ test('active saves stay detached and atomic across invalid edits, failed writes 
 
 test('shared changes still validate the byte limit of an inactive full Workbench', () => {
   const { store, raw } = fixture();
-  const full = store.getDraft(); full.grids = [];
+  const full = store.getDraft();
   full.texts = Array.from({ length: 3 }, (_, i) => ({
     id: 'text:large-' + i, visibility: 'PRIVATE', article: createArticle('Article ' + i),
   }));
@@ -208,7 +208,7 @@ test('two named Workbenches retain separate modules, dimensions, layout and edit
   assert.equal(store.getDraft().texts, undefined);
   assert.equal(store.getDraft().imageModules, undefined);
   assert.equal(store.getDraft().shapes, undefined);
-  assert.deepEqual(store.getDraft().grids, [], 'new Workbenches never create Display');
+  assert.equal(Object.hasOwn(store.getDraft(), 'grids'), false);
   assert.deepEqual(store.getDraft().keeperDocks, a.keeperDocks, 'one shared Keeper configuration');
   addTextModule(store, profile); addImageModule(store, profile); addShape(store, profile);
   edit(store, draft => { draft.texts[0].article.title = 'Studies article'; draft.workbench.area = { width: 640, height: 480 }; });
@@ -367,17 +367,17 @@ test('retry cannot apply an operation to a different externally selected Workben
   }
 });
 
-test('shared Keeper edits survive switching and room-style reopening without duplicating configuration', () => {
+test('shared Keeper edits survive switching and reopening the editor without duplicating configuration', () => {
   const { store, storage, raw } = fixture();
   addKeeperDock(store, profile);
   const keeper = store.getDraft().keeperDocks[0];
   store.createWorkbench('B');
   assert.ok(saveKeeperDock(store, profile, keeper, { name: 'Shared inhabitant' }));
   assert.ok(store.switchWorkbench(FIRST_WORKBENCH_ID));
-  const room = createSystemWorkflowDraftStore({ profileAddress: profile, storage, requireEditor: true });
-  assert.equal(room.getDraft().keeperDocks.length, 1);
-  assert.equal(room.getDraft().keeperDocks[0].name, 'Shared inhabitant');
-  assert.ok(saveKeeperDock(room, profile, room.getDraft().keeperDocks[0], { size: 120 }));
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage, requireEditor: true });
+  assert.equal(reopened.getDraft().keeperDocks.length, 1);
+  assert.equal(reopened.getDraft().keeperDocks[0].name, 'Shared inhabitant');
+  assert.ok(saveKeeperDock(reopened, profile, reopened.getDraft().keeperDocks[0], { size: 120 }));
   const collection = JSON.parse(raw());
   assert.equal(collection.shared.keeperDocks.length, 1);
   assert.ok(collection.workbenches.every(item => !Object.hasOwn(item.content, 'keeperDocks')));
@@ -405,7 +405,12 @@ test('all-Workbench backups roundtrip both compositions and reject partial repla
   assert.equal(backup.version, 2);
   const target = fixture();
   assert.ok(restoreWorkbenchBackup(target.store, backup, { expectedGeneration: target.store.getGeneration() }, target.storage).saved);
-  assert.deepEqual(target.store.getBackupSnapshot(), source.store.getBackupSnapshot());
+  assert.deepEqual(target.store.getBackupSnapshot(), backup.draft);
+  const portable = JSON.parse(serializeWorkbenchBackup(source.store.getBackupSnapshot())).draft;
+  for (const { content } of portable.workbenches) {
+    assert.equal(Object.hasOwn(content, 'grids'), false);
+    assert.equal(Object.hasOwn(content.workbench || {}, 'display'), false);
+  }
   const before = target.raw();
   assert.equal(restoreWorkbenchBackup(target.store, single, { expectedGeneration: target.store.getGeneration() }, target.storage).saved, false);
   assert.equal(target.raw(), before);
@@ -441,7 +446,7 @@ test('a Workbench scope exposes only its explicit editing contract, never root l
   assert.deepEqual(Object.keys(scope).sort(), [
     'hasWriteAccess', 'isCurrent', 'getProfileAddress', 'getWorkbenchId', 'getSnapshot', 'getDraft',
     'getGeneration', 'getHistory', 'getRecordState', 'getLastCommitFailure', 'isCollection',
-    'listWorkbenches', 'getBackupSnapshot', 'subscribe', 'guardWorkbenchTransition',
+    'listWorkbenches', 'getBackupSnapshot', 'whenCommitted', 'subscribe', 'guardWorkbenchTransition',
     'beginHistoryGroup', 'endHistoryGroup', 'undo', 'redo', 'commitCompletedOperation',
     'retryCompletedOperation', 'restoreBackup', 'createWorkbench', 'deleteWorkbench', 'switchWorkbench', 'renameWorkbench', 'leaveWorkbench',
   ].sort());

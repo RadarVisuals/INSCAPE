@@ -5,7 +5,7 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mkdir } from 'node:fs/promises';
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5197';
 const output = '.browser-test-runtime/scene-boundaries';
-for (const width of [1920, 390]) test(`scene lifetime, linked cells, isolation and finite gallery at ${width}px`, { timeout: 90000 }, async () => {
+for (const width of [1920, 390]) test(`artwork selection, linked content, isolation and finite gallery at ${width}px`, { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: width === 1920 ? 1080 : 844 }, hasTouch: width === 390, isMobile: width === 390, reducedMotion: 'reduce' });
@@ -22,28 +22,28 @@ for (const width of [1920, 390]) test(`scene lifetime, linked cells, isolation a
     });
     await page.goto(origin + '/browser-tests/scene-boundaries-fixture.html');
     const a = page.getByRole('region', { name: 'Workbench 1', exact: true }), b = page.getByRole('region', { name: 'Second canvas', exact: true });
-    await a.locator('.reception-artwork [data-media-state=ready]').waitFor();
+    await a.locator('.composition-artwork [data-media-state=ready]').waitFor();
     assert.equal(await page.locator('vite-error-overlay').count(), 0, await page.locator('vite-error-overlay').allTextContents());
     const before = await page.evaluate(() => JSON.stringify(localStorage));
     const first = await a.locator('[data-scene]').textContent();
-    await a.getByRole('button', { name: 'Next Grid', exact: true }).click();
+    await a.getByRole('button', { name: 'Second artwork', exact: true }).click();
     await a.locator('[data-linked-text]').getByText('Second passage', { exact: true }).waitFor();
     assert.equal(await a.locator('[data-artwork]').getAttribute('data-artwork'), 'artwork:1');
     assert.equal(await b.locator('[data-scene]').textContent(), first);
     assert.ok(await a.locator('[data-static]').getByText('Always here', { exact: true }).isVisible());
-    await a.getByRole('button', { name: 'Hide Display', exact: true }).click();
     assert.ok(await a.locator('[data-linked-text]').getByText('Second passage', { exact: true }).isVisible());
-    await a.getByRole('button', { name: 'Unmount Display', exact: true }).click();
-    await a.getByRole('button', { name: 'Previous scene', exact: true }).click();
+    await a.getByRole('button', { name: 'Unmount artwork', exact: true }).click();
+    assert.equal(await a.locator('[data-artwork]').count(), 0);
+    await a.getByRole('button', { name: 'First artwork', exact: true }).click();
     assert.equal(await a.locator('[data-scene]').textContent(), first);
-    await a.getByRole('button', { name: 'Next scene', exact: true }).click();
-    await a.getByRole('button', { name: 'Mount Display', exact: true }).click();
-    await a.getByRole('button', { name: 'Show Display', exact: true }).click();
-    assert.equal(await a.locator('[data-active-grid-id]').getAttribute('data-active-grid-id'), 'grid:two');
+    await a.getByRole('button', { name: 'Second artwork', exact: true }).click();
+    await a.getByRole('button', { name: 'Mount artwork', exact: true }).click();
+    assert.equal(await a.locator('[data-artwork]').getAttribute('data-artwork'), 'artwork:1');
+    assert.equal(await b.locator('[data-artwork]').getAttribute('data-artwork'), 'artwork:0');
     await a.getByRole('button', { name: 'Remove source', exact: true }).click();
     assert.ok(await a.getByRole('status').getByText('Source unavailable').isVisible());
     await a.getByRole('button', { name: 'Restore source', exact: true }).click();
-    await a.locator('.reception-artwork [data-media-state=ready]').waitFor();
+    await a.locator('.composition-artwork [data-media-state=ready]').waitFor();
     await page.getByRole('button', { name: 'New presentation session', exact: true }).click();
     assert.equal(await a.locator('[data-scene]').textContent(), first);
     const card = page.getByRole('button', { name: 'Open Workbench 1', exact: true });

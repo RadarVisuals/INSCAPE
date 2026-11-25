@@ -6,15 +6,15 @@ import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 export default function useWorkbenchPreview(store, onError) {
   const [preview, setPreview] = useState(null);
   const [preparing, setPreparing] = useState(false);
-  const request = useRef(0), mounted = useRef(false), returnFocus = useRef(null);
+  const request = useRef(null), mounted = useRef(false), returnFocus = useRef(null);
   const { restoreFocus: restoreTriggerFocus, cancelFocusReturn } = useDeferredFocusReturn();
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; request.current++; returnFocus.current = null; };
+    return () => { mounted.current = false; request.current = null; returnFocus.current = null; };
   }, [store]);
   const close = ({ restoreFocus = true } = {}) => {
     cancelFocusReturn();
-    request.current++;
+    request.current = null;
     setPreparing(false);
     setPreview(null);
     const node = returnFocus.current;
@@ -23,7 +23,8 @@ export default function useWorkbenchPreview(store, onError) {
   };
   const open = async (prepare, presentationCurrent, trigger) => {
     cancelFocusReturn();
-    const operation = ++request.current;
+    const operation = Symbol();
+    request.current = operation;
     const generation = store.getGeneration(), profile = store.getProfileAddress();
     const ownsRequest = () => mounted.current && operation === request.current;
     const current = () => ownsRequest() && store.getGeneration() === generation
@@ -44,5 +45,5 @@ export default function useWorkbenchPreview(store, onError) {
       if (ownsRequest()) setPreparing(false);
     }
   };
-  return { preview, preparing, open, close, returnFocus };
+  return { preview, preparing, open, close };
 }

@@ -8,12 +8,30 @@
 .owner-works[data-workspace-entering] { z-index: 77; animation: workspace-overview-arrive 260ms ease-out both; }
 .owner-overview-loading { position: fixed; inset: var(--workspace-navigation-top, var(--workspace-header-height, 48px)) 0 0; z-index: 80; margin: 0; padding: 24px; background: var(--interface-environment); }
 .owner-canvas-journey { position: fixed; z-index: 78; overflow: hidden; pointer-events: none; background: var(--interface-environment); }
-[data-canvas-journey-target] { opacity: 0; }
+[data-studio-return-tile],
+[data-canvas-journey-target]:not(.composition-explorer-viewport),
+.composition-explorer-viewport[data-canvas-journey-target] > .workbench-overview-preview { opacity: 0; }
 /* Tools arrive with the editor at the start, above the moving canvas. The
    artwork boundary and selection wait until they align with the actual artwork. */
 .system-workflow[data-workspace-journey="editor"] :is([data-workbench-toolbar], .workbench-tool-panel, .workbench-side-dock, .workbench-view-controls, .keeper-dock-window) { animation: workspace-tools-arrive 160ms ease-out both; }
 .system-workflow[data-workspace-journey="overview"] :is([data-workbench-toolbar], .workbench-tool-panel, .workbench-tool-window, .workbench-side-dock, .workbench-view-controls, .keeper-dock-window) { animation: workspace-tools-leave 220ms ease-in both; pointer-events: none; }
-.system-workflow[data-workspace-journey] :is([data-workbench-area], .lattice-pixel-grid, .workbench-selection, .workbench-canvas-edge) { visibility: hidden; }
+.system-workflow[data-workspace-journey]:not([data-gallery-entry]) :is([data-workbench-area], .lattice-pixel-grid),
+.system-workflow[data-workspace-journey] :is(.workbench-selection, .workbench-canvas-edge) { visibility: hidden; }
+/* Artwork stays live while the two routes exchange their controls. */
+:root:active-view-transition-type(gallery-studio) { view-transition-name: root; }
+:root:active-view-transition-type(gallery-studio) :is(.visitor-header, .editor-menu-bar) { view-transition-name: workspace-header; }
+:root:active-view-transition-type(gallery-studio) :is(.composition-index-sidebar, .visitor-work-details,
+  .composition-explorer-controls, .gallery-selection-tools, .workbench-overview-menu-trigger,
+  [data-workbench-toolbar], .workbench-side-dock, .workbench-tool-panel, .workbench-view-controls) { view-transition-name: match-element; }
+:root:active-view-transition-type(gallery-studio)::view-transition-group(*) { animation-duration: 220ms; }
+:root:active-view-transition-type(gallery-studio)::view-transition-old(*) { animation-duration: 200ms; }
+:root:active-view-transition-type(gallery-studio)::view-transition-new(*) { animation-duration: 160ms; }
+/* Dissolve the previous backdrop over the fully painted destination in either direction. */
+:root:active-view-transition-type(gallery-studio)::view-transition-old(root) {
+  z-index: 1; mix-blend-mode: normal; animation: studio-draft-dissolve 145ms linear both;
+}
+:root:active-view-transition-type(gallery-studio)::view-transition-new(root) { mix-blend-mode: normal; animation: none; }
+@keyframes studio-draft-dissolve { from { opacity: 1; } to { opacity: 0; } }
 @keyframes workspace-tools-arrive { from { opacity: 0; } to { opacity: 1; } }
 @keyframes workspace-tools-leave { from { opacity: 1; } to { opacity: 0; } }
 @keyframes workspace-overview-arrive { from { opacity: 0; } to { opacity: 1; } }
@@ -43,10 +61,11 @@
 .workbench-overview .workbench-overview-menu-trigger:hover:not(:disabled) { background: color-mix(in srgb, var(--overview-glass-ink) 5%, transparent); }
 .workbench-overview .workbench-overview-navigation button:focus-visible { outline-color: var(--overview-glass-ink); }
 .workbench-overview-preview { position: relative; width: 100%; height: 100%; overflow: hidden; }
-.workbench-overview-canvas { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; will-change: transform; pointer-events: none; }
+/* Composite adjacent, device-aligned artwork together during fractional camera transforms. */
+.workbench-overview-canvas { will-change: transform; position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; pointer-events: none; }
 .workbench-native-preview { position: relative; transform-origin: 0 0; }
-.workbench-native-preview > .reception-canvas { width: 100%; height: 100%; }
-.workbench-overview-canvas[data-native-interactive] :is(a, button, select) { pointer-events: auto; }
+.workbench-native-preview > .composition-canvas { width: 100%; height: 100%; }
+.workbench-overview-canvas[data-native-interactive] { pointer-events: auto; }
 .workbench-overview-canvas > .navigator-object { transform-origin: 0 0; }
 .workbench-overview-canvas .text-module-body { position: absolute; inset: 0; }
 .workbench-overview-view-controls { display: flex; gap: 4px; padding: 12px 0; margin-top: 8px; border-top: 1px solid var(--interface-hover); }
@@ -81,8 +100,35 @@
   .workbench-overview-navigation, .workbench-overview-menu-fold, .workbench-overview-menu > * { transition: none; }
 }
 
-/* Collection controls sit below the shared header in both Gallery layouts. */
-.workbench-overview[data-selectable-gallery] { --gallery-tools-height: 48px; }
+.workbench-overview[data-visitor-header] { scrollbar-width: none; }
+.workbench-overview[data-visitor-header][data-selecting] { --gallery-tools-height: 48px; }
+.workbench-overview[data-visitor-header][data-layout="grid"] {
+  padding: 0; display: flex; flex-direction: column;
+}
+.gallery-layout-toolbar {
+  position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 4px;
+  box-sizing: border-box; flex: none; width: 100%; max-width: 1920px; margin-inline: auto;
+  padding: var(--gallery-toolbar-inset) calc(var(--gallery-gutter) + var(--gallery-detail-space)) 4px var(--gallery-gutter);
+  color: var(--spread-muted);
+}
+.workbench-overview .gallery-layout-switch { padding: 0; min-height: 32px; }
+.gallery-layout-toolbar .gallery-layout-switch { margin-inline-start: auto; }
+.gallery-layout-toolbar .workbench-overview-navigation {
+  position: relative; inset: auto; transform: none; width: auto; overflow: visible;
+  background: transparent; box-shadow: none; backdrop-filter: none; transition: none;
+}
+.gallery-layout-toolbar .workbench-overview-menu-trigger { width: 30px; height: 30px; min-height: 30px; padding: 0; color: var(--spread-muted); }
+.gallery-layout-toolbar .workbench-overview-menu-fold {
+  position: absolute; top: 100%; left: 0; color: var(--spread-heading);
+  background: var(--spread-panel); border-radius: 6px; box-shadow: var(--overview-glass-shadow);
+}
+@media (max-width: 400px) {
+  .gallery-layout-toolbar .workbench-overview-navigation { position: static; }
+  .gallery-layout-toolbar .workbench-overview-menu-fold { left: var(--gallery-gutter); }
+}
+.workbench-overview[data-visitor-header][data-layout="grid"] .workbench-overview-grid-host {
+  position: relative; inset: auto; flex: 1; min-height: 0; margin: 12px;
+}
 .gallery-selection-tools {
   position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: end; gap: 4px;
   min-height: var(--gallery-tools-height); padding-inline: max(12px, 2.5%);
@@ -92,10 +138,6 @@
   min-height: 36px; padding: 4px 10px; font-size: 14px; background: var(--spread-panel); pointer-events: auto;
 }
 .workbench-overview .gallery-selection-remove { border-color: var(--spread-line); }
-.workbench-overview[data-selectable-gallery][data-layout="grid"] { padding: 0; }
-.workbench-overview[data-selectable-gallery][data-layout="grid"] .workbench-overview-grid-host {
-  top: calc(var(--gallery-tools-height) + 8px);
-}
 .gallery-index-selection {
   display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 6px; cursor: pointer; overflow-wrap: anywhere;
 }
@@ -110,3 +152,25 @@
 @media (max-width: 700px) {
   .gallery-index-selection { flex: none; }
 }
+
+[data-layout-flight-target] > .workbench-overview-preview { opacity: 0; }
+
+/* Keep the landing frame measurable while the moving surface owns its paint. */
+.workbench-overview[data-layout-journey="list"] .composition-explorer-viewport { opacity: 0; }
+
+@keyframes gallery-surroundings-arrive { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .workbench-overview[data-layout-leaving] :is(.workbench-overview-card:not([data-layout-flight-source]), .composition-index-sidebar, .visitor-work-details, .composition-explorer-controls) {
+    animation: gallery-surroundings-arrive 100ms ease-in reverse both;
+  }
+  /* CanvasJourney reveals the tiles on the same timeline as the measured artwork. */
+  .workbench-overview[data-layout-journey="grid"] .workbench-overview-grid-host { opacity: 0; }
+  .workbench-overview[data-layout-journey="list"] :is(.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls) {
+    animation: gallery-surroundings-arrive 200ms ease-out both;
+  }
+}
+
+/* Composite the moving frame with the live WebGL field. Otherwise Chromium
+   can skip painting the backdrop under the artwork's previous bounds. */
+.gallery-layout-flight .owner-canvas-journey { backdrop-filter: opacity(1); }
+.gallery-layout-flight { position: fixed; inset: 0; z-index: 3; pointer-events: none; }

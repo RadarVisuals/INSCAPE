@@ -33,7 +33,7 @@ export const designDecisions = [
     name: 'Properties and fields',
     status: 'review',
     detail:
-      'Complete Image, Display artwork and Shape control previews, including conditional states. Styling needs review.',
+      'Complete Image and Shape control previews, including conditional states. Styling needs review.',
   },
   {
     id: 'states',
@@ -50,12 +50,11 @@ export const designDecisions = [
 ];
 export const themes = ['dark', 'light'];
 export const tokenSources = [
-  { path: 'src/reception/reception.css', role: 'Reception', purpose: 'Rectangular partition, responsive flow, navigation contour and separate editor geometry using shared material controls.' },
-  { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs, Profile and Grids.' },
+  { path: 'src/composition/compositionDocument.css', role: 'Composition viewer', purpose: 'Composition cells, responsive artwork and linked content.' },
+  { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs and Profile.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchGroups.css', role: 'Groups', purpose: 'Compact Folio cards and group navigation using shared Editor materials.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchIndex.css', role: 'Index', purpose: 'Saved-view rows, compact navigation and shared Editor fields.' },
   { path: 'src/public/ownerLatticePublicationRack.css', role: 'Publication', purpose: 'Publication review, progress, recovery and support within the shared flat shell.' },
-  { path: 'src/startveil/publicEntryPortal.css', role: 'Discover', purpose: 'Shared flat directory chrome, responsive search, cards and contained results.' },
   { path: 'src/public/ownerSystemWorkflow/activity.css', role: 'Activity', purpose: 'Shared flat window material, bounded history, filters and read-state presentation.' },
   { path: 'src/public/ownerSystemWorkflow/settings.css', role: 'Settings', purpose: 'Flat shared window chrome and independently scrolling preference controls.' },
   { path: 'src/public/ownerSystemWorkflow/libraryWorkspace.css', role: 'Library', purpose: 'Shared Library chrome with compact Editor Dark/Light controls and existing profile-picker presentation.' },
@@ -147,7 +146,7 @@ export const typography = [
   ['--workflow-type-section', 'Section heading', 'Artwork and story'],
   ['--workflow-type-body', 'Body', 'Arrange independent artwork into a living composition.'],
   ['--workflow-type-control', 'Control', 'Return to composition'],
-  ['--workflow-type-panel-heading', 'Panel heading', 'Display appearance'],
+  ['--workflow-type-panel-heading', 'Panel heading', 'Composition appearance'],
   [
     '--workflow-type-panel-body',
     'Dense supporting copy',
@@ -157,15 +156,12 @@ export const typography = [
 ];
 const owner = 'src/public/ownerSystemWorkflow/';
 export const components = [
-  { id: 'destinations', name: 'Docs, Profile and Grids', kind: 'Sidebar destinations', material: 'Flat Carbon / Mist',
+  { id: 'destinations', name: 'Docs and Profile', kind: 'Sidebar destinations', material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchDestinationPanel.jsx', evidence: 'browser-tests/destination-panels.browser.mjs',
     contract: 'The existing panels share window chrome, navigation clearance, contained scrolling and visible keyboard focus. Their existing controllers retain content, access and actions.' },
   { id: 'groups', name: 'Groups', kind: 'Navigation tool', material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchGroups.jsx', evidence: 'browser-tests/workbench-groups.browser.mjs',
     contract: 'The existing movable window retains membership, visibility, stack and history actions. Flat fields and reachable controls use the shared tool material.' },
-  { id: 'discover', name: 'Discover', kind: 'Shared public directory', material: 'Flat Carbon / Mist',
-    source: 'src/startveil/PublicEntryPortal.jsx', evidence: 'browser-tests/discover-style.browser.mjs',
-    contract: 'Owner and public entry share the same search, published cards and account controls. One device-wide Dark/Light preference governs owner and public entry, including before sign-in. Results scroll beneath the header, with reachable pagination. Publication resolution and navigation retain their existing owners.' },
   { id: 'activity', name: 'Activity', kind: 'Sidebar destination', material: 'Flat Carbon / Mist',
     source: owner + 'OwnerSystemWorkflowActivity.jsx', evidence: 'browser-tests/activity.browser.mjs',
     contract: 'Recent notifications and full history share the flat panel shell. Filters, search, read markers, refresh and failure states retain the signal owner. Header and actions remain reachable while entries scroll. Escape returns from history, then closes Activity.' },
@@ -271,7 +267,7 @@ export const components = [
     material: 'Dark tactile',
     source: owner + 'SharedDisplayTools.jsx',
     contract:
-      'Independent shared windows with explicit Display and artwork targets. Layers follows scene order; Artwork info reads source projections. Visitor gets inspection only.',
+      'Independent shared windows with explicit module and artwork targets. Layers follows composition order; Artwork info reads source projections. Visitor gets inspection only.',
     evidence: 'browser-tests/shared-module-tools.browser.mjs',
     status: 'Production',
   },
@@ -282,7 +278,7 @@ export const components = [
     material: 'Flat Carbon / Mist',
     source: 'src/text/SharedTextTools.jsx',
     contract:
-      'Text uses the selection-following Inspector. Character and paragraph controls stay visible; extended writing, article defaults, search, links and recovery live in reachable sections. Position, Transform and Color share that same scrolling body. The existing editor, selection, Undo and Focus writing owners are retained; Display articles report through their module bridge.',
+      'Text uses the selection-following Inspector. Character and paragraph controls stay visible; extended writing, article defaults, search, links and recovery live in reachable sections. Position, Transform and Color share that same scrolling body. The existing editor, selection, Undo and Focus writing owners are retained.',
     evidence: 'browser-tests/text-hierarchy.browser.mjs',
     status: 'Production',
   },
@@ -375,17 +371,6 @@ export const components = [
     status: 'Local',
   },
   {
-    id: 'display',
-    name: 'Display',
-    kind: 'Module',
-    material: 'Authored Stage',
-    source: owner + 'PresentationBoardDefinitive.jsx',
-    contract:
-      'A clipped composition with multiple Grids. Controls overlay the Stage; interface changes cannot alter artwork geometry, crop or scene order.',
-    evidence: 'browser-tests/module-surfaces.browser.mjs',
-    status: 'Production',
-  },
-  {
     id: 'image',
     name: 'Image',
     kind: 'Module',
@@ -403,7 +388,7 @@ export const components = [
     material: 'Authored article',
     source: 'src/text/TextWorkbench.jsx',
     contract:
-      'Write, Read, Visitor and Display use shared article semantics. Authored fonts and line metrics are independent of interface typography.',
+      'Standalone Text and Bento Text use shared article semantics. Authored fonts and line metrics are independent of interface typography.',
     evidence: 'browser-tests/text-parity.browser.mjs',
     status: 'Production',
   },
@@ -435,7 +420,7 @@ export const components = [
     kind: 'Instrument',
     material: 'Flat Carbon / Mist',
     source: owner + 'OwnerSystemWorkflowMetadataModule.jsx',
-    contract: 'Read-only source facts follow the selected Image side or Display artwork. Info shares the owner tool dock and can detach, stack or rejoin. The reference and Visitor reuse the same metadata presentation.',
+    contract: 'Read-only source facts follow selected artwork. Info shares the owner tool dock and can detach, stack or rejoin. The reference and Visitor reuse the same metadata presentation.',
     evidence: 'browser-tests/artwork-info.browser.mjs',
     status: 'Local',
   },
@@ -458,17 +443,6 @@ export const components = [
     contract:
       'The dock uses the workspace reference’s compact Keeper surface and shared artwork slot. Its flat settings open independently of selection; animation, release, return and conversation remain module-owned.',
     evidence: 'browser-tests/tool-chrome-fixture.html',
-    status: 'Production',
-  },
-  {
-    id: 'reception',
-    name: 'Reception',
-    kind: 'Presentation',
-    material: 'Static bento / flat tactile controls',
-    source: 'src/profileDocument/components/ProfileOverview.jsx',
-    contract:
-      'One region renderer for public reading and a separate owner editor. Reception owns geometry, mobile order, surfaces and canonical Image/Text records. Workbench and Reception share movable/resizable ToolPanel windows and Library drag operation; window frames remain private preferences. Navigation clips the same surface/media silhouette. Multi-object cells are an isolated development experiment, not production data. Canvases and exploration retain their existing routes.',
-    evidence: 'browser-tests/reception-native-editor.browser.mjs',
     status: 'Production',
   },
   {
@@ -524,7 +498,7 @@ export const principles = [
   ],
   [
     'Continuity across hosts',
-    'Owner, Visitor and reception share the same module rendering, with different available actions.',
+    'Owner, Visitor and composition share the same module rendering, with different available actions.',
   ],
   [
     'Change with evidence',

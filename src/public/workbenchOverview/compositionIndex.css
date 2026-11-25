@@ -7,9 +7,6 @@
 .composition-index-header > button { margin-left: auto; flex: none; font-size: 12px; }
 .composition-index-body { display: grid; grid-template-columns: var(--index-width) minmax(0, 1fr); column-gap: clamp(24px, 3vw, 56px); padding: 28px var(--index-gutter) 56px; }
 .composition-index-sidebar { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow: auto; overscroll-behavior: contain; align-self: start; padding-top: 5px; padding-right: 8px; scrollbar-width: thin; }
-.composition-index-reception { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 28px; }
-.composition-index-reception button { gap: 8px; color: var(--tactile-muted); font-size: 12px; }
-.composition-index-sidebar .composition-index-about { justify-content: start; padding-left: 0; }
 .composition-index-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 12px 0; }
 .composition-index-label h2 { margin: 0; font: 400 14px/1.5 var(--font-interface); }
 .composition-index-label > span { color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); }
@@ -43,7 +40,7 @@
 .composition-explorer-zoom { display: flex; align-items: center; justify-self: start; gap: 2px; }
 .composition-explorer-controls button { --overview-button-padding: 0; --overview-button-min-height: 30px; flex: none; width: 28px; color: var(--tactile-muted); }
 .composition-explorer-controls button[aria-pressed="true"] { color: var(--tactile-ink); }
-.composition-explorer-zoom output { min-width: 36px; text-align: center; color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); font-variant-numeric: tabular-nums; }
+.composition-explorer-zoom .composition-fit-artwork { min-width: 36px; text-align: center; color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); font-variant-numeric: tabular-nums; }
 .composition-explorer select { max-width: 230px; min-width: 0; border: 1px solid var(--tactile-edge); background: var(--tactile-face); color: var(--tactile-ink); border-radius: var(--control-radius); padding: 7px; font: 12px/1.5 var(--font-interface); }
 .composition-explorer-bottom { display: flex; justify-content: space-between; align-items: start; gap: 36px; margin-top: 24px; }
 .composition-explorer-information { min-width: 0; max-width: 64ch; font-size: 13px; }

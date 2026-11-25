@@ -142,7 +142,7 @@
   box-shadow: none;
 }
 .workspace-command-menu[data-workflow-palette='editor'] button[data-command-id^="destination:"][data-selected] {
-  background: var(--workspace-sage); color: #172117;
+  background: var(--workspace-sage); color: var(--editor-on-accent);
 }
 .rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button:disabled {
   background: transparent;
@@ -151,4 +151,24 @@
 }
 .rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button::before { display: none; }
 
-.desktop-menu[data-workflow-palette="editor"] > .desktop-menu-section { margin-top: 5px; padding: 8px 9px 4px; border-top: 1px solid var(--tactile-divider); color: var(--tactile-muted); font: var(--workflow-type-micro); letter-spacing: .04em; text-transform: uppercase; }
+.workspace-command-menu > .desktop-menu-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+  padding: 8px 8px 5px;
+  color: var(--editor-menu-heading);
+  font: var(--workflow-type-control);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.workspace-command-menu > .desktop-menu-section::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--tactile-divider);
+}
+
+.library-new-menu[data-workflow-palette='editor'] {
+  --workflow-menu-row-height: 24px;
+  --workflow-type-control: 500 11px/1.3 var(--font-interface);
+}

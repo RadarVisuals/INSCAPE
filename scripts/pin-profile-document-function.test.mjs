@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
-import { buildGalleryRemoval } from '../src/profileDocument/domain/canvasPublication.js';
+import { createStudioComposition } from '../src/systemWorkflow/domain/studioComposition.js';
+import { createWorkbenchCollection } from '../src/systemWorkflow/domain/workbenchCollection.js';
+import { buildCanvasPublication, buildGalleryRemoval, canvasPublicationCandidates, resolvePublicationBaseline } from '../src/profileDocument/domain/canvasPublication.js';
 import { canonicalSerializeProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Serialization.js';
 import { createPinProfileDocumentHandler } from '../netlify/functions/pin-profile-document.mjs';
 import { memoryQuotaStore, uploadTestPolicy, uploadTestChallenge, uploadTestVerifier, UPLOAD_TEST_NOW, UPLOAD_TEST_SIGNER } from './fixtures/publicationUpload.mjs';
@@ -28,7 +30,20 @@ function requestFor(body, overrides = {}) {
   });
 }
 
+function studioReplacement() {
+  const record = createWorkbenchCollection(createEmptySystemWorkflowDraft(PROFILE));
+  const [work] = record.workbenches;
+  work.content.composition = createStudioComposition('canvas');
+  const previousDocument = resolvePublicationBaseline({ status: 'INVALID', errorCode: 'INVALID_DOCUMENT', address: PROFILE },
+    PROFILE, { replaceInvalid: true });
+  return buildCanvasPublication({
+    candidates: canvasPublicationCandidates({ record, assetRecords: [] }),
+    selectedIds: [work.id], placements: { [work.id]: ['gallery'] }, includeShared: true, previousDocument,
+  });
+}
+
 for (const [description, document] of [
+  ['replacing an invalid publication with the first Studio canvas in Gallery', studioReplacement()],
   ['an authored profile', publication()],
   ['the verified profile after its last Gallery work was removed', buildGalleryRemoval(publication(), 'workbench:main', 3)],
 ]) test('Netlify accepts the canonical document for ' + description, async () => {

@@ -151,3 +151,17 @@ test('abort suppresses a late page and invalid or empty requested IDs never init
   assert.equal((await collect(noFetch, { requestedAssetIds: [] }))[0].complete, true);
   await assert.rejects(collect(noFetch, { requestedAssetIds: [`1:${collection}:${tokenId(1)}`] }), /Invalid LUKSO asset ID/);
 });
+
+test('filtered pages retain raw offsets and discard repeated canonical IDs', async () => {
+  const offsets = [];
+  const searchFilter = {token:{name:{_ilike:'%art%'}}};
+  const repository = createLuksoEnvioProfileRepository({pageSize:2, fetchImpl:async (_, options) => {
+    const {offset,filter} = JSON.parse(options.body).variables;
+    assert.deepEqual(filter,searchFilter);
+    offsets.push(offset);
+    return response(offset ? [holding(2),holding(3)] : [holding(1),holding(2)],4);
+  }});
+  const batches = await collect(repository,{searchFilter});
+  assert.deepEqual(offsets,[0,2]);
+  assert.deepEqual(batches.flatMap(page => page.assets.map(a => a.id)),[1,2,3].map(assetId));
+});

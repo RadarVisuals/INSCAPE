@@ -2,15 +2,15 @@ import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMi
 import InspectorColourControls from '../colour/InspectorColourControls.jsx';
 import { CommittedOpacityControl } from '../colour/CommittedColourControls.jsx';
 import ShapeFillButton from './ShapeFillButton.jsx';
-import EditorCellInspector from '../reception/EditorCellInspector.jsx';
+import EditorCellInspector from '../composition/EditorCellInspector.jsx';
 import { OwnerSystemWorkflowSelectMenu } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowWorkspaceControls.jsx';
 import ShapeOutlineControls, { PatternNumber } from './ShapeOutlineControls.jsx';
 import ShapeEffectsControls from './ShapeEffectsControls.jsx';
 import { gridShapeFrame } from './gridShapeGeometry.js';
 import { memo, useCallback, useEffect, useMemo, useState, useId } from 'react';
 import { GripVertical } from 'lucide-react';
-import { EditorCellTools, useEditorCells, editorCellStructureActions } from '../reception/EditorCellsContext.jsx';
-import { RECEPTION_CELL_LIMIT } from '../reception/receptionEditorDocument.js';
+import { EditorCellTools, useEditorCells, editorCellStructureActions } from '../composition/EditorCellsContext.jsx';
+import { COMPOSITION_CELL_LIMIT } from '../composition/compositionEditorDocument.js';
 import ShapeSurface from './ShapeSurface.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { resizeWorkbenchWindow } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
@@ -135,7 +135,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
       { id: 'edit-cell', label: 'Edit cell contents', run: () => cellContext.enterCell(record.id) },
       { id: 'cell-settings', label: 'Bento settings', run: () => cellContext.openSettings(record.id) },
       ...editorCellStructureActions(store, record.id, view),
-    ] : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= RECEPTION_CELL_LIMIT,
+    ] : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= COMPOSITION_CELL_LIMIT,
       run: () => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); } }] : []; },
   }, shape: cell ? undefined : ({ section, transform, position, information }) => <>
     {shapeTools}
@@ -163,7 +163,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     <div className="shape-instance" data-shape-kind={kind} data-cell-owner={cell ? record.id : undefined} data-grid-selected={kind === 'grid' && view.selection?.includes(record.id) || undefined} data-workbench-select-on-pointer={editable || undefined} data-editable={editable || undefined} data-active={active || undefined}
       onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}>
       <ShapeArtworkWindow {...{ record, painted, cell, kind, toolbarVisible, editable, canvasHost, index, active, windowSnap, presentation, layout, resizeTarget, committedFrame }}
-        controls={windowControls} continuousFill={Boolean(cell && cellContext.store.getReception().bento?.gap > 0)} hideOutline={Boolean(cell && cellContext.innerLines)} />
+        controls={windowControls} continuousFill={Boolean(cell && cellContext.store.getComposition().bento?.gap > 0)} hideOutline={Boolean(cell && cellContext.innerLines)} />
     </div>
   </>;
 }

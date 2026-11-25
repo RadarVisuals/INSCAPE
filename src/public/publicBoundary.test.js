@@ -57,10 +57,7 @@ test('selected owner workflow does not restore the legacy Gallery workspace', ()
   const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
   const modulesSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerWorkbenchModules.jsx', import.meta.url), 'utf8');
   assert.match(runtimeSource, /<OwnerWorkbenchModules/u);
-  assert.match(modulesSource, /<OwnerDisplayInstance/u);
-  const displaySource = readFileSync(new URL('./ownerSystemWorkflow/DisplayModule.jsx', import.meta.url), 'utf8');
-  assert.match(displaySource, /<OwnerSystemWorkflowCanvas/u);
-  assert.doesNotMatch(displaySource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
+  assert.doesNotMatch(modulesSource, /OwnerDisplayInstance/u);
   assert.doesNotMatch(runtimeSource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
   assert.doesNotMatch(modulesSource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
 });
@@ -97,15 +94,6 @@ test('System Workflow routing contains no legacy Gallery destination controls', 
   assert.doesNotMatch(shellSource, /<OwnerSystemWorkflowSidebar/u);
 });
 
-test('published navigation follows ordered v9 Grids without a spatial-world handoff', () => {
-  const visitorSource = readFileSync(new URL('../profileDocument/components/PublishedDisplayModule.jsx', import.meta.url), 'utf8');
-  // Scene selection now lives in the headless presentation session. Behavioral
-  // selection/lifetime coverage is in presentation/sceneSession.test.js and
-  // browser-tests/scene-boundaries.browser.mjs, not a component state spelling.
-  assert.match(visitorSource, /aria-label="Next Grid"/u);
-  assert.doesNotMatch(visitorSource, /GalleryWorld|UpperWorldSurface|SpatialLevelNavigation/u);
-});
-
 test('selected owner and Visitor omit the retired upper-world topology', () => {
   const ownerSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
   const visitorSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
@@ -116,12 +104,12 @@ test('profile destinations mount the owner boundary only for an authorized Workb
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   assert.match(appSource, /localOwnerRoute \? !ownerSourceReady \?[\s\S]*<OwnerRuntimeBoundary/);
   assert.match(appSource, /localOwnerRoute \? ownerWorkspace : <Suspense[^]*?<PublishedProfileBoundary/);
-  assert.match(appSource, /ownerAuthoringEnabled = content\?\.kind === 'workbench'/);
+  assert.match(appSource, /ownerAuthoringEnabled = destination\.kind === 'workbench'/);
   assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
 });
 
 test('profile restore uses the isolated System Workflow store', () => {
-  const controllerSource = readFileSync(new URL('./ownerSystemWorkflow/useOwnerSystemWorkflowController.js', import.meta.url), 'utf8');
+  const controllerSource = readFileSync(new URL('./ownerSystemWorkflow/useWorkbenchController.js', import.meta.url), 'utf8');
   assert.match(controllerSource, /createSystemWorkflowDraftStore\(\{ profileAddress: profile/u);
   // Error handling is exercised through the mounted controller in
   // browser-tests/controller-hardening.browser.mjs, not source formatting.

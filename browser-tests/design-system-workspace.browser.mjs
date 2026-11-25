@@ -99,14 +99,14 @@ test('workspace locking, tab keyboard navigation and minimap keep independent st
     const { page, studio, errors } = await mount(browser, 390);
     await studio.getByRole('tab', { name: 'Layers', exact: true }).click();
     await studio.locator('.ds-studio-layer-list').getByRole('button', { name: 'Artwork', exact: true }).click();
-    await studio.getByRole('button', { name: 'Lock Artwork · Display', exact: true }).click();
+    await studio.getByRole('button', { name: 'Lock Artwork · Cell', exact: true }).click();
     assert.ok(await studio.getByRole('button', { name: 'Rotate', exact: true }).isDisabled());
     await studio.getByRole('tab', { name: 'Transform', exact: true }).click();
     assert.ok(await studio.getByLabel('Studio Width', { exact: true }).isDisabled());
     await studio.getByRole('tab', { name: 'Color', exact: true }).click();
     assert.equal(await studio.getByRole('slider', { name: 'Colour hue' }).getAttribute('aria-disabled'), 'true');
     await studio.getByRole('tab', { name: 'Layers', exact: true }).click();
-    await studio.getByRole('button', { name: 'Unlock Artwork · Display', exact: true }).click();
+    await studio.getByRole('button', { name: 'Unlock Artwork · Cell', exact: true }).click();
     assert.ok(await studio.getByRole('button', { name: 'Rotate', exact: true }).isEnabled());
     await studio.locator('.ds-studio-layer-list').getByRole('button', { name: 'Text', exact: true }).click();
     await studio.getByRole('button', { name: 'Edit Text', exact: true }).click();
@@ -139,7 +139,7 @@ test('workspace themes and tabs fit wide and narrow containers with legible tool
       const { page, studio, errors } = await mount(browser, width);
       for (const theme of ['carbon', 'mist']) {
         await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
-        for (const name of ['Color','Layers','Shape','Image','Display','Transform','FX','Info']) {
+        for (const name of ['Color','Layers','Shape','Image','Transform','FX','Info']) {
           await studio.getByRole('tab', { name, exact: true }).click();
           assert.ok(await studio.getByRole('tabpanel', { name, exact: true }).isVisible());
         }
@@ -197,10 +197,10 @@ test('Layers selection, grouping, visibility, ordering and confirmed removal sta
     await source.dragTo(target);
     assert.notEqual((await order())[0], 'moon', 'dragging changes the layer order');
     await row('Artwork').click(); await row('Moon').click({ modifiers: ['Shift'] });
-    const remove = studio.getByRole('button', { name: 'Remove Moon from Grid', exact: true });
+    const remove = studio.getByRole('button', { name: 'Remove Moon from cell', exact: true });
     const trashBounds=await remove.boundingBox(), listBounds=await list.boundingBox();
     await remove.click();
-    const confirm=studio.getByRole('alertdialog',{name:'Remove layers from Grid'});
+    const confirm=studio.getByRole('alertdialog',{name:'Remove layers from cell'});
     assert.match(await confirm.innerText(),/Remove 2 layers\?/);
     assert.equal(await list.locator('.ds-layer-row[data-layer-id="moon"]').getByRole('alertdialog').count(),1);
     const affirmativeBounds=await confirm.getByRole('button',{name:'Remove',exact:true}).boundingBox();
@@ -258,7 +258,7 @@ test('Layers spacing uses real validation and empty/read-only examples preserve 
     assert.ok(await studio.getByRole('button',{name:'Add text',exact:true}).isDisabled());
     await studio.locator('.ds-studio-layer-list').getByRole('button',{name:'Artwork',exact:true}).click();
     assert.ok(await studio.getByRole('button',{name:'Studio duplicate',exact:true}).isDisabled());
-    assert.ok(await studio.getByRole('button',{name:'Remove Artwork from Grid',exact:true}).isDisabled());
+    assert.ok(await studio.getByRole('button',{name:'Remove Artwork from cell',exact:true}).isDisabled());
     await studio.getByRole('tab',{name:'Color',exact:true}).click();
     assert.ok(await studio.getByLabel('Studio colour',{exact:true}).isDisabled());
     assert.equal(await studio.getByRole('slider',{name:'Colour hue'}).getAttribute('aria-disabled'),'true');

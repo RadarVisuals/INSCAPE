@@ -1,5 +1,5 @@
 import { undockWindow } from './fixtures/undock-window.mjs';
-import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
+import { editorDestination, editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -16,8 +16,8 @@ const prefs = page => page.evaluate(key => JSON.parse(localStorage.getItem(key))
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
 const library = page => page.getByRole('region', { name: 'Library workspace', exact: true });
 const showDisplayOptions = async page => {
-  if (!await page.getByRole('dialog', { name: 'Library display options', exact: true }).isVisible())
-    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+  if (!await page.getByRole('dialog', { name: 'Library view options', exact: true }).isVisible())
+    await page.getByRole('button', { name: 'Library view options', exact: true }).click();
 };
 const libraryHost = page => page.locator('.workbench-tool-dock').filter({ has: page.getByRole('tab', { name: 'Library', exact: true }) });
 const closeLibrary = page => libraryHost(page).getByRole('button', { name: 'Close Library', exact: true });
@@ -64,16 +64,15 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await mount(browser); await page.emulateMedia({ reducedMotion });
-      const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
       const trigger = editorMenu(page, 'Docs');
       const panel = page.getByRole('dialog', { name: 'Docs', exact: true });
-      await trigger.click(); await panel.waitFor();
+      await editorDestination(page, 'Docs'); await panel.waitFor();
       await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
       await panel.waitFor({ state: 'detached' });
       await page.waitForFunction(node => document.activeElement === node, await trigger.elementHandle());
-      await trigger.click(); await panel.waitFor(); await holdFrames(page);
+      await editorDestination(page, 'Docs'); await panel.waitFor(); await holdFrames(page);
       await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
-      const next = editorMenu(page, 'Canvas'); await next.focus();
+      const next = page.getByRole('button', { name: 'Studio', exact: true }); await next.focus();
       await panel.waitFor({ state: 'detached' });
       await page.evaluate(() => window.releaseHeldFrames());
       assert.equal(await next.evaluate(n => n === document.activeElement), true, 'closing animation and deferred return preserve newer focus');
@@ -125,7 +124,7 @@ test('Library preferences survive close, Workbench switching and reload without 
   try {
     const { page, errors } = await mount(browser); const before = await saved(page);
     await openLibrary(page);
-    await page.getByRole('button', { name: 'Owned', exact: true }).click();
+    await page.getByRole('button', { name: 'All Assets', exact: true }).click();
     await library(page).getByRole('button', { name: 'Filters: All', exact: true }).click();
     await page.getByRole('radio', { name: 'INSCAPE STUDIES', exact: true }).click();
     await page.keyboard.press('Escape');
@@ -144,7 +143,7 @@ test('Library preferences survive close, Workbench switching and reload without 
     await openLibrary(page); assert.equal(await search.inputValue(), 'moon');
     await page.reload(); await openLibrary(page);
     assert.equal(await search.inputValue(), 'moon');
-    assert.equal(await page.getByRole('button', { name: 'Owned', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.getByRole('button', { name: 'All Assets', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await library(page).getByRole('button', { name: 'Filters: INSCAPE STUDIES', exact: true }).count(), 1);
     await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '230');
@@ -318,7 +317,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await search.fill('');
     assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     assert.equal(await panel.evaluate(node => getComputedStyle(node).boxShadow), 'none');
-    for (const control of [search, panel.getByRole('button', { name: 'Library display options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'Owned', exact: true }), page.getByRole('button', { name: 'Created', exact: true })]) {
+    for (const control of [search, panel.getByRole('button', { name: 'Library view options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'All Assets', exact: true }), page.getByRole('button', { name: 'Folders', exact: true })]) {
       assert.equal(await control.evaluate(node => { const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)); }), true);
     }
     await showDisplayOptions(page);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
-import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringSession.js';
+import { addTextModule } from '../text/textSession.js';
 import { createArticle } from '../text/domain/article.js';
 import { draftChanges, applyDraftChanges } from './draftHistory.js';
 const profile = '0x1111111111111111111111111111111111111111';
@@ -15,28 +15,17 @@ function rename(store, name) {
   editShape(store, profile, current, { name });
 }
 
-test('chronological undo crosses Shape and Display and persists successful restoration', () => {
+test('chronological undo crosses Shape and Text and persists successful restoration', () => {
   const { store, storage } = setup(); addShape(store, profile);
   const before = store.getDraft();
   rename(store, 'My shape');
-  const session = createSystemWorkflowAuthoringSession({ store }); session.createGrid();
-  assert.equal(store.undo(), true); assert.equal(store.getDraft().grids.length, before.grids.length);
-  assert.ok(session.getState().draft.grids.some(grid => grid.id === session.getState().selectedGridId));
+  addTextModule(store, profile);
+  assert.equal(store.undo(), true); assert.equal(store.getDraft().texts, before.texts);
   assert.equal(store.getDraft().shapes[0].name, 'My shape');
   assert.equal(store.undo(), true); assert.deepEqual(store.getDraft(), before);
   assert.equal(store.redo(), true); assert.equal(store.getDraft().shapes[0].name, 'My shape');
-  assert.equal(store.redo(), true); assert.equal(store.getDraft().grids.length, before.grids.length + 1);
+  assert.equal(store.redo(), true); assert.equal(store.getDraft().texts.length, 1);
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), store.getDraft());
-});
-
-test('preview navigation is not an undo step and does not prevent undoing module creation', () => {
-  const { store } = setup();
-  const session = createSystemWorkflowAuthoringSession({ store });
-  session.createGrid();
-  addShape(store, profile);
-  session.selectGrid(store.getDraft().grids[0].id);
-  assert.equal(store.undo(), true); assert.equal(store.getDraft().shapes, undefined);
-  assert.equal(store.redo(), true); assert.equal(store.getDraft().shapes.length, 1);
 });
 
 test('failed writes and external edits preserve both draft and history', () => {

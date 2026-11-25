@@ -49,12 +49,12 @@ const libraryExamples = [
   ['created-error', 'Created source unavailable'],
 ];
 
-const tabs = ['Color', 'Layers', 'Shape', 'Image', 'Display', 'Transform', 'FX', 'Info'];
+const tabs = ['Color', 'Layers', 'Shape', 'Image', 'Transform', 'FX', 'Info'];
 const seed = () =>
   [
     { id: 'image', kind: 'image', name: 'Image', color: '#b5a99a' },
     { id: 'shape', kind: 'shape', name: 'Rectangle', color: '#8d9c8c', shape: 'rectangle' },
-    { id: 'display', kind: 'display', name: 'Display · Grid 1', color: '#d4d1c8', grid: true },
+    { id: 'cell', kind: 'cell', name: 'Bento cell', color: '#d4d1c8', grid: true },
     ...sampleLayers(),
   ].map((item) => ({
     x: 120,
@@ -117,7 +117,7 @@ export default function WorkspacePreview({ onAction, status }) {
     selectedItems = items.filter((i) => selectedIds.includes(i.id)),
     multiple = selectedItems.length > 1;
   const isLayerSelection =
-    selectedItems.length > 0 && selectedItems.every((i) => i.parent === 'display');
+    selectedItems.length > 0 && selectedItems.every((i) => i.parent === 'cell');
   const record = items.find((record) => record.id === selected),
     item =
       record?.kind === 'text'
@@ -159,7 +159,7 @@ export default function WorkspacePreview({ onAction, status }) {
       );
     const target = items.find((i) => i.id === value),
       ids =
-        target?.parent === 'display'
+        target?.parent === 'cell'
           ? expandGroup(items, groups, [value]).filter(
               (id) => items.find((i) => i.id === id)?.visible,
             )
@@ -223,7 +223,7 @@ export default function WorkspacePreview({ onAction, status }) {
   const changeLayerExample = (value) => {
     setLayerScenario(value);
     setItems((list) => {
-      const retained = list.filter((i) => i.parent !== 'display');
+      const retained = list.filter((i) => i.parent !== 'cell');
       const samples = sampleLayers(value).map((i) =>
         retained.some((r) => r.id === i.id) ? { ...i, id: i.id + '-' + ++nextId.current } : i,
       );
@@ -244,7 +244,7 @@ export default function WorkspacePreview({ onAction, status }) {
       article: sampleArticle('empty'),
     };
     // Added text must not cover an existing text frame in this fixed-size example.
-    const textLayers = items.filter((layer) => layer.parent === 'display' && layer.kind === 'text');
+    const textLayers = items.filter((layer) => layer.parent === 'cell' && layer.kind === 'text');
     const positions = [text.y, ...textLayers.map((layer) => layer.y + layer.height + 8)];
     const y = positions
       .sort((a, b) => a - b)
@@ -267,7 +267,7 @@ export default function WorkspacePreview({ onAction, status }) {
     }
     setItems((list) => [...list, { ...text, y }]);
     setSelectedIds([text.id]);
-    report('Text added to the example Display.');
+    report('Text added to the example cell.');
   };
   const applyGutter = (value) => {
     try {
@@ -371,7 +371,7 @@ export default function WorkspacePreview({ onAction, status }) {
         !i.locked &&
         !i.textReadOnly &&
         i.visible &&
-        !(readOnly && i.parent === 'display')
+        !(readOnly && i.parent === 'cell')
           ? patchPreviewItem(i, patch)
           : i,
       ),
@@ -383,8 +383,8 @@ export default function WorkspacePreview({ onAction, status }) {
           ? {
               ...i,
               article: sampleArticle(mode),
-              parent: mode === 'display' ? 'display' : undefined,
-              name: mode === 'display' ? 'Text · Display' : 'Text · Article',
+              parent: mode === 'cell' ? 'cell' : undefined,
+              name: mode === 'cell' ? 'Text · Cell' : 'Text · Article',
               textReadOnly: mode === 'readonly',
               textExample: mode,
               textRevision: (i.textRevision || 0) + 1,
@@ -490,7 +490,7 @@ export default function WorkspacePreview({ onAction, status }) {
               <option value="composition">Composition</option>
               <option value="spacing">Spacing study</option>
               <option value="long">Long list · 24 layers</option>
-              <option value="empty">Empty Display</option>
+              <option value="empty">Empty cell</option>
               <option value="readonly">Read-only</option>
             </select>
           </label>
@@ -501,10 +501,10 @@ export default function WorkspacePreview({ onAction, status }) {
             Text example
             <select
               aria-label="Text example"
-              value={item.textExample || 'display'}
+              value={item.textExample || 'cell'}
               onChange={(event) => changeTextExample(event.target.value)}
             >
-              <option value="display">Display text</option>
+              <option value="cell">Cell text</option>
               <option value="article">Standalone article</option>
               <option value="illustrated">Illustrated article</option>
               <option value="empty">Empty article</option>
@@ -536,7 +536,7 @@ export default function WorkspacePreview({ onAction, status }) {
         data-library-open={libraryOpen || undefined} data-navigation-collapsed={sidebarCollapsed || undefined}>
         <NavigationPreview collapsed={sidebarCollapsed} onCollapse={() => setSidebarCollapsed(value => !value)}
           libraryOpen={libraryOpen} onLibrary={toggleLibrary} navigationHost={setLibraryNavigationHost}
-          onWorkbench={() => setLibraryOpen(false)} onGrids={() => { selectSample('display'); setTab('Display'); report('Grids belong to the selected Display.'); }} />
+          onWorkbench={() => setLibraryOpen(false)} />
         <div className="ds-studio-body"><div className="ds-studio-content">
           {libraryVisited && (
             <Suspense fallback={null}>
@@ -558,7 +558,6 @@ export default function WorkspacePreview({ onAction, status }) {
           <div
             className="ds-studio-canvas"
             aria-label="Example workbench"
-            data-grid={(item?.kind === 'display' && item.grid) || undefined}
           >
             <span className="ds-studio-canvas-label">
               WORKBENCH <span>{zoom}%</span>
@@ -612,14 +611,13 @@ export default function WorkspacePreview({ onAction, status }) {
                       >
                         {image ? (
                           <SampleArtwork item={item} />
-                        ) : item.kind === 'display' ? (
+                        ) : item.kind === 'cell' ? (
                           <>
                             <span className="ds-studio-display-art">
                               <SampleArtwork
                                 item={items.find((i) => i.kind === 'artwork') || item}
                               />
                             </span>
-                            <small>Grid {item.scene || 1}</small>
                             <span
                               className="ds-studio-grain"
                               style={{ opacity: item.grain / 100 }}
@@ -1007,7 +1005,7 @@ export default function WorkspacePreview({ onAction, status }) {
         {notice}
       </p>
       <p className="ds-caption">
-        This reference uses a disposable Display composition. The local Workbench now has
+        This reference uses a disposable Bento composition. The local Workbench now has
         Layers, Transform, Color, Image, Shape, FX and Info in movable docks. Text uses its own window;
         Color and Transform remain shared.
         Existing control references remain below.

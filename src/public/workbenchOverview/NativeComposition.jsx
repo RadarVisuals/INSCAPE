@@ -1,11 +1,8 @@
-import ReceptionDocumentCanvas from '../../reception/ReceptionDocumentCanvas.jsx';
-import ReceptionCanvas from '../../reception/ReceptionCanvas.jsx';
-import ReceptionPresentation, { useReceptionPresentation } from '../../reception/ReceptionPresentation.jsx';
+import CompositionDocumentCanvas from '../../composition/CompositionDocumentCanvas.jsx';
+import { useCompositionPresentation } from '../../composition/CompositionPresentation.jsx';
 
 export default function NativeComposition({ composition, interactive }) {
-  const context = useReceptionPresentation();
-  const Reader = composition.version === 3 ? ReceptionDocumentCanvas : ReceptionCanvas;
-  const content = <Reader reception={composition} model={context?.profile} address={context?.snapshot.profileAddress}
+  const context = useCompositionPresentation();
+  return <CompositionDocumentCanvas composition={composition}
     onOpenSource={interactive ? context?.onOpenSource : undefined} />;
-  return context && composition.links?.length ? <ReceptionPresentation {...context}>{content}</ReceptionPresentation> : content;
 }

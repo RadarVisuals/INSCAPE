@@ -12,7 +12,7 @@ async function exposeText(page) {
 }
 
 async function exposeReadAction(page) {
-  const win = page.locator('.text-window').first();
+  const win = page.locator('aside.text-window').first();
   await win.hover();
   const read = page.getByRole('button', { name: 'Read', exact: true });
   const action = await read.boundingBox(), menu = await page.locator('.editor-menu-bar').boundingBox();
@@ -48,7 +48,7 @@ async function exposeReadAction(page) {
   return read;
 }
 
-for (const width of [1440, 700]) test(`Rejected Library drop onto Read mode Text does not report an error in Display at ${width}px`, { timeout: 60000 }, async () => {
+for (const width of [1440, 700]) test(`Rejected Library drop onto Read mode Text reports the error in the Library at ${width}px`, { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });

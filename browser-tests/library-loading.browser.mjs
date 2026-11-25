@@ -83,6 +83,20 @@ test('Library retains cached cards after failed RPC discovery and Retry assets r
   } finally { await browser.close(); }
 });
 
+test('Library labels only the creator relationship while holding evidence is unavailable', async () => {
+  const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.route('https://**/*', route => route.abort());
+    await page.goto(`${root}/browser-tests/library-progressive-fixture.html`);
+    const collection = page.getByRole('button', { name: /^My collection(?: \/|$)/ });
+    await collection.waitFor();
+    assert.deepEqual(await collection.locator('.lattice-browser-asset__relationships small').allTextContents(), ['CREATED']);
+    assert.equal(await page.evaluate(() => window.libraryDemandTest.ownedPages), 1);
+  } finally { await browser.close(); }
+});
+
 test('5000 assets stay paged, visible metadata preserves selection, and a chosen category opens directly after reload', { timeout: 90000 }, async () => {
   const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
   const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -108,7 +122,7 @@ test('5000 assets stay paged, visible metadata preserves selection, and a chosen
       const updated = page.getByRole('button', { name: /^Fresh A token 1(?: \/|$)/ });
       await updated.waitFor();
       assert.equal(await updated.getAttribute('aria-pressed'), 'true');
-      await page.getByRole('button', { name: 'Created', exact: true }).click();
+      await page.getByRole('button', { name: 'All Assets', exact: true }).click();
       await page.getByRole('button', { name: /^My collection(?: \/|$)/ }).dblclick();
       await page.waitForFunction(() => Boolean(window.libraryDemandTest.data.collectionContext));
       assert.equal(await page.evaluate(() => window.libraryDemandTest.collectionPages), 1);
@@ -208,5 +222,56 @@ test('a category keeps individual images from one NFT through reload and removes
       assert.deepEqual(errors, []);
       await page.close();
     }
+  } finally { await browser.close(); }
+});
+
+test('Curation opens offline with durable assets and an unresolved folder member', { timeout: 60000 }, async () => {
+  const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE, headless: true });
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('https://**/*', route => route.abort());
+    await page.route('https://art.test/prop.webp', route => route.fulfill({ contentType: 'image/webp', path: 'public/assets/actors/abyssal_eye/full.webp' }));
+    const fixture = root + '/browser-tests/library-storage-fixture.html?curation';
+    await page.goto(fixture);
+    await page.waitForFunction(() => !!window.storageTest?.openCuration);
+    const { id, broken } = await page.evaluate(() => {
+      const store = window.storageTest.store;
+      const state = store.getState();
+      const contract = '0x' + '2'.repeat(40);
+      const id = '42:' + contract + ':contract';
+      const broken = '42:0x' + '3'.repeat(40) + ':contract';
+      const folder = state.createFolder('Props');
+      state.setFolderAsset(folder, broken, true);
+      store.setState({ assets: [{ id, chainId: 42, contractAddress: contract, tokenId: null,
+        ownerAddress: state.profileAddress, standard: 'LSP7', name: 'Saved prop', imageUrl: 'https://art.test/prop.webp' }] });
+      window.storageTest.openCuration();
+      return { id, broken };
+    });
+    const left = page.locator('[data-curation-pane="source"]');
+    const right = page.locator('[data-curation-pane="destination"]');
+    await left.getByRole('button', { name: 'Saved prop', exact: true }).dblclick();
+    await page.waitForFunction(id => !!JSON.parse(window.storageTest.saved()).curatedSnapshots[id], id);
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await page.getByRole('button', { name: 'Open Curation' }).waitFor();
+    await page.unroute('https://art.test/prop.webp');
+    await context.setOffline(true);
+    await page.getByRole('button', { name: 'Open Curation' }).click();
+    await right.getByRole('button', { name: 'All Assets', exact: true }).click();
+    await right.getByRole('button', { name: 'Saved prop', exact: true }).waitFor();
+    const missing = right.locator('[data-library-asset-id="' + broken + '"]');
+    await missing.getByText(broken, { exact: true }).waitFor();
+    await missing.getByText('Props', { exact: true }).waitFor();
+    assert.deepEqual(await right.locator('[data-library-asset-id]').evaluateAll(nodes => nodes.map(node => node.dataset.libraryAssetId)), [broken, id]);
+    assert.equal(await right.getByRole('button', { name: 'Retry assets' }).count(), 0);
+    await right.getByRole('button', { name: 'Props', exact: true }).click();
+    await missing.getByText(broken, { exact: true }).waitFor();
+    assert.equal(await right.locator('[data-library-asset-id]').count(), 1);
+    await page.setViewportSize({ width: 760, height: 800 });
+    await missing.getByText(broken, { exact: true }).waitFor();
+    assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

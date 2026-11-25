@@ -4,8 +4,9 @@ import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import './workbenchCanvasContent.css';
 import { artworkModuleId, layerIds } from '../../systemWorkflow/domain/artworkLayers.js';
-import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
-import { editorCellClip, transformedCellWindow } from '../../reception/editorCellGeometry.js';
+import { slideOf, slideIndex } from '../../composition/cellSlides.js';
+import { useEditorCells } from '../../composition/EditorCellsContext.jsx';
+import { editorCellClip, transformedCellWindow } from '../../composition/editorCellGeometry.js';
 
 // One clipping plane for authored content. Its projection follows the camera
 // paint clock, without reading module rectangles or re-rendering their media.
@@ -15,6 +16,7 @@ export default function WorkbenchCanvasContent({ children, suspended = false }) 
   const { getCamera, subscribeCameraPaint, registerCameraPlane } = useWorkbenchCamera();
   const { layers, content, entries, editorHiddenIds, subscribe, frames, transforms, presentationTransforms, scale } = useWorkbenchView();
   const cellContext = useEditorCells();
+  const cells = cellContext?.cells, slidePositions = cellContext?.slidePositions;
   const node = useRef(null), current = useRef(area); current.current = area;
   const plane = useRef(null);
   useLayoutEffect(() => registerCameraPlane?.(plane.current), [registerCameraPlane]);
@@ -34,6 +36,8 @@ export default function WorkbenchCanvasContent({ children, suspended = false }) 
   useLayoutEffect(() => { paint.current?.(getCamera()); });
   useLayoutEffect(() => {
     const order = layerIds(layers || []);
+    const offSlide = new Set(cells?.flatMap(cell => cell.slides
+      ? cell.members.filter(id => slideOf(cell, id) !== slideIndex(cell, slidePositions)) : []));
     const update = () => {
       for (const [id, element] of entries) {
         const moduleId = artworkModuleId(content, id), index = order.indexOf(moduleId);
@@ -41,11 +45,11 @@ export default function WorkbenchCanvasContent({ children, suspended = false }) 
         element.setAttribute('data-workbench-artwork', '');
         // At most 64 artwork modules; host controls begin above this band.
         element.style.setProperty('--artwork-order', String(index + 1));
-        element.toggleAttribute('data-editor-hidden', editorHiddenIds?.includes(moduleId));
+        element.toggleAttribute('data-editor-hidden', editorHiddenIds?.includes(moduleId) || offSlide.has(moduleId));
       }
     };
     update(); return subscribe(update);
-  }, [layers, content, entries, subscribe, editorHiddenIds]);
+  }, [layers, content, entries, subscribe, editorHiddenIds, cells, slidePositions]);
   useLayoutEffect(() => {
     const host = node.current;
     const update = () => {

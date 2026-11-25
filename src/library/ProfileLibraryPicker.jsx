@@ -24,10 +24,10 @@ export default function ProfileLibraryPicker({ library, onClose, placementScope,
   const handlePlacing = useCallback(next => { setPlacing(next); onPlacingChange?.(next); }, [onPlacingChange]);
   const panel = <ToolPanel title="Library" label="Library" closeLabel="Close Library" onClose={onClose} chrome="flat"
     data-workflow-material="tactile" data-workflow-finish="flat" data-workbench-selection-tools
-    className={`reception-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
+    className={`composition-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
     frame={frames.library || initial} onFrameChange={updateFrame} boundsRef={boundsRef} active={active} onActivate={onActivate}
     minimumWidth={280} minimumHeight={300}>
-    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label={label} phase="open" resizable={false} overlayPlacement embedded
+    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="composition-library" label={label} phase="open" resizable={false} overlayPlacement embedded
       data={library.libraryData} categoryCommands={library.categoryCommands}
       placementScope={placementScope} placementTargetRef={placementTargetRef} preferenceStore={preferences}
       selectionAction={selectionAction} selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}

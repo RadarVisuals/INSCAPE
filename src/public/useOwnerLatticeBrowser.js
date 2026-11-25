@@ -7,9 +7,9 @@ import { adaptLatticeProductionBrowserData } from '../lattice/browser/latticePro
 import { projectLibraryAssetUnion } from '../lattice/browser/libraryAssetUnion.js';
 import { createLibraryMetadataDemand } from '../library/data/libraryMetadataDemand.js';
 
-export function createOwnerLatticeCategoryCommands(profileAddress, getStore = useLibraryStore.getState) {
+export function createOwnerLatticeCategoryCommands(profileAddress, getStore = useLibraryStore.getState, records) {
   const profile = normalizeProfileAddress(profileAddress);
-  const commit = (command) => getStore().commitCategoryForProfile(profile, command);
+  const commit = (command) => getStore().commitCategoryForProfile(profile, command, records);
   return Object.freeze({
     createCategory: (name, sectionId = null, parentId = null) => commit({ name, sectionId, parentId, type: 'create' }),
     deleteCategory: (categoryId) => commit({ categoryId, type: 'delete' }),
@@ -21,6 +21,7 @@ export function createOwnerLatticeCategoryCommands(profileAddress, getStore = us
     createSection: (name) => commit({ name, type: 'create-section' }),
     renameSection: (sectionId, name) => commit({ name, sectionId, type: 'rename-section' }),
     deleteSection: (sectionId) => commit({ sectionId, type: 'delete-section' }),
+    moveCategoryAssets: (fromId, toId, assetIds, imageUrl) => commit({ fromId, toId, assetIds, imageUrl, type: 'move-assets' }),
     moveCategory: (categoryId, sectionId = null, beforeId = null, parentId = null) => commit({ beforeId, categoryId, sectionId, parentId, type: 'move-category' }),
     moveSection: (sectionId, beforeId = null) => commit({ beforeId, sectionId, type: 'move-section' }),
   });
@@ -38,7 +39,7 @@ export function retryLibraryForProfile(profileAddress, getStore = useLibraryStor
   return state.unresolvedAssetIds?.length ? state.repair() : state.load({ forceLive: true });
 }
 
-export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled = true, referencedAssetIds = []) {
+export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled = true, referencedAssetIds = [], referencesOnly = false) {
   const profile = normalizeProfileAddress(profileAddress);
   const [useRelatedCreationsStore] = useState(() => createCreationsStore({ retainOnRetry: true, pageOnDemand: true }));
   const [useCollectionTokensStore] = useState(() => createCollectionTokensStore());
@@ -122,11 +123,12 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
     return () => controller.abort();
   }, [inventoryEnabled, profileReady, createdReady, categoryKey, category?.assetIds, categoryLimit, resolveReferences, retryVersion]);
 
-  const ownedAssets = useMemo(() => profileReady ? [...owned.assets, ...owned.referencedAssets] : [],
-    [profileReady, owned.assets, owned.referencedAssets]);
+  const ownedAssets = useMemo(() => profileReady
+    ? referencesOnly ? owned.referencedAssets : [...owned.assets, ...owned.referencedAssets] : [],
+    [profileReady, referencesOnly, owned.assets, owned.referencedAssets]);
   const union = useMemo(() => projectLibraryAssetUnion({ profileAddress: profile, ownedAssets,
-    createdAssets: createdReady ? [...created.assets, ...created.referencedAssets] : [] }),
-  [profile, ownedAssets, createdReady, created.assets, created.referencedAssets]);
+    createdAssets: createdReady ? referencesOnly ? created.referencedAssets : [...created.assets, ...created.referencedAssets] : [] }),
+  [profile, ownedAssets, createdReady, referencesOnly, created.assets, created.referencedAssets]);
   const collectionUnion = useMemo(() => activeCollection ? projectLibraryAssetUnion({ profileAddress: profile,
     createdAssets: [activeCollection, ...collection.assets],
     ownedAssets: ownedAssets.filter(asset => asset.contractAddress === activeCollection.contractAddress) })
@@ -191,11 +193,11 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
       onRetryCollection: () => { setMetadataError(null); metadata.retry(); return collection.retry(activeCollection); } } : {}),
   };
   const commands = useMemo(() => {
-    const base = createOwnerLatticeCategoryCommands(profile);
+    const base = createOwnerLatticeCategoryCommands(profile, useLibraryStore.getState, new Map(records.map(record => [record.id, record])));
     const accepted = union.assets.map(asset => asset.stableAssetId);
     return { ...base, setCategoryAsset: (id, asset, value) => base.setCategoryAsset(id, asset, value, accepted),
       setCategoryAssets: (id, assets, value) => base.setCategoryAssets(id, assets, value, accepted),
       setCategoryImage: (id, asset, url, value) => base.setCategoryImage(id, asset, url, value, accepted) };
-  }, [profile, union.assets]);
+  }, [profile, union.assets, records]);
   return { data, records, commands: profileReady && !activeCollection ? commands : null, retryCreated: created.retry };
 }

@@ -14,9 +14,8 @@ async function actualCoordinates(page) {
   await page.locator('main.system-workflow').focus();
   await setWorkbenchZoom(page, 1);
   const pan = await page.evaluate(() => {
-    const rect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
-    const frame = window.savedDraft().workbench.display.window;
-    return { deltaX: rect.left - frame.left, deltaY: rect.top - frame.top, bubbles: true, cancelable: true };
+    const host = document.querySelector('main.system-workflow');
+    return { deltaX: Number(host.dataset.workbenchCameraX), deltaY: Number(host.dataset.workbenchCameraY), bubbles: true, cancelable: true };
   });
   await page.locator('main.system-workflow').dispatchEvent('wheel', pan); await settle(page);
 }
@@ -49,7 +48,6 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     const fill = await shape.locator('.shape-fill').boundingBox();
     near(fill.width, 700); near(fill.height, 450);
     assert.equal(await shape.locator('.shape-fill').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(255, 102, 0)');
-    assert.ok(await page.evaluate(() => Boolean(document.elementFromPoint(1000, 300)?.closest('.system-workflow__presentation-board'))), 'Display stays above shapes too');
     // Move the background partly under the text, through the same direct drag.
     await page.keyboard.down('Alt'); await page.mouse.move(1100, 620); await page.mouse.down();
     await page.mouse.move(640, 660, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);

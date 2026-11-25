@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 106,
-    "definitions": 757,
-    "names": 431
+    "files": 99,
+    "definitions": 847,
+    "names": 449
   },
   "sources": [
     {
@@ -35,7 +35,7 @@
     {
       "path": "design-system/lab/lab.css",
       "role": "Reference local",
-      "sha256": "5433c2f26b92bf6ccfca3edb923142510760d7379c3fbc42e31acbee8fa8f04d",
+      "sha256": "9446608550b38593b5fd04870f00726ea4c7baf665b40f9a1c102ad89998c126",
       "definitions": [],
       "references": [
         "--color-text-secondary",
@@ -809,9 +809,254 @@
       ]
     },
     {
+      "path": "src/composition/cellNumber.css",
+      "role": "Local",
+      "sha256": "43414279e3e611bd45df6f65386925cc3dd26eed7ebe8e3100e59ea4b10ad28e",
+      "definitions": [],
+      "references": [
+        "--tactile-ink"
+      ]
+    },
+    {
+      "path": "src/composition/composition.css",
+      "role": "Local",
+      "sha256": "ed5497b608ac89447e101d432c236228fc20f5f02a5954147b0f5e5c800c3a5c",
+      "definitions": [],
+      "references": [
+        "--control-target-touch",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/composition/compositionBento.css",
+      "role": "Local",
+      "sha256": "9c326d4d0100232036e887fb0ef57c536dc84282d634d06e19dcd958728be059",
+      "definitions": [
+        {
+          "name": "--tool-control-height",
+          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
+          "scope": [
+            ".composition-bento-panel"
+          ],
+          "line": 11,
+          "references": [
+            "--control-height-sm",
+            "--tool-touch-target"
+          ]
+        },
+        {
+          "name": "--tool-icon-target",
+          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
+          "scope": [
+            ".composition-bento-panel"
+          ],
+          "line": 11,
+          "references": [
+            "--control-height-sm",
+            "--tool-touch-target"
+          ]
+        }
+      ],
+      "references": [
+        "--control-height-sm",
+        "--editor-accent",
+        "--editor-ink",
+        "--editor-panel",
+        "--tactile-accent",
+        "--tactile-control-edge",
+        "--tactile-edge",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-radius-control",
+        "--tactile-well",
+        "--tool-control-height",
+        "--tool-touch-target",
+        "--workbench-toolbar-clearance",
+        "--workbench-toolbar-offset",
+        "--workflow-border",
+        "--workflow-dock-height",
+        "--workflow-ink",
+        "--workflow-panel",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/composition/compositionCellGrain.css",
+      "role": "Local",
+      "sha256": "f7d9b0d36cc4d1e97f9379afb71e763a46d5239e244f55587f8a8f7b5276975a",
+      "definitions": [],
+      "references": []
+    },
+    {
+      "path": "src/composition/compositionDocument.css",
+      "role": "Composition viewer",
+      "sha256": "03ef856638b5ac9dd9812667964774eb08b91f3fd8e82923082f5b0f00a01b45",
+      "definitions": [
+        {
+          "name": "--text-stack-height",
+          "value": "100cqh",
+          "scope": [
+            ".composition-text-preview[data-stacked]"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".composition-cell-group[data-swiping] > .composition-document-cell"
+          ],
+          "line": 25,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".composition-cell-group[data-swiping] > .composition-document-layer,\n.composition-cell-group[data-swiping] > .composition-document-cell > .composition-document-cell-content"
+          ],
+          "line": 33,
+          "references": []
+        },
+        {
+          "name": "--cell-slide-offset",
+          "value": "calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1)",
+          "scope": [
+            ".composition-cell-group[data-swiping] > .composition-document-layer,\n.composition-cell-group[data-swiping] > .composition-document-cell > .composition-document-cell-content"
+          ],
+          "line": 34,
+          "references": [
+            "--layer-slide",
+            "--slide-position",
+            "--slide-count"
+          ]
+        },
+        {
+          "name": "--swipe-pan",
+          "value": "pan-x",
+          "scope": [
+            ".composition-cell-group[data-vertical-swipe]"
+          ],
+          "line": 42,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "right center",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "left center",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center bottom",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center top",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
+          "references": []
+        }
+      ],
+      "references": [
+        "--cell-slide-offset",
+        "--composition-frame-fill",
+        "--composition-frame-fill-opacity",
+        "--composition-frame-line",
+        "--composition-frame-line-opacity",
+        "--glow-edge",
+        "--glow-size",
+        "--interface-environment",
+        "--interface-window",
+        "--layer-slide",
+        "--slide-count",
+        "--slide-position",
+        "--slide-x",
+        "--slide-y",
+        "--swipe-pan",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/composition/compositionInnerLines.css",
+      "role": "Local",
+      "sha256": "b98f7f218812aa34a1b29d398b202838b1174c9d9e2281e2e1ea76a32ebdabc6",
+      "definitions": [],
+      "references": []
+    },
+    {
+      "path": "src/composition/editorCells.css",
+      "role": "Local",
+      "sha256": "03aac30b77b7eb709696b5e3395c97ed757ea1ba33a4e065f2e52926165557e2",
+      "definitions": [],
+      "references": [
+        "--tactile-edge",
+        "--tactile-ink",
+        "--workbench-content-scale",
+        "--workflow-ink",
+        "--workflow-type-control"
+      ]
+    },
+    {
       "path": "src/imageModule/imageModule.css",
       "role": "Local",
-      "sha256": "d99cecee41a1caa9dc8943f2a61c2b87c65ac71aaa2880664c2ad9d19f745ec5",
+      "sha256": "d620308f27779fe4d06ef12409be12238ee55652e4549805c15324130585657b",
       "definitions": [],
       "references": [
         "--editor-accent",
@@ -845,7 +1090,7 @@
     {
       "path": "src/inscapeTokens.css",
       "role": "Foundation",
-      "sha256": "eb7104421b2e53389529f072bd66b2da0a3dc08c4718a2cb378b870606b98e00",
+      "sha256": "f2f528bf51a6fd785131bd6c9b2fbac605d8935bed48f4667efb6fe8d2dbd152",
       "definitions": [
         {
           "name": "--font-creation-toolbar",
@@ -963,7 +1208,7 @@
         },
         {
           "name": "--editor-default-panel",
-          "value": "#2a2c2b",
+          "value": "#2b2b2b",
           "scope": [
             ":root"
           ],
@@ -972,7 +1217,7 @@
         },
         {
           "name": "--editor-default-workspace",
-          "value": "#121413",
+          "value": "#141414",
           "scope": [
             ":root"
           ],
@@ -981,7 +1226,7 @@
         },
         {
           "name": "--editor-default-accent",
-          "value": "#aad5ae",
+          "value": "#c4c4c4",
           "scope": [
             ":root"
           ],
@@ -990,7 +1235,7 @@
         },
         {
           "name": "--editor-default-ink",
-          "value": "#eceeeb",
+          "value": "#eeeeee",
           "scope": [
             ":root"
           ],
@@ -999,7 +1244,7 @@
         },
         {
           "name": "--editor-default-on-accent",
-          "value": "#242527",
+          "value": "#222222",
           "scope": [
             ":root"
           ],
@@ -1008,13 +1253,12 @@
         },
         {
           "name": "--editor-panel",
-          "value": "var(--editor-custom-panel, var(--editor-default-panel))",
+          "value": "var(--editor-default-panel)",
           "scope": [
             ":root"
           ],
           "line": 46,
           "references": [
-            "--editor-custom-panel",
             "--editor-default-panel"
           ]
         },
@@ -1032,31 +1276,29 @@
         },
         {
           "name": "--editor-surround",
-          "value": "var(--editor-custom-workspace, var(--editor-default-workspace))",
+          "value": "var(--editor-default-workspace)",
           "scope": [
             ":root"
           ],
           "line": 48,
           "references": [
-            "--editor-custom-workspace",
             "--editor-default-workspace"
           ]
         },
         {
           "name": "--editor-ink",
-          "value": "var(--editor-custom-ink, var(--editor-default-ink))",
+          "value": "var(--editor-default-ink)",
           "scope": [
             ":root"
           ],
           "line": 49,
           "references": [
-            "--editor-custom-ink",
             "--editor-default-ink"
           ]
         },
         {
           "name": "--editor-muted",
-          "value": "color-mix(in srgb, var(--editor-ink) 65%, var(--editor-panel))",
+          "value": "color-mix(in srgb, var(--editor-ink) 76%, var(--editor-panel))",
           "scope": [
             ":root"
           ],
@@ -1068,7 +1310,7 @@
         },
         {
           "name": "--editor-field",
-          "value": "color-mix(in srgb, var(--editor-ink) 6%, var(--editor-panel))",
+          "value": "color-mix(in srgb, var(--editor-ink) 11%, var(--editor-panel))",
           "scope": [
             ":root"
           ],
@@ -1079,12 +1321,56 @@
           ]
         },
         {
+          "name": "--editor-menu-face",
+          "value": "color-mix(in srgb, var(--editor-ink) 8%, var(--editor-panel))",
+          "scope": [
+            ":root"
+          ],
+          "line": 52,
+          "references": [
+            "--editor-ink",
+            "--editor-panel"
+          ]
+        },
+        {
+          "name": "--editor-menu-heading",
+          "value": "color-mix(in srgb, #468edc 50%, var(--editor-ink))",
+          "scope": [
+            ":root"
+          ],
+          "line": 53,
+          "references": [
+            "--editor-ink"
+          ]
+        },
+        {
+          "name": "--editor-menu-edge",
+          "value": "color-mix(in srgb, var(--editor-ink) 56%, var(--editor-panel))",
+          "scope": [
+            ":root"
+          ],
+          "line": 54,
+          "references": [
+            "--editor-ink",
+            "--editor-panel"
+          ]
+        },
+        {
+          "name": "--editor-menu-shadow",
+          "value": "0 2px 5px rgb(0 0 0 / .22), 0 8px 18px rgb(0 0 0 / .24)",
+          "scope": [
+            ":root"
+          ],
+          "line": 55,
+          "references": []
+        },
+        {
           "name": "--editor-header-control",
           "value": "var(--editor-field)",
           "scope": [
             ":root"
           ],
-          "line": 52,
+          "line": 56,
           "references": [
             "--editor-field"
           ]
@@ -1095,7 +1381,7 @@
           "scope": [
             ":root"
           ],
-          "line": 53,
+          "line": 57,
           "references": [
             "--editor-ink",
             "--editor-panel"
@@ -1103,13 +1389,12 @@
         },
         {
           "name": "--editor-accent",
-          "value": "var(--editor-custom-accent, var(--editor-default-accent))",
+          "value": "var(--editor-default-accent)",
           "scope": [
             ":root"
           ],
-          "line": 54,
+          "line": 58,
           "references": [
-            "--editor-custom-accent",
             "--editor-default-accent"
           ]
         },
@@ -1119,7 +1404,7 @@
           "scope": [
             ":root"
           ],
-          "line": 55,
+          "line": 59,
           "references": [
             "--editor-accent",
             "--editor-panel"
@@ -1127,13 +1412,12 @@
         },
         {
           "name": "--editor-on-accent",
-          "value": "var(--editor-custom-on-accent, var(--editor-default-on-accent))",
+          "value": "var(--editor-default-on-accent)",
           "scope": [
             ":root"
           ],
-          "line": 56,
+          "line": 60,
           "references": [
-            "--editor-custom-on-accent",
             "--editor-default-on-accent"
           ]
         },
@@ -1143,55 +1427,11 @@
           "scope": [
             ":root"
           ],
-          "line": 57,
+          "line": 61,
           "references": []
         },
         {
           "name": "--color-world",
-          "value": "var(--interface-environment)",
-          "scope": [
-            ":root"
-          ],
-          "line": 58,
-          "references": [
-            "--interface-environment"
-          ]
-        },
-        {
-          "name": "--color-surface",
-          "value": "var(--interface-panel)",
-          "scope": [
-            ":root"
-          ],
-          "line": 59,
-          "references": [
-            "--interface-panel"
-          ]
-        },
-        {
-          "name": "--color-surface-deep",
-          "value": "var(--interface-panel)",
-          "scope": [
-            ":root"
-          ],
-          "line": 60,
-          "references": [
-            "--interface-panel"
-          ]
-        },
-        {
-          "name": "--color-surface-base",
-          "value": "var(--interface-environment)",
-          "scope": [
-            ":root"
-          ],
-          "line": 61,
-          "references": [
-            "--interface-environment"
-          ]
-        },
-        {
-          "name": "--color-surface-raised",
           "value": "var(--interface-environment)",
           "scope": [
             ":root"
@@ -1202,7 +1442,7 @@
           ]
         },
         {
-          "name": "--color-surface-elevated",
+          "name": "--color-surface",
           "value": "var(--interface-panel)",
           "scope": [
             ":root"
@@ -1213,7 +1453,7 @@
           ]
         },
         {
-          "name": "--color-surface-subtle",
+          "name": "--color-surface-deep",
           "value": "var(--interface-panel)",
           "scope": [
             ":root"
@@ -1224,12 +1464,56 @@
           ]
         },
         {
+          "name": "--color-surface-base",
+          "value": "var(--interface-environment)",
+          "scope": [
+            ":root"
+          ],
+          "line": 65,
+          "references": [
+            "--interface-environment"
+          ]
+        },
+        {
+          "name": "--color-surface-raised",
+          "value": "var(--interface-environment)",
+          "scope": [
+            ":root"
+          ],
+          "line": 66,
+          "references": [
+            "--interface-environment"
+          ]
+        },
+        {
+          "name": "--color-surface-elevated",
+          "value": "var(--interface-panel)",
+          "scope": [
+            ":root"
+          ],
+          "line": 67,
+          "references": [
+            "--interface-panel"
+          ]
+        },
+        {
+          "name": "--color-surface-subtle",
+          "value": "var(--interface-panel)",
+          "scope": [
+            ":root"
+          ],
+          "line": 68,
+          "references": [
+            "--interface-panel"
+          ]
+        },
+        {
           "name": "--color-surface-overlay",
           "value": "var(--interface-panel)",
           "scope": [
             ":root"
           ],
-          "line": 65,
+          "line": 69,
           "references": [
             "--interface-panel"
           ]
@@ -1240,7 +1524,7 @@
           "scope": [
             ":root"
           ],
-          "line": 66,
+          "line": 70,
           "references": [
             "--interface-panel"
           ]
@@ -1251,7 +1535,7 @@
           "scope": [
             ":root"
           ],
-          "line": 67,
+          "line": 71,
           "references": [
             "--interface-ink"
           ]
@@ -1262,7 +1546,7 @@
           "scope": [
             ":root"
           ],
-          "line": 68,
+          "line": 72,
           "references": [
             "--interface-ink"
           ]
@@ -1273,7 +1557,7 @@
           "scope": [
             ":root"
           ],
-          "line": 69,
+          "line": 73,
           "references": [
             "--interface-ink"
           ]
@@ -1284,7 +1568,7 @@
           "scope": [
             ":root"
           ],
-          "line": 70,
+          "line": 74,
           "references": [
             "--interface-ink"
           ]
@@ -1295,7 +1579,7 @@
           "scope": [
             ":root"
           ],
-          "line": 71,
+          "line": 75,
           "references": [
             "--interface-ink",
             "--interface-panel"
@@ -1307,7 +1591,7 @@
           "scope": [
             ":root"
           ],
-          "line": 72,
+          "line": 76,
           "references": [
             "--color-text-secondary"
           ]
@@ -1318,7 +1602,7 @@
           "scope": [
             ":root"
           ],
-          "line": 73,
+          "line": 77,
           "references": [
             "--color-text-secondary"
           ]
@@ -1329,7 +1613,7 @@
           "scope": [
             ":root"
           ],
-          "line": 74,
+          "line": 78,
           "references": [
             "--color-text-secondary"
           ]
@@ -1340,7 +1624,7 @@
           "scope": [
             ":root"
           ],
-          "line": 75,
+          "line": 79,
           "references": [
             "--interface-ink",
             "--interface-panel"
@@ -1352,7 +1636,7 @@
           "scope": [
             ":root"
           ],
-          "line": 76,
+          "line": 80,
           "references": [
             "--interface-ink",
             "--interface-panel"
@@ -1364,7 +1648,7 @@
           "scope": [
             ":root"
           ],
-          "line": 77,
+          "line": 81,
           "references": [
             "--interface-line"
           ]
@@ -1375,7 +1659,7 @@
           "scope": [
             ":root"
           ],
-          "line": 78,
+          "line": 82,
           "references": [
             "--interface-line"
           ]
@@ -1386,7 +1670,7 @@
           "scope": [
             ":root"
           ],
-          "line": 79,
+          "line": 83,
           "references": [
             "--interface-line"
           ]
@@ -1397,7 +1681,7 @@
           "scope": [
             ":root"
           ],
-          "line": 80,
+          "line": 84,
           "references": [
             "--interface-line"
           ]
@@ -1408,7 +1692,7 @@
           "scope": [
             ":root"
           ],
-          "line": 81,
+          "line": 85,
           "references": [
             "--interface-ink",
             "--interface-panel"
@@ -1420,7 +1704,7 @@
           "scope": [
             ":root"
           ],
-          "line": 82,
+          "line": 86,
           "references": [
             "--color-border-strong"
           ]
@@ -1431,7 +1715,7 @@
           "scope": [
             ":root"
           ],
-          "line": 83,
+          "line": 87,
           "references": [
             "--interface-ink"
           ]
@@ -1442,7 +1726,7 @@
           "scope": [
             ":root"
           ],
-          "line": 84,
+          "line": 88,
           "references": [
             "--interface-hover"
           ]
@@ -1453,7 +1737,7 @@
           "scope": [
             ":root"
           ],
-          "line": 85,
+          "line": 89,
           "references": [
             "--interface-hover"
           ]
@@ -1464,7 +1748,7 @@
           "scope": [
             ":root"
           ],
-          "line": 86,
+          "line": 90,
           "references": [
             "--interface-ink"
           ]
@@ -1475,7 +1759,7 @@
           "scope": [
             ":root"
           ],
-          "line": 87,
+          "line": 91,
           "references": [
             "--interface-ink"
           ]
@@ -1486,7 +1770,7 @@
           "scope": [
             ":root"
           ],
-          "line": 88,
+          "line": 92,
           "references": []
         },
         {
@@ -1495,7 +1779,7 @@
           "scope": [
             ":root"
           ],
-          "line": 89,
+          "line": 93,
           "references": []
         },
         {
@@ -1504,7 +1788,7 @@
           "scope": [
             ":root"
           ],
-          "line": 90,
+          "line": 94,
           "references": [
             "--interface-ink"
           ]
@@ -1515,7 +1799,7 @@
           "scope": [
             ":root"
           ],
-          "line": 91,
+          "line": 95,
           "references": []
         },
         {
@@ -1524,7 +1808,7 @@
           "scope": [
             ":root"
           ],
-          "line": 93,
+          "line": 97,
           "references": [
             "--color-world"
           ]
@@ -1535,7 +1819,7 @@
           "scope": [
             ":root"
           ],
-          "line": 94,
+          "line": 98,
           "references": [
             "--color-surface-elevated"
           ]
@@ -1546,7 +1830,7 @@
           "scope": [
             ":root"
           ],
-          "line": 95,
+          "line": 99,
           "references": [
             "--color-border"
           ]
@@ -1557,7 +1841,7 @@
           "scope": [
             ":root"
           ],
-          "line": 96,
+          "line": 100,
           "references": [
             "--color-text-primary"
           ]
@@ -1568,7 +1852,7 @@
           "scope": [
             ":root"
           ],
-          "line": 97,
+          "line": 101,
           "references": [
             "--color-text-muted"
           ]
@@ -1579,7 +1863,7 @@
           "scope": [
             ":root"
           ],
-          "line": 98,
+          "line": 102,
           "references": [
             "--font-body"
           ]
@@ -1590,7 +1874,7 @@
           "scope": [
             ":root"
           ],
-          "line": 99,
+          "line": 103,
           "references": [
             "--color-border-strong"
           ]
@@ -1601,7 +1885,7 @@
           "scope": [
             ":root"
           ],
-          "line": 100,
+          "line": 104,
           "references": [
             "--color-text-primary"
           ]
@@ -1612,7 +1896,7 @@
           "scope": [
             ":root"
           ],
-          "line": 101,
+          "line": 105,
           "references": [
             "--color-text-muted"
           ]
@@ -1623,7 +1907,7 @@
           "scope": [
             ":root"
           ],
-          "line": 102,
+          "line": 106,
           "references": [
             "--color-focus"
           ]
@@ -1634,7 +1918,7 @@
           "scope": [
             ":root"
           ],
-          "line": 103,
+          "line": 107,
           "references": [
             "--color-success"
           ]
@@ -1645,7 +1929,7 @@
           "scope": [
             ":root"
           ],
-          "line": 104,
+          "line": 108,
           "references": [
             "--color-destructive"
           ]
@@ -1656,7 +1940,7 @@
           "scope": [
             ":root"
           ],
-          "line": 105,
+          "line": 109,
           "references": [
             "--color-accent-interface"
           ]
@@ -1667,7 +1951,7 @@
           "scope": [
             ":root"
           ],
-          "line": 106,
+          "line": 110,
           "references": [
             "--color-accent-interface"
           ]
@@ -1678,7 +1962,7 @@
           "scope": [
             ":root"
           ],
-          "line": 107,
+          "line": 111,
           "references": [
             "--color-accent-interface"
           ]
@@ -1689,7 +1973,7 @@
           "scope": [
             ":root"
           ],
-          "line": 109,
+          "line": 113,
           "references": []
         },
         {
@@ -1698,7 +1982,7 @@
           "scope": [
             ":root"
           ],
-          "line": 110,
+          "line": 114,
           "references": []
         },
         {
@@ -1707,7 +1991,7 @@
           "scope": [
             ":root"
           ],
-          "line": 111,
+          "line": 115,
           "references": []
         },
         {
@@ -1716,7 +2000,7 @@
           "scope": [
             ":root"
           ],
-          "line": 112,
+          "line": 116,
           "references": []
         },
         {
@@ -1725,7 +2009,7 @@
           "scope": [
             ":root"
           ],
-          "line": 113,
+          "line": 117,
           "references": []
         },
         {
@@ -1734,7 +2018,7 @@
           "scope": [
             ":root"
           ],
-          "line": 114,
+          "line": 118,
           "references": []
         },
         {
@@ -1743,7 +2027,7 @@
           "scope": [
             ":root"
           ],
-          "line": 116,
+          "line": 120,
           "references": []
         },
         {
@@ -1752,7 +2036,7 @@
           "scope": [
             ":root"
           ],
-          "line": 117,
+          "line": 121,
           "references": [
             "--space-1"
           ]
@@ -1763,7 +2047,7 @@
           "scope": [
             ":root"
           ],
-          "line": 118,
+          "line": 122,
           "references": [
             "--control-radius",
             "--control-inset"
@@ -1775,7 +2059,7 @@
           "scope": [
             ":root"
           ],
-          "line": 119,
+          "line": 123,
           "references": []
         },
         {
@@ -1784,7 +2068,7 @@
           "scope": [
             ":root"
           ],
-          "line": 120,
+          "line": 124,
           "references": []
         },
         {
@@ -1793,7 +2077,7 @@
           "scope": [
             ":root"
           ],
-          "line": 121,
+          "line": 125,
           "references": []
         },
         {
@@ -1802,7 +2086,7 @@
           "scope": [
             ":root"
           ],
-          "line": 122,
+          "line": 126,
           "references": []
         },
         {
@@ -1811,7 +2095,7 @@
           "scope": [
             ":root"
           ],
-          "line": 123,
+          "line": 127,
           "references": []
         },
         {
@@ -1820,7 +2104,7 @@
           "scope": [
             ":root"
           ],
-          "line": 124,
+          "line": 128,
           "references": []
         },
         {
@@ -1829,7 +2113,7 @@
           "scope": [
             ":root"
           ],
-          "line": 125,
+          "line": 129,
           "references": []
         },
         {
@@ -1838,7 +2122,7 @@
           "scope": [
             ":root"
           ],
-          "line": 126,
+          "line": 130,
           "references": []
         },
         {
@@ -1847,7 +2131,7 @@
           "scope": [
             ":root"
           ],
-          "line": 127,
+          "line": 131,
           "references": []
         },
         {
@@ -1856,7 +2140,7 @@
           "scope": [
             ":root"
           ],
-          "line": 128,
+          "line": 132,
           "references": []
         },
         {
@@ -1865,7 +2149,7 @@
           "scope": [
             ":root"
           ],
-          "line": 129,
+          "line": 133,
           "references": []
         },
         {
@@ -1874,7 +2158,7 @@
           "scope": [
             ":root"
           ],
-          "line": 130,
+          "line": 134,
           "references": []
         },
         {
@@ -1883,7 +2167,7 @@
           "scope": [
             ":root"
           ],
-          "line": 131,
+          "line": 135,
           "references": []
         },
         {
@@ -1892,7 +2176,7 @@
           "scope": [
             ":root"
           ],
-          "line": 132,
+          "line": 136,
           "references": []
         },
         {
@@ -1901,7 +2185,7 @@
           "scope": [
             ":root"
           ],
-          "line": 133,
+          "line": 137,
           "references": []
         },
         {
@@ -1910,7 +2194,7 @@
           "scope": [
             ":root"
           ],
-          "line": 134,
+          "line": 138,
           "references": []
         },
         {
@@ -1919,7 +2203,7 @@
           "scope": [
             ":root"
           ],
-          "line": 135,
+          "line": 139,
           "references": []
         },
         {
@@ -1928,7 +2212,7 @@
           "scope": [
             ":root"
           ],
-          "line": 136,
+          "line": 140,
           "references": []
         },
         {
@@ -1937,7 +2221,7 @@
           "scope": [
             ":root"
           ],
-          "line": 137,
+          "line": 141,
           "references": []
         },
         {
@@ -1946,7 +2230,7 @@
           "scope": [
             ":root"
           ],
-          "line": 138,
+          "line": 142,
           "references": []
         },
         {
@@ -1955,7 +2239,7 @@
           "scope": [
             ":root"
           ],
-          "line": 139,
+          "line": 143,
           "references": []
         },
         {
@@ -1964,7 +2248,7 @@
           "scope": [
             ":root"
           ],
-          "line": 140,
+          "line": 144,
           "references": []
         },
         {
@@ -1973,7 +2257,7 @@
           "scope": [
             ":root"
           ],
-          "line": 141,
+          "line": 145,
           "references": []
         },
         {
@@ -1982,53 +2266,11 @@
           "scope": [
             ":root"
           ],
-          "line": 142,
-          "references": []
-        },
-        {
-          "name": "--spatial-background",
-          "value": "var(--interface-environment)",
-          "scope": [
-            ":root"
-          ],
-          "line": 144,
-          "references": [
-            "--interface-environment"
-          ]
-        },
-        {
-          "name": "--spatial-grid-line",
-          "value": "var(--interface-line)",
-          "scope": [
-            ":root"
-          ],
-          "line": 145,
-          "references": [
-            "--interface-line"
-          ]
-        },
-        {
-          "name": "--spatial-vignette",
-          "value": "none",
-          "scope": [
-            ":root"
-          ],
           "line": 146,
           "references": []
         },
         {
-          "name": "--spatial-floor",
-          "value": "var(--interface-environment)",
-          "scope": [
-            ":root"
-          ],
-          "line": 147,
-          "references": [
-            "--interface-environment"
-          ]
-        },
-        {
-          "name": "--spatial-ceiling",
+          "name": "--spatial-background",
           "value": "var(--interface-environment)",
           "scope": [
             ":root"
@@ -2039,12 +2281,54 @@
           ]
         },
         {
+          "name": "--spatial-grid-line",
+          "value": "var(--interface-line)",
+          "scope": [
+            ":root"
+          ],
+          "line": 149,
+          "references": [
+            "--interface-line"
+          ]
+        },
+        {
+          "name": "--spatial-vignette",
+          "value": "none",
+          "scope": [
+            ":root"
+          ],
+          "line": 150,
+          "references": []
+        },
+        {
+          "name": "--spatial-floor",
+          "value": "var(--interface-environment)",
+          "scope": [
+            ":root"
+          ],
+          "line": 151,
+          "references": [
+            "--interface-environment"
+          ]
+        },
+        {
+          "name": "--spatial-ceiling",
+          "value": "var(--interface-environment)",
+          "scope": [
+            ":root"
+          ],
+          "line": 152,
+          "references": [
+            "--interface-environment"
+          ]
+        },
+        {
           "name": "--interface-environment",
           "value": "#dedbd3",
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 153,
+          "line": 157,
           "references": []
         },
         {
@@ -2053,7 +2337,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 154,
+          "line": 158,
           "references": []
         },
         {
@@ -2062,7 +2346,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 155,
+          "line": 159,
           "references": []
         },
         {
@@ -2071,7 +2355,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 156,
+          "line": 160,
           "references": []
         },
         {
@@ -2080,25 +2364,25 @@
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 157,
+          "line": 161,
           "references": []
         },
         {
           "name": "--editor-default-accent",
-          "value": "#007a50",
+          "value": "#484844",
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 158,
+          "line": 162,
           "references": []
         },
         {
           "name": "--editor-default-ink",
-          "value": "#252b27",
+          "value": "#292927",
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 159,
+          "line": 163,
           "references": []
         },
         {
@@ -2107,8 +2391,579 @@
           "scope": [
             ":root[data-interface-theme=\"light\"]"
           ],
-          "line": 160,
+          "line": 164,
           "references": []
+        },
+        {
+          "name": "--editor-menu-shadow",
+          "value": "0 2px 5px rgb(0 0 0 / .10), 0 8px 18px rgb(0 0 0 / .13)",
+          "scope": [
+            ":root[data-interface-theme=\"light\"]"
+          ],
+          "line": 165,
+          "references": []
+        },
+        {
+          "name": "--editor-surround",
+          "value": "var(--interface-environment)",
+          "scope": [
+            ":root[data-palette='charcoal'][data-interface-theme='light']"
+          ],
+          "line": 169,
+          "references": [
+            "--interface-environment"
+          ]
+        },
+        {
+          "name": "--editor-panel",
+          "value": "var(--interface-panel)",
+          "scope": [
+            ":root[data-palette='charcoal'][data-interface-theme='light']"
+          ],
+          "line": 170,
+          "references": [
+            "--interface-panel"
+          ]
+        },
+        {
+          "name": "--editor-ink",
+          "value": "#292927",
+          "scope": [
+            ":root[data-palette='charcoal'][data-interface-theme='light']"
+          ],
+          "line": 171,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#201418",
+          "scope": [
+            ":root[data-palette='oxblood']"
+          ],
+          "line": 176,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#563138",
+          "scope": [
+            ":root[data-palette='oxblood']"
+          ],
+          "line": 176,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#352126",
+          "scope": [
+            ":root[data-palette='oxblood']"
+          ],
+          "line": 177,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#43282d",
+          "scope": [
+            ":root[data-palette='oxblood']"
+          ],
+          "line": 177,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#f0e4dc",
+          "scope": [
+            ":root[data-palette='oxblood']"
+          ],
+          "line": 177,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#e3a5a2",
+          "scope": [
+            ":root[data-palette='oxblood']"
+          ],
+          "line": 177,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#282316",
+          "scope": [
+            ":root[data-palette='saffron']"
+          ],
+          "line": 180,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#605039",
+          "scope": [
+            ":root[data-palette='saffron']"
+          ],
+          "line": 180,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#3d3323",
+          "scope": [
+            ":root[data-palette='saffron']"
+          ],
+          "line": 181,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#493f2c",
+          "scope": [
+            ":root[data-palette='saffron']"
+          ],
+          "line": 181,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#f5e9ce",
+          "scope": [
+            ":root[data-palette='saffron']"
+          ],
+          "line": 181,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#e8c565",
+          "scope": [
+            ":root[data-palette='saffron']"
+          ],
+          "line": 181,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#19212c",
+          "scope": [
+            ":root[data-palette='storm-glass']"
+          ],
+          "line": 184,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#455765",
+          "scope": [
+            ":root[data-palette='storm-glass']"
+          ],
+          "line": 184,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#28323f",
+          "scope": [
+            ":root[data-palette='storm-glass']"
+          ],
+          "line": 185,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#343f4b",
+          "scope": [
+            ":root[data-palette='storm-glass']"
+          ],
+          "line": 185,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#e4eaf1",
+          "scope": [
+            ":root[data-palette='storm-glass']"
+          ],
+          "line": 185,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#b2c9da",
+          "scope": [
+            ":root[data-palette='storm-glass']"
+          ],
+          "line": 185,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#182123",
+          "scope": [
+            ":root[data-palette='brass-ink']"
+          ],
+          "line": 188,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#404b4f",
+          "scope": [
+            ":root[data-palette='brass-ink']"
+          ],
+          "line": 188,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#263133",
+          "scope": [
+            ":root[data-palette='brass-ink']"
+          ],
+          "line": 189,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#2c383a",
+          "scope": [
+            ":root[data-palette='brass-ink']"
+          ],
+          "line": 189,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#ece9df",
+          "scope": [
+            ":root[data-palette='brass-ink']"
+          ],
+          "line": 189,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#d4b783",
+          "scope": [
+            ":root[data-palette='brass-ink']"
+          ],
+          "line": 189,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#b6a697",
+          "scope": [
+            ":root[data-palette='oxblood'][data-interface-theme='light']"
+          ],
+          "line": 192,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#e8decb",
+          "scope": [
+            ":root[data-palette='oxblood'][data-interface-theme='light']"
+          ],
+          "line": 192,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#d1c2b0",
+          "scope": [
+            ":root[data-palette='oxblood'][data-interface-theme='light']"
+          ],
+          "line": 193,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#dccebb",
+          "scope": [
+            ":root[data-palette='oxblood'][data-interface-theme='light']"
+          ],
+          "line": 193,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#392628",
+          "scope": [
+            ":root[data-palette='oxblood'][data-interface-theme='light']"
+          ],
+          "line": 193,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#762f3b",
+          "scope": [
+            ":root[data-palette='oxblood'][data-interface-theme='light']"
+          ],
+          "line": 193,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#c3b491",
+          "scope": [
+            ":root[data-palette='saffron'][data-interface-theme='light']"
+          ],
+          "line": 196,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#ece3c6",
+          "scope": [
+            ":root[data-palette='saffron'][data-interface-theme='light']"
+          ],
+          "line": 196,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#dccdaa",
+          "scope": [
+            ":root[data-palette='saffron'][data-interface-theme='light']"
+          ],
+          "line": 197,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#e5d8b7",
+          "scope": [
+            ":root[data-palette='saffron'][data-interface-theme='light']"
+          ],
+          "line": 197,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#382f20",
+          "scope": [
+            ":root[data-palette='saffron'][data-interface-theme='light']"
+          ],
+          "line": 197,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#73520b",
+          "scope": [
+            ":root[data-palette='saffron'][data-interface-theme='light']"
+          ],
+          "line": 197,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#a6b6c3",
+          "scope": [
+            ":root[data-palette='storm-glass'][data-interface-theme='light']"
+          ],
+          "line": 200,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#d6e1e7",
+          "scope": [
+            ":root[data-palette='storm-glass'][data-interface-theme='light']"
+          ],
+          "line": 200,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#beccd5",
+          "scope": [
+            ":root[data-palette='storm-glass'][data-interface-theme='light']"
+          ],
+          "line": 201,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#ccd7dd",
+          "scope": [
+            ":root[data-palette='storm-glass'][data-interface-theme='light']"
+          ],
+          "line": 201,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#29313c",
+          "scope": [
+            ":root[data-palette='storm-glass'][data-interface-theme='light']"
+          ],
+          "line": 201,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#425b73",
+          "scope": [
+            ":root[data-palette='storm-glass'][data-interface-theme='light']"
+          ],
+          "line": 201,
+          "references": []
+        },
+        {
+          "name": "--field-low",
+          "value": "#aeaaa0",
+          "scope": [
+            ":root[data-palette='brass-ink'][data-interface-theme='light']"
+          ],
+          "line": 204,
+          "references": []
+        },
+        {
+          "name": "--field-high",
+          "value": "#e1decf",
+          "scope": [
+            ":root[data-palette='brass-ink'][data-interface-theme='light']"
+          ],
+          "line": 204,
+          "references": []
+        },
+        {
+          "name": "--palette-canvas",
+          "value": "#cbc6ba",
+          "scope": [
+            ":root[data-palette='brass-ink'][data-interface-theme='light']"
+          ],
+          "line": 205,
+          "references": []
+        },
+        {
+          "name": "--palette-glass",
+          "value": "#d5cec1",
+          "scope": [
+            ":root[data-palette='brass-ink'][data-interface-theme='light']"
+          ],
+          "line": 205,
+          "references": []
+        },
+        {
+          "name": "--palette-ink",
+          "value": "#313431",
+          "scope": [
+            ":root[data-palette='brass-ink'][data-interface-theme='light']"
+          ],
+          "line": 205,
+          "references": []
+        },
+        {
+          "name": "--palette-accent",
+          "value": "#70532b",
+          "scope": [
+            ":root[data-palette='brass-ink'][data-interface-theme='light']"
+          ],
+          "line": 205,
+          "references": []
+        },
+        {
+          "name": "--interface-environment",
+          "value": "var(--palette-canvas)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 208,
+          "references": [
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--interface-panel",
+          "value": "var(--palette-glass)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 208,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--interface-ink",
+          "value": "var(--palette-ink)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 208,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--editor-panel",
+          "value": "var(--palette-glass)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 209,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--editor-surround",
+          "value": "var(--palette-canvas)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 209,
+          "references": [
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--editor-ink",
+          "value": "var(--palette-ink)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 209,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--editor-accent",
+          "value": "var(--palette-accent)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 210,
+          "references": [
+            "--palette-accent"
+          ]
+        },
+        {
+          "name": "--editor-on-accent",
+          "value": "var(--palette-canvas)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 210,
+          "references": [
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--editor-menu-heading",
+          "value": "var(--palette-accent)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])"
+          ],
+          "line": 211,
+          "references": [
+            "--palette-accent"
+          ]
         },
         {
           "name": "--duration-fast",
@@ -2117,7 +2972,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 183,
+          "line": 238,
           "references": []
         },
         {
@@ -2127,7 +2982,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 183,
+          "line": 238,
           "references": []
         },
         {
@@ -2137,7 +2992,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 183,
+          "line": 238,
           "references": []
         }
       ],
@@ -2157,11 +3012,6 @@
         "--control-inset",
         "--control-radius",
         "--editor-accent",
-        "--editor-custom-accent",
-        "--editor-custom-ink",
-        "--editor-custom-on-accent",
-        "--editor-custom-panel",
-        "--editor-custom-workspace",
         "--editor-default-accent",
         "--editor-default-ink",
         "--editor-default-on-accent",
@@ -2178,6 +3028,10 @@
         "--interface-ink",
         "--interface-line",
         "--interface-panel",
+        "--palette-accent",
+        "--palette-canvas",
+        "--palette-glass",
+        "--palette-ink",
         "--space-1"
       ]
     },
@@ -2508,234 +3362,6 @@
       ]
     },
     {
-      "path": "src/lattice/rendering/latticeProductionTableRenderer.css",
-      "role": "Local",
-      "sha256": "4ea131095fb828a2ca1fdc22d7d504cf0f68411170c555d35f26572ca0fa3613",
-      "definitions": [
-        {
-          "name": "--lattice-production-surface",
-          "value": "#0b0c0c",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(216 213 204 / 0.085)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(9 10 10 / 0.88)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(216 213 204 / 0.84)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(216 213 204 / 0.56)",
-          "scope": [
-            ".lattice-production-table"
-          ],
-          "line": 6,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#383a3a",
-          "scope": [
-            ".lattice-production-table[data-surface=\"graphite\"]"
-          ],
-          "line": 27,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(232 231 226 / 0.115)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"graphite\"]"
-          ],
-          "line": 27,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#7b7b7b",
-          "scope": [
-            ".lattice-production-table[data-surface=\"slate\"]"
-          ],
-          "line": 28,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(243 242 237 / 0.14)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"slate\"]"
-          ],
-          "line": 28,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#b2b2b2",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(255 255 255 / 0.22)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(21 24 24 / 0.88)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(21 24 24 / 0.58)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(213 212 207 / 0.91)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"ash\"]"
-          ],
-          "line": 29,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#c9c6bd",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(18 20 20 / 0.11)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(24 26 26 / 0.9)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(24 26 26 / 0.58)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(215 211 202 / 0.92)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"mist\"]"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-surface",
-          "value": "#d8d4ca",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-grid-line",
-          "value": "rgb(34 31 27 / 0.095)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-ink",
-          "value": "rgb(31 29 26 / 0.9)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-muted",
-          "value": "rgb(31 29 26 / 0.58)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--lattice-production-label-surface",
-          "value": "rgb(232 228 218 / 0.93)",
-          "scope": [
-            ".lattice-production-table[data-surface=\"paper\"]"
-          ],
-          "line": 31,
-          "references": []
-        }
-      ],
-      "references": [
-        "--lattice-production-label-ink",
-        "--lattice-production-label-muted",
-        "--lattice-production-surface"
-      ]
-    },
-    {
       "path": "src/lattice/rendering/latticeProfileRail.css",
       "role": "Local",
       "sha256": "010cd0d03031845ce42647d8281af51362f511d629a3ed345b929a64f7a434ec",
@@ -2779,24 +3405,87 @@
       ]
     },
     {
+      "path": "src/library/curation.css",
+      "role": "Local",
+      "sha256": "0b3dc3259f3f50ee09ae44b2a1f1b1a9a23ebef4573c49ea3db2e1dc986e9d00",
+      "definitions": [],
+      "references": [
+        "--editor-accent",
+        "--editor-field",
+        "--editor-ink",
+        "--editor-selection",
+        "--font-interface",
+        "--interface-environment",
+        "--interface-ink",
+        "--library-tile-size"
+      ]
+    },
+    {
       "path": "src/library/profileLibraryPicker.css",
       "role": "Local",
-      "sha256": "6a59d76d366727dcb7b9757e6202a22b35dc41935e31f2ce0a8adc1d3056b610",
+      "sha256": "b4debc8c238d60cb450068537c89abbb6d6ee1ae932fbb685259c1534eb12318",
       "definitions": [],
       "references": []
     },
     {
       "path": "src/profileDocument/components/profileOverview.css",
       "role": "Local",
-      "sha256": "eeab700ddabdb239fc65560a437ed6c44e86321b96e2d66db059496509953239",
+      "sha256": "c8411bf5a6e6fabd4b677bc62313ab2275db98a0fbe5111355c5d4db7e6471bb",
       "definitions": [],
       "references": [
-        "--control-radius",
-        "--control-shell-radius",
         "--tactile-edge",
-        "--tactile-face",
-        "--tactile-muted",
-        "--tactile-well"
+        "--tactile-muted"
+      ]
+    },
+    {
+      "path": "src/profileDocument/components/profileStrip.css",
+      "role": "Local",
+      "sha256": "1b79eb2d88b3e62eeb55063a3f45f0b7cf005d90228b364cb7b5b6963c164208",
+      "definitions": [
+        {
+          "name": "--strip-outline",
+          "value": "color-mix(in srgb, var(--editor-default-ink) 32%, var(--editor-default-panel))",
+          "scope": [
+            ".visitor-header .profile-strip:not([data-account]) .strip-trigger"
+          ],
+          "line": 4,
+          "references": [
+            "--editor-default-ink",
+            "--editor-default-panel"
+          ]
+        },
+        {
+          "name": "--strip-outline",
+          "value": "rgb(248 248 248 / 87.5%)",
+          "scope": [
+            "@media (min-width: 481px)",
+            ":root[data-interface-theme='light'] .visitor-header .profile-strip:not([data-account]) .strip-trigger"
+          ],
+          "line": 11,
+          "references": []
+        }
+      ],
+      "references": [
+        "--card-material",
+        "--color-text-primary",
+        "--editor-control-radius",
+        "--editor-default-ink",
+        "--editor-default-panel",
+        "--editor-ink",
+        "--editor-line",
+        "--editor-menu-face",
+        "--editor-menu-heading",
+        "--font-technical",
+        "--interface-line",
+        "--interface-panel",
+        "--spread-active",
+        "--spread-line",
+        "--strip-outline",
+        "--tactile-ink",
+        "--tactile-selected",
+        "--tactile-selected-ink",
+        "--workflow-menu-row-height",
+        "--workflow-type-control"
       ]
     },
     {
@@ -2825,23 +3514,13 @@
     {
       "path": "src/profileDocument/components/publishedCompositions.css",
       "role": "Local",
-      "sha256": "7aa818d7b901affb10ef287875c40fb5aaaa0c33126c79daf2a0dbe17bdb6e59",
+      "sha256": "9f7bf0ff076068a69a684333167c019a5e70eae8e08d3a256b44c06c8f0f1fed",
       "definitions": [],
       "references": [
         "--font-interface",
         "--interface-environment",
         "--spread-heading",
-        "--spread-height",
         "--spread-muted"
-      ]
-    },
-    {
-      "path": "src/profileDocument/components/publishedDisplay.css",
-      "role": "Local",
-      "sha256": "6369824379488362aeac4a10e0d3d8ce3672a7d778bae07990c592759f46615d",
-      "definitions": [],
-      "references": [
-        "--visitor-grid-swipe-x"
       ]
     },
     {
@@ -2919,7 +3598,7 @@
     {
       "path": "src/profileDocument/components/visitorGridWorld.css",
       "role": "Local",
-      "sha256": "5f992aaa357692c0b3882226a91b0b32b72b16fe96848bb7744ba8a6922d372c",
+      "sha256": "7da3f2e76fa58005d650f702e60b2479dc808b370d835126a05db07595d99170",
       "definitions": [
         {
           "name": "--visitor-grid-surface",
@@ -3027,7 +3706,7 @@
             "@media (max-width: 640px)",
             ".visitor-grid-world[data-workbench]:has(> .visitor-grid-world__dock .visitor-grid-world__actions)"
           ],
-          "line": 54,
+          "line": 44,
           "references": []
         },
         {
@@ -3037,7 +3716,7 @@
             "@media (max-width: 640px)",
             ".visitor-grid-world[data-workbench]:has(> .visitor-grid-world__dock .visitor-grid-world__actions)"
           ],
-          "line": 54,
+          "line": 44,
           "references": []
         },
         {
@@ -3046,7 +3725,7 @@
           "scope": [
             ".visitor-grid-world[data-public-header]"
           ],
-          "line": 64,
+          "line": 51,
           "references": [
             "--workspace-header-height"
           ]
@@ -3067,15 +3746,123 @@
     {
       "path": "src/profileDocument/components/visitorProfile.css",
       "role": "Local",
-      "sha256": "9043920ecb4c8e184743677090cd9930148210fc4a20d20177833d19e1d3bacb",
+      "sha256": "7e7433dde7fd19c2d67aff9ab015c4939fdb99908421e60732fa8f67eae5e295",
       "definitions": [
+        {
+          "name": "--field-tint",
+          "value": "rgb(0 0 0 / 12%)",
+          "scope": [
+            ":root"
+          ],
+          "line": 15,
+          "references": []
+        },
+        {
+          "name": "--field-glow",
+          "value": "#5e5e5e",
+          "scope": [
+            ":root"
+          ],
+          "line": 16,
+          "references": []
+        },
+        {
+          "name": "--field-shade",
+          "value": "#000",
+          "scope": [
+            ":root"
+          ],
+          "line": 17,
+          "references": []
+        },
+        {
+          "name": "--field-glow-strength",
+          "value": ".11",
+          "scope": [
+            ":root"
+          ],
+          "line": 18,
+          "references": []
+        },
+        {
+          "name": "--field-shade-strength",
+          "value": ".30",
+          "scope": [
+            ":root"
+          ],
+          "line": 19,
+          "references": []
+        },
+        {
+          "name": "--field-speed",
+          "value": "1",
+          "scope": [
+            ":root"
+          ],
+          "line": 20,
+          "references": []
+        },
+        {
+          "name": "--field-travel",
+          "value": "1",
+          "scope": [
+            ":root"
+          ],
+          "line": 21,
+          "references": []
+        },
+        {
+          "name": "--field-tint",
+          "value": "transparent",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 24,
+          "references": []
+        },
+        {
+          "name": "--field-glow",
+          "value": "#f9efda",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 25,
+          "references": []
+        },
+        {
+          "name": "--field-shade",
+          "value": "#393d39",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 26,
+          "references": []
+        },
+        {
+          "name": "--field-glow-strength",
+          "value": ".27",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 27,
+          "references": []
+        },
+        {
+          "name": "--field-shade-strength",
+          "value": ".18",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 28,
+          "references": []
+        },
         {
           "name": "--spread-heading",
           "value": "#eee",
           "scope": [
             ".visitor-publication"
           ],
-          "line": 14,
+          "line": 31,
           "references": []
         },
         {
@@ -3084,7 +3871,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 14,
+          "line": 31,
           "references": []
         },
         {
@@ -3093,7 +3880,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 14,
+          "line": 31,
           "references": []
         },
         {
@@ -3102,7 +3889,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 15,
+          "line": 32,
           "references": []
         },
         {
@@ -3111,7 +3898,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 15,
+          "line": 32,
           "references": []
         },
         {
@@ -3120,7 +3907,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 15,
+          "line": 32,
           "references": []
         },
         {
@@ -3129,7 +3916,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 16,
+          "line": 33,
           "references": []
         },
         {
@@ -3138,7 +3925,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 16,
+          "line": 33,
           "references": []
         },
         {
@@ -3147,7 +3934,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 16,
+          "line": 33,
           "references": []
         },
         {
@@ -3156,7 +3943,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 17,
+          "line": 34,
           "references": []
         },
         {
@@ -3165,7 +3952,16 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 17,
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--gallery-mat",
+          "value": "rgb(16 16 16 / 68%)",
+          "scope": [
+            ".visitor-publication"
+          ],
+          "line": 35,
           "references": []
         },
         {
@@ -3174,7 +3970,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 18,
+          "line": 36,
           "references": []
         },
         {
@@ -3183,7 +3979,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 18,
+          "line": 36,
           "references": []
         },
         {
@@ -3192,7 +3988,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 18,
+          "line": 36,
           "references": []
         },
         {
@@ -3201,7 +3997,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 19,
+          "line": 37,
           "references": []
         },
         {
@@ -3210,7 +4006,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 19,
+          "line": 37,
           "references": []
         },
         {
@@ -3219,25 +4015,25 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 19,
+          "line": 37,
           "references": []
         },
         {
           "name": "--spread-tab",
-          "value": "#acaba6",
+          "value": "#acacac",
           "scope": [
             ".visitor-publication"
           ],
-          "line": 20,
+          "line": 38,
           "references": []
         },
         {
           "name": "--spread-active",
-          "value": "#e7e6e0",
+          "value": "#e7e7e7",
           "scope": [
             ".visitor-publication"
           ],
-          "line": 20,
+          "line": 38,
           "references": []
         },
         {
@@ -3246,7 +4042,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 20,
+          "line": 38,
           "references": [
             "--workspace-header-height"
           ]
@@ -3257,7 +4053,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 26,
+          "line": 46,
           "references": []
         },
         {
@@ -3266,7 +4062,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 26,
+          "line": 46,
           "references": []
         },
         {
@@ -3275,7 +4071,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 26,
+          "line": 46,
           "references": []
         },
         {
@@ -3284,7 +4080,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 27,
+          "line": 47,
           "references": []
         },
         {
@@ -3293,7 +4089,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 27,
+          "line": 47,
           "references": []
         },
         {
@@ -3302,7 +4098,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 27,
+          "line": 47,
           "references": []
         },
         {
@@ -3311,7 +4107,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 28,
+          "line": 48,
           "references": []
         },
         {
@@ -3320,8 +4116,19 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 28,
+          "line": 48,
           "references": []
+        },
+        {
+          "name": "--gallery-mat",
+          "value": "color-mix(in srgb, var(--spread-heading) 8%, transparent)",
+          "scope": [
+            "[data-interface-theme='light'] .visitor-publication"
+          ],
+          "line": 49,
+          "references": [
+            "--spread-heading"
+          ]
         },
         {
           "name": "--card-edge",
@@ -3329,7 +4136,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 29,
+          "line": 50,
           "references": []
         },
         {
@@ -3338,7 +4145,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 29,
+          "line": 50,
           "references": []
         },
         {
@@ -3347,7 +4154,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 29,
+          "line": 50,
           "references": []
         },
         {
@@ -3356,7 +4163,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 30,
+          "line": 51,
           "references": []
         },
         {
@@ -3365,7 +4172,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 30,
+          "line": 51,
           "references": []
         },
         {
@@ -3374,7 +4181,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 30,
+          "line": 51,
           "references": []
         },
         {
@@ -3383,7 +4190,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3392,7 +4199,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3401,7 +4208,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3410,7 +4217,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3419,25 +4226,348 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 32,
+          "line": 53,
+          "references": []
+        },
+        {
+          "name": "--field-glow",
+          "value": "var(--field-high)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 56,
+          "references": [
+            "--field-high"
+          ]
+        },
+        {
+          "name": "--field-shade",
+          "value": "var(--field-low)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 56,
+          "references": [
+            "--field-low"
+          ]
+        },
+        {
+          "name": "--field-fallback-mask",
+          "value": "url('/assets/visitor/field-range.png')",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 57,
+          "references": []
+        },
+        {
+          "name": "--field-fallback-face",
+          "value": "var(--field-high)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 58,
+          "references": [
+            "--field-high"
+          ]
+        },
+        {
+          "name": "--field-fallback-opacity",
+          "value": "1",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 58,
+          "references": []
+        },
+        {
+          "name": "--spread-heading",
+          "value": "var(--palette-ink)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 59,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--spread-active",
+          "value": "var(--palette-ink)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 59,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--spread-body",
+          "value": "color-mix(in srgb, var(--palette-ink) 93%, var(--palette-canvas))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 60,
+          "references": [
+            "--palette-ink",
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--spread-role",
+          "value": "var(--spread-body)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 61,
+          "references": [
+            "--spread-body"
+          ]
+        },
+        {
+          "name": "--spread-secondary",
+          "value": "color-mix(in srgb, var(--palette-ink) 85%, var(--palette-canvas))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 61,
+          "references": [
+            "--palette-ink",
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--spread-muted",
+          "value": "color-mix(in srgb, var(--palette-ink) 76%, var(--palette-canvas))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 62,
+          "references": [
+            "--palette-ink",
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--spread-tab",
+          "value": "var(--spread-secondary)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 63,
+          "references": [
+            "--spread-secondary"
+          ]
+        },
+        {
+          "name": "--spread-contact",
+          "value": "var(--spread-secondary)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 63,
+          "references": [
+            "--spread-secondary"
+          ]
+        },
+        {
+          "name": "--spread-panel",
+          "value": "var(--palette-glass)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 64,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--spread-line",
+          "value": "color-mix(in srgb, var(--palette-ink) 30%, var(--palette-glass))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 64,
+          "references": [
+            "--palette-ink",
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--card-material",
+          "value": "var(--palette-glass)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 65,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--card-base",
+          "value": "color-mix(in srgb, var(--palette-glass) 16%, transparent)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 65,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--card-light",
+          "value": "color-mix(in srgb, var(--palette-glass) 91%, var(--palette-accent))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 66,
+          "references": [
+            "--palette-glass",
+            "--palette-accent"
+          ]
+        },
+        {
+          "name": "--card-shade",
+          "value": "color-mix(in srgb, var(--palette-glass) 69%, black)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 67,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--card-lighting",
+          "value": "linear-gradient(148deg, var(--card-light), var(--card-material) 46%, var(--card-shade))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 68,
+          "references": [
+            "--card-light",
+            "--card-material",
+            "--card-shade"
+          ]
+        },
+        {
+          "name": "--card-edge",
+          "value": "color-mix(in srgb, var(--palette-ink) 19%, transparent)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 69,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--card-inner-edge",
+          "value": "color-mix(in srgb, var(--palette-accent) 15%, transparent)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 69,
+          "references": [
+            "--palette-accent"
+          ]
+        },
+        {
+          "name": "--card-chip",
+          "value": "color-mix(in srgb, var(--palette-accent) 15%, var(--palette-glass))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 70,
+          "references": [
+            "--palette-accent",
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--card-rule",
+          "value": "color-mix(in srgb, var(--palette-ink) 16%, transparent)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 71,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--card-heading",
+          "value": "var(--palette-ink)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
+          ],
+          "line": 71,
+          "references": [
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--gallery-mat",
+          "value": "color-mix(in srgb, var(--palette-canvas) 45%, #080808)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='dark'] .visitor-publication"
+          ],
+          "line": 75,
+          "references": [
+            "--palette-canvas"
+          ]
+        },
+        {
+          "name": "--card-light",
+          "value": "color-mix(in srgb, var(--palette-glass) 85%, white)",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='light'] .visitor-publication"
+          ],
+          "line": 78,
+          "references": [
+            "--palette-glass"
+          ]
+        },
+        {
+          "name": "--card-shade",
+          "value": "color-mix(in srgb, var(--palette-glass) 86%, var(--palette-ink))",
+          "scope": [
+            ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='light'] .visitor-publication"
+          ],
+          "line": 79,
+          "references": [
+            "--palette-glass",
+            "--palette-ink"
+          ]
+        },
+        {
+          "name": "--spread-height",
+          "value": "92px",
+          "scope": [
+            "@media (max-width: 1250px)",
+            ".visitor-publication:has(.visitor-toolbar-slot:not(:empty))"
+          ],
+          "line": 114,
           "references": []
         },
         {
           "name": "--inner-rim",
           "value": "5px",
           "scope": [
-            "[data-layout='card'] .visitor-profile-body"
+            ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 118,
+          "line": 175,
           "references": []
         },
         {
           "name": "--image-inset",
           "value": "calc(var(--inner-rim) + 1px)",
           "scope": [
-            "[data-layout='card'] .visitor-profile-body"
+            ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 118,
+          "line": 175,
           "references": [
             "--inner-rim"
           ]
@@ -3449,17 +4579,29 @@
         "--card-edge",
         "--card-heading",
         "--card-inner-edge",
+        "--card-light",
+        "--card-lighting",
         "--card-material",
         "--card-rule",
+        "--card-shade",
         "--card-shadow",
         "--color-text-primary",
         "--color-text-secondary",
-        "--editor-control-radius",
+        "--field-fallback-face",
+        "--field-fallback-mask",
+        "--field-fallback-opacity",
+        "--field-high",
+        "--field-low",
+        "--field-tint",
         "--font-interface",
         "--image-inset",
         "--inner-rim",
         "--interface-line",
         "--interface-panel",
+        "--palette-accent",
+        "--palette-canvas",
+        "--palette-glass",
+        "--palette-ink",
         "--spread-active",
         "--spread-body",
         "--spread-contact",
@@ -3478,7 +4620,7 @@
     {
       "path": "src/public/identity/identityCardContent.css",
       "role": "Local",
-      "sha256": "3ff1e2861398b7f0aa28cf8296865f2db0cc9810a07f0afd1b66562468d97808",
+      "sha256": "e3021a7ab3cb6ad6244fd7ba8ed9b14d1a7401b59c7b47878d9d69736440fd73",
       "definitions": [
         {
           "name": "--identity-capacity",
@@ -3590,7 +4732,7 @@
     {
       "path": "src/public/menus/rackMenu.css",
       "role": "Local",
-      "sha256": "2f7860c90abef7238d5d48e33aee6664236ead4320b85e9a2a313c9e3b469566",
+      "sha256": "276b80a775084b6fe5da3eb0152e3361224f1173bf9c11f40e797aace9a0c222",
       "definitions": [
         {
           "name": "--rack-menu-panel",
@@ -3742,6 +4884,26 @@
           "references": [
             "--tactile-selected"
           ]
+        },
+        {
+          "name": "--workflow-menu-row-height",
+          "value": "24px",
+          "scope": [
+            ".library-new-menu[data-workflow-palette='editor']"
+          ],
+          "line": 172,
+          "references": []
+        },
+        {
+          "name": "--workflow-type-control",
+          "value": "500 11px/1.3 var(--font-interface)",
+          "scope": [
+            ".library-new-menu[data-workflow-palette='editor']"
+          ],
+          "line": 173,
+          "references": [
+            "--font-interface"
+          ]
         }
       ],
       "references": [
@@ -3753,6 +4915,8 @@
         "--color-text-primary",
         "--color-text-secondary",
         "--editor-control-radius",
+        "--editor-menu-heading",
+        "--editor-on-accent",
         "--font-interface",
         "--lattice-menu-faint",
         "--lattice-menu-ink",
@@ -3779,14 +4943,13 @@
         "--tactile-selected-ink",
         "--workflow-menu-row-height",
         "--workflow-type-control",
-        "--workflow-type-micro",
         "--workspace-sage"
       ]
     },
     {
       "path": "src/public/menus/workspaceHeader.css",
       "role": "Local",
-      "sha256": "043a95e75cee43fce1e470aecce1ebde6043d845df3669a74abe94037b60860a",
+      "sha256": "99d3269c3351d62db3e5b80a0288ba4f58d8bf27449f00ae8678bed0bf811866",
       "definitions": [
         {
           "name": "--workspace-header-height",
@@ -3799,12 +4962,14 @@
         },
         {
           "name": "--workspace-sage",
-          "value": "#a8bc9e",
+          "value": "var(--editor-accent)",
           "scope": [
             ":root"
           ],
           "line": 1,
-          "references": []
+          "references": [
+            "--editor-accent"
+          ]
         },
         {
           "name": "--inscape-wordmark-accent",
@@ -3816,13 +4981,127 @@
           "references": [
             "--workspace-sage"
           ]
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "41px",
+          "scope": [
+            ".studio-header-tools"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "12px",
+          "scope": [
+            ".studio-header-tools"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "8px",
+          "scope": [
+            "@media (max-width: 900px)",
+            ".studio-header-tools"
+          ],
+          "line": 31,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "4px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".studio-header-tools"
+          ],
+          "line": 32,
+          "references": []
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "35px",
+          "scope": [
+            "@media (max-width: 480px)",
+            ".studio-header-tools"
+          ],
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "2px",
+          "scope": [
+            "@media (max-width: 480px)",
+            ".studio-header-tools"
+          ],
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "24px",
+          "scope": [
+            "@media (max-width: 360px)",
+            ".studio-header-tools"
+          ],
+          "line": 38,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-face",
+          "value": "Canvas",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 63,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-heading",
+          "value": "CanvasText",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 64,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-edge",
+          "value": "ButtonText",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 65,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-shadow",
+          "value": "none",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 66,
+          "references": []
         }
       ],
       "references": [
         "--color-text-primary",
+        "--editor-accent",
         "--editor-control-radius",
+        "--editor-menu-edge",
+        "--editor-menu-face",
+        "--editor-menu-shadow",
         "--font-interface",
         "--interface-panel",
+        "--studio-end-width",
+        "--studio-tools-gap",
         "--workspace-header-height",
         "--workspace-sage"
       ]
@@ -3967,7 +5246,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/displayArtworkSurface.css",
       "role": "Local",
-      "sha256": "6831eec4a39a4b9684b4353ea6cc99924db0a66966a2c18fea6833c394722bc9",
+      "sha256": "3dc71ae31c4da4e9b66f73ca6f928e89c2f909782f48cd5267d93af0962ab716",
       "definitions": [],
       "references": [
         "--display-media-height",
@@ -3978,46 +5257,9 @@
       ]
     },
     {
-      "path": "src/public/ownerSystemWorkflow/displayCanvasControls.css",
-      "role": "Local",
-      "sha256": "a9795357ce97dd18b1d9320250279ad7d59fc6c4802777f6ca53c0c8d8383147",
-      "definitions": [],
-      "references": [
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-type-micro"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayInspection.css",
-      "role": "Local",
-      "sha256": "661c36914a76d86a813eae19d29ef4b8a004308fced91b7f8ae81aec083a60ef",
-      "definitions": [],
-      "references": [
-        "--inspection-lift-progress",
-        "--inspection-return-top",
-        "--workbench-right-dock-width",
-        "--workflow-muted"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayInspectionCues.css",
-      "role": "Local",
-      "sha256": "eb794b2d7a90058b67c15439de7051d91d4c9d4bb9c5aac2352d4a3ad7914147",
-      "definitions": [],
-      "references": [
-        "--workbench-content-scale",
-        "--workflow-board-radius",
-        "--workflow-border-strong",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control"
-      ]
-    },
-    {
       "path": "src/public/ownerSystemWorkflow/displayInstruments.css",
       "role": "Local",
-      "sha256": "4fd3a12105aff3cb8d7eb2353458ae38e3736815dd9d60885e04d7bfbeef44c1",
+      "sha256": "6a719a92da544008eafd474c3952ca36129fdd033dc79ff24df31f16072638b3",
       "definitions": [
         {
           "name": "--detached-window-width",
@@ -4025,7 +5267,7 @@
           "scope": [
             ".system-workflow__instrument-window"
           ],
-          "line": 40,
+          "line": 38,
           "references": []
         }
       ],
@@ -4041,40 +5283,9 @@
       ]
     },
     {
-      "path": "src/public/ownerSystemWorkflow/displayModuleLift.css",
-      "role": "Local",
-      "sha256": "70d2a1d4c67b8b92a6fdf8a7b2e091aefdb34f3c9b35aba4497c57c4ef6b5afe",
-      "definitions": [],
-      "references": [
-        "--workbench-control-scale"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displaySize.css",
-      "role": "Local",
-      "sha256": "576ac64d0472beb2c2e3a11abf57e5a7077f012f97cc37557fa55185498d83c9",
-      "definitions": [],
-      "references": [
-        "--workflow-border",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-type-panel-body",
-        "--workflow-type-panel-heading"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayText.css",
-      "role": "Local",
-      "sha256": "8491b803ec59f292f8a7045ed01e89fb6840575b3f3705d81fb83f031c19c1fe",
-      "definitions": [],
-      "references": []
-    },
-    {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "ff58fafe12ed9ef3c83313e07f31fa2c7bbce06c9310260ec010e2027376cfdb",
+      "sha256": "d3cf297f7925fa2bd313a7f66f6833729a4381f6f8be467f5a6cfe1f589f4a12",
       "definitions": [
         {
           "name": "--editor-workspace-radius",
@@ -4082,14 +5293,18 @@
           "scope": [
             ".system-workflow[data-editor-menu]"
           ],
-          "line": 21,
+          "line": 22,
           "references": []
         }
       ],
       "references": [
         "--editor-accent",
         "--editor-control-radius",
+        "--editor-field",
+        "--editor-ink",
         "--editor-line",
+        "--editor-muted",
+        "--editor-on-accent",
         "--editor-panel",
         "--editor-workspace-radius",
         "--font-interface",
@@ -4108,7 +5323,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/libraryWorkspace.css",
       "role": "Library",
-      "sha256": "ac72f4922c5c8d177b2dddfef6a93d338768d1f499d40883c60b644071a22076",
+      "sha256": "fa889644e787d8e15aa0fd90b6b144960d6b1b99129cf423617f67b20f4c01f4",
       "definitions": [
         {
           "name": "--library-row-height",
@@ -4906,12 +6121,10 @@
     {
       "path": "src/public/ownerSystemWorkflow/moduleSurface.css",
       "role": "Local",
-      "sha256": "7f06a15ae63a5875fb509885010e0f71595bed657bfe9204efb48eb86ea36237",
+      "sha256": "e4132ee5476d0e7a660f8d1f46d8f2c72043a4acf82fd500b6add7e5cf638d5c",
       "definitions": [],
       "references": [
-        "--module-corners",
         "--module-grain",
-        "--module-shadow",
         "--workbench-content-scale",
         "--workflow-border",
         "--workflow-border-strong",
@@ -4941,7 +6154,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/ownerSystemWorkflow.css",
       "role": "Workflow",
-      "sha256": "f8ccbb708b255e916eddffca7b769d110e914b34be0b73a532bce768514134e4",
+      "sha256": "ae8ad2ff6ad062f24ae0470ad12a7db3d38508c87c4de7055949f2e0890e65d9",
       "definitions": [
         {
           "name": "--study-surface",
@@ -4949,7 +6162,7 @@
           "scope": [
             ".system-workflow"
           ],
-          "line": 8,
+          "line": 7,
           "references": [
             "--interface-environment"
           ]
@@ -4960,7 +6173,7 @@
           "scope": [
             ".system-workflow"
           ],
-          "line": 9,
+          "line": 8,
           "references": [
             "--interface-ink"
           ]
@@ -4971,7 +6184,7 @@
           "scope": [
             ".system-workflow"
           ],
-          "line": 10,
+          "line": 9,
           "references": [
             "--interface-line"
           ]
@@ -4982,42 +6195,9 @@
           "scope": [
             ".system-workflow[data-editor-menu]:not([data-overview])"
           ],
-          "line": 22,
+          "line": 21,
           "references": [
             "--editor-surround"
-          ]
-        },
-        {
-          "name": "--workflow-board-frame-gap",
-          "value": "var(--workflow-window-chrome-gutter)",
-          "scope": [
-            ".system-workflow__presentation-board"
-          ],
-          "line": 85,
-          "references": [
-            "--workflow-window-chrome-gutter"
-          ]
-        },
-        {
-          "name": "--workflow-board-radius",
-          "value": "var(--workflow-window-chrome-radius)",
-          "scope": [
-            ".system-workflow__presentation-board"
-          ],
-          "line": 86,
-          "references": [
-            "--workflow-window-chrome-radius"
-          ]
-        },
-        {
-          "name": "--workflow-board-frame-surface",
-          "value": "var(--workflow-selection)",
-          "scope": [
-            ".system-workflow__presentation-board"
-          ],
-          "line": 87,
-          "references": [
-            "--workflow-selection"
           ]
         },
         {
@@ -5026,7 +6206,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 479,
+          "line": 176,
           "references": [
             "--lattice-menu-ink"
           ]
@@ -5037,7 +6217,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 479,
+          "line": 176,
           "references": [
             "--lattice-menu-ink",
             "--lattice-menu-panel"
@@ -5049,7 +6229,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 479,
+          "line": 176,
           "references": []
         },
         {
@@ -5058,7 +6238,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 542,
+          "line": 233,
           "references": []
         },
         {
@@ -5067,7 +6247,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 543,
+          "line": 234,
           "references": [
             "--workflow-window-chrome-radius"
           ]
@@ -5078,7 +6258,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 544,
+          "line": 235,
           "references": [
             "--workflow-window-chrome-gutter"
           ]
@@ -5089,7 +6269,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 545,
+          "line": 236,
           "references": [
             "--workflow-rail-height"
           ]
@@ -5100,7 +6280,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 546,
+          "line": 237,
           "references": []
         },
         {
@@ -5109,7 +6289,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 547,
+          "line": 238,
           "references": []
         },
         {
@@ -5118,7 +6298,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 548,
+          "line": 239,
           "references": [
             "--workflow-window-chrome-shadow-inset"
           ]
@@ -5129,7 +6309,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 549,
+          "line": 240,
           "references": [
             "--workflow-window-chrome-shadow-height"
           ]
@@ -5140,7 +6320,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"] .system-workflow__detached-window-surface"
           ],
-          "line": 611,
+          "line": 302,
           "references": []
         },
         {
@@ -5149,7 +6329,7 @@
           "scope": [
             ":root[data-interface-theme=\"light\"] .system-workflow__detached-window-surface"
           ],
-          "line": 612,
+          "line": 303,
           "references": []
         },
         {
@@ -5158,7 +6338,7 @@
           "scope": [
             ".system-workflow[data-layout=\"narrow\"]"
           ],
-          "line": 636,
+          "line": 327,
           "references": []
         }
       ],
@@ -5196,21 +6376,17 @@
         "--workbench-toolbar-offset",
         "--workflow-active-vertical",
         "--workflow-board-frame-gap",
-        "--workflow-board-frame-surface",
         "--workflow-board-inverse-scale",
         "--workflow-board-radius",
         "--workflow-border",
         "--workflow-border-strong",
         "--workflow-dock-height",
         "--workflow-ease",
-        "--workflow-grid-swipe-x",
         "--workflow-hover",
-        "--workflow-identity-strip-height",
         "--workflow-ink",
         "--workflow-menu-row-height",
         "--workflow-menu-type",
         "--workflow-menu-z",
-        "--workflow-metadata-width",
         "--workflow-motion-in",
         "--workflow-motion-out",
         "--workflow-muted",
@@ -5220,15 +6396,9 @@
         "--workflow-selection",
         "--workflow-shadow-panel",
         "--workflow-shadow-workspace",
-        "--workflow-shortcut-height",
-        "--workflow-shortcut-icon-size",
-        "--workflow-shortcut-label-size",
-        "--workflow-shortcut-width",
         "--workflow-type-control",
         "--workflow-type-label",
         "--workflow-type-micro",
-        "--workflow-type-panel-rail",
-        "--workflow-type-technical",
         "--workflow-window-chrome-gutter",
         "--workflow-window-chrome-noise-opacity",
         "--workflow-window-chrome-noise-size",
@@ -5243,7 +6413,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/settings.css",
       "role": "Settings",
-      "sha256": "2b56e6370ab13ec3c216ab63be5513f7a9e5de6351a4695dd32a7b844b6be7dc",
+      "sha256": "3a5b264f7684d24de3b35be896eaa76f13680e53fab1237aaea1da5b110f06e6",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -5360,7 +6530,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".system-workflow__settings.workbench-tool-panel"
           ],
-          "line": 73,
+          "line": 67,
           "references": []
         }
       ],
@@ -5391,7 +6561,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasContent.css",
       "role": "Local",
-      "sha256": "8c8c5ce8cdc5d62adc3c725ebb2b1ed10d38da549c610281c9010f7b578a3f6f",
+      "sha256": "705b73e6aa507040ffb8587f740b45e26d41e549a3770698fa62158a89a962ac",
       "definitions": [
         {
           "name": "--group-reading-order",
@@ -5433,7 +6603,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCreation.css",
       "role": "Local",
-      "sha256": "ca1e6055144c04d05bd4c79574d3cc4648a192901a06da76b015926439fac030",
+      "sha256": "a9dc91624e7a65afb2fca8ec8f2f98e7e8d6b49ccb7f2ebb9986d7398050987d",
       "definitions": [],
       "references": [
         "--workbench-toolbar-clearance",
@@ -5450,7 +6620,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchDestinationPanel.css",
       "role": "Destinations",
-      "sha256": "bdea771123726f9db6b52bfc95ece04de63f46ae1facfe9d5b81fd12d01aede2",
+      "sha256": "9b801fb4dbcf5928617a904e39b08c837821106f5d068eca209e84a4a8d98d3d",
       "definitions": [
         {
           "name": "--destination-inset",
@@ -5579,22 +6749,13 @@
           "references": []
         },
         {
-          "name": "--destination-width",
-          "value": "560px",
-          "scope": [
-            ".system-workflow__grid-switcher"
-          ],
-          "line": 59,
-          "references": []
-        },
-        {
           "name": "--destination-target",
           "value": "44px",
           "scope": [
             "@media (max-width: 520px), (pointer: coarse)",
             ".workbench-destination-panel.workbench-tool-panel"
           ],
-          "line": 86,
+          "line": 60,
           "references": []
         }
       ],
@@ -5607,7 +6768,6 @@
         "--destination-width",
         "--font-interface",
         "--font-technical",
-        "--icon-size-interface",
         "--tactile-disabled",
         "--tactile-edge",
         "--tactile-face",
@@ -5843,7 +7003,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchLayers.css",
       "role": "Layers",
-      "sha256": "a7e080616ebf49d2aec92d3b90fa2b58411e20929b0d7f37938e1e44f4783ce3",
+      "sha256": "ccccdf158280b2117373eb7ae1dd3b5d208c34ee8bd0ec4d7149d8ac1dec313e",
       "definitions": [],
       "references": [
         "--control-height-sm",
@@ -6176,90 +7336,15 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "7a99d0cb5ccbdbd8159edec4cf31d8889402032e080e4453b873d917242f0217",
+      "sha256": "0cbb7c9e41817a9c19dbe80aaf8b6261272fb2339d94ae7e4ce8ff1ac699d66e",
       "definitions": [
-        {
-          "name": "--toolbar-target",
-          "value": "32px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--toolbar-icon",
-          "value": "16px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--toolbar-height",
-          "value": "44px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--toolbar-column-gap",
-          "value": "2px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 6,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-block",
-          "value": "6px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 7,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-inline",
-          "value": "6px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 8,
-          "references": []
-        },
-        {
-          "name": "--toolbar-radius",
-          "value": "11px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 9,
-          "references": []
-        },
-        {
-          "name": "--toolbar-key-radius",
-          "value": "calc(var(--toolbar-radius) - var(--toolbar-padding-inline))",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 10,
-          "references": [
-            "--toolbar-radius",
-            "--toolbar-padding-inline"
-          ]
-        },
         {
           "name": "--toolbar-popup-radius",
           "value": "var(--toolbar-radius)",
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 11,
+          "line": 5,
           "references": [
             "--toolbar-radius"
           ]
@@ -6270,7 +7355,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 26,
+          "line": 20,
           "references": []
         },
         {
@@ -6279,7 +7364,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 27,
+          "line": 21,
           "references": [
             "--toolbar-padding-block",
             "--toolbar-popup-border"
@@ -6291,7 +7376,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 28,
+          "line": 22,
           "references": [
             "--toolbar-padding-inline",
             "--toolbar-popup-border"
@@ -6303,7 +7388,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 29,
+          "line": 23,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -6314,7 +7399,7 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 49,
+          "line": 43,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -6326,7 +7411,7 @@
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 227,
+          "line": 221,
           "references": [
             "--control-target-touch"
           ]
@@ -6372,7 +7457,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "8f1d2049956fcc970be72e43c40b7ffff0f318293e10202ae424da04b658226f",
+      "sha256": "ae03cd09e601bba01c7231f6e64663136adafca03abb2c8ca3e22a9b93f91315",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -6455,7 +7540,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchWindowChrome.css",
       "role": "Window",
-      "sha256": "d3d016810dc447bab17befdb12400f0d8af47d463f62e7c7284f889a7f643c45",
+      "sha256": "3f901d22e5b254d8d72777a411a724c90a5835637092ba3a8b00c5c630fc7110",
       "definitions": [
         {
           "name": "--tool-control-size",
@@ -6479,7 +7564,7 @@
           "name": "--toolbar-left",
           "value": "calc(var(--workbench-left-dock-width, 0px) + 8px)",
           "scope": [
-            ".reception-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
+            ".composition-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
           ],
           "line": 21,
           "references": [
@@ -6490,7 +7575,7 @@
           "name": "--toolbar-right",
           "value": "calc(100dvw - var(--workbench-right-dock-width, 0px) - 8px)",
           "scope": [
-            ".reception-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
+            ".composition-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
           ],
           "line": 22,
           "references": [
@@ -6744,45 +7829,13 @@
           "name": "--workflow-window-chrome-shadow",
           "value": "calc(4px * var(--workbench-content-scale, 1)) calc(6px * var(--workbench-content-scale, 1)) calc(14px * var(--workbench-content-scale, 1)) rgb(17 19 19 / 14%)",
           "scope": [
-            ".system-workflow__presentation-board, .text-window"
+            ".text-window"
           ],
           "line": 127,
           "references": [
             "--workbench-content-scale",
             "--workbench-content-scale",
             "--workbench-content-scale"
-          ]
-        },
-        {
-          "name": "--workflow-board-radius",
-          "value": "calc(var(--workflow-window-chrome-radius) * var(--workbench-content-scale, 1))",
-          "scope": [
-            ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
-          ],
-          "line": 130,
-          "references": [
-            "--workflow-window-chrome-radius",
-            "--workbench-content-scale"
-          ]
-        },
-        {
-          "name": "--workflow-board-frame-gap",
-          "value": "0px",
-          "scope": [
-            ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
-          ],
-          "line": 131,
-          "references": []
-        },
-        {
-          "name": "--workflow-board-frame-surface",
-          "value": "var(--workflow-panel)",
-          "scope": [
-            ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
-          ],
-          "line": 132,
-          "references": [
-            "--workflow-panel"
           ]
         }
       ],
@@ -6801,15 +7854,11 @@
         "--toolbar-screen-x",
         "--workbench-content-scale",
         "--workbench-control-scale",
+        "--workbench-controls-gap",
         "--workbench-left-dock-width",
         "--workbench-right-dock-width",
-        "--workflow-board-radius",
-        "--workflow-border",
-        "--workflow-hover",
         "--workflow-ink",
         "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-window-chrome-radius",
         "--workflow-window-chrome-shadow",
         "--workflow-window-control-active-shadow",
         "--workflow-window-control-fill",
@@ -8313,7 +9362,7 @@
     {
       "path": "src/public/workbenchOverview/canvasPresentation.css",
       "role": "Local",
-      "sha256": "07a31a07cdc8ce0d64e2daeffaff5bfda63a626abffb6c7576ab15b90555f19f",
+      "sha256": "80481341ce1cec7e5dfb57acf231049310ef2ff090e79a110d9abc5298ba3de8",
       "definitions": [
         {
           "name": "--tactile-ink",
@@ -8328,12 +9377,15 @@
         },
         {
           "name": "--tactile-muted",
-          "value": "#c6c7c7",
+          "value": "color-mix(in srgb, var(--overview-glass-ink) 84%, var(--overview-glass))",
           "scope": [
             ".canvas-presentation"
           ],
           "line": 1,
-          "references": []
+          "references": [
+            "--overview-glass-ink",
+            "--overview-glass"
+          ]
         },
         {
           "name": "--presentation-height",
@@ -8366,6 +9418,85 @@
           "references": [
             "--canvas-ratio"
           ]
+        },
+        {
+          "name": "--quick-peek",
+          "value": "clamp(22px, 2.5vw, 48px)",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]"
+          ],
+          "line": 99,
+          "references": []
+        },
+        {
+          "name": "--quick-shrink",
+          "value": ".56",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]"
+          ],
+          "line": 100,
+          "references": []
+        },
+        {
+          "name": "--quick-height",
+          "value": "min(86dvh, calc(88vw / var(--canvas-ratio)))",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor)"
+          ],
+          "line": 104,
+          "references": [
+            "--canvas-ratio"
+          ]
+        },
+        {
+          "name": "--edge-distance",
+          "value": "calc(50vw + 50% * var(--quick-shrink) - var(--quick-peek))",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor)"
+          ],
+          "line": 107,
+          "references": [
+            "--quick-shrink",
+            "--quick-peek"
+          ]
+        },
+        {
+          "name": "--remaining",
+          "value": "1",
+          "scope": [
+            ".workbench-overview .canvas-presentation .quick-view-neighbor"
+          ],
+          "line": 111,
+          "references": []
+        },
+        {
+          "name": "--side",
+          "value": "-1",
+          "scope": [
+            ".quick-view-neighbor[data-side='Previous'], .canvas-presentation[data-travel='Next']"
+          ],
+          "line": 115,
+          "references": []
+        },
+        {
+          "name": "--side",
+          "value": "1",
+          "scope": [
+            ".quick-view-neighbor[data-side='Next'], .canvas-presentation[data-travel='Previous']"
+          ],
+          "line": 116,
+          "references": []
+        },
+        {
+          "name": "--remaining",
+          "value": "calc(1 - var(--quick-progress))",
+          "scope": [
+            ".canvas-presentation[data-travel='Next'] .quick-view-neighbor[data-side='Next'],\n.canvas-presentation[data-travel='Previous'] .quick-view-neighbor[data-side='Previous']"
+          ],
+          "line": 118,
+          "references": [
+            "--quick-progress"
+          ]
         }
       ],
       "references": [
@@ -8375,6 +9506,7 @@
         "--card-material",
         "--control-radius",
         "--control-shell-radius",
+        "--edge-distance",
         "--font-technical",
         "--overview-ease",
         "--overview-glass",
@@ -8385,7 +9517,13 @@
         "--overview-panel-duration",
         "--overview-radius",
         "--presentation-height",
+        "--quick-height",
+        "--quick-peek",
+        "--quick-progress",
+        "--quick-shrink",
+        "--remaining",
         "--sample-offset",
+        "--side",
         "--space-2",
         "--tactile-edge",
         "--tactile-face",
@@ -8398,7 +9536,7 @@
     {
       "path": "src/public/workbenchOverview/compositionIndex.css",
       "role": "Local",
-      "sha256": "04b2a4aa0fa00a1cff1735cea9d681408fb265b58dd54993891b7f67bb44859a",
+      "sha256": "3c64521f63423c2cbdbeb6f5802604f96b39b3f643648b090c76567a4b37c6fe",
       "definitions": [
         {
           "name": "--index-width",
@@ -8424,7 +9562,7 @@
           "scope": [
             ".composition-explorer-controls button"
           ],
-          "line": 44,
+          "line": 41,
           "references": []
         },
         {
@@ -8433,7 +9571,7 @@
           "scope": [
             ".composition-explorer-controls button"
           ],
-          "line": 44,
+          "line": 41,
           "references": []
         },
         {
@@ -8443,7 +9581,7 @@
             "@media (max-width: 800px)",
             ".composition-index"
           ],
-          "line": 65,
+          "line": 62,
           "references": []
         }
       ],
@@ -8461,6 +9599,17 @@
       ]
     },
     {
+      "path": "src/public/workbenchOverview/compositionPreview.css",
+      "role": "Local",
+      "sha256": "a83284d7b7e4d642230b95018d32d795c8f10e15c25dd01cb38a13d021c63420",
+      "definitions": [],
+      "references": [
+        "--color-border",
+        "--color-text-primary",
+        "--interface-environment"
+      ]
+    },
+    {
       "path": "src/public/workbenchOverview/thumbnailCrop.css",
       "role": "Local",
       "sha256": "02f6feb8de334ac4242f8ae0731626274df9dab5887a52678f7faefaa8ee8fb6",
@@ -8475,24 +9624,56 @@
     {
       "path": "src/public/workbenchOverview/visitorWorksList.css",
       "role": "Local",
-      "sha256": "6fb33b65645e118b566a0d7308cdc9fe3f9cf8ed61a5ac191541aaa047ff9902",
+      "sha256": "7635ed0adfefa0b3fb0485f72ca2a71634b2e83a37fb1c33bb156eced2628232",
       "definitions": [
+        {
+          "name": "--gallery-toolbar-inset",
+          "value": "clamp(42px, calc(16.2dvh - var(--spread-height)), 100px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 35,
+          "references": [
+            "--spread-height"
+          ]
+        },
+        {
+          "name": "--gallery-gutter",
+          "value": "2.5%",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 36,
+          "references": []
+        },
+        {
+          "name": "--gallery-detail-space",
+          "value": "calc(var(--works-rail) + var(--works-gap))",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 37,
+          "references": [
+            "--works-rail",
+            "--works-gap"
+          ]
+        },
         {
           "name": "--works-rail",
           "value": "clamp(150px, 11.6vw, 220px)",
           "scope": [
-            ".workbench-overview[data-visitor-header][data-layout='list']"
+            ".workbench-overview[data-visitor-header]"
           ],
-          "line": 3,
+          "line": 38,
           "references": []
         },
         {
           "name": "--works-gap",
           "value": "clamp(20px, 1.8vw, 38px)",
           "scope": [
-            ".workbench-overview[data-visitor-header][data-layout='list']"
+            ".workbench-overview[data-visitor-header]"
           ],
-          "line": 4,
+          "line": 39,
           "references": []
         },
         {
@@ -8501,7 +9682,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-layout='list']"
           ],
-          "line": 5,
+          "line": 42,
           "references": []
         },
         {
@@ -8510,18 +9691,112 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-layout='list']"
           ],
-          "line": 6,
+          "line": 43,
           "references": []
+        },
+        {
+          "name": "--gallery-detail-space",
+          "value": "0px",
+          "scope": [
+            "@media (max-width: 959px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 166,
+          "references": []
+        },
+        {
+          "name": "--gallery-gutter",
+          "value": "16px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 171,
+          "references": []
+        },
+        {
+          "name": "--gallery-toolbar-inset",
+          "value": "12px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 171,
+          "references": []
+        },
+        {
+          "name": "--gallery-stage-height",
+          "value": "calc(100dvh - var(--spread-height) - 24px - var(--gallery-tools-height, 0px))",
+          "scope": [
+            ".workbench-overview[data-published-gallery][data-layout='list']"
+          ],
+          "line": 188,
+          "references": [
+            "--spread-height",
+            "--gallery-tools-height"
+          ]
+        },
+        {
+          "name": "--rails-and-gaps",
+          "value": "calc(2 * (var(--works-rail) + var(--works-gap)))",
+          "scope": [
+            ".workbench-overview[data-published-gallery] .composition-index:not([data-expanded]) .composition-index-body"
+          ],
+          "line": 192,
+          "references": [
+            "--works-rail",
+            "--works-gap"
+          ]
+        },
+        {
+          "name": "--maximum",
+          "value": "calc(var(--gallery-stage-height) - 36px)",
+          "scope": [
+            "@media (min-width: 701px)",
+            ".workbench-overview[data-published-gallery] .composition-index:not([data-expanded]) .composition-explorer-viewport"
+          ],
+          "line": 212,
+          "references": [
+            "--gallery-stage-height"
+          ]
         }
       ],
       "references": [
-        "--card-material",
+        "--card-base",
+        "--card-edge",
+        "--card-inner-edge",
+        "--editor-accent",
+        "--editor-field",
+        "--editor-ink",
+        "--editor-line",
+        "--editor-muted",
+        "--editor-on-accent",
+        "--editor-panel",
+        "--editor-selection",
+        "--gallery-gutter",
+        "--gallery-height-fill",
+        "--gallery-mat",
+        "--gallery-stage-height",
+        "--gallery-toolbar-inset",
+        "--gallery-tools-height",
+        "--gallery-width-fraction",
+        "--maximum",
+        "--rails-and-gaps",
         "--spread-body",
         "--spread-heading",
         "--spread-height",
+        "--spread-line",
         "--spread-muted",
         "--spread-panel",
         "--spread-secondary",
+        "--toolbar-column-gap",
+        "--toolbar-height",
+        "--toolbar-icon",
+        "--toolbar-key-radius",
+        "--toolbar-padding-block",
+        "--toolbar-padding-inline",
+        "--toolbar-radius",
+        "--toolbar-target",
         "--works-gap",
         "--works-label-height",
         "--works-rail",
@@ -8531,7 +9806,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "7075e83c2770440671fec03e55a936dff5c0bfe147e05791f0df9606b2adc5ad",
+      "sha256": "f49b382e14242c88414c62afc8665a95352ad2ada74b726bc27e5840b1d76abf",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -8627,7 +9902,7 @@
           "scope": [
             ".workbench-overview-navigation"
           ],
-          "line": 27,
+          "line": 45,
           "references": [
             "--interface-panel"
           ]
@@ -8639,7 +9914,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 77,
+          "line": 96,
           "references": [
             "--interface-panel"
           ]
@@ -8651,7 +9926,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 77,
+          "line": 96,
           "references": []
         },
         {
@@ -8661,16 +9936,16 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 77,
+          "line": 96,
           "references": []
         },
         {
           "name": "--gallery-tools-height",
           "value": "48px",
           "scope": [
-            ".workbench-overview[data-selectable-gallery]"
+            ".workbench-overview[data-visitor-header][data-selecting]"
           ],
-          "line": 85,
+          "line": 104,
           "references": []
         }
       ],
@@ -8680,6 +9955,9 @@
         "--control-target-touch",
         "--font-interface",
         "--font-technical",
+        "--gallery-detail-space",
+        "--gallery-gutter",
+        "--gallery-toolbar-inset",
         "--gallery-tools-height",
         "--interface-environment",
         "--interface-hover",
@@ -8701,6 +9979,7 @@
         "--spread-heading",
         "--spread-height",
         "--spread-line",
+        "--spread-muted",
         "--spread-panel",
         "--tactile-edge",
         "--tactile-face",
@@ -8716,7 +9995,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "39afa441d0c433d13ad7d19fcc23dd0cd01e93953b32a883373ff5668c842695",
+      "sha256": "8c4a3488f35129f213897919de852c5d86b5c174218b49b68631da635e709e57",
       "definitions": [
         {
           "name": "--gallery-columns",
@@ -8725,7 +10004,7 @@
             "@media (max-width: 1600px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 38,
+          "line": 39,
           "references": []
         },
         {
@@ -8735,7 +10014,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 41,
+          "line": 42,
           "references": []
         },
         {
@@ -8745,7 +10024,7 @@
             "@media (max-width: 520px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 49,
+          "line": 50,
           "references": []
         },
         {
@@ -8754,7 +10033,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 52,
+          "line": 53,
           "references": []
         },
         {
@@ -8763,7 +10042,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 52,
+          "line": 53,
           "references": []
         },
         {
@@ -8772,7 +10051,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 53,
+          "line": 54,
           "references": []
         },
         {
@@ -8781,7 +10060,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 53,
+          "line": 54,
           "references": []
         },
         {
@@ -8791,7 +10070,7 @@
             "@media (max-width: 1600px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 66,
+          "line": 67,
           "references": []
         },
         {
@@ -8801,7 +10080,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 67,
+          "line": 68,
           "references": []
         },
         {
@@ -8811,7 +10090,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 67,
+          "line": 68,
           "references": []
         },
         {
@@ -8821,7 +10100,34 @@
             "@media (max-width: 520px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 68,
+          "line": 69,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(170px, 23vw, 320px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] .workbench-overview-gallery"
+          ],
+          "line": 78,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(108px, 9vw, 152px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-card-size=\"1\"]"
+          ],
+          "line": 79,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(300px, 38vw, 620px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-card-size=\"3\"]"
+          ],
+          "line": 80,
           "references": []
         },
         {
@@ -8830,8 +10136,19 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-cycle"
           ],
-          "line": 78,
+          "line": 82,
           "references": []
+        },
+        {
+          "name": "--side",
+          "value": "min(var(--tile-size), 100cqh, 100cqw)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-horizontal] .workbench-overview-cycle"
+          ],
+          "line": 91,
+          "references": [
+            "--tile-size"
+          ]
         },
         {
           "name": "--thumbnail-background",
@@ -8839,7 +10156,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-card"
           ],
-          "line": 88,
+          "line": 98,
           "references": []
         },
         {
@@ -8848,575 +10165,28 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-card"
           ],
-          "line": 89,
+          "line": 99,
           "references": []
         }
       ],
       "references": [
         "--card-material",
         "--gallery-columns",
-        "--gallery-count",
         "--gallery-height",
         "--overview-ease",
         "--overview-glass",
         "--overview-glass-filter",
         "--overview-glass-ink",
         "--overview-radius",
+        "--side",
         "--space-2",
         "--space-3",
-        "--spread-heading",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-well",
-        "--tile-gap"
+        "--tile-gap",
+        "--tile-size"
       ]
-    },
-    {
-      "path": "src/reception/cellNumber.css",
-      "role": "Local",
-      "sha256": "525aab740708e5a9114e2af8d254304efe3dff4bfc6b1dbd3f86269a58cdb99e",
-      "definitions": [],
-      "references": [
-        "--tactile-ink"
-      ]
-    },
-    {
-      "path": "src/reception/editorCells.css",
-      "role": "Local",
-      "sha256": "2700541c9dbe18b1c85c6bf417b1f7e4d81769a842e6e61b77249a68b1ff23ba",
-      "definitions": [],
-      "references": [
-        "--tactile-edge",
-        "--tactile-ink",
-        "--workbench-content-scale",
-        "--workflow-ink",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/reception.css",
-      "role": "Reception",
-      "sha256": "921e9857c44434a9ae2b2b57c8d1b4c65c199fd45884e34ecf3a8ee1456eec83",
-      "definitions": [
-        {
-          "name": "--reception-page-padding",
-          "value": "12px",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-width",
-          "value": "100%",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-height",
-          "value": "100%",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-border",
-          "value": "0px",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-background",
-          "value": "transparent",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-header-border",
-          "value": "0px",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        }
-      ],
-      "references": [
-        "--control-shell-radius",
-        "--control-target-touch",
-        "--font-interface",
-        "--font-technical",
-        "--interface-environment",
-        "--reception-align-x",
-        "--reception-align-y",
-        "--reception-gutter",
-        "--reception-header-border",
-        "--reception-page-background",
-        "--reception-page-padding",
-        "--reception-radius",
-        "--reception-window-background",
-        "--reception-window-border",
-        "--reception-window-height",
-        "--reception-window-width",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well",
-        "--tool-control-height",
-        "--workflow-type-control",
-        "--workspace-header-height"
-      ]
-    },
-    {
-      "path": "src/reception/receptionAtmosphere.css",
-      "role": "Local",
-      "sha256": "d88028d92790ce25bc1e27efe3f7ad264bf642fc4d11bae00fea2a5959332dbc",
-      "definitions": [
-        {
-          "name": "--reception-light-origin",
-          "value": "clamp(calc(26% + 16px), var(--reception-light-position), calc(74% - 16px))",
-          "scope": [
-            ".reception-atmosphere"
-          ],
-          "line": 1,
-          "references": [
-            "--reception-light-position"
-          ]
-        },
-        {
-          "name": "--reception-light-edge",
-          "value": "0%",
-          "scope": [
-            ".reception-atmosphere-light[data-side=\"down\"]"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--reception-light-edge",
-          "value": "100%",
-          "scope": [
-            ".reception-atmosphere-light[data-side=\"up\"]"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--reception-light-depth",
-          "value": "74px",
-          "scope": [
-            ".reception-atmosphere-sample-header"
-          ],
-          "line": 8,
-          "references": []
-        }
-      ],
-      "references": [
-        "--interface-environment",
-        "--reception-content-inset",
-        "--reception-light-color",
-        "--reception-light-depth",
-        "--reception-light-edge",
-        "--reception-light-origin",
-        "--reception-light-position",
-        "--reception-light-spread",
-        "--reception-light-strength",
-        "--reception-page-background",
-        "--tactile-edge",
-        "--tactile-muted",
-        "--tactile-radius-control",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/receptionBento.css",
-      "role": "Local",
-      "sha256": "f622545673f28f7e024b7068f32ac9dd6efd3edba6b4ad0945a44dc7cb4f894f",
-      "definitions": [
-        {
-          "name": "--tool-control-height",
-          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
-          "scope": [
-            ".reception-bento-panel"
-          ],
-          "line": 10,
-          "references": [
-            "--control-height-sm",
-            "--tool-touch-target"
-          ]
-        },
-        {
-          "name": "--tool-icon-target",
-          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
-          "scope": [
-            ".reception-bento-panel"
-          ],
-          "line": 10,
-          "references": [
-            "--control-height-sm",
-            "--tool-touch-target"
-          ]
-        }
-      ],
-      "references": [
-        "--control-height-sm",
-        "--editor-accent",
-        "--editor-ink",
-        "--editor-panel",
-        "--tactile-accent",
-        "--tactile-control-edge",
-        "--tactile-edge",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-radius-control",
-        "--tactile-well",
-        "--tool-control-height",
-        "--tool-touch-target",
-        "--workflow-border",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/receptionCellGrain.css",
-      "role": "Local",
-      "sha256": "d7663b237a2d61aa4277c31a07b9f05577b85e45bf4cdb73adc133c2c81da95c",
-      "definitions": [],
-      "references": []
-    },
-    {
-      "path": "src/reception/receptionDocument.css",
-      "role": "Local",
-      "sha256": "21137b81bd0bf7850e0cf1af75916bb988ef26d29f76430c4d7fb378c8c52121",
-      "definitions": [
-        {
-          "name": "--text-stack-height",
-          "value": "100cqh",
-          "scope": [
-            ".reception-text-preview[data-stacked]"
-          ],
-          "line": 13,
-          "references": []
-        },
-        {
-          "name": "--slide-position",
-          "value": "inherit",
-          "scope": [
-            ".reception-cell-group[data-swiping] > .reception-document-cell"
-          ],
-          "line": 25,
-          "references": []
-        },
-        {
-          "name": "--slide-position",
-          "value": "inherit",
-          "scope": [
-            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
-          ],
-          "line": 33,
-          "references": []
-        },
-        {
-          "name": "--cell-slide-offset",
-          "value": "calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1)",
-          "scope": [
-            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
-          ],
-          "line": 34,
-          "references": [
-            "--layer-slide",
-            "--slide-position",
-            "--slide-count"
-          ]
-        },
-        {
-          "name": "--swipe-pan",
-          "value": "pan-x",
-          "scope": [
-            ".reception-cell-group[data-vertical-swipe]"
-          ],
-          "line": 42,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "4px 38%",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"left\"]"
-          ],
-          "line": 47,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "right center",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"left\"]"
-          ],
-          "line": 47,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "4px 38%",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"right\"]"
-          ],
-          "line": 48,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "left center",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"right\"]"
-          ],
-          "line": 48,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "38% 4px",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"up\"]"
-          ],
-          "line": 49,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "center bottom",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"up\"]"
-          ],
-          "line": 49,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "38% 4px",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"down\"]"
-          ],
-          "line": 50,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "center top",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"down\"]"
-          ],
-          "line": 50,
-          "references": []
-        }
-      ],
-      "references": [
-        "--cell-slide-offset",
-        "--glow-edge",
-        "--glow-size",
-        "--interface-environment",
-        "--interface-window",
-        "--layer-slide",
-        "--reception-frame-fill",
-        "--reception-frame-fill-opacity",
-        "--reception-frame-line",
-        "--reception-frame-line-opacity",
-        "--reception-page-background",
-        "--slide-count",
-        "--slide-position",
-        "--slide-x",
-        "--slide-y",
-        "--swipe-pan",
-        "--tactile-ink"
-      ]
-    },
-    {
-      "path": "src/reception/receptionInnerLines.css",
-      "role": "Local",
-      "sha256": "6b2783c05ee654a817b2bbe43ce5a764120e1aff96459289015b729bfe5e5de7",
-      "definitions": [],
-      "references": []
-    },
-    {
-      "path": "src/reception/receptionPreview.css",
-      "role": "Local",
-      "sha256": "cfdcee5c80113ae73dfc3ca23fbe9bfcdafaaedda3dcd46f2cfc8568f2fddda9",
-      "definitions": [
-        {
-          "name": "--editor-accent",
-          "value": "var(--interface-ink)",
-          "scope": [
-            ".editor-object-toolbar-button.reception-preview-menu-trigger"
-          ],
-          "line": 3,
-          "references": [
-            "--interface-ink"
-          ]
-        },
-        {
-          "name": "--editor-selection",
-          "value": "color-mix(in srgb, var(--interface-ink) 8%, transparent)",
-          "scope": [
-            ".editor-object-toolbar-button.reception-preview-menu-trigger"
-          ],
-          "line": 3,
-          "references": [
-            "--interface-ink"
-          ]
-        },
-        {
-          "name": "--tactile-selected",
-          "value": "var(--editor-accent)",
-          "scope": [
-            ".reception-viewport-presets"
-          ],
-          "line": 20,
-          "references": [
-            "--editor-accent"
-          ]
-        },
-        {
-          "name": "--tactile-selected-ink",
-          "value": "var(--editor-on-accent)",
-          "scope": [
-            ".reception-viewport-presets"
-          ],
-          "line": 20,
-          "references": [
-            "--editor-on-accent"
-          ]
-        },
-        {
-          "name": "--tactile-selected",
-          "value": "Highlight",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".reception-viewport-presets"
-          ],
-          "line": 48,
-          "references": []
-        },
-        {
-          "name": "--tactile-selected-ink",
-          "value": "HighlightText",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".reception-viewport-presets"
-          ],
-          "line": 48,
-          "references": []
-        }
-      ],
-      "references": [
-        "--editor-accent",
-        "--editor-ink",
-        "--editor-line",
-        "--editor-muted",
-        "--editor-on-accent",
-        "--editor-panel",
-        "--font-interface",
-        "--interface-environment",
-        "--interface-ink",
-        "--tactile-accent",
-        "--tactile-divider",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-radius-control",
-        "--tactile-well",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/receptionProfile.css",
-      "role": "Local",
-      "sha256": "d7058b3d8d445828d65e37753342110e06024a1793670d156c001ccaa6406b16",
-      "definitions": [
-        {
-          "name": "--reception-portrait-width",
-          "value": "64px",
-          "scope": [
-            ".reception-window-header[data-profile-header]"
-          ],
-          "line": 1,
-          "references": []
-        },
-        {
-          "name": "--reception-profile-gap",
-          "value": "16px",
-          "scope": [
-            ".reception-window-header[data-profile-header]"
-          ],
-          "line": 1,
-          "references": []
-        },
-        {
-          "name": "--reception-page-inset",
-          "value": "clamp(20px, 4%, 64px)",
-          "scope": [
-            ".reception-page[data-profile-page], .reception-preview-page"
-          ],
-          "line": 22,
-          "references": []
-        },
-        {
-          "name": "--reception-content-inset",
-          "value": "max(var(--reception-page-inset), calc((100% - var(--reception-bento-width)) / 2))",
-          "scope": [
-            ".reception-page[data-profile-page], .reception-preview-page"
-          ],
-          "line": 22,
-          "references": [
-            "--reception-page-inset",
-            "--reception-bento-width"
-          ]
-        },
-        {
-          "name": "--reception-page-padding",
-          "value": "0px",
-          "scope": [
-            ".reception-page[data-profile-page]"
-          ],
-          "line": 23,
-          "references": []
-        }
-      ],
-      "references": [
-        "--font-interface",
-        "--font-technical",
-        "--interface-environment",
-        "--interface-ink",
-        "--reception-bento-width",
-        "--reception-content-inset",
-        "--reception-page-background",
-        "--reception-page-inset",
-        "--reception-portrait-width",
-        "--reception-profile-gap",
-        "--tactile-muted"
-      ]
-    },
-    {
-      "path": "src/reception/receptionScene.css",
-      "role": "Local",
-      "sha256": "ac4b4cb26a21a28a18b6ee43de065760c2cc7d5a4947fa36b795838b8f440427",
-      "definitions": [],
-      "references": []
     },
     {
       "path": "src/recovery/creepsMetadataRecovery.css",
@@ -9463,51 +10233,9 @@
       ]
     },
     {
-      "path": "src/startveil/publicEntryPortal.css",
-      "role": "Discover",
-      "sha256": "69e81104bbc0d8dad472d9737368cd49aa553603b625b899f3723e18d82ff69b",
-      "definitions": [
-        {
-          "name": "--portal-target",
-          "value": "var(--control-height-sm)",
-          "scope": [
-            ".public-entry-portal"
-          ],
-          "line": 2,
-          "references": [
-            "--control-height-sm"
-          ]
-        },
-        {
-          "name": "--portal-target",
-          "value": "44px",
-          "scope": [
-            "@media (max-width: 520px), (pointer: coarse)",
-            ".public-entry-portal"
-          ],
-          "line": 84,
-          "references": []
-        }
-      ],
-      "references": [
-        "--control-height-sm",
-        "--control-radius",
-        "--font-interface",
-        "--font-technical",
-        "--interface-environment",
-        "--portal-target",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-hover",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well"
-      ]
-    },
-    {
       "path": "src/startveil/startveil.css",
       "role": "Local",
-      "sha256": "e34c6a7286eafc8b7e5b4a94c1ceb97ae78ebcbc5c3e4ffa2aa1e09e3b956d0e",
+      "sha256": "1a48526509f26d93e24b0ddaef58540ffcb8d6ee008f987c961f188fe511c1ed",
       "definitions": [
         {
           "name": "--up-modal-font-family",
@@ -9582,6 +10310,7 @@
         }
       ],
       "references": [
+        "--control-radius",
         "--interface-environment",
         "--interface-hover",
         "--interface-ink",
@@ -9627,7 +10356,7 @@
     {
       "path": "src/text/text.css",
       "role": "Local",
-      "sha256": "6ff5c904b15cf9cf11184f75a09bc74d3a1e87ed9bce0bdad3630763b6553bfb",
+      "sha256": "06a8d5e7207782b50630216c3a2370ad52cf00e578c3c1cd75a2bda0cf9e342d",
       "definitions": [
         {
           "name": "--text-automatic-padding",
@@ -9635,7 +10364,7 @@
           "scope": [
             ".text-document, .text-editor-page"
           ],
-          "line": 49,
+          "line": 46,
           "references": []
         },
         {
@@ -9645,7 +10374,7 @@
             "@media (max-width: 600px)",
             ".text-document, .text-editor-page"
           ],
-          "line": 120,
+          "line": 116,
           "references": []
         },
         {
@@ -9654,7 +10383,7 @@
           "scope": [
             ".text-workbench .text-window[data-window-chrome]"
           ],
-          "line": 121,
+          "line": 117,
           "references": []
         },
         {
@@ -9663,11 +10392,13 @@
           "scope": [
             ".text-module-scroll[data-stacked]"
           ],
-          "line": 138,
+          "line": 127,
           "references": []
         }
       ],
       "references": [
+        "--controls-frame-height",
+        "--controls-frame-width",
         "--editor-accent",
         "--text-automatic-padding",
         "--text-caption-color",
@@ -9697,13 +10428,13 @@
         "--text-page-gap",
         "--text-page-height",
         "--text-page-width",
-        "--text-shortcut-bottom",
         "--text-stack-height",
         "--text-viewport-bottom-padding",
         "--text-z",
         "--workbench-content-scale",
         "--workbench-content-width",
         "--workbench-control-scale",
+        "--workbench-controls-gap",
         "--workflow-border",
         "--workflow-ink",
         "--workflow-panel",
@@ -9726,7 +10457,7 @@
     {
       "path": "src/text/textTools.css",
       "role": "Local",
-      "sha256": "b9cefc26e3be28c201239826c1d71a724b61d203be33187a95bde3b36851b416",
+      "sha256": "47aa18e6ba4271c08062d8431451d24152a3b03003bd0b4442629b03ada3d3ce",
       "definitions": [
         {
           "name": "--workflow-border",
@@ -9795,6 +10526,103 @@
         "--workflow-panel",
         "--workflow-selection",
         "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/ui/iconSwitch.css",
+      "role": "Local",
+      "sha256": "e6eee840bc217aeb2b0243385e3ba05e5c996b97ca2a1973a978a76a3b968442",
+      "definitions": [],
+      "references": [
+        "--interface-ink",
+        "--interface-line",
+        "--interface-panel"
+      ]
+    },
+    {
+      "path": "src/ui/iconToolbar.css",
+      "role": "Local",
+      "sha256": "5c51d6e40dc06fc3a34a7d8a9d2c50aaa5ce89db5c608fe5999f4b9931ab2e6d",
+      "definitions": [
+        {
+          "name": "--toolbar-target",
+          "value": "32px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--toolbar-icon",
+          "value": "16px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 4,
+          "references": []
+        },
+        {
+          "name": "--toolbar-height",
+          "value": "44px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 5,
+          "references": []
+        },
+        {
+          "name": "--toolbar-column-gap",
+          "value": "2px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 6,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-block",
+          "value": "6px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 7,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-inline",
+          "value": "6px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 8,
+          "references": []
+        },
+        {
+          "name": "--toolbar-radius",
+          "value": "11px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 9,
+          "references": []
+        },
+        {
+          "name": "--toolbar-key-radius",
+          "value": "calc(var(--toolbar-radius) - var(--toolbar-padding-inline))",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 10,
+          "references": [
+            "--toolbar-radius",
+            "--toolbar-padding-inline"
+          ]
+        }
+      ],
+      "references": [
+        "--toolbar-padding-inline",
+        "--toolbar-radius"
       ]
     },
     {
@@ -9934,6 +10762,16 @@
         "--control-height-sm",
         "--tool-field-font-size",
         "--tool-touch-target"
+      ]
+    },
+    {
+      "path": "src/workspace/workspaceStatus.css",
+      "role": "Local",
+      "sha256": "19576701725ffc2abc033acb487c280ce76904cbe7b72f124be29522757984e7",
+      "definitions": [],
+      "references": [
+        "--interface-ink",
+        "--interface-surface"
       ]
     }
   ]

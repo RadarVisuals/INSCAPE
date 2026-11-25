@@ -1,4 +1,4 @@
-import { restoreReception } from '../domain/receptionPresentation.js';
+import { restoreCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 as createOwnerDraftFromPublishedProfile } from '../domain/profileDocumentV9Reconciliation.js';
 import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
@@ -21,7 +21,7 @@ function restoreCanvasDraft(document, entry) {
   // Links were verified against the whole publication, not this canvas alone.
   const { composition, ...content } = canvasDocument(document, entry);
   const draft = createOwnerDraftFromPublishedProfile(content);
-  return composition ? { ...draft, composition: restoreReception(composition) } : draft;
+  return composition ? { ...draft, composition: restoreCompositionEditorDocument(composition) } : draft;
 }
 
 export function openStudioWorkbench(store, id, resolution) {
@@ -57,15 +57,12 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
     return Object.freeze({ status: 'LOCAL_DRAFT_UNAVAILABLE', reason: recordState?.reason,
       issues: recordState?.issues || [], fingerprint: recordState?.fingerprint });
   }
-  // Existing local work is authoritative. Published Reception is restored only
-  // by the explicit, previewed action, with a durable recovery copy.
   if (recordState.status === 'valid') return Object.freeze({ status: 'LOCAL_CHANGES_PRESERVED' });
   if (document.canvas) {
     // An existing local draft remains authoritative. Only an absent local record
     // is initialized from the complete public collection, never its first canvas.
     const entries = publishedCanvasEntries(document);
     const first = restoreCanvasDraft(document, entries[0]);
-    if (document.reception) first.reception = restoreReception(document.reception);
     let collection = createWorkbenchCollection(first);
     const { id, name, introduction, thumbnailCrop } = document.canvas;
     Object.assign(collection.workbenches[0], { id, name, introduction, thumbnailCrop });

@@ -1,5 +1,6 @@
 import { editorDestination, openEditorMenu, editorDocumentNames, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, activeEditorDocumentName } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,8 +11,8 @@ import { openSharedTool } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/local-workbenches';
 const url = `${origin}/browser-tests/workbench-storage-fixture.html?seed=1`;
-const current = page => page.evaluate(() => window.guardedStore().getDraft());
-const record = page => page.evaluate(() => window.savedDraft());
+const current = page => page.evaluate(() => window.activeArtworkDraft());
+const record = page => page.evaluate(() => window.readCommittedDraft());
 let diagnosticIndex = 0;
 async function open(page, selection = false) {
   page.setDefaultTimeout(15000);
@@ -33,10 +34,10 @@ async function open(page, selection = false) {
     throw error;
   }
   await editorMenu(page, 'Canvas').waitFor();
-  await page.locator('.text-window').waitFor();
+  await page.locator('aside.text-window').waitFor();
 }
 async function rename(page, name) {
-  await editorCommand(page, 'Canvas', 'Rename');
+  await editorCommand(page, 'Studio', 'Rename composition');
   await page.getByLabel('Composition name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Save name', exact: true }).click();
 }
@@ -48,7 +49,7 @@ async function create(page, name) {
 async function write(page, text) {
   const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
   if (!await editor.isVisible()) {
-    await page.locator('.text-window').click({ position: { x: 80, y: 90 } });
+    await page.locator('aside.text-window').focus();
     const tools = await openSharedTool(page, 'Text');
     const edit = tools.getByRole('button', { name: 'Edit text', exact: true });
     if (await edit.count()) await edit.click();
@@ -57,13 +58,7 @@ async function write(page, text) {
   await editorMenu(page, 'Canvas').focus();
 }
 async function failWrites(page, fail) {
-  await page.evaluate(fail => {
-    if (!window.normalSetItem) window.normalSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = fail ? function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw new DOMException('Full', 'QuotaExceededError');
-      return window.normalSetItem.call(this, key, value);
-    } : window.normalSetItem;
-  }, fail);
+  await page.evaluate(fail => window.failWorkbenchWrites(fail), fail);
 }
 
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -75,20 +70,20 @@ test('canvas deletion confirms the named local work, permits cancel and opens th
     await open(page);
     await create(page, 'Disposable study');
     const original = await record(page);
-    await editorCommand(page, 'Canvas', 'Delete canvas');
-    const confirm = page.getByRole('alertdialog', { name: 'Delete local canvas' });
+    await editorCommand(page, 'Canvas', 'Delete local composition…');
+    const confirm = page.getByRole('alertdialog', { name: 'Delete local composition' });
     assert.match(await confirm.innerText(), /Disposable study/);
     assert.ok(await confirm.getByRole('button', { name: 'Cancel' }).evaluate(node => node === document.activeElement));
     await page.keyboard.press('Escape');
     assert.deepEqual(await record(page), original);
-    await editorCommand(page, 'Canvas', 'Delete canvas');
-    await confirm.getByRole('button', { name: 'Delete local canvas' }).click();
-    await page.locator('.text-window').waitFor();
+    await editorCommand(page, 'Canvas', 'Delete local composition…');
+    await confirm.getByRole('button', { name: 'Delete local composition' }).click();
+    await page.locator('aside.text-window').waitFor();
     const after = await record(page);
     assert.deepEqual(after.workbenches, original.workbenches.filter(item => item.id !== original.activeId));
     assert.equal(await activeEditorDocument(page), after.activeId);
     const menu = await openEditorMenu(page, 'Canvas');
-    assert.ok(await menu.getByRole('menuitem', { name: 'Delete canvas (last canvas)' }).isDisabled());
+    assert.ok(await menu.getByRole('menuitem', { name: 'Delete local composition…' }).isDisabled());
   } finally { await browser.close(); }
 });
 
@@ -98,7 +93,7 @@ test('fixed menu retains named canvases through reload and stays above the works
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     await open(page); const before = await record(page);
     assert.equal((await page.locator('.editor-menu-bar').boundingBox()).y, 0);
-    assert.equal((await page.locator('.editor-menu-bar').boundingBox()).height, 40);
+    assert.equal((await page.locator('.editor-menu-bar').boundingBox()).height, 48);
     assert.deepEqual(await record(page), before);
     await rename(page, 'Fixed menu'); const renamed = await record(page);
     await page.reload(); await editorMenu(page, 'Canvas').waitFor();
@@ -107,13 +102,13 @@ test('fixed menu retains named canvases through reload and stays above the works
     await create(page, 'Another canvas');
     assert.equal(await activeEditorDocumentName(page), 'Another canvas');
     await page.setViewportSize({ width: 390, height: 700 }); await settle(page);
-    await editorCommand(page, 'Canvas', 'Rename');
+    await editorCommand(page, 'Studio', 'Rename composition');
     const form = await page.getByRole('dialog', { name: 'Rename composition' }).boundingBox();
     assert.ok(form.x >= 0 && form.x + form.width <= 390 && form.y + form.height <= 700);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   } finally { await browser.close(); }
 });
-const selectedFrames = page => page.locator('[data-workbench-view-id="text:private"], [data-workbench-view-id="image:gesture"]').evaluateAll(nodes =>
+const selectedFrames = page => page.locator('[data-workbench-artwork][data-workbench-view-id="text:private"], [data-workbench-artwork][data-workbench-view-id="image:gesture"]').evaluateAll(nodes =>
   nodes.map(node => { const { x, y, width, height } = node.getBoundingClientRect(); return { id: node.dataset.workbenchViewId, x, y, width, height }; }));
 async function selectMixed(page) {
   await page.locator('[data-workbench-view-id="image:gesture"]').waitFor();
@@ -127,7 +122,7 @@ async function selectMixed(page) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) await close.click();
   }
-  await settle(page);
+  await resetCameraTestView(page);
   const frames = await selectedFrames(page);
   assert.equal(frames.length, 2);
   const left = Math.min(...frames.map(frame => frame.x)), top = Math.min(...frames.map(frame => frame.y));
@@ -181,7 +176,7 @@ test('active mixed selection gestures block canvas switching and Escape restores
       const before = await record(page), frames = await selectedFrames(page);
       await beginMixedGesture(page, kind);
       assert.notDeepEqual(await selectedFrames(page), frames, `${kind} has a visible temporary preview`);
-      await selectEditorDocument(page, bId);
+      await selectEditorDocument(page, bId, { keyboard: true });
       await page.getByRole('alert')
         .filter({ hasText: 'Finish or cancel the canvas gesture' }).waitFor();
       assert.equal(await activeEditorDocument(page), aId);
@@ -192,9 +187,9 @@ test('active mixed selection gestures block canvas switching and Escape restores
       assert.deepEqual(await record(page), before);
     }
     await selectEditorDocument(page, bId);
-    assert.equal(await page.locator('.text-window').count(), 0);
+    assert.equal(await page.locator('aside.text-window').count(), 0);
     await selectEditorDocument(page, aId);
-    await page.locator('.text-window').waitFor();
+    await page.locator('aside.text-window').waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -240,11 +235,11 @@ test('forced editor unmount discards a mixed resize preview and ignores the late
     await beginMixedGesture(page);
     assert.notDeepEqual(await selectedFrames(page), frames);
     await page.evaluate(() => window.leaveEditor());
-    await page.locator('.text-window').waitFor({ state: 'detached' });
+    await page.locator('aside.text-window').waitFor({ state: 'detached' });
     await page.mouse.up(); await page.keyboard.press('ArrowRight'); await settle(page);
     assert.deepEqual(await record(page), before);
     await page.reload();
-    await page.locator('.text-window').waitFor();
+    await page.locator('aside.text-window').waitFor();
     assert.deepEqual(await record(page), before, 'reopening keeps the accepted state from before the unfinished gesture');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -266,29 +261,30 @@ test('named local Workbenches keep separate content and canvas geometry through 
     const a = await current(page);
     await create(page, 'Studies');
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2
-      && !window.guardedStore().getDraft().texts?.length);
+      && !window.activeArtworkDraft().texts?.length);
     const bId = await activeEditorDocument(page);
     assert.notEqual(aId, bId);
-    assert.equal(await page.locator('.text-window').count(), 0);
+    assert.equal(await page.locator('aside.text-window').count(), 0);
     assert.ok(await editorMenu(page, 'Canvas').evaluate(node => document.activeElement === node));
     await page.getByRole('button', { name: 'Text tool', exact: true }).click();
     await page.mouse.click(750, 240);
-    await page.locator('.text-window').waitFor();
+    await page.locator('aside.text-window').waitFor();
     await write(page, 'Studies keeps independent text.');
     const b = await current(page);
     assert.notEqual(a.texts[0].id, b.texts[0].id);
     assert.notDeepEqual(a.workbench.area, b.workbench.area);
     await selectEditorDocument(page, aId);
-    await page.waitForFunction(() => window.guardedStore().getDraft().texts?.[0]?.article.content.content.some(node => JSON.stringify(node).includes('Lunar Desert')));
+    await page.waitForFunction(() => window.activeArtworkDraft().texts?.[0]?.article.content.content.some(node => JSON.stringify(node).includes('Lunar Desert')));
     assert.deepEqual((await current(page)).texts, a.texts);
     assert.deepEqual((await current(page)).workbench.area, a.workbench.area);
     await selectEditorDocument(page, bId);
     assert.deepEqual((await current(page)).texts, b.texts);
     await editorMenu(page, 'Canvas').focus();
     await page.keyboard.press('Control+z');
-    await page.waitForFunction(() => !JSON.stringify(window.guardedStore().getDraft().texts).includes('Studies keeps independent text.'));
+    await page.waitForFunction(() => !JSON.stringify(window.activeArtworkDraft().texts).includes('Studies keeps independent text.'));
     await page.keyboard.press('Control+Shift+z');
-    await page.waitForFunction(() => JSON.stringify(window.guardedStore().getDraft().texts).includes('Studies keeps independent text.'));
+    await page.waitForFunction(() => JSON.stringify(window.activeArtworkDraft().texts).includes('Studies keeps independent text.'));
+    await page.evaluate(() => window.readCommittedDraft());
     await page.reload();
     await editorMenu(page, 'Canvas').waitFor();
     assert.equal(await activeEditorDocument(page), bId);
@@ -314,10 +310,10 @@ test('named local Workbenches keep separate content and canvas geometry through 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await openEditorMenu(page, 'Backup');
     const downloading = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download all Workbenches', exact: true }).click();
+    await page.getByRole('button', { name: 'Download workspace backup', exact: true }).click();
     const backup = JSON.parse(await readFile(await (await downloading).path(), 'utf8'));
-    assert.equal(backup.draft.workbenches.length, 2);
-    assert.deepEqual(backup.draft.workbenches.map(item => item.name), ['Lunar Desert', 'Studies']);
+    assert.equal(backup.workspace.workbenches.workbenches.length, 2);
+    assert.deepEqual(backup.workspace.workbenches.workbenches.map(item => item.name), ['Lunar Desert', 'Studies']);
     const other = await context.newPage();
     await other.goto(url);
     await other.getByRole('heading', { name: 'This tab is view-only' }).waitFor();
@@ -398,33 +394,33 @@ test('naming validates input, retries failed writes and commits the visible layo
     assert.deepEqual(await record(page), before);
     await page.keyboard.press('Escape');
     assert.equal(await page.getByLabel('Composition name', { exact: true }).count(), 0);
-    assert.ok(await editorMenu(page, 'Canvas').evaluate(node => document.activeElement === node));
-    const header = page.locator('.text-window header[data-workbench-selectable]');
-    const original = await page.locator('.text-window').boundingBox();
+    assert.ok(await page.getByRole('button', { name: 'Studio', exact: true }).evaluate(node => document.activeElement === node));
+    const header = page.getByLabel('Move Text window', { exact: true });
+    const original = await page.locator('aside.text-window').boundingBox();
     await header.focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
-    const moved = await page.locator('.text-window').boundingBox();
+    const moved = await page.locator('aside.text-window').boundingBox();
     assert.notEqual(moved.x, original.x);
     assert.notEqual(moved.y, original.y);
-    await page.evaluate(() => { window.originalTextWindow = document.querySelector('.text-window'); });
+    await page.evaluate(() => { window.originalTextWindow = document.querySelector('aside.text-window'); });
     const beforeRename = await record(page);
     await failWrites(page, true);
     await rename(page, 'Lunar Desert');
-    await page.getByRole('alert').filter({ hasText: 'Could not save the Workbench' }).waitFor();
+    await page.getByRole('alert').filter({ hasText: 'Save the current changes before switching documents' }).waitFor();
     assert.deepEqual(await record(page), beforeRename);
     assert.equal(await page.getByLabel('Composition name', { exact: true }).inputValue(), 'Lunar Desert');
     await failWrites(page, false);
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
-    assert.ok(await page.evaluate(() => window.originalTextWindow === document.querySelector('.text-window')));
+    assert.ok(await page.evaluate(() => window.originalTextWindow === document.querySelector('aside.text-window')));
     const saved = await current(page);
     assert.notDeepEqual(saved.workbench.texts[0].window, before.workbench.texts[0].window);
     assert.equal((await record(page)).workbenches[0].name, 'Lunar Desert');
     await page.reload();
-    await page.locator('.text-window').waitFor();
+    await page.locator('aside.text-window').waitFor();
     assert.deepEqual((await current(page)).workbench, saved.workbench);
-    const reloaded = await page.locator('.text-window').boundingBox();
+    const reloaded = await page.locator('aside.text-window').boundingBox();
     assert.ok(Math.abs(reloaded.x - moved.x) < 1 && Math.abs(reloaded.y - moved.y) < 1);
   } finally { await browser.close(); }
 });
@@ -442,8 +438,8 @@ test('all 30 local Workbenches stay reachable, with an explained limit and usabl
     await page.keyboard.press('Escape');
     const lastId = await activeEditorDocument(page);
     await selectEditorDocument(page, firstId);
-    await page.locator('.text-window').waitFor();
-    await editorCommand(page, 'Canvas', 'Rename');
+    await page.locator('aside.text-window').waitFor();
+    await editorCommand(page, 'Studio', 'Rename composition');
     await page.getByLabel('Composition name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
     await mkdir(output, { recursive: true });
     for (const width of [1440, 390]) {
@@ -460,7 +456,7 @@ test('all 30 local Workbenches stay reachable, with an explained limit and usabl
     }
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
     await selectEditorDocument(page, lastId);
-    assert.equal(await page.locator('.text-window').count(), 0);
+    assert.equal(await page.locator('aside.text-window').count(), 0);
     await page.reload();
     await editorMenu(page, 'Canvas').waitFor();
     assert.equal(await activeEditorDocument(page), lastId);

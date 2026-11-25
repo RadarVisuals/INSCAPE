@@ -66,7 +66,6 @@ test('owner startup preserves a private draft when its publication baseline is m
     const draft = createEmptySystemWorkflowDraft(profile);
     const document = buildProfileDocumentV9({ assetRecords: [], createdAt: 1, exportedAt: 2,
       profileAddress: profile, profileIdentity: {}, revision: 1, systemWorkflowDraft: draft });
-    draft.grids[0].title = 'Private unfinished work'; draft.grids[0].visibility = 'PRIVATE';
     window.savedDraftKey = systemWorkflowDraftKey(profile);
     window.savedDraftBytes = JSON.stringify(draft);
     localStorage.setItem(window.savedDraftKey, window.savedDraftBytes);
@@ -100,26 +99,4 @@ test('a cold owner resolves persisted assets without opening Library', () => wit
   await page.getByText('Restored artwork', { exact: true }).waitFor();
   assert.equal(await page.evaluate(() => window.inventoryRequests), 0);
   assert.equal(await page.evaluate(() => window.referenceRequests.length), 1);
-}));
-
-test('Preview survives a new publication with fewer Grids and resets selection', () => withPage(async page => {
-  await page.evaluate(async () => {
-    const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
-    const Preview = (await import('/src/profileDocument/components/ProfileDocumentV9Preview.jsx')).default;
-    const { createEmptySystemWorkflowDraft } = await import('/src/systemWorkflow/domain/systemWorkflowDraft.js');
-    const { buildProfileDocumentV9 } = await import('/src/profileDocument/domain/profileDocumentV9Builder.js');
-    const profile = '0x1111111111111111111111111111111111111111';
-    const draft = createEmptySystemWorkflowDraft(profile, { generateId: () => 'home' });
-    draft.grids.push({ ...structuredClone(draft.grids[0]), id: 'grid:second', title: 'Second' });
-    const value = buildProfileDocumentV9({ assetRecords: [], createdAt: 1, exportedAt: 2, profileAddress: profile, profileIdentity: {}, revision: 1, systemWorkflowDraft: draft });
-    const root = createRoot(document.getElementById('root'));
-    window.shrink = () => root.render(React.createElement(Preview, { document: { ...value, revision: 2, grids: value.grids.slice(0, 1) } }));
-    root.render(React.createElement(Preview, { document: value }));
-  });
-  await page.locator('.visitor-grid-world').focus();
-  await page.keyboard.press('ArrowRight');
-  await page.waitForFunction(() => document.querySelector('[data-active-grid-id]')?.dataset.activeGridId === 'grid:second');
-  await page.evaluate(() => window.shrink());
-  await page.waitForFunction(() => document.querySelector('[data-active-grid-id]')?.dataset.activeGridId === 'grid:home');
-  assert.equal(await page.locator('.visitor-grid-world').evaluate(node => node === document.activeElement), true);
 }));

@@ -4,7 +4,7 @@ import RackMenu from '../menus/RackMenu.jsx';
 import { nextWorkbenchObject, workbenchObjectsAtPoint } from './workbenchObjectPicking.js';
 import { artworkModuleId, artworkRecords } from '../../systemWorkflow/domain/artworkLayers.js';
 import { editArtworkLayers } from '../../systemWorkflow/artworkLayerSession.js';
-import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
+import { useEditorCells } from '../../composition/EditorCellsContext.jsx';
 
 const controls = 'input,textarea,select,[contenteditable="true"],button:not([data-workbench-selectable]),a,[role="separator"],[data-workbench-toolbar],[data-workbench-selection-tools],[data-system-workflow-panel],[data-context-tools],[role="menu"],[data-immersive]';
 

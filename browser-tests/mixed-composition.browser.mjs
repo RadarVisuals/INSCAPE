@@ -6,21 +6,23 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const address = '0x' + '1'.repeat(40);
 
-test('a published composition keeps its text on Profile and Gallery and out of Writing', { timeout: 60000 }, async () => {
+test('published composition text stays with the work in Profile and Gallery and is absent from Writing', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&mixed=1`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&mixed=1`);
     const open = label => page.getByRole('button', { name: label, exact: true });
     await open('Open Mixed study').click();
     const dialog = page.getByRole('dialog', { name: 'View Mixed study' });
     const assertMixed = async host => {
-      const layout = host.locator('.reception-document-canvas');
-      await layout.locator('[data-layer-id="text:free-caption"]').waitFor();
-      assert.equal(await layout.locator('[data-layer-id="text:free-caption"]').count(), 1);
+      const layout = host.locator('.composition-document-canvas');
+      const caption = layout.locator('[data-layer-id="text:free-caption"]');
+      await caption.waitFor();
+      assert.equal(await caption.count(), 1);
+      await caption.getByText('Free caption', { exact: true }).first().waitFor();
       assert.ok(await layout.locator('[data-cell-group]').count() > 0);
       assert.equal(await layout.locator('[data-cell-group] [data-layer-id="text:free-caption"]').count(), 0);
     };
@@ -28,6 +30,7 @@ test('a published composition keeps its text on Profile and Gallery and out of W
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
     await open('Gallery').click();
+    await page.getByRole('radio', { name: 'List view' }).check();
     const index = page.getByRole('navigation', { name: 'Canvases' });
     await index.getByRole('button', { name: 'Open Mixed study' }).waitFor();
     assert.equal(await index.getByRole('button', { name: 'Open Vision' }).count(), 0);
@@ -36,32 +39,34 @@ test('a published composition keeps its text on Profile and Gallery and out of W
     await open('Expand canvas').click();
     await assertMixed(gallery);
     await open('Return to index').click();
-    await open('Grid').click();
+    await page.getByRole('radio', { name: 'Grid view' }).check();
     await page.locator('[data-gallery-cycle="0"] [data-card-id="workbench:mixed"] [data-layer-id="text:free-caption"]').waitFor();
     await page.setViewportSize({ width: 900, height: 720 });
     await open('Writing').click();
     const writing = page.locator('.published-writing');
-    await writing.getByText('No published writing yet.').waitFor();
-    assert.equal(await writing.getByText('Free caption').count(), 0);
+    await writing.getByText('No published writing yet.', { exact: true }).waitFor();
+    assert.equal(await writing.getByText('Free caption', { exact: true }).count(), 0);
+    assert.equal(await writing.getByText('Mixed study', { exact: true }).count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('Writing opens the owner Studio without selecting a composition', { timeout: 45000 }, async () => {
+test('The shared Studio header resumes the active document from Profile and Writing', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1365, height: 820 }, reducedMotion: 'reduce' });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    const profile = origin + '/browser-tests/profile-overview-fixture.html?view=' + address + '&reception=published&mixed=1&owner=1';
+    const profile = origin + '/browser-tests/profile-overview-fixture.html?view=' + address + '&mixed=1&owner=1';
     const button = name => page.getByRole('button', { name, exact: true });
     await page.goto(profile);
     await button('Studio').click();
-    await button('Create composition').waitFor();
+    await page.locator('.editor-menu-bar[data-document="workbench:mixed"]').waitFor();
     await page.goto(profile);
     await button('Writing').click();
-    await page.getByText('No published writing yet.').waitFor();
-    await page.evaluate(() => window.__galleryStore.switchWorkbench('workbench:main'));
+    const writing = page.locator('.published-writing');
+    await writing.getByText('No published writing yet.', { exact: true }).waitFor();
+    assert.equal(await writing.getByText('Free caption', { exact: true }).count(), 0);
     await button('Studio').click();
-    await page.locator('.editor-menu-bar[data-document="workbench:main"]').waitFor();
+    await page.locator('.editor-menu-bar[data-document="workbench:mixed"]').waitFor();
   } finally { await browser.close(); }
 });

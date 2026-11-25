@@ -1,15 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { encodeAbiParameters, toHex } from 'viem';
 import { createLuksoProfileContractRepository } from './luksoProfileContractRepository.js';
 
 const ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
 function makeRepository(overrides = {}) {
-  const values = { 'LSP5ReceivedAssets[]': ['0x1', '0x2'], 'LSP12IssuedAssets[]': ['0x3'] };
   return createLuksoProfileContractRepository({
-    fetchImpl: async () => ({ ok: true, json: async () => ({ result: '0x2a' }) }),
+    fetchImpl: async (_, { body }) => {
+      const data = JSON.parse(body).params[0].data;
+      assert.equal(data.length, 74);
+      const value = toHex(data.includes('6460ee3c') ? 2 : 1, {size:16});
+      return {ok:true, json:async () => ({result:encodeAbiParameters([{type:'bytes'}], [value])})};
+    },
     chainReader: async () => 42,
-    erc725Factory: () => ({ supportsInterface: async () => true, getData: async (key) => ({ value: values[key] }) }),
+    erc725Factory: () => ({ supportsInterface: async () => true }),
     ...overrides
   });
 }
@@ -24,13 +29,10 @@ test('resolves active chain, LSP0, and exact LSP5/LSP12 register lengths indepen
 
 test('keeps partial RPC failures unresolved rather than turning them into zero', async () => {
   const repository = makeRepository({
-    erc725Factory: () => ({
-      supportsInterface: async () => true,
-      getData: async (key) => {
-        if (key === 'LSP5ReceivedAssets[]') throw new Error('read failed');
-        return { value: [] };
-      }
-    })
+    fetchImpl: async (_, { body }) => {
+      if (body.includes('6460ee3c')) throw Error('read failed');
+      return {ok:true, json:async () => ({result:encodeAbiParameters([{type:'bytes'}], ['0x'])})};
+    }
   });
   const facts = await repository.resolve(ADDRESS);
   assert.equal(facts.receivedAssetContracts.status, 'ERROR');

@@ -1,4 +1,4 @@
-import { Trash2, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { categoryDialogInitialName } from '../../lattice/browser/browserWorkspaceModel.js';
 
@@ -28,12 +28,12 @@ export function OwnerSystemWorkflowSidebarEditor({ dialog, entityLabel = 'item',
 
 export function OwnerSystemWorkflowSidebarDeleteConfirmation({ entityLabel, name, onCancel, onConfirm }) {
   return <div aria-label={`Delete ${entityLabel} ${name}`} className="system-workflow__sidebar-delete" role="alertdialog">
-    <span>Delete {name}</span>
+    <span>Delete {name}?</span>
     <button aria-label={`Cancel deleting ${name}`} onClick={onCancel} title="Cancel" type="button">
       <X aria-hidden="true" size={13} />
     </button>
-    <button aria-label={`Delete ${name}`} onClick={onConfirm} title={`Delete ${entityLabel}`} type="button">
-      <Trash2 aria-hidden="true" size={13} />
+    <button aria-label={`Delete ${name}`} onClick={onConfirm} title={`Confirm deletion of ${name}`} type="button">
+      <Check aria-hidden="true" size={13} />
     </button>
   </div>;
 }

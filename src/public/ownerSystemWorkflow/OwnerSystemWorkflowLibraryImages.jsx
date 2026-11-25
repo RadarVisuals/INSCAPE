@@ -1,3 +1,5 @@
+import { Check, Minus } from 'lucide-react';
+import { imageResourceIdentity } from '../../library/data/resolveContentUrl.js';
 import { useState } from 'react';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
@@ -20,6 +22,14 @@ export function libraryCategoryImage(asset) {
     || libraryImageChoices(asset)[0]?.sources[0] || null;
 }
 
+export function CurationMark({ entries, url }) {
+  if (!entries || (url && entries.length && !entries.some(entry => imageResourceIdentity(entry.url) === imageResourceIdentity(url)))) return null;
+  const partial = !url && entries.length > 0;
+  const Icon = partial ? Minus : Check;
+  const label = partial ? `${entries.length} selected in Inscape Library` : 'In Inscape Library';
+  return <span className="curation-included" aria-label={label} title={label}><Icon size={12} strokeWidth={2.5} aria-hidden="true" /></span>;
+}
+
 export function ImageChoice(props) {
   const { choice, workspace } = props;
   const candidates = libraryPreviewCandidates({ ...choice, originalImageUrl: choice.sources[0] }, workspace?.assetSize, globalThis.devicePixelRatio || 1);
@@ -31,12 +41,12 @@ function ImageChoicePreview({ asset, choice, number, onActivate, onPointerDown, 
   const [dimensions, setDimensions] = useState(null);
   const originalSource = choice.sources[0];
   const src = candidates[candidate];
-  const original = candidate > 0 && candidates.slice(0, candidate).includes(originalSource) && choice.sources.includes(src) ? src : originalSource;
+  const original = !workspace?.curatedPicker && candidate > 0 && candidates.slice(0, candidate).includes(originalSource) && choice.sources.includes(src) ? src : originalSource;
   const format = libraryFileFormat(original, choice.fileType);
   const filename = libraryFilename(original);
   const id = asset.stableAssetId || asset.id;
   const selected = workspace?.selectedAssetIds.includes(id) && workspace.selectedImage?.assetId === id && workspace.selectedImage.media.url === original;
-  const selectedAsset = dimensions && { ...assetForPlacement(asset, { selectedMedia: {
+  const selectedAsset = (dimensions || (workspace?.curatedPicker && choice.width && choice.height)) && { ...assetForPlacement(asset, { selectedMedia: {
     url: original, width: choice.width || (src === original ? dimensions.width : null),
     height: choice.height || (src === original ? dimensions.height : null) } }),
     previewSrc: src, thumbnailUrl: src, previewCandidates: candidates };
@@ -56,7 +66,8 @@ function ImageChoicePreview({ asset, choice, number, onActivate, onPointerDown, 
         const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
         setDimensions({ width, height });
         rememberArtworkPreview(original, src, width, height);
-      }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>Image unavailable</span>}
+      }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>{workspace?.curationRole === 'destination' || workspace?.curatedPicker ? [asset.title || id, filename].filter(Boolean).join(' / ') : 'Image unavailable'}</span>}
+      {workspace?.curationRole === 'source' && <CurationMark entries={workspace.curatedImages?.get(id)} url={original} />}
       <small className="library-file-format">{format}</small>
     </span>
     {!workspace?.hideLabels && <span className="lattice-browser-asset__record"><strong title={filename}>{filename}</strong>

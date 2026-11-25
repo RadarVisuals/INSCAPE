@@ -21,7 +21,7 @@
     "design-system:check": "node scripts/designSystemInventory.js --check",
     "test:design-system": "node --test scripts/designSystemInventory.test.js scripts/buildDesignSystem.test.js design-system/colourModel.test.js design-system/workspaceLayers.test.js",
     "test:browser:design-system": "node --test browser-tests/design-system.browser.mjs browser-tests/design-system-workspace.browser.mjs browser-tests/design-system-library.browser.mjs browser-tests/design-system-colour.browser.mjs browser-tests/design-system-interactions.browser.mjs",
-    "build": "vite build",
+    "build": "vite build --configLoader native",
     "build:check": "node scripts/checkProductionBuild.js",
     "test": "node --test --test-concurrency=4 \"src/**/*.test.js\" \"scripts/**/*.test.{js,mjs}\" \"browser-tests/**/*.test.{js,mjs}\" \"design-system/**/*.test.js\" \"prototypes/**/*.test.js\"",
     "test:lukso-standards": "node --test scripts/luksoStandards.audit.test.js",

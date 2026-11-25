@@ -28,6 +28,19 @@ test('projects owned-only and strong created-only records with honest relationsh
   assert.deepEqual(createdOnly, before);
 });
 
+test('Created-only search preserves holding evidence independently of Owned pagination', () => {
+  for (const ownedAssets of [[], [owned(CONTRACT_A)]]) {
+    for (const [ownershipKnown, isOwnedByViewedProfile] of [[false, null], [false, false], [true, true], [true, false]]) {
+      const result = projectLibraryAssetUnion({ profileAddress: PROFILE, ownedAssets,
+        createdAssets: [created(CONTRACT_B, { ownershipKnown, isOwnedByViewedProfile })] });
+      const card = result.assets.find(asset => asset.stableAssetId === id(CONTRACT_B));
+      assert.equal(card.created, true);
+      assert.equal(card.isOwnedByViewedProfile, ownershipKnown ? isOwnedByViewedProfile : null);
+      assert.equal(card.owned, ownershipKnown && isOwnedByViewedProfile === true);
+    }
+  }
+});
+
 test('deduplicates exact canonical stable IDs and retains authoritative ownership plus creator provenance', () => {
   const result = projectLibraryAssetUnion({
     ownedAssets: [owned(CONTRACT_A, { name: 'Authoritative owned', imageWidth: 2000 })],

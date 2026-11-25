@@ -8,20 +8,22 @@ export default function useTextExcerpt(host, content, { article, enabled = true,
   const [clip, setClip] = useState({ overflow: false, size: null, fade: 0, start: 0 });
   useLayoutEffect(() => {
     if (!enabled) return;
-    let active = true, pending;
+    let active = true, pending, frameSize;
     const measure = () => {
       pending = null;
-      if (!active) return;
+      if (!active || !frameSize) return;
       const box = host.current, page = content.current;
       const bounds = box.getBoundingClientRect();
       // Native Editor camera zoom scales DOM rectangles; CSS clipping uses local
-      // layout pixels. Public Reception usually has scale 1, but uses this same path.
-      const scaleX = bounds.width / box.clientWidth || 1, scaleY = bounds.height / box.clientHeight || 1;
+      // layout pixels. Public Composition usually has scale 1, but uses this same path.
+      // clientWidth/Height round fractional layout pixels. That can turn a
+      // fitting first line into a partial line in responsive or zoomed frames.
+      const scaleX = bounds.width / frameSize.width || 1, scaleY = bounds.height / frameSize.height || 1;
       // The authored text frame stays intact. Only its visible intersection
       // with the cell participates in overflow/fade measurement.
       const visibleLeft = Math.max(0, left), visibleTop = Math.max(0, top);
-      const visibleRight = Math.max(0, Math.min(box.clientWidth, right)), visibleBottom = Math.max(0, Math.min(box.clientHeight, bottom));
-      let available = horizontal ? visibleRight : visibleBottom;
+      const visibleRight = Math.max(0, Math.min(frameSize.width, right)), visibleBottom = Math.max(0, Math.min(frameSize.height, bottom));
+      const available = horizontal ? visibleRight : visibleBottom;
       const beginning = horizontal ? visibleLeft : visibleTop;
       // Measure visible ink, not the article's trailing paragraph margins. A
       // short chapter strip must not overflow solely because of empty spacing.
@@ -56,14 +58,6 @@ export default function useTextExcerpt(host, content, { article, enabled = true,
       const overflow = local.some(r => r.width && r.height && (r.left < visibleLeft - 1 || r.top < visibleTop - 1
         || r.right > visibleRight + 1 || r.bottom > visibleBottom + 1));
       const trailing = lines.some(line => line.end > available + 1);
-      if (trailing && !horizontal && Number.isFinite(bottom)) {
-        // Mirror the text frame's actual top inset at the cell bottom. Its own
-        // lower edge still wins when earlier; fitting text never gains overflow.
-        // On short cells retain the first two complete lines whenever they fit.
-        const fitting = lines.filter(line => line.start >= beginning - 1 && line.end <= available + 1);
-        const minimumEnd = fitting[Math.min(1, fitting.length - 1)]?.end ?? available;
-        available = Math.min(available, Math.max(minimumEnd, bottom - Math.max(0, -top)));
-      }
       const visible = lines.filter(line => line.start >= beginning - 1 && line.end <= available + 1);
       const last = visible.sort((a, b) => b.end - a.end)[0];
       const size = trailing && !singleLine ? Math.max(0, Math.min(available, Math.ceil(last?.end || 0))) : available;
@@ -78,10 +72,12 @@ export default function useTextExcerpt(host, content, { article, enabled = true,
       onOverflow?.(id, { overflow });
     };
     const schedule = () => { if (active && pending == null) pending = requestAnimationFrame(measure); };
-    const observer = new ResizeObserver(schedule);
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) if (entry.target === host.current) frameSize = entry.contentRect;
+      schedule();
+    });
     observer.observe(host.current); observer.observe(content.current);
     document.fonts.ready.then(schedule); document.fonts.addEventListener('loadingdone', schedule);
-    schedule();
     return () => { active = false; cancelAnimationFrame(pending); observer.disconnect(); document.fonts.removeEventListener('loadingdone', schedule); };
   }, [enabled, article, horizontal, singleLine, id, onOverflow, left, top, right, bottom, host, content]);
   const style = !enabled || clip.size === null ? undefined : {

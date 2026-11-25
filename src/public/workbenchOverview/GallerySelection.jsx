@@ -24,22 +24,21 @@ export function useGallerySelection(items, enabled) {
     toggleAll: () => setChecked(new Set(all ? [] : eligibleIds)) };
 }
 
-export function GallerySelectionTools({ selection, onRemove }) {
+export function GallerySelectionTools({ selection, onRemove, returnFocus }) {
   const firstButton = useRef(null);
+  useEffect(() => { firstButton.current?.focus({ preventScroll: true }); }, []);
   const cancel = () => {
     selection.cancel();
-    requestAnimationFrame(() => firstButton.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => returnFocus.current?.focus({ preventScroll: true }));
   };
   return <div className="gallery-selection-tools" role="group" aria-label="Gallery selection">
-    <button ref={firstButton} type="button" onClick={selection.active ? selection.toggleAll : selection.start}>
-      {selection.active ? (selection.all ? 'Deselect all' : 'Select all') : 'Select'}
+    <button ref={firstButton} type="button" onClick={selection.toggleAll}>
+      {selection.all ? 'Deselect all' : 'Select all'}
     </button>
-    {selection.active && <>
-      <button type="button" onClick={cancel}>Cancel</button>
-      <button type="button" disabled={!selection.selectedIds.length} className="gallery-selection-remove"
-        onClick={event => onRemove(selection.selectedIds, event.currentTarget)}>
-        Remove selected ({selection.selectedIds.length})
-      </button>
-    </>}
+    <button type="button" onClick={cancel}>Cancel</button>
+    <button type="button" disabled={!selection.selectedIds.length} className="gallery-selection-remove"
+      onClick={event => onRemove(selection.selectedIds, event.currentTarget)}>
+      Remove from Gallery ({selection.selectedIds.length})
+    </button>
   </div>;
 }

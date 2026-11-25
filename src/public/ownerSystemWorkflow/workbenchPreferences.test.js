@@ -23,11 +23,11 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   const storage = memoryStorage();
   const profile = '0xAbC';
   const saved = saveWorkbenchPreferences(profile, {
-    chromeNoise: false, compositionLocked: true, gridColor: '#AABBCC', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
+    chromeNoise: false, compositionLocked: true, canvasColor: '#A2B3C4', gridColor: '#AABBCC', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
   }, storage);
 
   assert.deepEqual(saved, {
-    galleryCardSize: 2, gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false,
+    galleryCardSize: 2, gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, canvasColor: '#a2b3c4', gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false,
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, storage), saved);
   assert.equal(storage.values.size, 1);

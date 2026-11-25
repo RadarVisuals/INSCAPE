@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useBrowserWorkspace from '../../lattice/browser/useBrowserWorkspace.js';
 import '../../lattice/browser/browserWorkspace.css';
@@ -19,6 +19,10 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   // Host closure invalidates pending drops immediately, before exit animation.
   const libraryClosed = !open;
   const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
+  const onSourceCriteria = data.onSourceCriteria;
+  useLayoutEffect(() => {
+    onSourceCriteria?.({query:workspace.query.trim(), collection:workspace.collection, relationship:workspace.relationshipView});
+  }, [onSourceCriteria, workspace.query, workspace.collection, workspace.relationshipView]);
   const onBrowse = data.onBrowse;
   useEffect(() => {
     if (!libraryClosed && data.workspaceReady !== false && !data.collectionContext) onBrowse?.({ ...workspace.view, relationship: workspace.relationshipView });
@@ -32,8 +36,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     && (libraryImageChoices(source).some(choice => choice.sources.includes(imageChoice.media.url))
       || workspace.selectedCategory?.imageSelections?.some(entry => entry.assetId === imageChoice.assetId && entry.url === imageChoice.media.url))
       ? assetForPlacement(source, { selectedMedia: imageChoice.media }) : null : source;
-  const resolveDimensions = asset => decodeOwnerSystemWorkflowAssetDimensions(asset, { preferMetadata: true });
-  const preload = asset => { void (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset).catch(() => {}); };
+  const resolveDimensions = asset => (data.curatedPicker && ownerSystemWorkflowAssetDimensions(asset))
+    || decodeOwnerSystemWorkflowAssetDimensions(asset, { preferMetadata: true });
+  const preload = asset => { if (data.curatedPicker && ownerSystemWorkflowAssetDimensions(asset)) return; void (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset).catch(() => {}); };
   const [dragPreview, setDragPreview] = useState(null);
   const [categoryDrag, setCategoryDrag] = useState(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -58,8 +63,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   useEffect(() => { onPlacingChange?.(placing); return () => onPlacingChange?.(false); }, [placing, onPlacingChange]);
   const place = async (asset) => {
     if (authoringLocked || libraryClosed) return false;
-    // Registry wrappers follow selection. Retain the receiving module/Grid
-    // before asynchronous media work, rather than selecting again afterward.
+    // Capture the destination before resolving image dimensions.
     const target = placementTargetRef?.current?.captureTarget();
     if (!target) return false;
     preload(asset);
@@ -85,6 +89,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     globalThis.removeEventListener('blur', active.cancel);
     document.removeEventListener('visibilitychange', active.visibility);
     active.source?.removeEventListener('lostpointercapture', active.lostCapture);
+    active.dropNode?.removeAttribute('data-curation-hover');
     active.source?.removeAttribute('data-workflow-dragging');
     dragRef.current = null;
     if (active.source?.hasPointerCapture?.(active.pointerId)) active.source.releasePointerCapture(active.pointerId);
@@ -99,7 +104,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     suppressSelection.current = false;
     setDropFeedback(null);
     const assetIds = options.assetIds || [id];
-    const canPlace = assetIds.length === 1 && asset.placeable && workspaceState?.isAssetRenderable(id);
+    const canPlace = data.curationRole !== 'source' && assetIds.length === 1 && asset.placeable && workspaceState?.isAssetRenderable(id);
     const origin = { x: event.clientX, y: event.clientY };
     const active = { target: placementTargetRef?.current, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
       moduleTarget: moduleAssetTargetRef?.current,
@@ -117,15 +122,34 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     const receiverAt = (pointerEvent) => {
       const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
       const hit = document.elementFromPoint(point.x, point.y);
+      if (data.curationRole === 'source') {
+        const node = hit?.closest('[data-browser-category-id], [data-curation-folder], button[aria-label="All Assets"]');
+        if (!node?.closest('[data-curation-pane="destination"]')) return null;
+        const folder = node.dataset.browserCategoryId || node.dataset.curationFolder || null;
+        return { kind: 'curation', node, isCurrent: () => node.isConnected, preview: () => null,
+          place: () => data.onCurationAction(assetIds, folder, asset.selectedMedia?.url), rejection: 'Could not add the selected works.' };
+      }
+      if (data.onReorder && workspaceState.sort === 'curated' && library.contains(hit)
+        && hit?.closest('[data-curation-folder]') && !hit.closest('[data-browser-category-id]')) {
+        const tile = hit.closest('[data-library-asset-id]');
+        const node = tile || hit.closest('[data-curation-folder]');
+        return { kind: 'curation', node, isCurrent: () => node.isConnected, preview: () => null,
+          place: () => data.onReorder(assetIds, tile?.dataset.libraryAssetId) };
+      }
       if (overLibraryNavigation(pointerEvent) || hit?.closest('[data-library-folder-tile]')) {
         const categoryId = hit?.closest('[data-browser-category-id]')?.dataset.browserCategoryId;
-        if (!categoryId) return null;
+        const fromId = options.sourceFolderId;
+        if (!categoryCommands || !categoryId || categoryId === fromId) return null;
+        const imageUrl = assetIds.length === 1 && asset.selectedMedia ? libraryCategoryImage(asset) : null;
         return { kind: 'category', categoryId, point, preview: () => null,
           isCurrent: () => latestLibrary.current.data.categories.some(({ id }) => id === categoryId)
             && assetIds.every(id => latestLibrary.current.data.assets.some(asset => (asset.stableAssetId || asset.id) === id)),
-          place: () => assetIds.length === 1 && asset.selectedMedia && libraryCategoryImage(asset)
-            ? latestLibrary.current.categoryCommands?.setCategoryImage(categoryId, id, libraryCategoryImage(asset), true)
-            : latestLibrary.current.categoryCommands?.setCategoryAssets(categoryId, assetIds, true),
+          place: () => {
+            const commands = latestLibrary.current.categoryCommands;
+            if (fromId) return commands?.moveCategoryAssets(fromId, categoryId, assetIds, imageUrl);
+            return imageUrl ? commands?.setCategoryImage(categoryId, id, imageUrl, true)
+              : commands?.setCategoryAssets(categoryId, assetIds, true);
+          },
           rejection: 'Artwork could not be added to this category.' };
       }
       if (!canPlace) return null;
@@ -142,7 +166,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
             && active.moduleTarget?.has?.(moduleTarget) !== false && moduleTarget.node?.isConnected,
           place: () => moduleTarget.placeAsset(asset, point), rejection: 'This module could not accept the artwork.' };
       }
-      // The native Reception scope can explicitly accept a cell's surface as
+      // The native Composition scope can explicitly accept a cell's surface as
       // its canvas. Other modules still reject drops outside registered targets.
       if (hit?.closest('[data-workbench-module]') && !workbenchTarget) return { preview: () => null, isCurrent: () => true,
         place: () => false, rejection: 'This module cannot accept artwork here.' };
@@ -153,11 +177,11 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
             ? shortcutTargetRef?.current.has(shortcut) : shortcutTargetRef?.current === shortcut),
           place: () => shortcut.placeAsset(asset), rejection: 'This shortcut could not accept the artwork.' };
       }
-      const display = active.target?.targetAt?.(point);
-      const target = display || workbenchTarget;
+      const placement = active.target?.targetAt?.(point);
+      const target = placement || workbenchTarget;
       if (!target) return null;
       return { preview: dimensions => target.previewAt(point, dimensions, options),
-        isCurrent: () => target.isCurrent?.() !== false && (display || workbenchImageTargetRef?.current === workbench),
+        isCurrent: () => target.isCurrent?.() !== false && (placement || workbenchImageTargetRef?.current === workbench),
         place: (dimensions, preview, isCurrent) => dimensions && preview?.destination
           && target.placeAsset(asset, dimensions, preview.destination, isCurrent),
         reject: target.rejectDrop, rejection: 'Artwork could not be placed here.' };
@@ -165,6 +189,11 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     const updatePreview = (pointerEvent) => {
       navigationTargetRef.current?.hover({ x: pointerEvent.clientX, y: pointerEvent.clientY });
       const receiver = receiverAt(pointerEvent);
+      if (data.curationRole) {
+        active.dropNode?.removeAttribute('data-curation-hover');
+        active.dropNode = receiver?.node;
+        active.dropNode?.setAttribute('data-curation-hover', '');
+      }
       const category = receiver?.kind === 'category';
       setCategoryDrag(category ? { assetIds, categoryId: receiver.categoryId, point: receiver.point } : null);
       setDragPreview(canPlace && !overLibraryNavigation(pointerEvent)
@@ -202,7 +231,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         if (receiver.reject) receiver.reject(); else setDropFeedback(message || receiver.rejection);
       };
       try {
-        const dimensions = receiver.kind === 'category' ? null : await active.dimensionPromise;
+        const dimensions = ['category', 'curation'].includes(receiver.kind) ? null : await active.dimensionPromise;
         if (dragRef.current !== active) return;
         if (!isCurrent()) { cleanup(); return; }
         const preview = receiver.preview(dimensions);
@@ -270,9 +299,10 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data} open={!libraryClosed}
       navigationTargetRef={navigationTargetRef}
       categoryDrag={categoryDrag} dropFeedback={dropFeedback}
-       onAssetActivate={(_event, asset) => activate(asset)}
-      onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)}
-      workspace={{ ...workspace, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
+       onAssetActivate={(_event, asset) => data.curationRole === 'source' && !asset.isCollection ? data.onCurationAction([asset.stableAssetId || asset.id]) : activate(asset)}
+      onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => data.curationRole === 'source'
+        ? data.onCurationAction([asset.stableAssetId || asset.id], null, asset.selectedMedia.url) : place(asset)}
+      workspace={{ ...workspace, curatedPicker: data.curatedPicker, curationRole: data.curationRole, collectionContext:data.collectionContext, curatedImages: data.curatedImages, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
         if (!suppressSelection.current || event.detail === 0) {
           workspace.selectAsset(id, event);
           setImageSelection(media ? { assetId: id, ownerContext: data.ownerContext, media } : null);

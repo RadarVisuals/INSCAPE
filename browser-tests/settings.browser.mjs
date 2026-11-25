@@ -52,7 +52,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await mount(browser, theme, width, height), before = await saved(page);
-      const material = await page.locator('.keeper-dock-window').evaluate(node => ({ background: getComputedStyle(node).backgroundColor, radius: getComputedStyle(node).borderRadius }));
+      const material = { background: theme === 'carbon' ? 'rgb(43, 43, 43)' : 'rgb(235, 236, 231)', radius: '9px' };
       const trigger = await open(page), panel = settings(page), close = panel.getByRole('button', { name: 'Close Settings' });
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/settings-${theme}-${width}-top.png` });
@@ -68,7 +68,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       assert.equal(await notification.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'pointer does not add a focus ring');
       await notification.press('Tab'); await page.keyboard.press('Shift+Tab');
       assert.notEqual(await notification.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'keyboard focus remains visible');
-      const background = panel.getByRole('button', { name: /^Workbench grid display:/ });
+      const background = panel.getByRole('button', { name: /^Workbench grid style:/ });
       await background.scrollIntoViewIfNeeded();
       // A user can scroll a selector to the top of the panel; its popup must flip.
       await background.evaluate(node => {
@@ -78,7 +78,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       await background.click();
       const menu = page.getByRole('listbox'); const menuBox = await menu.boundingBox();
       assert.ok(menuBox.y >= 0 && menuBox.y + menuBox.height <= height, 'selector stays inside the viewport');
-      assert.equal(await menu.evaluate(node => getComputedStyle(node).backgroundColor), material.background, 'portalled menu uses the window material');
+      assert.equal(await menu.evaluate(node => getComputedStyle(node).backgroundColor), theme === 'carbon' ? 'rgb(8, 8, 8)' : material.background, 'the menu uses its themed popup material');
       assert.equal(await background.evaluate(node => getComputedStyle(node, '::after').content), 'none', 'no old heavy active bar');
       await page.keyboard.press('ArrowDown');
       assert.equal(await menu.locator(':focus').evaluate(hit), true, 'keyboard options remain reachable');
@@ -111,7 +111,7 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     await panel.getByLabel('Workbench grid cell size', { exact: true }).fill('41'); await page.keyboard.press('Tab');
     await panel.getByLabel('Space between modules', { exact: true }).fill('12');
     await panel.getByLabel('Workbench grid color', { exact: true }).fill('#8d73c2');
-    await panel.getByRole('button', { name: /^Workbench grid display:/ }).click();
+    await panel.getByRole('button', { name: /^Workbench grid style:/ }).click();
     await page.getByRole('option', { name: 'Dots', exact: true }).click();
     assert.deepEqual(await saved(page), before, 'local Workbench and signal controls do not author the composition');
     await panel.getByRole('button', { name: 'DARK', exact: true }).click();
@@ -127,13 +127,13 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     assert.equal(await panel.getByLabel('Workbench grid cell size', { exact: true }).inputValue(), '41');
     assert.equal(await panel.getByLabel('Space between modules', { exact: true }).inputValue(), '12');
     assert.equal(await panel.getByLabel('Workbench grid color', { exact: true }).inputValue(), '#8d73c2');
-    assert.equal(await panel.getByRole('button', { name: 'Workbench grid display: Dots', exact: true }).count(), 1);
+    assert.equal(await panel.getByRole('button', { name: 'Workbench grid style: Dots', exact: true }).count(), 1);
     assert.equal(await panel.getByRole('button', { name: 'DARK', exact: true }).getAttribute('aria-pressed'), 'true');
     await openEditorMenu(page, 'Backup');
     const backup = page.getByRole('dialog', { name: 'Backup', exact: true });
     await backup.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') });
-    await backup.getByRole('status').waitFor();
-    assert.match(await backup.getByRole('status').innerText(), /backup|JSON/i);
+    await backup.getByRole('status').filter({ hasText: /invalid|not valid|could not|cannot|JSON/i }).waitFor();
+    assert.match(await backup.getByRole('status').filter({ hasText: /invalid|not valid|could not|cannot|JSON/i }).innerText(), /backup|JSON/i);
     assert.deepEqual(await saved(page), changed, 'an invalid backup does not replace the draft');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

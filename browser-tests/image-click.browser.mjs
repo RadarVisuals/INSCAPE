@@ -24,10 +24,10 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(8000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320, seamReview: 'single' });
+      await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 320, seamReview: 'single' });
       await page.evaluate(async visitor => {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
-        draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+        draft.shapes = []; draft.workbench.shapes = [];
         draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:click-${index}`, name: `Click ${index}`, width: 200, height: 180 }));
         draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: visitor ? 32 : 900, top: (visitor ? 64 : 780) + index * 250 } }));
         localStorage.setItem(window.__motionKey, JSON.stringify(draft));

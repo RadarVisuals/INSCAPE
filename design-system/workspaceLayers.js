@@ -5,15 +5,10 @@ import {
   selectedPlacementGroup,
 } from '../src/systemWorkflow/domain/placementGroups.js';
 import { systemWorkflowLayerOperationAvailability } from '../src/systemWorkflow/systemWorkflowLayer.js';
-import {
-  createEmptySystemWorkflowDraft,
-  quantizeSystemWorkflowGridCoordinate as quantize,
-} from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
-import { createSystemWorkflowPlacementCandidate } from '../src/systemWorkflow/systemWorkflowPlacement.js';
-import { createSystemWorkflowGutterCandidate } from '../src/systemWorkflow/systemWorkflowGutters.js';
+import { quantizeSystemWorkflowGridCoordinate as quantize } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 
 // Reference-only adapters. The workspace owns these example values; no store or persistence is created.
-export const layerItems = (items) => items.filter((item) => item.parent === 'display');
+export const layerItems = (items) => items.filter((item) => item.parent === 'cell');
 export const layerGrid = (items, groups = []) => ({
   groups,
   placements: layerItems(items).map((item, layer) => ({
@@ -71,7 +66,7 @@ export function reorderLayers(items, ids, direction) {
         [layers[i + 1], layers[i]] = [layers[i], layers[i + 1]];
   }
   let index = 0;
-  return items.map((item) => (item.parent === 'display' ? layers[index++] : item));
+  return items.map((item) => (item.parent === 'cell' ? layers[index++] : item));
 }
 export function dropLayer(items, groups, sourceId, targetId, edge = 'before') {
   const layers = layerItems(items);
@@ -90,7 +85,7 @@ export function dropLayer(items, groups, sourceId, targetId, edge = 'before') {
     edge === 'before' ? Math.max(...targetIndexes) + 1 : Math.min(...targetIndexes);
   rest.splice(insert, 0, ...moving);
   let index = 0;
-  return items.map((item) => (item.parent === 'display' ? rest[index++] : item));
+  return items.map((item) => (item.parent === 'cell' ? rest[index++] : item));
 }
 export function canGroup(items, groups, ids) {
   const selected = layerItems(items).filter((item) => ids.includes(item.id));
@@ -108,33 +103,70 @@ export function canGroup(items, groups, ids) {
 }
 export const cleanGroups = (groups, removed) =>
   groups.filter((group) => !group.placementIds.some((id) => removed.includes(id)));
+const EPSILON = 1e-7;
+const overlaps = (a, b, axis, span) => Math.min(a[axis] + a[span], b[axis] + b[span])
+  - Math.max(a[axis], b[axis]) > EPSILON;
+
+function spacedCoordinates(items, axis, span, crossAxis, crossSpan, gap) {
+  const coordinates = new Map();
+  const ordered = [...items].sort((a, b) => a[axis] - b[axis] || a.id.localeCompare(b.id));
+  for (const item of ordered) {
+    // Use the original composition to identify neighbours. A tall image may
+    // neighbour several shorter images without belonging to a shared row.
+    const predecessors = ordered.filter(other => other.id !== item.id
+      && other[axis] + other[span] <= item[axis] + EPSILON
+      && overlaps(item, other, crossAxis, crossSpan));
+    const coordinate = predecessors.length
+      ? Math.max(...predecessors.map(other => coordinates.get(other.id) + other[span] + gap))
+      : item[axis];
+    coordinates.set(item.id, quantize(coordinate));
+  }
+  return coordinates;
+}
+
+function spaceLayerGeometry(items, gutter) {
+  if (!Number.isFinite(gutter) || gutter < 0 || gutter > 32) throw new Error('Enter a gutter between 0 and 32 canvas units.');
+  if (items.length < 2) throw new Error('Add at least two layers first.');
+  const gap = quantize(gutter);
+  for (let index = 0; index < items.length; index += 1) {
+    for (const other of items.slice(index + 1)) {
+      if (overlaps(items[index], other, 'column', 'columnSpan') && overlaps(items[index], other, 'row', 'rowSpan')) {
+        throw new Error('Some image bounds overlap. Separate those images before applying gutters.');
+      }
+    }
+  }
+  const columns = spacedCoordinates(items, 'column', 'columnSpan', 'row', 'rowSpan', gap);
+  const rows = spacedCoordinates(items, 'row', 'rowSpan', 'column', 'columnSpan', gap);
+  const destinations = items.map(item => ({ ...item, column: columns.get(item.id), row: rows.get(item.id) }));
+  // Independent axis changes can introduce new neighbours in complex layouts.
+  // Reject the entire operation if the resulting arrangement cannot keep the gap.
+  for (let index = 0; index < destinations.length; index += 1) {
+    const item = destinations[index];
+    for (const other of destinations.slice(index + 1)) {
+      const horizontalGap = Math.max(other.column - item.column - item.columnSpan, item.column - other.column - other.columnSpan);
+      const verticalGap = Math.max(other.row - item.row - item.rowSpan, item.row - other.row - other.rowSpan);
+      if (overlaps(item, other, 'row', 'rowSpan') && horizontalGap < gap - EPSILON
+        || overlaps(item, other, 'column', 'columnSpan') && verticalGap < gap - EPSILON) {
+        throw new Error('This gutter would crowd another image. Try a smaller value or move that image first.');
+      }
+    }
+  }
+  return destinations;
+}
+
 export function applyLayerGutter(items, groups, gutter) {
   const layers = layerItems(items);
   if (groups.length) throw new Error('Ungroup layers before applying composition spacing.');
   if (layers.some((i) => i.locked || !i.visible))
     throw new Error('Unlock and show all layers before applying spacing.');
-  // Feed disposable geometry through the real, pure spacing validator. Text uses its frame bounds.
-  let draft = createEmptySystemWorkflowDraft('0x1111111111111111111111111111111111111111');
-  const gridId = draft.grids[0].id;
-  for (const item of layers)
-    draft = createSystemWorkflowPlacementCandidate(draft, {
-      gridId,
-      stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01',
-      generatePlacementId: () => item.id,
-      destination: {
-        column: quantize(item.x / 24),
-        row: quantize(item.y / 24),
-        columnSpan: quantize(item.width / 24),
-        rowSpan: quantize(item.height / 24),
-      },
-    });
-  const next =
-    createSystemWorkflowGutterCandidate(draft, {
-      gridId,
-      gutter,
-      expectedPlacements: draft.grids[0].placements,
-    }) || draft;
-  const positions = new Map(next.grids[0].placements.map((p) => [p.id, p]));
+  const geometry = layers.map(item => ({
+    id: item.id,
+    column: quantize(item.x / 24),
+    row: quantize(item.y / 24),
+    columnSpan: quantize(item.width / 24),
+    rowSpan: quantize(item.height / 24),
+  }));
+  const positions = new Map(spaceLayerGeometry(geometry, gutter).map(item => [item.id, item]));
   return items.map((item) =>
     positions.has(item.id)
       ? { ...item, x: positions.get(item.id).column * 24, y: positions.get(item.id).row * 24 }
@@ -143,7 +175,7 @@ export function applyLayerGutter(items, groups, gutter) {
 }
 export function sampleLayers(mode = 'composition') {
   const base = {
-    parent: 'display',
+    parent: 'cell',
     kind: 'artwork',
     rotation: 0,
     opacity: 100,
@@ -171,7 +203,7 @@ export function sampleLayers(mode = 'composition') {
     {
       ...base,
       id: 'artwork',
-      name: 'Artwork · Display',
+      name: 'Artwork · Cell',
       variant: 'arch',
       color: '#a99b85',
       x: 36,
@@ -205,9 +237,9 @@ export function sampleLayers(mode = 'composition') {
       ...base,
       id: 'text',
       kind: 'text',
-      name: 'Text · Display',
+      name: 'Text · Cell',
       article: sampleArticle(),
-      textExample: 'display',
+      textExample: 'cell',
       x: 24,
       y: 12,
       width: 192,

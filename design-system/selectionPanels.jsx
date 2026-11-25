@@ -17,7 +17,7 @@ export default function SelectionPanels({
 }) {
   if (tab === 'Info') return selectedCount === 1 && ['image', 'artwork'].includes(item?.kind)
     ? <OwnerSystemWorkflowMetadataContent dossier={{ title: item.name, description: 'Example artwork metadata in the design-system preview.',
-      collection: 'Design-system examples', creators: [], traits: [{ label: 'Example type', value: item.kind === 'image' ? 'Image' : 'Display artwork' }] }} />
+      collection: 'Design-system examples', creators: [], traits: [{ label: 'Example type', value: item.kind === 'image' ? 'Image' : 'Cell artwork' }] }} />
     : <p className="ds-studio-empty">Select one artwork with source information.</p>;
   if (selectedCount > 1)
     return (
@@ -161,57 +161,6 @@ export default function SelectionPanels({
           value={item.included}
           onChange={(included) => update({ included })}
         />
-      </>
-    );
-  if (tab === 'Display')
-    return item.kind !== 'display' ? (
-      typeHint('a Display')
-    ) : (
-      <>
-        <label>
-          Scene
-          <select
-            aria-label="Studio scene"
-            value={item.scene || '1'}
-            onChange={(event) =>
-              update({
-                scene: event.target.value,
-                name: `Display · Grid ${event.target.value}`,
-              })
-            }
-          >
-            <option value="1">Grid 1</option>
-            <option value="2">Grid 2</option>
-          </select>
-        </label>
-        <CheckField label="Show grid" value={item.grid} onChange={(grid) => update({ grid })} />
-        <CheckField
-          label="Snap to grid"
-          value={item.snap}
-          onChange={(snap) => update({ snap })}
-        />
-        <details>
-          <summary>Edges</summary>
-          <NumberField
-            label="Corner radius"
-            value={item.radius || 0}
-            max={64}
-            onChange={(radius) => update({ radius })}
-          />
-          <CheckField
-            label="Shadow"
-            value={item.shadow}
-            onChange={(shadow) => update({ shadow })}
-          />
-        </details>
-        <CheckField
-          label="Include in publication"
-          value={item.included}
-          onChange={(included) => update({ included })}
-        />
-        <p className="ds-studio-note">
-          Background colour, canvas dimensions and effects use the shared tabs.
-        </p>
       </>
     );
   return item.kind !== 'text' ? typeHint('Text') : null;

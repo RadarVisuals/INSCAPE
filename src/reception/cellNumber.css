@@ -1,2 +1,0 @@
-.reception-cell-number[data-invalid] { flex-wrap: wrap; }
-.reception-cell-number > .reception-cell-number-error { flex: 0 0 100%; min-width: 0; padding-block: 0 6px; color: var(--tactile-ink); font-size: 11px; line-height: 1.4; white-space: normal; }

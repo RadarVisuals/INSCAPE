@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { moduleGrainStyle } from '../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import './shapes.css';
 
-// Appearance belongs to the Shape. Editor and Reception paint the same record.
+// Appearance belongs to the Shape. Editor and Composition paint the same record.
 export default function ShapeSurface({ record, children, radius = 0, hideOutline = false, hideGrain = false, continuousFill = false }) {
   const pattern = useId().replaceAll(':', '');
   const kind = record.kind || 'rectangle';

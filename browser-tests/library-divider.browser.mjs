@@ -16,9 +16,9 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
         return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
       return route.abort();
     });
-    await page.goto(origin + '/browser-tests/reception-editor-fixture.html?sample&image-choices&session=divider-' + theme);
+    await page.goto(origin + '/browser-tests/library-images-fixture.html?long-navigation');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).waitFor();
-    if (theme === 'light') await page.getByRole('button', { name: 'Switch to Light', exact: true }).click();
+    if (theme === 'light') await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     const panel = sharedToolPanel(page, 'Library');
     const divider = page.getByRole('button', { name: 'Resize Browser navigation', exact: true });
@@ -30,7 +30,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
       await page.mouse.move(box.x + box.width / 2 + dx, box.y + box.height / 2, { steps: 5 }); await page.mouse.up(); await settle();
     };
     const resize = async width => dragBy(edge, width - (await panel.boundingBox()).width);
-    const draft = await page.evaluate(() => JSON.stringify(window.receptionFixture.root.getDraft()));
+    const draft = await page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
     await dragBy(divider, -250);
     const compactX = (await divider.boundingBox()).x;
     for (const width of [390, 418, 420, 422, 450, 500, 390]) {
@@ -53,7 +53,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
     await page.waitForFunction(() => document.querySelector('.lattice-browser-sidebar').scrollTop > 0);
     await rail.getByRole('button', { name: 'All Assets', exact: true }).focus();
     await page.keyboard.press('Tab');
-    assert.equal(await page.getByRole('button', { name: 'Owned', exact: true }).evaluate(node => document.activeElement === node), true);
+    assert.equal(await page.getByRole('button', { name: 'Folders', exact: true }).evaluate(node => document.activeElement === node), true);
     await page.screenshot({ path: '.browser-test-runtime/library-divider/' + theme + '-rail-overflow.png' });
     const compactBottom = await bottom.boundingBox();
     await page.mouse.move(compactBottom.x + compactBottom.width / 2, compactBottom.y + compactBottom.height / 2);
@@ -72,7 +72,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
       await resize(width); assert.equal((await divider.boundingBox()).x, expandedX);
     }
     await dragBy(divider, -250);
-    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+    await page.getByRole('button', { name: 'Library view options', exact: true }).click();
     await page.getByRole('checkbox', { name: 'Labels', exact: true }).uncheck();
     await page.getByRole('slider', { name: 'Card size', exact: true }).focus(); await page.keyboard.press('Home');
     await page.keyboard.press('Escape');
@@ -92,7 +92,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
     assert.equal((await divider.boundingBox()).x, compactX); await checkBadge();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await page.screenshot({ path: '.browser-test-runtime/library-divider/' + theme + '-narrow.png' });
-    assert.equal(await page.evaluate(() => JSON.stringify(window.receptionFixture.root.getDraft())), draft);
+    assert.equal(await page.evaluate(() => JSON.stringify(window.__imageTest.draft())), draft);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -113,11 +113,11 @@ for (const theme of ['dark', 'light']) test(`Library keeps square tiles, explici
     });
     await page.goto(origin + '/browser-tests/library-images-fixture.html');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
-    if (theme === 'light') await page.getByRole('button', { name: 'Switch to Light', exact: true }).click();
+    if (theme === 'light') await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
     await detachTool(page, 'Library');
     const panel = sharedToolPanel(page, 'Library');
     const navigation = page.getByRole('navigation', { name: 'Browser navigation' });
-    const view = page.getByRole('button', { name: 'Library display options', exact: true });
+    const view = page.getByRole('button', { name: 'Library view options', exact: true });
     const setView = async mode => { await view.click(); await page.getByRole('button', { name: mode, exact: true }).click(); await page.keyboard.press('Escape'); };
     const before = await page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
     await view.click(); await page.getByRole('checkbox', { name: 'Labels', exact: true }).uncheck();
@@ -153,7 +153,7 @@ for (const theme of ['dark', 'light']) test(`Library keeps square tiles, explici
     await flyout.waitFor();
     const pickerBox = await flyout.boundingBox(), panelBox = await panel.boundingBox();
     assert.ok(pickerBox.height <= 300 && pickerBox.y >= panelBox.y && pickerBox.y + pickerBox.height <= panelBox.y + panelBox.height, 'drag picker stays content-sized and inside Library');
-    assert.equal(await navigation.getByRole('button', { name: 'Owned', exact: true }).getAttribute('title'), null);
+    assert.equal(await navigation.getByRole('button', { name: 'Folders', exact: true }).getAttribute('title'), null);
     const destination = flyout.getByRole('button', { name: 'FIELD NOTES', exact: true });
     const to = await destination.boundingBox();
     await page.mouse.move(to.x + 45, to.y + to.height / 2, { steps: 10 }); await page.mouse.up();

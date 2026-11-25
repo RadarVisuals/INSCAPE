@@ -1,9 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createInterfaceThemeStore, INTERFACE_THEME_KEY, EDITOR_COLORS_KEY, editorColorInk } from './interfaceTheme.js';
+import { createInterfaceThemeStore, INTERFACE_THEME_KEY, INTERFACE_PALETTE_KEY, interfacePalettes } from './interfaceTheme.js';
 import { createEmptySystemWorkflowDraft, assertValidSystemWorkflowDraft } from './systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, assertValidWorkbenchCollection } from './systemWorkflow/domain/workbenchCollection.js';
-import { createReception } from './profileDocument/domain/receptionPresentation.js';
 
 test('one device appearance persists independently of profile and artwork records', () => {
   const records = new Map([['composition', 'authored content']]);
@@ -35,60 +34,57 @@ test('failed persistence stays explicit, retries, and storage events synchronize
 test('existing drafts discard retired interface choices without rewriting artwork or their input', () => {
   const draft = createEmptySystemWorkflowDraft(`0x${'1'.repeat(40)}`);
   draft.appearance.menuSurfaceId = 'paper'; draft.appearance.dossierSurfaceId = 'slate';
-  draft.identityPresentation.dossierSurface = 'mist'; draft.reception = createReception(); draft.reception.branding.theme = 'carbon';
+  draft.identityPresentation.dossierSurface = 'mist';
   const before = structuredClone(draft), clean = assertValidSystemWorkflowDraft(draft);
   assert.deepEqual(draft, before);
   assert.deepEqual(clean.grids, draft.grids); assert.equal(clean.appearance.surfaceId, draft.appearance.surfaceId);
   assert.equal(Object.hasOwn(clean.appearance, 'menuSurfaceId'), false);
   assert.equal(Object.hasOwn(clean.identityPresentation, 'dossierSurface'), false);
-  assert.equal(Object.hasOwn(clean.reception.branding, 'theme'), false);
   const collection = createWorkbenchCollection(clean); collection.shared.menuSurfaceId = 'graphite';
-  collection.shared.reception.branding.theme = 'mist';
   const result = assertValidWorkbenchCollection(collection);
   assert.equal(Object.hasOwn(result.shared, 'menuSurfaceId'), false);
-  assert.equal(Object.hasOwn(result.shared.reception.branding, 'theme'), false);
   assert.deepEqual(result.workbenches, collection.workbenches);
 });
 
-test('editor colors persist per mode, reset independently and never write authored content', () => {
-  const records = new Map([['composition', 'keep artwork']]), properties = new Map();
+test('only curated palettes persist, independently of mode, artwork and legacy editor colors', () => {
+  const legacy = '{"dark":{"panel":"#ff0044"}}';
+  const records = new Map([['inscape:editor-colors', legacy], ['composition', 'original']]);
   const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };
-  const target = { dataset: {}, style: { setProperty: (key, value) => properties.set(key, value), removeProperty: key => properties.delete(key) } };
-  const store = createInterfaceThemeStore({ storage, target });
-  store.setColor('panel', '#EEEEEE'); store.setColor('workspace', '#121314');
-  assert.equal(properties.get('--editor-custom-ink'), '#000000');
-  assert.equal(properties.get('--editor-custom-panel'), '#eeeeee');
-  store.setMode('light'); assert.equal(properties.has('--editor-custom-panel'), false);
-  store.setColor('accent', '#000000'); assert.equal(properties.get('--editor-custom-on-accent'), '#ffffff');
-  store.setMode('dark'); assert.equal(properties.get('--editor-custom-panel'), '#eeeeee');
-  store.resetColors(); assert.equal(properties.has('--editor-custom-panel'), false);
-  const reopened = createInterfaceThemeStore({ storage });
-  assert.deepEqual(reopened.getSnapshot().colors, { dark: {}, light: { accent: '#000000' } });
-  assert.equal(records.get('composition'), 'keep artwork');
-  assert.throws(() => store.setColor('panel', 'red'), /valid editor color/);
-  assert.throws(() => store.setColor('artwork', '#112233'), /valid editor color/);
-  assert.equal(editorColorInk('#000000'), '#ffffff');
-  store.dispose(); reopened.dispose();
+  const target = { dataset: {} }, store = createInterfaceThemeStore({ storage, target });
+  assert.equal(target.dataset.palette, 'charcoal');
+  for (const id of Object.keys(interfacePalettes)) {
+    store.setPalette(id);
+    assert.equal(records.get(INTERFACE_PALETTE_KEY), id);
+    store.setMode('light');
+    assert.equal(target.dataset.palette, id);
+    store.setMode('dark');
+    assert.equal(target.dataset.palette, id);
+    assert.equal(createInterfaceThemeStore({ storage }).getSnapshot().palette, id);
+  }
+  for (const value of ['custom', '#12ab34', '__proto__']) assert.throws(() => store.setPalette(value), /Inscape palette/);
+  assert.equal(records.get('composition'), 'original');
+  assert.equal(records.get('inscape:editor-colors'), legacy);
+  records.set(INTERFACE_PALETTE_KEY, '#badbad');
+  assert.equal(createInterfaceThemeStore({ storage }).getSnapshot().palette, 'charcoal');
+  store.dispose();
 });
 
-test('failed color writes remain visible and retryable across theme changes, external updates synchronize', () => {
-  const records = new Map(); let broken = false;
-  const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => {
-    if (broken && key === EDITOR_COLORS_KEY) throw Error('Quota'); records.set(key, value);
-  } };
-  const events = new EventTarget(), store = createInterfaceThemeStore({ storage, events });
-  broken = true; store.setColor('accent', '#ff0000');
-  assert.match(store.getSnapshot().colorError, /could not be saved/);
-  store.setMode('light'); assert.match(store.getSnapshot().colorError, /could not be saved/);
-  broken = false; store.retryColors(); assert.equal(store.getSnapshot().colorError, null);
-  assert.equal(JSON.parse(records.get(EDITOR_COLORS_KEY)).dark.accent, '#ff0000');
+test('palette writes are retryable and valid cross-window changes and clears update the view', () => {
+  let broken = true;
+  const storage = { getItem: () => null, setItem: key => { if (key === INTERFACE_PALETTE_KEY && broken) throw Error('Full'); } };
+  const target = { dataset: {} }, events = new EventTarget(), store = createInterfaceThemeStore({ storage, target, events });
+  store.setPalette('oxblood');
+  assert.match(store.getSnapshot().error, /could not be saved/);
+  store.setMode('light'); assert.match(store.getSnapshot().error, /could not be saved/);
+  assert.equal(target.dataset.palette, 'oxblood');
+  broken = false; store.setPalette('oxblood'); assert.equal(store.getSnapshot().error, null);
   const event = new Event('storage');
-  Object.assign(event, { key: EDITOR_COLORS_KEY, newValue: JSON.stringify({ light: { workspace: '#112233', panel: 'invalid' } }) });
-  events.dispatchEvent(event); assert.deepEqual(store.getSnapshot().colors.light, { workspace: '#112233' });
-  Object.assign(event, { newValue: '{broken' }); events.dispatchEvent(event);
-  assert.match(store.getSnapshot().colorError, /could not be loaded/);
-  assert.deepEqual(store.getSnapshot().colors.light, { workspace: '#112233' });
+  Object.assign(event, { key: INTERFACE_PALETTE_KEY, newValue: 'storm-glass' });
+  events.dispatchEvent(event); assert.equal(target.dataset.palette, 'storm-glass');
+  assert.equal(target.dataset.interfaceTheme, 'light');
+  Object.assign(event, { newValue: '#ab0010' }); events.dispatchEvent(event);
+  assert.equal(target.dataset.palette, 'charcoal');
   Object.assign(event, { key: null, newValue: null }); events.dispatchEvent(event);
-  assert.equal(store.getSnapshot().mode, 'dark'); assert.deepEqual(store.getSnapshot().colors, { dark: {}, light: {} });
+  assert.deepEqual(target.dataset, { interfaceTheme: 'dark', palette: 'charcoal' });
   store.dispose();
 });

@@ -12,7 +12,7 @@ export function PatternNumber({ label, caption = label, prefix, value, min, max,
     }} /></label></div>;
 }
 
-// One stroke editor for rectangle outlines and Reception's shared inside edges.
+// One stroke editor for rectangle outlines and Composition's shared inside edges.
 export default function ShapeOutlineControls({ outline, onChange, disabled, label = 'Stroke', ...colour }) {
   return <div className="shape-inspector-properties">
     <InspectorColourControls {...colour} label={label} color={outline.color} disabled={disabled} onChange={onChange} />

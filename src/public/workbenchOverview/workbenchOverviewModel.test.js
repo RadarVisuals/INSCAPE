@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createDefaultWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createArticle } from '../../text/domain/article.js';
-import { workbenchOverviewModel, overviewAssetIds } from './workbenchOverviewModel.js';
+import { workbenchOverviewModel } from './workbenchOverviewModel.js';
 
 test('preview uses saved origin, open frames, artwork and authored layer order without mutating its input', () => {
-  const draft = createEmptySystemWorkflowDraft(`0x${'1'.repeat(40)}`); draft.grids = [];
+  const draft = createEmptySystemWorkflowDraft(`0x${'1'.repeat(40)}`);
   draft.shapes = [{ id: 'shape:a' }, { id: 'shape:closed' }];
   draft.imageModules = [{ id: 'image:a', width: 120, height: 80, artwork: { crop: { x: .3, y: .6, zoom: 2 } } }];
   draft.texts = [{ id: 'text:a', article: createArticle('Title') }];
@@ -16,12 +16,14 @@ test('preview uses saved origin, open frames, artwork and authored layer order w
     imageModules: [{ id: 'image:a', open: true, position: { left: 100, top: 80 } }],
     texts: [{ id: 'text:a', open: true, window: { left: 200, top: 150, width: 200, height: 250 }, frames: [{ id: 'text-frame:a', window: { left: 400, top: 150, width: 200, height: 250 } }] }] };
   const before = structuredClone(draft), result = workbenchOverviewModel(draft);
+  assert.doesNotMatch(result.contains, /Display/);
   assert.deepEqual(result.area, draft.workbench.area);
   assert.deepEqual(result.items.map(item => item.id), ['image:a', 'shape:a', 'text:a']);
   assert.deepEqual(result.items[0].frame, { left: 100, top: 80, width: 120, height: 80 });
   assert.deepEqual(result.items[0].source.crop, draft.imageModules[0].artwork.crop);
   assert.deepEqual(result.items[2].source.frames, draft.workbench.texts[0].frames);
-  assert.deepEqual(overviewAssetIds(draft), []); assert.deepEqual(draft, before);
+  assert.equal(result.items[2].source.article, draft.texts[0].article);
+  assert.deepEqual(draft, before);
 });
 
 test('a mixed composition uses one native layout for artwork and source details', () => {

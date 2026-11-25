@@ -20,6 +20,23 @@ function setup() {
 }
 const group = { type: 'group', ids: ['image:body', 'image:eyes'], id: 'composition:person', name: 'Secret person' };
 const publish = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft });
+test('Canvas layer locks protect positions, survive reload and undo, and stay private', () => {
+  const { store, edit, storage } = setup(), before = store.getDraft();
+  edit({ type: 'lock', ids: group.ids, lock: true });
+  const locked = store.getDraft();
+  assert.deepEqual(locked.workbench.lockedLayerIds, group.ids);
+  assert.deepEqual(publish(locked).workbench, publish(before).workbench);
+  assert.throws(() => edit({ type: 'delete', ids: group.ids }), /Unlock/);
+  const moved = store.getDraft();
+  moved.workbench.imageModules[0].position.left += 30;
+  assert.equal(store.commitCompletedOperation(moved, { expectedGeneration: store.getGeneration() }), false);
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
+  assert.ok(store.redo());
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), locked);
+  edit({ type: 'lock', ids: group.ids, lock: false });
+  assert.deepEqual(store.getDraft(), before);
+});
+
 test('formation anchors at the frontmost member and preserves content/geometry through one Undo, Redo and reload', () => {
   const f = setup(), before = f.store.getDraft(); f.edit(group);
   const after = f.store.getDraft();
@@ -28,6 +45,36 @@ test('formation anchors at the frontmost member and preserves content/geometry t
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
   assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), after);
+});
+test('stacking is one private layout edit and does not duplicate group membership', () => {
+  const { store, edit, storage, fail } = setup();
+  edit(group);
+  const before = store.getDraft(), action = { type: 'stack', id: group.id, position: { left: 120, top: 80 } };
+  fail(true);
+  assert.throws(() => edit(action), /Could not save/);
+  assert.deepEqual(store.getDraft(), before);
+  fail(false);
+  edit(action);
+  const after = store.getDraft();
+  assert.deepEqual(after.artworkLayers.at(-1), { ...before.artworkLayers.at(-1), stackPosition: action.position });
+  assert.deepEqual(after.workbenchGroups, before.workbenchGroups);
+  assert.deepEqual(after.workbench, before.workbench);
+  assert.deepEqual(publish(after).artworkLayers, publish(before).artworkLayers);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), after);
+  assert.ok(store.undo());
+  assert.deepEqual(store.getDraft(), before);
+  assert.ok(store.redo());
+  const move = { ...action, from: action.position, position: { left: 260, top: 150 } };
+  edit(move);
+  const moved = store.getDraft();
+  assert.deepEqual(moved.workbench, before.workbench);
+  assert.throws(() => edit(move), /stack moved/);
+  assert.deepEqual(store.getDraft(), moved);
+  assert.ok(store.undo());
+  assert.deepEqual(store.getDraft(), after);
+  edit({ type: 'unstack', id: group.id });
+  assert.throws(() => edit(move), /unfolded/);
+  assert.deepEqual(store.getDraft(), before);
 });
 test('ordering and drops move whole blocks or reorder parts without splitting them', () => {
   const f = setup(); f.edit(group);

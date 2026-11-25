@@ -47,7 +47,7 @@ test('hook exceptions reject changed bytes, extra errors, stale entries and an e
 
 test('the reported lint scope excludes tests and applies the correctness rules to production JSX', async () => {
   assert.equal(await eslint.isPathIgnored(resolve(root, 'src/systemWorkflow/workbenchCollection.test.js')), true);
-  assert.equal(await eslint.isPathIgnored(resolve(root, 'src/public/ownerSystemWorkflow/DisplayModule.jsx')), false);
+  assert.equal(await eslint.isPathIgnored(resolve(root, 'src/public/ownerSystemWorkflow/OwnerWorkbenchModules.jsx')), false);
   const config = await eslint.calculateConfigForFile(filePath);
   for (const rule of ['no-undef', 'no-unreachable', 'no-unused-vars', 'react-hooks/rules-of-hooks', 'react-hooks/exhaustive-deps'])
     assert.equal(config.rules[rule][0], 2, rule);

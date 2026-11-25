@@ -22,7 +22,7 @@ const colors = { dark: { environment: 'rgb(23, 23, 23)', panel: 'rgb(8, 8, 8)', 
 async function open(page, path) { await page.goto(origin + path, { waitUntil: 'domcontentloaded' }); }
 async function capture(page, name) { await page.mouse.move(1435, 5); await page.screenshot({ path: `${output}/${name}.png` }); }
 
-test('one Settings choice governs owner controls, portal menus, reception, overview, login and Discover', { timeout: 120000 }, async () => {
+test('one Settings choice governs owner controls, portal menus, composition, overview and login', { timeout: 120000 }, async () => {
  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
  try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -41,11 +41,11 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
    const content = await page.evaluate(() => JSON.stringify(window.savedDraft()));
    const expected = colors[mode];
    await button(page, mode.toUpperCase()).click(); await page.mouse.move(1435, 5);
-   assert.deepEqual(await palette(page, '.system-workflow__settings'), { background: mode === 'dark' ? 'rgb(42, 44, 43)' : 'rgb(250, 249, 246)', color: mode === 'dark' ? 'rgb(236, 238, 235)' : 'rgb(37, 43, 39)' });
+   assert.deepEqual(await palette(page, '.system-workflow__settings'), { background: mode === 'dark' ? 'rgb(43, 43, 43)' : colors.light.panel, color: mode === 'dark' ? 'rgb(238, 238, 238)' : 'rgb(41, 41, 39)' });
    assert.deepEqual(await palette(page, '.interface-theme-toggle [aria-pressed=true]'), { background: expected.ink, color: expected.panel });
-   assert.equal((await palette(page, '.system-workflow')).background, mode === 'dark' ? 'rgb(18, 20, 19)' : 'rgb(244, 243, 239)');
+   assert.equal((await palette(page, '.system-workflow')).background, mode === 'dark' ? 'rgb(20, 20, 20)' : colors.light.environment);
    assert.equal(await page.getByRole('button', { name: /Menu theme|Workbench background/ }).count(), 0);
-   await page.getByRole('button', { name: /Workbench grid display/ }).click();
+   await page.getByRole('button', { name: /Workbench grid style/ }).click();
    assert.deepEqual(await palette(page, '[role=listbox]'), { background: expected.panel, color: expected.ink });
    await page.keyboard.press('Escape');
    await capture(page, `settings-${mode}`);
@@ -58,40 +58,28 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
    await editSelectedWork(page); await editorCommand(page, 'Edit', 'Settings');
   }
   await button(page, 'LIGHT').click();
-  await open(page, '/browser-tests/reception-editor-fixture.html?sample&session=theme-review');
+  await open(page, '/browser-tests/composition-native-editor-fixture.html?sample&session=theme-review');
   await editorCommand(page, 'Edit', 'Settings');
   assert.equal(await button(page, 'LIGHT').getAttribute('aria-pressed'), 'true');
-  assert.equal((await palette(page, '.system-workflow__settings')).background, 'rgb(250, 249, 246)');
-  assert.equal((await palette(page, '.system-workflow')).background, 'rgb(244, 243, 239)');
-  const reception = await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot()));
+  assert.equal((await palette(page, '.system-workflow__settings')).background, colors.light.panel);
+  assert.equal((await palette(page, '.system-workflow')).background, colors.light.environment);
+  const composition = await page.evaluate(() => JSON.stringify(nativeCompositionFixture.root.getBackupSnapshot()));
   await button(page, 'DARK').click();
-  assert.equal((await palette(page, '.system-workflow__settings')).background, 'rgb(42, 44, 43)');
-  assert.equal((await palette(page, '.system-workflow')).background, 'rgb(18, 20, 19)');
-  assert.equal(await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot())), reception);
-  await capture(page, 'reception-dark');
+  assert.equal((await palette(page, '.system-workflow__settings')).background, 'rgb(43, 43, 43)');
+  assert.equal((await palette(page, '.system-workflow')).background, 'rgb(20, 20, 20)');
+  assert.equal(await page.evaluate(() => JSON.stringify(nativeCompositionFixture.root.getBackupSnapshot())), composition);
+  await capture(page, 'composition-dark');
   for (const mode of ['dark', 'light']) {
    await button(page, mode.toUpperCase()).click();
    const publicPage = await context.newPage(); publicPage.setDefaultTimeout(20000);
    publicPage.on('pageerror', e => errors.push(e.message));
-   await open(publicPage, '/browser-tests/reception-editor-fixture.html?public&session=theme-review');
-   await publicPage.locator('.reception-page').waitFor();
-   assert.deepEqual(await palette(publicPage, '.reception-page'), { background: colors[mode].environment, color: colors[mode].ink });
-   assert.equal((await palette(publicPage, '.reception-document-canvas')).background, colors[mode].environment);
-   await capture(publicPage, `public-reception-${mode}`);
-   for (const path of ['/', '/?discover=']) {
-    await open(publicPage, path); await publicPage.locator('.public-entry-portal').waitFor();
-    await publicPage.locator('.startveil[data-exiting]').waitFor({state:'detached'});
-    await publicPage.waitForFunction(() => !document.querySelector('.startveil') || document.querySelector('.startveil[data-ready]'));
-    const expected = colors[mode];
-    assert.deepEqual(await palette(publicPage, '.public-entry-portal'), { background: expected.environment, color: expected.ink });
-    await capture(publicPage, `${path === '/' ? 'login' : 'discover'}-${mode}`);
-   }
-   await open(publicPage, '/browser-tests/discover-style-fixture.html');
-   await button(publicPage, 'Open Discover').click();
-   await publicPage.locator('.public-entry-portal__world-card').first().waitFor();
-   assert.equal((await palette(publicPage, '.public-entry-portal__world-card')).background, colors[mode].panel);
-   await publicPage.locator('.public-entry-portal__world-card').first().locator('img.is-ready').first().waitFor();
-   await capture(publicPage, `discover-filled-${mode}`);
+   await open(publicPage, '/browser-tests/profile-overview-fixture.html?view=0x' + '1'.repeat(40));
+   await publicPage.locator('.visitor-publication').waitFor();
+   assert.equal(await publicPage.locator('html').getAttribute('data-interface-theme'), mode);
+   await open(publicPage, '/');
+   await publicPage.locator('.profile-sign-in').waitFor();
+   assert.deepEqual(await palette(publicPage, '.profile-sign-in'), { background: colors[mode].environment, color: colors[mode].ink });
+   await capture(publicPage, `login-${mode}`);
    await publicPage.close();
   }
   assert.deepEqual(errors, []);
@@ -122,7 +110,7 @@ test('Workbench outside background and reveal shading repaint their actual pixel
   await mkdir(output, { recursive: true });
   for (const mode of ['dark', 'light', 'dark']) {
    await button(page, mode.toUpperCase()).click();
-   const expected = mode === 'dark' ? [23, 23, 23] : [222, 219, 211];
+   const expected = mode === 'dark' ? [20, 20, 20] : [222, 219, 211];
    const [outside, shade] = await pixels();
    assert.deepEqual(outside, [...expected, 255], 'painted exterior uses the shared environment');
    shade.slice(0, 3).forEach((channel, index) => assert.ok(Math.abs(channel - expected[index]) <= 1, 'reveal shade uses the same colour'));
@@ -140,30 +128,47 @@ test('Workbench outside background and reveal shading repaint their actual pixel
  } finally { await browser.close(); }
 });
 
-test('personal editor colors survive reload, stay separate per mode and leave Reception content intact', { timeout: 60000 }, async () => {
+test('curated palettes follow public Profile and Gallery into both editors without writing to a composition', { timeout: 120000 }, async () => {
  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
  try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await open(page, '/browser-tests/reception-editor-fixture.html?sample&session=personal-colors');
+  const context = await browser.newContext({ viewport: { width: 1280, height: 850 }, reducedMotion: 'reduce' });
+  await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  const page = await context.newPage();
+  const header = page.locator('header.workspace-header');
+  const picker = page.locator('.system-workflow__settings').getByRole('combobox', { name: 'Color palette' });
+  await open(page, '/browser-tests/profile-overview-fixture.html?collection&view=0x' + '1'.repeat(40));
+  await header.waitFor();
+  assert.equal(await header.getByRole('combobox').count(), 0);
+  await button(page, 'Settings').click();
+  await picker.waitFor();
+  assert.deepEqual(await picker.locator('option').allTextContents(), ['Charcoal', 'Oxblood', 'Saffron', 'Storm Glass', 'Brass & Ink']);
+  await picker.selectOption('oxblood');
+  await button(page, 'Close Settings').click();
+  assert.equal((await palette(page, '.visitor-publication')).color, 'rgb(240, 228, 220)');
+  await button(page, 'Gallery').click(); await page.locator('.composition-explorer-viewport').waitFor();
+  await button(page, 'Settings').click();
+  assert.equal(await picker.inputValue(), 'oxblood');
+  await picker.selectOption('charcoal');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.composition-explorer-viewport > .workbench-overview-preview')).backgroundColor === 'rgba(16, 16, 16, 0.68)');
+  await picker.selectOption('storm-glass');
+  await open(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
+  await page.locator('.workbench-layers').waitFor();
+  assert.equal(await header.getByRole('combobox').count(), 0);
+  const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
   await editorCommand(page, 'Edit', 'Settings');
-  const before = await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot()));
-  const setHex = async (name, value) => {
-   const input = page.getByLabel(`Editor ${name} hex`, { exact: true });
-   await input.fill(value); await input.press('Tab');
-  };
-  await setHex('panels & header', '#34413c'); await setHex('workspace', '#0d1714');
-  assert.equal((await palette(page, '.editor-menu-bar')).background, 'rgb(52, 65, 60)');
-  assert.equal((await palette(page, '.system-workflow__settings')).background, 'rgb(52, 65, 60)');
-  assert.equal((await palette(page, '.system-workflow')).background, 'rgb(13, 23, 20)');
-  assert.equal(await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot())), before);
-  await page.reload(); await editorCommand(page, 'Edit', 'Settings');
-  assert.equal(await page.getByLabel('Editor panels & header hex', { exact: true }).inputValue(), '#34413C');
+  assert.equal(await picker.inputValue(), 'storm-glass');
+  await picker.selectOption('saffron');
+  assert.equal((await palette(page, '.system-workflow__settings')).background, 'rgb(73, 63, 44)');
   await button(page, 'LIGHT').click();
-  assert.equal(await page.getByLabel('Editor panels & header hex', { exact: true }).inputValue(), '#FAF9F6');
-  await button(page, 'DARK').click(); await button(page, 'Reset editor colors').click();
-  assert.equal((await palette(page, '.editor-menu-bar')).background, 'rgb(42, 44, 43)');
-  assert.equal((await palette(page, '.system-workflow')).background, 'rgb(18, 20, 19)');
-  assert.equal(await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot())), before);
+  assert.equal((await palette(page, '.system-workflow__settings')).background, 'rgb(229, 216, 183)');
+  assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before);
+  await open(page, '/browser-tests/composition-native-editor-fixture.html?tiling=1');
+  assert.equal((await palette(page, '.workbench-layers')).background, 'rgb(229, 216, 183)');
+  await editorCommand(page, 'Edit', 'Settings');
+  assert.equal(await picker.inputValue(), 'saffron');
+  await picker.selectOption('brass-ink'); await page.reload();
+  assert.equal((await palette(page, '.workbench-layers')).background, 'rgb(213, 206, 193)');
+  await editorCommand(page, 'Edit', 'Settings');
+  assert.equal(await picker.inputValue(), 'brass-ink');
  } finally { await browser.close(); }
 });

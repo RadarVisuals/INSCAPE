@@ -1,18 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createKeeperMotion, releaseKeeper, returnKeeper, stepKeeper, faceKeeperPointer, keeperZone, keeperFlightViewport, moveKeeperTo, steerKeeper, beginKeeperReaction, stopKeeperReaction } from './keeperMotion.js';
+import { createKeeperMotion, releaseKeeper, returnKeeper, stepKeeper, faceKeeperPointer, keeperZone, keeperViewport, moveKeeperTo, steerKeeper, beginKeeperReaction, stopKeeperReaction } from './keeperMotion.js';
 import { captureKeeperScene } from './keeperScene.js';
 
 // The module owns this temporary animation. The Workbench only supplies its host
 // and dock geometry; no animation frame writes into the draft or layout cache.
-export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef, motionSpace, enabled, reducedMotion, faces, size, movement = 'flip', swim, paused = false, onPosition, getSelection }) {
-  const viewport = useCallback(() => motionSpace ? motionSpace.viewport(size) : keeperFlightViewport(size, flightAreaRef?.current?.getBoundingClientRect(), innerWidth, innerHeight), [size, flightAreaRef, motionSpace]);
+export function useKeeperMotion({ dock, actor, rigActor, hostRef, enabled, reducedMotion, faces, size, movement = 'flip', swim, paused = false, onPosition, getSelection }) {
+  const viewport = useCallback(() => keeperViewport(size, innerWidth, innerHeight), [size]);
   // SVG float shares destination/recall ownership, with its own artwork pose.
   const rigged = movement === 'swim' || movement === 'svg';
   const [phase, setPhase] = useState('docked');
-  useEffect(() => {
-    motionSpace?.setActive(phase !== 'docked' && enabled && !reducedMotion);
-    return () => motionSpace?.setActive(false);
-  }, [motionSpace, phase, enabled, reducedMotion]);
   const motion = useRef(null), pointer = useRef(null), tuning = useRef(swim);
   const attention = useRef(null), reactionVersion = useRef(0);
   const interaction = useRef({ paused });
@@ -20,57 +16,51 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef,
   // Reading the latest authored controls does not restart flight, input or the rig.
   tuning.current = swim;
   const home = useCallback(() => {
-    if (motionSpace) return motionSpace.home();
     const rect = dock.current?.getBoundingClientRect();
     return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : { x: 80, y: 100 };
-  }, [dock, motionSpace]);
+  }, [dock]);
   const paint = useCallback((state, dt = 0) => {
     if (!actor.current) return;
-    motionSpace?.update(state, dt);
-    const screen = motionSpace ? motionSpace.project(state) : state;
-    const scale = motionSpace?.getZoom() || 1;
-    const bob = reducedMotion ? 0 : Math.sin(state.elapsed * 1.5) * 3 * scale;
-    actor.current.style.transform = `translate3d(${screen.x}px, ${screen.y + bob}px, 0)`;
-    actor.current.dataset.worldX = state.x; actor.current.dataset.worldY = state.y;
+    const bob = reducedMotion ? 0 : Math.sin(state.elapsed * 1.5) * 3;
+    actor.current.style.transform = `translate3d(${state.x}px, ${state.y + bob}px, 0)`;
     actor.current.style.setProperty('--keeper-facing', state.facing * (faces === 'left' ? -1 : 1));
-    const renderedSize = viewport().size * scale;
+    const renderedSize = viewport().size;
     actor.current.style.setProperty('--keeper-size', `${renderedSize}px`);
     actor.current.style.setProperty('--keeper-tilt', `${state.expression?.gesture === 'curious' ? state.expression.amount * .22 : state.expression?.gesture === 'startled' ? state.expression.amount * -.12 : 0}rad`);
     actor.current.dataset.keeperGesture = state.expression?.gesture || 'none';
-    if (rigged) rigActor.current?.paint(screen, dt, { faces, reducedMotion, swim: tuning.current,
+    if (rigged) rigActor.current?.paint(state, dt, { faces, reducedMotion, swim: tuning.current,
       size: renderedSize, pointer: attention.current, bounds: { left: 8, top: 24, right: innerWidth - 8, bottom: innerHeight - 48 } });
-    onPosition?.current?.(screen);
-  }, [actor, rigActor, reducedMotion, faces, size, movement, rigged, onPosition, viewport, motionSpace]);
-  useEffect(() => motionSpace?.subscribe(() => { if (motion.current) paint(motion.current); }), [motionSpace, paint]);
-  const settle = useCallback(() => { motion.current = null; pointer.current = null; rigActor?.current?.reset(); motionSpace?.reset(); setPhase('docked'); }, [rigActor, motionSpace]);
+    onPosition?.current?.(state);
+  }, [actor, rigActor, reducedMotion, faces, rigged, onPosition, viewport]);
+  const settle = useCallback(() => { motion.current = null; pointer.current = null; rigActor?.current?.reset(); setPhase('docked'); }, [rigActor]);
   const cancelReaction = useCallback(() => { reactionVersion.current++; stopKeeperReaction(motion.current); }, []);
   useEffect(() => { if (!paused || reducedMotion || !enabled) cancelReaction(); }, [paused, reducedMotion, enabled, cancelReaction]);
   useEffect(() => { if (motion.current) motion.current.steering = false; }, [paused]);
   const steer = useCallback(point => {
     if (!enabled || reducedMotion || motion.current?.phase !== 'free') return;
-    cancelReaction(); steerKeeper(motion.current, motionSpace ? motionSpace.unproject(point) : point);
-  }, [enabled, reducedMotion, cancelReaction, motionSpace]);
+    cancelReaction(); steerKeeper(motion.current, point);
+  }, [enabled, reducedMotion, cancelReaction]);
   const nudge = useCallback((x, y) => {
-    if (motion.current) { const goal = { x: motion.current.x + x, y: motion.current.y + y }; steer(motionSpace ? motionSpace.project(goal) : goal); }
-  }, [steer, motionSpace]);
+    if (motion.current) { const goal = { x: motion.current.x + x, y: motion.current.y + y }; steer(goal); }
+  }, [steer]);
   const captureReaction = useCallback(options => {
     cancelReaction();
     const expected = motion.current, version = reactionVersion.current;
     const current = expected || home();
-    const snapshot = captureKeeperScene(hostRef.current, motionSpace ? motionSpace.project(current) : current, attention.current,
+    const snapshot = captureKeeperScene(hostRef.current, current, attention.current,
       { ...options, selectedModuleIds: options.shareArtwork ? getSelection?.() : undefined, layered: rigged, reducedMotion });
     return { scene: snapshot.scene, previews: snapshot.previews, metadata: snapshot.metadata, perform(action) {
       if (!enabled || reducedMotion || !interaction.current.paused || !expected || motion.current !== expected
         || reactionVersion.current !== version || expected.steering || document.hidden || !document.hasFocus()) return false;
       const target = snapshot.resolve(action);
-      return Boolean(target && beginKeeperReaction(expected, target.action.gesture, motionSpace && target.point ? motionSpace.unproject(target.point) : target.point, viewport().bounds, size));
+      return Boolean(target && beginKeeperReaction(expected, target.action.gesture, target.point, viewport().bounds, size));
     } };
-  }, [cancelReaction, hostRef, home, rigged, reducedMotion, enabled, size, getSelection, viewport, motionSpace]);
+  }, [cancelReaction, hostRef, home, rigged, reducedMotion, enabled, size, getSelection, viewport]);
   useEffect(() => { if (!enabled) settle(); }, [enabled, settle]);
   useEffect(() => {
     if (phase === 'docked' || !enabled) return;
     const host = hostRef.current;
-    let press = null, following = null, heldPoint = null, contextPointer = null, inactive = false;
+    let press = null, following = null, contextPointer = null, inactive = false;
     const canSwim = () => rigged && !reducedMotion && motion.current?.phase === 'free';
     const point = event => ({ x: event.clientX, y: event.clientY });
     // A hold starts on empty Workbench space, then follows across child windows
@@ -78,7 +68,6 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef,
     const follow = event => {
       if (event.pointerId !== following) return;
       if (!(event.buttons & 2) || !canSwim()) { following = null; return; }
-      heldPoint = point(event);
       steer(point(event));
     };
     const newPress = () => { following = null; contextPointer = null; };
@@ -106,10 +95,9 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef,
       if (!canSwim() || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
       // Match the host's empty-space surfaces. Editing, controls and dragging
       // keep their input; background clicks and right-button holds steer swimming.
-      if (event.target !== host && !event.target.matches?.('.system-workflow__workbench, .system-workflow__display-instance')) return;
+      if (event.target !== host && !event.target.matches?.('.system-workflow__workbench')) return;
       if (event.button === 2 && event.pointerType === 'mouse') {
         following = event.pointerId; contextPointer = event.pointerId;
-        heldPoint = point(event);
         steer(point(event));
         event.preventDefault();
       } else if (event.button === 0) { cancelReaction(); press = { x: event.clientX, y: event.clientY, id: event.pointerId }; }
@@ -172,10 +160,9 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef,
         }
         state.stationary = false;
         const dt = previous ? (now - previous) / 1000 : 0;
-        if (following !== null && heldPoint && motionSpace) steer(heldPoint);
         const area = viewport();
-        stepKeeper(state, { dt, pointer: motionSpace && pointer.current ? motionSpace.unproject(pointer.current) : pointer.current, home: home(), movement: movement === 'svg' ? 'swim' : movement, swim: tuning.current, paused: interaction.current.paused,
-          walls: motionSpace?.walls || [], collisionRadius: motionSpace?.collisionRadius(area.size), ...area });
+        stepKeeper(state, { dt, pointer: pointer.current, home: home(), movement: movement === 'svg' ? 'swim' : movement, swim: tuning.current, paused: interaction.current.paused,
+          ...area });
         previous = now; paint(state, dt);
         if (state.phase === 'docked') settle();
         else frame = requestAnimationFrame(tick);
@@ -192,7 +179,7 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef,
       globalThis.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', stop); globalThis.removeEventListener('blur', blur); globalThis.removeEventListener('focus', focus);
     };
-  }, [phase, enabled, reducedMotion, faces, size, movement, rigged, home, paint, settle, hostRef, cancelReaction, steer, viewport, motionSpace]);
+  }, [phase, enabled, reducedMotion, faces, size, movement, rigged, home, paint, settle, hostRef, cancelReaction, steer, viewport]);
   const toggle = event => {
     if (!enabled) return;
     if (phase === 'free') {

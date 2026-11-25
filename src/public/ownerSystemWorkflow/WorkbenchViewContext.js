@@ -58,7 +58,7 @@ export function useClosedArtworkLayout(presentation, setPresentation, saved) {
     if (previous.current === key) return;
     previous.current = key;
     if (saved && !presentation.open) setPresentation(current => ({ ...current, ...saved, open: current.open }));
-  }, [key, presentation.open, setPresentation]);
+  }, [key, saved, presentation.open, setPresentation]);
 }
 
 // Modules retain inspection state and media readiness. The Workbench only routes
@@ -100,8 +100,7 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
   const savedLayout = resizeTarget?.store?.getSnapshot().workbench;
   /** @type {{window?: import('../../contracts/workbench.js').Frame | import('../../contracts/workbench.js').Position, position?: import('../../contracts/workbench.js').Position} | undefined} */
   const savedEntry = resizeTarget?.parentTextId ? savedLayout?.texts?.find(item => item.id === resizeTarget.parentTextId)?.frames?.find(item => item.id === id)
-    : resizeTarget?.layoutKey === 'display' ? savedLayout?.display
-    : savedLayout?.[/** @type {Exclude<import('../../contracts/workbench.js').ResizeTarget['layoutKey'], 'display' | undefined>} */ (resizeTarget?.layoutKey)]?.find(item => item.id === id);
+    : resizeTarget ? savedLayout?.[resizeTarget.layoutKey]?.find(item => item.id === id) : undefined;
   const savedFrame = savedEntry?.window || savedEntry?.position;
   const savedKey = JSON.stringify(savedFrame ?? null);
   // Remember the local frame for an older draft without a saved entry. Undoing
@@ -120,7 +119,7 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
       // for local frames, never an alternative persisted layout.
       while (savedFrames.current.size > 51) savedFrames.current.delete(/** @type {string} */ (savedFrames.current.keys().next().value));
     }
-  }, [savedKey, frame?.left, frame?.top, frame?.width, frame?.height, resizeTarget, previewFrame]);
+  }, [savedKey, savedFrame, frame, resizeTarget, previewFrame]);
   useLayoutEffect(() => {
     if (!id || !enabled || !node.current || !register) return;
     register(id, node.current);

@@ -6,7 +6,7 @@ import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection
 import { addTextModule } from '../../text/textSession.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { retainTextRecovery, clearTextRecovery, textRecoveryScope } from '../../text/textEditRecovery.js';
-import { createReception } from '../../profileDocument/domain/receptionPresentation.js';
+import { createStudioComposition } from '../../systemWorkflow/domain/studioComposition.js';
 import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
 
 const profile = `0x${'a'.repeat(40)}`;
@@ -117,12 +117,14 @@ test('deleting a local canvas retains its neighbors, checks pending changes, and
 test('a local Bento link to the canvas prevents deletion', () => {
   const { root, actions, raw } = fixture();
   const added = actions.create('Linked canvas');
-  const draft = root.getDraft();
-  draft.reception = createReception();
-  draft.reception.regions[0].content = 'link:study';
-  draft.reception.links = [{ id: 'link:study', kind: 'source', destination: null,
+  root.switchWorkbench('workbench:main');
+  const linked = root.getDraft();
+  linked.composition = createStudioComposition('bento');
+  linked.composition.cells[0].content = 'link:study';
+  linked.composition.links = [{ id: 'link:study', kind: 'source', destination: null,
     source: { profileAddress: profile, canvasId: added, moduleId: 'text:study' } }];
-  assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
+  assert.ok(root.commitCompletedOperation(linked, { expectedGeneration: root.getGeneration() }));
+  root.switchWorkbench(added);
   const saved = raw();
   assert.throws(() => root.getWorkbenchScope().deleteWorkbench(added), /links to this canvas/);
   assert.equal(raw(), saved);

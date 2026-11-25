@@ -11,7 +11,7 @@ export const BROWSER_LIFECYCLE_TIMEOUTS = Object.freeze({
   commandMs: 3_000,
   // A fresh PowerShell/CIM snapshot includes process startup. Under browser
   // load that can exceed the generic command budget; keep a separate bound.
-  processInventoryMs: 6_000,
+  processInventoryMs: process.platform === 'win32' ? 15_000 : 6_000,
   processObservationMs: 1_000,
   processTerminationMs: 4_000,
   browserCloseMs: 3_000,
@@ -199,9 +199,36 @@ export async function resolveWindowsProcessRuntime(environment = process.env, { 
 export async function listWindowsProcesses({ run = runBoundedCommand, runtime, environment = process.env } = {}) {
   const selected = runtime || await resolveWindowsProcessRuntime(environment);
   if (!selected) throw Error('Windows process inventory requires a Windows runtime');
-  // JSON serializes DateTime differently in Windows PowerShell and PowerShell 7.
-  // Preserve the existing UTC millisecond identity explicitly in both runtimes.
-  const script = "$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,@{Name='CreationDate';Expression={if ($null -ne $_.CreationDate) {'/Date(' + ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds().ToString([Globalization.CultureInfo]::InvariantCulture) + ')/'}}} | ConvertTo-Json -Compress -ErrorAction Stop";
+  // Read all three counters from one OS snapshot. Check its raw creation
+  // clock against our own native start time before trusting any identities.
+  // CIM remains available on systems with missing or localized counters.
+  const script = `
+    $ErrorActionPreference = 'Stop'
+    try {
+      $snapshot = [Diagnostics.PerformanceCounterCategory]::new('Process').ReadCategory()
+      $ids = $snapshot['ID Process']
+      $parents = $snapshot['Creating Process ID']
+      $births = $snapshot['Elapsed Time']
+      $selfBirth = [Diagnostics.Process]::GetCurrentProcess().StartTime.ToFileTimeUtc()
+      $selfVerified = $false
+      $rows = foreach ($item in $ids.Values) {
+        if ($item.RawValue -eq 0) { continue }
+        $name = $item.InstanceName
+        if (!$parents.Contains($name) -or !$births.Contains($name)) { throw 'Incomplete process counters' }
+        $birth = $births[$name].RawValue
+        if ($birth -le 0) { throw 'Missing creation time' }
+        if ($item.RawValue -eq $PID -and $birth -eq $selfBirth) { $selfVerified = $true }
+        $millis = [DateTimeOffset]::FromFileTime($birth).ToUnixTimeMilliseconds()
+        [PSCustomObject]@{ ProcessId=$item.RawValue; ParentProcessId=$parents[$name].RawValue; CreationDate="/Date($millis)/" }
+      }
+      if (!$selfVerified) { throw 'Process creation clock could not be verified' }
+    } catch {
+      $rows = Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate -ErrorAction Stop |
+        Select-Object ProcessId,ParentProcessId,@{Name='CreationDate';Expression={
+          if ($null -ne $_.CreationDate) { '/Date(' + ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() + ')/' }
+        }}
+    }
+    $rows | ConvertTo-Json -Compress -ErrorAction Stop`;
   const result = await run(selected.executable, ['-NoProfile', '-NonInteractive', '-Command', script], {
     stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
   });

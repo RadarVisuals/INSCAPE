@@ -58,14 +58,6 @@ export function mergeOwnedAndCreatedAsset(owned, created, profileAddress) {
   return merged;
 }
 
-function createdBrowserAsset(asset, profileAddress) {
-  if (!isStrongCreatedAsset(asset, profileAddress)) return null;
-  const projected = adaptLatticeProductionBrowserAsset(asset, profileAddress, true);
-  return projected ? { ...projected, assetRecord: asset, created: true, owned: false,
-    creatorRelationship: creatorRelationshipForProfile(asset, profileAddress),
-    currentOwnerAddress: asset.currentOwnerAddress ?? null, isOwnedByViewedProfile: false } : null;
-}
-
 export function projectLibraryAssetUnion({ createdAssets = [], ownedAssets = [], profileAddress } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   const ownedById = new Map();
@@ -85,11 +77,12 @@ export function projectLibraryAssetUnion({ createdAssets = [], ownedAssets = [],
     return mergeOwnedAndCreatedAsset(owned, created, profile);
   }).filter(Boolean);
   const assets = records.map((record) => {
-    const owned = ownedById.has(record.id); const created = createdById.has(record.id);
-    const projected = owned ? adaptLatticeProductionBrowserAsset(record, profile) : createdBrowserAsset(record, profile);
-    return projected ? { ...projected, assetRecord: record, created, owned,
+    const created = createdById.has(record.id);
+    const projected = adaptLatticeProductionBrowserAsset(record, profile, created);
+    const isOwnedByViewedProfile = record.ownershipKnown === true ? record.isOwnedByViewedProfile ?? null : null;
+    return projected ? { ...projected, assetRecord: record, created, owned: isOwnedByViewedProfile === true,
       creatorRelationship: created ? creatorRelationshipForProfile(record, profile) : null,
-      currentOwnerAddress: record.currentOwnerAddress ?? null, isOwnedByViewedProfile: owned } : null;
+      currentOwnerAddress: record.currentOwnerAddress ?? null, isOwnedByViewedProfile } : null;
   }).filter(Boolean);
   return { assets, records };
 }

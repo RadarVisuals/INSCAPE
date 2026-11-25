@@ -5,7 +5,7 @@ import { useTextFrame, useLinkedFrameLayout } from './TextFrame.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
-import { Plus, GripVertical, Pencil, Settings2 as Settings, X } from 'lucide-react';
+import { Plus, GripVertical, Settings2 as Settings, X } from 'lucide-react';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 
@@ -40,7 +40,7 @@ export function LinkedTextContent({ article, flow, index = 0, mode, children }) 
   </div>;
 }
 
-export default function LinkedTextWindow({ frame, index, article, flow, ownerId, active, store, resizeTarget, onLayout, onRemove, onAdd, onEdit, onTools, windowSnap, mode, flowEditor, registerTarget, acceptImage }) {
+export default function LinkedTextWindow({ frame, index, article, flow, ownerId, active, store, resizeTarget, onLayout, onRemove, onAdd, onTools, windowSnap, mode, flowEditor, registerTarget, acceptImage }) {
   const view = workbenchModuleTransform(useWorkbenchView(), frame.id), paintScale = view.scale * (globalThis.devicePixelRatio || 1);
   const [committed, setCommitted] = useState(null);
   const surface = useRef(null);
@@ -62,11 +62,11 @@ export default function LinkedTextWindow({ frame, index, article, flow, ownerId,
       {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
     width={frame.window.width} initialHeight={frame.window.height} initialX={frame.window.left} initialY={frame.window.top}
     onLayoutChange={layout} resizeTarget={target} committedFrame={committed} moveFromContent={mode === 'read'}
-    controls={store && <><button className="editor-object-toolbar-button" aria-label={`Write in frame ${index + 1}`} title="Write" onClick={onEdit}><Pencil /></button>
+    controls={store && <>
       <button className="editor-object-toolbar-button" aria-label={`Text tools for frame ${index + 1}`} title="Text tools" onClick={onTools}><Settings /></button>
       <button className="editor-object-toolbar-button" aria-label={`Add linked frame after ${index + 1}`} title="Add linked frame" disabled={flow.ranges.length >= 8} onClick={() => onAdd(frame.id)}><Plus /></button>
       <button className="editor-object-toolbar-button" aria-label={`Remove frame ${index + 1}, keep text`} title="Remove frame; keep text" onClick={() => onRemove(frame.id)}><X /></button></>}>
-    <div ref={surface} className="text-module-body" style={textOutputStyle(article, view.frame || frame.window)}><div className="text-scene-viewport">
+    <div ref={surface} className="text-module-body" style={textOutputStyle(article, view.frame || frame.window)}><div className="text-content-viewport">
       <LinkedTextContent {...{ article, flow, index, mode }}>
         {flowEditor && <Suspense fallback={<p role="status">Opening editor…</p>}><ContinuationEditor controller={flowEditor} article={article} range={flow.ranges[index]} index={index} /></Suspense>}
       </LinkedTextContent>

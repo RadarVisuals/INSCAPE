@@ -2,14 +2,14 @@ import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/dom
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createArticle } from '../src/text/domain/article.js';
 
-export function sampleArticle(mode = 'display') {
+export function sampleArticle(mode = 'cell') {
   const article = createArticle(mode === 'article' || mode === 'readonly' ? 'A quiet place' : '');
   article.appearance = { ...article.appearance, background: null, color: '#232c26', fontSize: 15 };
   const paragraph = (text) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
   article.content.content =
     mode === 'empty'
       ? [{ type: 'paragraph' }]
-      : mode === 'display'
+      : mode === 'cell'
         ? [paragraph('A quiet place')]
         : [
             {

@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
-import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
+import { assertWorkbenchName } from '../../systemWorkflow/domain/workbenchCollection.js';
 import { canvasModuleDraft, studioCellsUnavailableReason } from '../../systemWorkflow/domain/studioComposition.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
 import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
-import { createReceptionEditorScope } from '../../reception/receptionEditorScope.js';
-import { createReceptionTextMeasure } from '../../reception/measureReceptionText.jsx';
+import { createCompositionEditorScope } from '../../composition/compositionEditorScope.js';
+import { createCompositionTextMeasure } from '../../composition/measureCompositionText.jsx';
 import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import WorkbenchBackupControls from '../../systemWorkflow/WorkbenchBackupControls.jsx';
 import { workbenchSaveError } from './namedWorkbenchActions.js';
@@ -34,11 +34,11 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   const localNavigation = useRef(null);
   const returning = useRef(false);
   const overviewMemory = useRef({ cameras: new Map(), scroll: null });
-  const [reception, setReception] = useState(null);
+  const [composition, setComposition] = useState(null);
   const [openingError, setOpeningError] = useState(null);
   const appliedRequest = useRef(null);
   const { requestedWorkId, onEditorDocumentChange } = props;
-  const request = requestedWorkId || (props.receptionEditorRequested ? 'reception' : props.canvasOverviewRequested ? 'overview' : 'canvas');
+  const request = requestedWorkId || (props.canvasOverviewRequested ? 'overview' : 'canvas');
   const [readyRequest, setReadyRequest] = useState(null);
   const [overviewView, setOverviewView] = useState(() => ({ layout: props.canvasOverviewRequested && innerWidth < 900 ? 'grid' : 'list', wrap: true }));
   const [store] = useState(() =>
@@ -87,40 +87,31 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   }, [editorPreferences, workbenchPreferenceStore, props.profileAddress]);
   const activation = useSyncExternalStore(store.subscribe, store.getActivation);
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
-  const collection = useMemo(() => reception && ({ kind: 'local', profileAddress: props.profileAddress, revision: 'editor', generation,
-    entries: store.listWorkbenches().map(item => store.readWorkbench(item.id)) }), [store, props.profileAddress, generation, reception]);
   const activeCanvasId = store.getWorkbenchId();
   const lastCanvas = editorPreferences.section('lastCanvasId');
   // A legacy single-canvas draft can predate the picker. Its saved layout or
-  // artwork identifies the canvas; Reception alone does not establish a visit.
+  // artwork identifies the canvas.
   const [previousCanvas] = useState(() => {
     if (lastCanvas.getSnapshot() !== undefined || store.getRecordState().status !== 'valid') return null;
     const draft = store.getSnapshot();
-    const hasCanvas = store.isCollection() || draft.workbench || draft.shapes?.length || draft.imageModules?.length
-      || draft.texts?.length || draft.displays?.length || draft.grids.some(grid => grid.placements.length);
+    const hasCanvas = store.isCollection() || draft.composition || draft.workbench || draft.shapes?.length || draft.imageModules?.length
+      || draft.texts?.length;
     return hasCanvas ? store.getWorkbenchId() : null;
   });
   useEffect(() => {
     if (readyRequest !== request || openingError || !store.hasWriteAccess()) return;
-    if (!overview && reception?.getWorkbenchId() !== 'reception') {
+    if (!overview) {
       if (lastCanvas.getSnapshot() !== activeCanvasId) lastCanvas.update(activeCanvasId);
     } else if (lastCanvas.getSnapshot() === undefined) lastCanvas.update(previousCanvas);
-  }, [activeCanvasId, lastCanvas, openingError, overview, previousCanvas, readyRequest, reception, request, store]);
-  const openNative = useCallback(id => createReceptionEditorScope(store, {
-    ...createReceptionTextMeasure(), documentId: id === 'reception' ? undefined : id,
+  }, [activeCanvasId, lastCanvas, openingError, overview, previousCanvas, readyRequest, composition, request, store]);
+  const openNative = useCallback(id => createCompositionEditorScope(store, {
+    ...createCompositionTextMeasure(), documentId: id,
   }), [store]);
-  const openReception = useCallback(() => {
-    if (reception?.getWorkbenchId() !== 'reception' || !reception.isCurrent()) {
-      reception?.release();
-      setReception(openNative('reception'));
-    }
-    setOpeningError(null); setOverview(false);
-  }, [openNative, reception]);
   const showOverview = useCallback(source => {
-    reception?.release();
-    setReception(null); setOpeningError(null); setOverview(true);
+    composition?.release();
+    setComposition(null); setOpeningError(null); setOverview(true);
     setJourney(source ? { source, direction: 'overview' } : null);
-  }, [reception]);
+  }, [composition]);
   const openOverview = source => {
     returning.current = true;
     showOverview(source);
@@ -129,50 +120,48 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   };
   const updateEditorRoute = id => {
     localNavigation.current = id;
-    onEditorDocumentChange?.(id === 'reception' ? 'reception' : 'canvas', id);
+    onEditorDocumentChange?.(id);
   };
   const activateCanvas = useCallback(id => {
-    if (reception?.isCurrent() && reception.getWorkbenchId() === id) {
+    if (composition?.isCurrent() && composition.getWorkbenchId() === id) {
       setOpeningError(null); setOverview(false); return;
     }
-    if (reception?.isCurrent()) reception.checkTransition();
+    if (composition?.isCurrent()) composition.checkTransition();
     // Switch first: failed persistence must leave the originating scope usable.
     if (!openStudioWorkbench(store, id, props.publishedResolution)) throw workbenchSaveError(store);
-    reception?.release();
-    setReception(store.getSnapshot().composition ? openNative(id) : null);
+    composition?.release();
+    setComposition(store.getSnapshot().composition ? openNative(id) : null);
     setOverview(false); setOpeningError(null);
-  }, [openNative, props.publishedResolution, reception, store]);
+  }, [openNative, props.publishedResolution, composition, store]);
   const selectDocument = (id, source) => {
-    if (id === 'reception') openReception();
-    else activateCanvas(id);
+    activateCanvas(id);
     setJourney(source ? { source, direction: 'editor' } : null);
     updateEditorRoute(id);
   };
   const prepareDocumentChange = () => {
-    if (activation !== store.getActivation() || reception && !reception.isCurrent())
+    if (activation !== store.getActivation() || composition && !composition.isCurrent())
       throw new Error('The active composition changed. Open its menu again.');
     if (saveBeforeRoute.current && !saveBeforeRoute.current())
       throw new Error('Save the current changes before switching documents.');
-    reception?.checkTransition();
+    composition?.checkTransition();
   };
   const createDocument = (name, layout) => {
+    const title = name.trim();
+    assertWorkbenchName(title);
     prepareDocumentChange();
-    const id = store.createWorkbench(name.trim(), { layout });
+    const id = store.createWorkbench(title, { layout });
     if (!id) throw workbenchSaveError(store);
     selectDocument(id);
-  };
-  const enableCells = () => {
-    prepareDocumentChange();
-    if (!store.enableCurrentWorkbenchCells()) throw workbenchSaveError(store);
-    selectDocument(store.getWorkbenchId());
   };
   const enableCanvasModules = () => {
     prepareDocumentChange();
     if (!store.enableCurrentCanvasModules()) throw workbenchSaveError(store);
   };
   const renameDocument = name => {
+    const title = name.trim();
+    assertWorkbenchName(title);
     prepareDocumentChange();
-    if (!store.renameWorkbench(name.trim())) throw workbenchSaveError(store);
+    if (!store.renameWorkbench(title)) throw workbenchSaveError(store);
   };
   const removeDocument = () => {
     prepareDocumentChange();
@@ -190,31 +179,30 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     localNavigation.current = null;
     if (!handled) {
       if (previous && !overview && !openingError && saveBeforeRoute.current && !saveBeforeRoute.current()) {
-        const id = reception?.getWorkbenchId() || store.getWorkbenchId();
+        const id = composition?.getWorkbenchId() || store.getWorkbenchId();
         localNavigation.current = id;
-        onEditorDocumentChange?.(id === 'reception' ? 'reception' : 'canvas', id, { replace: true });
+        onEditorDocumentChange?.(id, { replace: true });
         return;
       }
       try {
         setJourney(null);
         if (request === 'overview') { returning.current = Boolean(previous); showOverview(null); }
-        else if (request === 'reception') openReception();
         else activateCanvas(requestedWorkId || store.getWorkbenchId());
       } catch (error) { setOpeningError(error.message); }
     }
     setReadyRequest(request);
-  }, [request, overview, openingError, reception, store, requestedWorkId, onEditorDocumentChange, openReception, activateCanvas, showOverview]);
+  }, [request, overview, openingError, composition, store, requestedWorkId, onEditorDocumentChange, activateCanvas, showOverview]);
   // The in-place adoption is an ordinary Undo entry, so undo/redo may change
   // which projection is appropriate without changing the work's ID or URL.
   useLayoutEffect(() => {
-    if (readyRequest !== request || overview || openingError || reception?.getWorkbenchId() === 'reception') return;
-    if (store.getSnapshot().composition && !reception?.isCurrent()) setReception(openNative(store.getWorkbenchId()));
-    else if (!store.getSnapshot().composition && reception?.isCurrent()) {
-      reception.release({ force: true });
-      setReception(null);
+    if (readyRequest !== request || overview || openingError) return;
+    if (store.getSnapshot().composition && !composition?.isCurrent()) setComposition(openNative(store.getWorkbenchId()));
+    else if (!store.getSnapshot().composition && composition?.isCurrent()) {
+      composition.release({ force: true });
+      setComposition(null);
     }
-  }, [generation, openNative, openingError, overview, readyRequest, reception, request, store]);
-  useEffect(() => () => reception?.release({ force: true }), [reception]);
+  }, [generation, openNative, openingError, overview, readyRequest, composition, request, store]);
+  useEffect(() => () => composition?.release({ force: true }), [composition]);
   if (!readyRequest) return <p role="status">Opening Studio…</p>;
   if (openingError) return <main className="published-profile-status" data-published-focus-fallback tabIndex={-1}>
     <StartupDestinationReady />
@@ -227,25 +215,24 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
       </div>
     </section>
   </main>;
-  const scope = reception?.isCurrent() ? reception : store.getWorkbenchScope();
-  const canUseCanvasModules = readyRequest === request && scope === reception && scope.getWorkbenchId() !== 'reception'
+  const scope = composition?.isCurrent() ? composition : store.getWorkbenchScope();
+  const canUseCanvasModules = readyRequest === request && scope === composition
     && Boolean(canvasModuleDraft(store.getSnapshot()));
-  const cellsUnavailableReason = scope === reception ? '' : studioCellsUnavailableReason(store.getSnapshot());
+  const cellsUnavailableReason = scope === composition ? '' : studioCellsUnavailableReason(store.getSnapshot());
   return (
-    <EditorDocument key={activation} component={Session} scope={scope} revision={activation}
+    <Session key={activation} sharedStore={scope}
         {...props}
         overview={{ active: overview, store, view: overviewView, onViewChange: setOverviewView, memory: overviewMemory.current,
           onEdit: selectDocument, journey, saveBeforeRoute, returning: returning.current,
           onJourneyComplete: () => setJourney(null) }}
         onOpenWorkbenchOverview={openOverview}
-        onEditReception={() => selectDocument('reception')}
         documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), lastCanvas: lastCanvas.getSnapshot, select: selectDocument, create: createDocument, rename: renameDocument, remove: removeDocument,
           enableCanvasModules: canUseCanvasModules ? enableCanvasModules : undefined,
-          enableCells: scope !== reception && !cellsUnavailableReason ? enableCells : undefined, cellsUnavailableReason,
+          beginFirstCell: scope !== composition && !cellsUnavailableReason ? store.beginFirstCell : undefined, cellsUnavailableReason,
           onCanvasChange: updateEditorRoute }}
-        reception={scope === reception ? { collection, backupControls: <WorkbenchBackupControls store={store}
-          storage={props.reviewStorage ?? globalThis.localStorage} receptionRecovery={scope.getWorkbenchId() === 'reception' ? { scope: reception, collection, publishedResolution: props.publishedResolution } : undefined}
-          onRestored={props.onDraftRestored} /> } : undefined}
+        compositionBackup={scope === composition ? <WorkbenchBackupControls store={store}
+          storage={props.reviewStorage ?? globalThis.localStorage}
+          onRestored={props.onDraftRestored} /> : undefined}
         editorPreferences={editorPreferences}
         workbenchPreferenceStore={workbenchPreferenceStore}
         keeperDockPositions={keeperDockPositions}
@@ -253,11 +240,4 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
         focusWorkbench={activation > 0 || Boolean(props.requestedWorkId)}
       />
   );
-}
-
-function EditorDocument({ component: Session, scope, revision, ...props }) {
-  const content = useSyncExternalStore(scope.subscribe, scope.getSnapshot);
-  return <SceneNavigationProvider scope={{ profileAddress: scope.getProfileAddress(), canvasId: scope.getWorkbenchId(), revision }} content={content}>
-    <Session {...props} sharedStore={scope} />
-  </SceneNavigationProvider>;
 }

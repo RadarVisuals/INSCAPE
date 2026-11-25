@@ -36,7 +36,7 @@ async function sameDrawing(page, before, after) {
   }, [before, after].map(buffer => `data:image/png;base64,${buffer.toString('base64')}`));
 }
 
-test('SVG Lift scales a stable document in Image and owner/Visitor Display', { timeout: 90000 }, async () => {
+test('SVG Lift scales a stable document in Studio and the public Image viewer', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   await mkdir(output, { recursive: true });
   try {
@@ -48,12 +48,12 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         window.svgSizes = [];
         addEventListener('message', event => { if (event.data?.type === 'svg-lift-test' && event.data.width > 0) window.svgSizes.push(event.data); });
       });
-      await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 600, seamReview: 'single',
+      await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 600, seamReview: 'single',
         artwork: { ...artwork, body: svg, transform: width === 390 ? { quarterTurns: 1, mirrorX: true, mirrorY: false } : undefined } });
       const image = page.locator('.image-module__canvas').first();
-      const display = page.locator('.system-workflow__presentation-board').locator('.system-workflow__placement[tabindex="0"], .lattice-production-placement[tabindex="0"]').first();
       await page.waitForFunction(() => window.svgSizes.length > 0);
-      for (const [kind, source] of [['image', image], ['display', display]]) {
+      {
+        const source = image, kind = 'image';
         await source.locator('.artwork-svg-document').waitFor();
         await source.locator('.artwork-svg-status').waitFor({ state: 'detached' });
         const documentElement = await source.locator('iframe').elementHandle();
@@ -67,13 +67,12 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         });
         const before = await source.screenshot({ path: `${output}/${kind}-${visitor}-${width}-before.png` });
         await page.evaluate(() => { window.svgSizes = []; });
-        if (kind === 'image') { await source.focus(); await page.keyboard.press('i'); }
-        else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
+        await source.focus(); await page.keyboard.press('i');
         await page.locator('.system-workflow__lift-artwork').waitFor();
         const samples = await page.evaluate(async ({ frame, kind }) => {
           const samples = [];
           const lift = document.querySelector('.system-workflow__lift-artwork');
-          const progressTarget = kind === 'image' ? lift.parentElement : document.querySelector('[data-inspection-context="selected"]').parentElement;
+          const progressTarget = lift.parentElement;
           const sample = () => {
             if (frame) {
               const matrix = frame.closest('foreignObject').getScreenCTM();
@@ -93,8 +92,7 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         assert.ok(samples.some(sample => sample.progress > 0 && sample.progress < 1), `${kind}: animated opening`);
         assert.ok(samples.every(sample => sample.width === 640 && sample.height === 480), `${kind}: document stays at native size during Lift`);
         await page.waitForFunction(kind => {
-          const target = kind === 'image' ? document.querySelector('.system-workflow__lift-artwork')?.parentElement
-            : document.querySelector('[data-inspection-context="selected"]')?.parentElement;
+          const target = document.querySelector('.system-workflow__lift-artwork')?.parentElement;
           return target?.style.getPropertyValue('--inspection-lift-progress') === '1';
         }, kind);
         const targetMatrix = await source.locator('foreignObject').evaluate(node => {

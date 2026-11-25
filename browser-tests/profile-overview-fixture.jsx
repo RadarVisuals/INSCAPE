@@ -7,7 +7,10 @@ import { createRoot } from 'react-dom/client';
 const PublicationConfirmation = lazy(() => import('../src/public/PublicationConfirmation.jsx'));
 const OwnerWorkspace = lazy(() => import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx'));
 import PublishedProfileBoundary from '../src/profileDocument/components/PublishedProfileBoundary.jsx';
-import useApplicationNavigation from '../src/profileDiscovery/useApplicationNavigation.js';
+import { useLibraryStore } from '../src/library/state/useLibraryStore.js';
+import { GalleryStudioMotion } from '../src/navigation/galleryStudioMotion.js';
+import GalleryStudioStage from '../src/navigation/GalleryStudioStage.jsx';
+import useApplicationNavigation from '../src/navigation/useApplicationNavigation.js';
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { createDefaultWorkbenchPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
@@ -18,10 +21,8 @@ import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWork
 const OwnerSystemWorkflowPublicationRack = lazy(() => import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'));
 import '../src/index.css';
 import { createArticle } from '../src/text/domain/article.js';
-import { createReceptionEditorDocument } from '../src/reception/receptionEditorDocument.js';
+import { createStudioComposition } from '../src/systemWorkflow/domain/studioComposition.js';
 import { createTextPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
-import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
-import { splitReception } from '../src/reception/receptionLayout.js';
 const address = `0x${'1'.repeat(40)}`, contract = `0x${'3'.repeat(40)}`;
 const assetId = `42:${contract}:0x01`;
 const draft = createEmptySystemWorkflowDraft(address, { generateId: () => 'first' });
@@ -30,46 +31,64 @@ draft.identityPresentation.bio = { mode: 'inscape', customText: 'Illustration, s
 draft.identityPresentation.card = { version: 1, columns: 2, background: { type: 'plain', color: '#161818', speed: 1 }, fields: [
   { id: 'field:location', label: 'Location', type: 'text', value: 'Underneath' },
 ] };
-const portrait = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><path fill="#d3d0c8" d="M400 120c-120 0-180 110-180 230l-90 660h540l-90-660c0-120-60-230-180-230Z"/><ellipse cx="400" cy="345" rx="108" ry="145" fill="#252828"/><path fill="none" stroke="#8b8b82" stroke-width="10" d="m220 530 180 180 180-180M270 1050l55-410m205 410-55-410"/></svg>');
+const portrait = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><path fill="#bd956b" d="M400 120c-120 0-180 110-180 230l-90 660h540l-90-660c0-120-60-230-180-230Z"/><ellipse cx="400" cy="345" rx="108" ry="145" fill="#252828"/><path fill="none" stroke="#8b8b82" stroke-width="10" d="m220 530 180 180 180-180M270 1050l55-410m205 410-55-410"/></svg>');
 const asset = { id: assetId, chainId: 42, contractAddress: contract, tokenId: '0x01', standard: 'LSP8', name: 'Source artwork',
   imageUrl: portrait, originalImageUrl: portrait, imageWidth: 800, imageHeight: 1200, creators: [], attributes: [] };
+if (new URLSearchParams(location.search).has('owner')) {
+  useLibraryStore.getState().setProfileAddress(address);
+  useLibraryStore.setState({ assets: [{ ...asset, ownerAddress: address }], referencedAssets: [], status: 'ready' });
+}
 draft.identityPresentation.avatar = { mode: 'inscape', stableAssetId: assetId, shape: 'square' };
 draft.imageModules = [{ id: 'image:study', visibility: 'PUBLIC', name: 'A closer look', width: 320, height: 480,
   artwork: { id: 'artwork:first', asset: createProfileDocumentV9AssetResolver([asset])(assetId), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
 draft.workbench = createDefaultWorkbenchPresentation();
 draft.workbench.imageModules = [{ id: 'image:study', open: true, position: { left: 180, top: 100 } }];
 if (new URLSearchParams(location.search).has('collection')) {
-  draft.grids = [];
-  draft.workbench.display.open = false;
+
+
   draft.workbench.area = { left: 0, top: 0, width: 800, height: 1200 };
   draft.imageModules[0].width = 800; draft.imageModules[0].height = 1200;
   draft.workbench.imageModules[0].position = { left: 0, top: 0 };
 }
-draft.reception = createReception();
-draft.reception = splitReception(draft.reception, draft.reception.regions[0].id, 'x', 'region:portrait');
-draft.reception.regions[0].content = 'profile';
-draft.reception.regions[1].content = 'image:reception';
-draft.reception.regions[1].padding = 0;
-draft.reception.imageModules = [{ ...structuredClone(draft.imageModules[0]), id: 'image:reception' }];
 let published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
 let collection = createWorkbenchCollection(draft);
 collection.workbenches[0].name = 'Vision';
+collection.workbenches[0].introduction = 'A study of the figure in shadow.';
 collection = appendWorkbench(collection, 'workbench:anatomy', 'Anatomy', draft);
 collection = appendWorkbench(collection, 'workbench:private', 'Private experiment', draft);
 collection.activeId = 'workbench:main';
+if (new URLSearchParams(location.search).has('landscape-gallery')) {
+  const anatomy = collection.workbenches.find(item => item.id === 'workbench:anatomy');
+  anatomy.content = structuredClone(anatomy.content);
+  anatomy.content.workbench.area = { left: 0, top: 0, width: 1600, height: 900 };
+}
+const extraGalleryIds = [];
+if (new URLSearchParams(location.search).has('large-gallery')) {
+  for (let number = 1; number <= 16; number++) {
+    const id = 'workbench:study-' + number;
+    collection = appendWorkbench(collection, id, 'Study ' + number, draft);
+    extraGalleryIds.push(id);
+  }
+  collection.activeId = 'workbench:main';
+}
 if (new URLSearchParams(location.search).has('collection')) {
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
-    selectedIds: ['workbench:main', 'workbench:anatomy', 'reception'], includeShared: true });
+    selectedIds: ['workbench:main', 'workbench:anatomy', ...extraGalleryIds], includeShared: true });
 }
 if (new URLSearchParams(location.search).has('mixed')) {
-  const composition = createReceptionEditorDocument(draft.reception);
+  const composition = createStudioComposition('bento');
+  const image = structuredClone(draft.imageModules[0]);
+  composition.imageModules.push(image);
+  composition.cells[0].members.push(image.id);
+  composition.workbench.imageModules.push({ ...draft.workbench.imageModules[0] });
+  composition.artworkLayers.push(image.id);
   const free = { id: 'text:free-caption', visibility: 'PUBLIC', article: createArticle('Free caption') };
   composition.texts.push(free);
   composition.workbench.texts.push({ ...createTextPresentation(free.id), open: true,
     window: { left: 140, top: 112, width: 320, height: 140 } });
   composition.artworkLayers.push(free.id);
   const fresh = createEmptySystemWorkflowDraft(address);
-  fresh.grids = [];
+
   fresh.composition = composition;
   collection = appendWorkbench(collection, 'workbench:mixed', 'Mixed study', fresh);
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
@@ -77,15 +96,24 @@ if (new URLSearchParams(location.search).has('mixed')) {
     placements: { 'workbench:main': ['profile'], 'workbench:mixed': ['gallery', 'profile'] } });
 }
 if (new URLSearchParams(location.search).has('bulk')) {
+  collection = appendWorkbench(collection, 'workbench:bento', 'Bento', { ...createEmptySystemWorkflowDraft(address), composition: createStudioComposition('bento') });
   collection = appendWorkbench(collection, 'workbench:profile-link', 'Profile link', draft);
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
-    selectedIds: ['workbench:main', 'workbench:anatomy', 'workbench:profile-link', 'reception'], includeShared: true,
+    selectedIds: ['workbench:main', 'workbench:anatomy', 'workbench:profile-link', 'workbench:bento'], includeShared: true,
     placements: { 'workbench:main': ['gallery'], 'workbench:anatomy': ['gallery'],
-      'workbench:profile-link': ['profile'], reception: ['gallery', 'profile'] } });
+      'workbench:profile-link': ['profile'], 'workbench:bento': ['gallery', 'profile'] } });
 }
 if (new URLSearchParams(location.search).has('last-gallery')) {
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
     selectedIds: ['workbench:main'], includeShared: true, placements: { 'workbench:main': ['gallery'] } });
+}
+if (new URLSearchParams(location.search).has('revised')) {
+  const anatomy = collection.workbenches.find(item => item.id === 'workbench:anatomy');
+  const content = structuredClone(anatomy.content);
+  content.workbench.area = { left: 0, top: 0, width: 1200, height: 800 };
+  content.imageModules[0] = { ...content.imageModules[0], name: 'Unpublished studio revision', width: 320, height: 480 };
+  content.workbench.imageModules[0].position = { left: 720, top: 160 };
+  anatomy.content = content;
 }
 // Isolate fixture drafts from application data while retaining saves across reloads.
 const storage = {
@@ -94,7 +122,7 @@ const storage = {
   removeItem: key => sessionStorage.removeItem('profile-overview-fixture:' + key),
 };
 const store = createSystemWorkflowDraftStore({ profileAddress: address, storage });
-if (store.getRecordState().status === 'absent') {
+if (store.getRecordState().status === 'absent' && !new URLSearchParams(location.search).has('no-saved-compositions')) {
   const local = new URLSearchParams(location.search).has('publishedOnly')
     ? { ...collection, workbenches: collection.workbenches.filter(item => item.id !== 'workbench:anatomy') } : collection;
   store.restoreBackup(local, { expectedGeneration: store.getGeneration() });
@@ -110,11 +138,11 @@ function Fixture() {
     return stored ? { status: 'RESOLVED', document: JSON.parse(stored), address } : initialResolution;
   });
   const [confirmation, setConfirmation] = useState(null);
-  const publicationConfirmed = (result, removedTitles) => {
+  const publicationConfirmed = (result, context) => {
     if (result?.status !== 'RESOLVED') return;
     sessionStorage.setItem('profile-overview-fixture:verified-publication', JSON.stringify(result.document));
     setResolution(result);
-    setConfirmation({ profileAddress: address, transactionHash: result.transactionHash, removedTitles });
+    setConfirmation({ profileAddress: address, transactionHash: result.transactionHash, ...context });
   };
   const replacementTest = new URLSearchParams(location.search).has('invalid-publication');
   const [publicationResolution, setPublicationResolution] = useState(() => replacementTest
@@ -122,7 +150,7 @@ function Fixture() {
     : { status: 'UNAVAILABLE', address });
   const owner = new URLSearchParams(location.search).has('owner');
   const navigation = useApplicationNavigation({ status: 'complete', profileAddress: owner ? address : null, ownershipVerified: owner });
-  const content = navigation.content;
+  const content = navigation.destination;
   if (new URLSearchParams(location.search).has('publish')) return <Suspense fallback={null}><main className="system-workflow">
     {replacementTest && <div style={{ position: 'fixed', right: 12, top: 12, zIndex: 999 }}>
       <button onClick={() => setPublicationResolution(current => ({ ...current }))}>Recheck publication fixture</button>
@@ -137,18 +165,18 @@ function Fixture() {
   const ownerDestinations = account && {
     Profile: () => navigation.openOverview(account.address), Gallery: () => navigation.openCanvas(account.address),
     Writing: () => navigation.openWriting(account.address), Studio: owner ? () => navigation.openStudio(address) : undefined,
-    Discover: navigation.openDiscover,
   };
-  return <div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
+  return <GalleryStudioMotion.Provider value={navigation.motion}><div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
     {content?.kind === 'workbench' ? <Suspense fallback={null}>
       <OwnerWorkspace profileAddress={address} canvasOverviewRequested={content.canvas === true}
-        requestedWorkId={content.worksEditorId} receptionEditorRequested={content.receptionEditorRequested}
+        requestedWorkId={content.worksEditorId}
         publishedResolution={resolution} connectedProfile={account} ownerDestinations={ownerDestinations}
         initialNew={content.newComposition === true} onNewOpened={navigation.consumeNewComposition}
         onManageCompositions={() => navigation.manageCompositions(address)} onOpenGallery={() => navigation.openCanvas(address)}
         returnLabel={navigation.studioReturnLabel} onOpenWriting={() => navigation.openWriting(address)}
-        onOpenReception={mode => navigation.openReception(address, mode === 'published' ? 'published' : true)}
-        onEditorDocumentChange={(kind, id, options) => kind === 'reception' ? navigation.editReception(address, options) : navigation.editWork(address, id, options)}
+        onOpenProfile={() => navigation.openOverview(address)}
+        onEditorDocumentChange={(id, options) => navigation.editWork(address, id, options)}
+        getWalletPublicationContext={() => window.publicationBoundaryWallet} onPublicationConfirmed={publicationConfirmed}
         onReturnToWorks={() => navigation.returnToWorks(address)}
         reviewStorage={storage} reviewProfile={{ name: 'Nomad' }} reviewAssets={[asset]} />
     </Suspense> : <PublishedProfileBoundary address={address} resolution={resolution} connectedProfile={account}
@@ -161,13 +189,13 @@ function Fixture() {
         return { ...resolution, document: newerDocument };
       }}
       returnProfileAddress={account?.address} ownerDestinations={ownerDestinations} onReturnToWorkbench={owner ? ownerDestinations.Studio : undefined}
-      onNewComposition={owner ? () => navigation.openStudio(address, { create: true }) : undefined}
-      onEditComposition={owner ? id => id === 'reception' ? navigation.editReception(address) : navigation.editWork(address, id) : undefined}
+      onManageWorks={owner ? () => navigation.manageCompositions(address) : undefined}
+            onNewComposition={owner ? () => navigation.openStudio(address, { create: true }) : undefined}
+      onEditComposition={owner ? id => navigation.editWork(address, id) : undefined}
       onOpenWriting={() => navigation.openWriting(address)} onDisconnect={() => { window.__fixtureDisconnected = true; }}
-      onEditReception={owner ? () => navigation.editReception(address) : undefined}
-      entry={{ surface: content?.writing ? 'writing' : content?.canvas ? 'canvas' : 'overview', target: content?.target, reception: content?.reception }}
+      entry={{ surface: content?.writing ? 'writing' : content?.canvas ? 'canvas' : 'overview', target: content?.target }}
       onOpenCanvas={() => navigation.openCanvas(address)} onOpenOverview={() => navigation.openOverview(address)} />}
     {confirmation && <Suspense fallback={null}><PublicationConfirmation confirmation={confirmation} onClose={() => setConfirmation(null)} /></Suspense>}
-  </div></div>;
+  <GalleryStudioStage /></div></div></GalleryStudioMotion.Provider>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

@@ -40,7 +40,7 @@ export async function seedPresentation(page, { portrait = false } = {}) {
       draft.artworkLayers = ['shape:ground', draft.imageModules[0].id];
       draft.workbenchIndex = createWorkbenchIndex();
     }
-    if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Presentation fixture save failed');
+    if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }) || !await store.whenCommitted()) throw Error('Presentation fixture save failed');
   }, portrait);
   await page.reload(); await editorOverview(page);
 }

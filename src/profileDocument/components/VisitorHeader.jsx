@@ -1,38 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, UserRound } from 'lucide-react';
-import { getOfficialProfileUrl } from '../../profileIdentity/domain/profileIdentity.js';
-import { useProfileIdentity } from '../../profileIdentity/state/useProfileIdentity.js';
-import { HeaderThemeButton, profileTabs, WorkspaceBrand } from '../../public/menus/WorkspaceHeader.jsx';
-import AccountAvatar from '../../ui/AccountAvatar.jsx';
-import { VisitorPortrait } from './VisitorProfile.jsx';
-import VisitorMenu from './VisitorMenu.jsx';
+import { useLayoutEffect, useRef } from 'react';
+import { Settings } from 'lucide-react';
+import { HeaderThemeButton, StudioHeaderTools, profileTabs, WorkspaceBrand } from '../../public/menus/WorkspaceHeader.jsx';
+import ProfileStrip from './ProfileStrip.jsx';
 import './visitorProfile.css';
 
-function AccountMenu({ account, model, onPanel, onDisconnect }) {
-  const [copyMessage, setCopyMessage] = useState('');
-  const address = account.address, own = model?.address?.toLowerCase() === address.toLowerCase();
-  const identity = useProfileIdentity(!account.name && !own ? address : null);
-  const short = address.slice(0, 6) + '…' + address.slice(-4);
-  const name = account.name || identity?.name || (own && model?.officialProfile?.name) || 'Universal Profile';
-  const trigger = useRef(null);
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(address); setCopyMessage('Address copied.'); }
-    catch { setCopyMessage('Clipboard unavailable. Open Universal Profile to copy the address.'); }
-  };
-  return <><VisitorMenu name={name + ' account'} buttonRef={trigger} trigger={<>
-    <span className="visitor-account-avatar"><AccountAvatar account={account} model={model}><UserRound size={14} /></AccountAvatar></span>
-    <ChevronDown size={12} aria-hidden="true" /></>}>
-    <div className="visitor-account-identity"><strong>{name}</strong><small title={address}>{short}</small></div>
-    <button type="button" onClick={copy}>Copy address</button>
-    <a href={getOfficialProfileUrl(address)} target="_blank" rel="noreferrer">Universal Profile</a>
-    <button type="button" disabled={!onPanel} onClick={() => onPanel('settings', trigger.current)}>Settings</button>
-    <button type="button" disabled={!onDisconnect} onClick={onDisconnect}>Disconnect</button>
-  </VisitorMenu>
-    {copyMessage && <span className="visitor-feedback" role="status" onAnimationEnd={() => setCopyMessage('')}>{copyMessage}</span>}</>;
-}
-
 export default function VisitorHeader({ model, account, works, current = works ? 'Gallery' : 'Profile',
-  onProfile, onWorks, onWriting, onEdit, ownerDestinations, onDiscover, onPanel, onDisconnect, onConnect, children }) {
+  toolbarRef, onProfile, onWorks, onWriting, ownerDestinations, onPanel, onDisconnect, onConnect }) {
   const trigger = useRef(null);
   const tabList = useRef(null);
   const hasProfile = Boolean(model);
@@ -52,26 +25,26 @@ export default function VisitorHeader({ model, account, works, current = works ?
 
   const own = Boolean(account?.address && account.address.toLowerCase() === model?.address?.toLowerCase());
   const tabs = { Profile: onProfile, Gallery: onWorks, Writing: onWriting };
-  const destinations = account && { ...(own && tabs), Discover: onDiscover, ...ownerDestinations };
-  const name = model?.officialProfile?.name || model?.profile?.displayName || model?.address;
+  const destinations = account && { ...(own && tabs), ...ownerDestinations };
+  const accountMenu = account?.address && <ProfileStrip key={account.address} address={account.address} accountStrip onProfile={ownerDestinations?.Profile} {...{ account, model, onPanel, onDisconnect }} />;
   return <header className="workspace-header visitor-header">
+    <div className="visitor-navigation">
     <div className="visitor-signature">
-      <WorkspaceBrand trigger={trigger} current={own || current === 'Discover' ? current : null} onDiscover={onDiscover}
+      <WorkspaceBrand trigger={trigger} current={own ? current : null}
         destinations={destinations} onPanel={onPanel} />
-      {model && <><span className="visitor-path-separator" aria-hidden="true">/</span>
-        <button className="visitor-breadcrumb" type="button" onClick={onProfile} aria-label={'Profile of ' + name} title={name}>
-          <VisitorPortrait src={model.profile?.avatarUrl} className="visitor-avatar" /><span>{name}</span>
-        </button></>}
+      {!own && model?.address && <ProfileStrip key={model.address} address={model.address} {...{ account, model, onProfile }} />}
     </div>
     {model ? <nav ref={tabList} aria-label="Profile navigation" className="visitor-tabs">
       {profileTabs.map(label => <button type="button" key={label} disabled={label !== current && !tabs[label]}
         aria-current={label === current ? 'page' : undefined} onClick={tabs[label]}>{label}</button>)}
-    </nav> : children}
+    </nav> : null}
+    </div>
+    {toolbarRef && <div className="visitor-toolbar-slot" ref={toolbarRef} />}
     <div className="visitor-tools">
-      {own && onEdit && <button className="visitor-edit" type="button" onClick={onEdit}>Studio</button>}
-      <HeaderThemeButton />
-      {account?.address ? <AccountMenu key={account.address} {...{ account, model, onPanel, onDisconnect }} />
-        : onConnect && <button className="visitor-connect" type="button" onClick={onConnect}>Sign in</button>}
+      {own && ownerDestinations?.Studio ? <StudioHeaderTools onStudio={ownerDestinations.Studio}>{accountMenu}</StudioHeaderTools> : <><HeaderThemeButton />
+      {!account?.address && onPanel && <button className="workspace-theme-button" type="button" aria-label="Settings" title="Settings"
+        onClick={event => onPanel('settings', event.currentTarget)}><Settings size={16} aria-hidden="true" /></button>}
+      {accountMenu || (onConnect && <button className="visitor-connect" type="button" onClick={onConnect}>Sign in</button>)}</>}
     </div>
   </header>;
 }

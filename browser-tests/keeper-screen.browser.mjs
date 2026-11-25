@@ -28,7 +28,7 @@ for (const width of [1440, 390]) test(`Keeper belongs to the screen and follows 
     assert.equal(await trigger.evaluate(hit), true);
     assert.equal(await dock.evaluate(node => Boolean(node.closest('.workbench-canvas-content'))), false);
     const before = await page.evaluate(() => window.readToolChromeDraft());
-    const board = page.locator('.system-workflow__presentation-board').first();
+    const board = page.locator('aside.shape-window').first();
     const boardBefore = await board.boundingBox();
     const host = page.locator('main.system-workflow');
     await host.dispatchEvent('wheel', { deltaY: -180, ctrlKey: true, clientX: 180, clientY: 220, bubbles: true, cancelable: true });

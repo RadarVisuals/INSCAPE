@@ -17,7 +17,7 @@ import './lab.css';
 const loaders = Object.fromEntries(Object.entries(import.meta.glob(['./artboards/*.jsx', './experiments/*.jsx']))
   .map(([path, load]) => [path.slice(2, -4), load]));
 const params = new URLSearchParams(location.search);
-const artboard = params.get('artboard') || 'artboards/reception';
+const artboard = params.get('artboard') || 'artboards/workspace';
 const frame = params.has('frame');
 if (['dark', 'light'].includes(params.get('theme'))) interfaceTheme.setMode(params.get('theme'));
 const requestedWidth = Number(params.get('width'));
@@ -115,7 +115,7 @@ function DesignLab() {
       </div>
     </main>
     {!frame && <footer className="lab-footer" data-lab-chrome>
-      <code>npm run design:new -- my-study --from {artboard.startsWith('artboards/') ? artboard.split('/').at(-1) : 'reception'}</code>
+      <code>npm run design:new -- my-study --from {artboard.startsWith('artboards/') ? artboard.split('/').at(-1) : 'workspace'}</code>
       <span>Experiments use the real components. Changes to shared source affect every artboard.</span>
     </footer>}
   </div>;

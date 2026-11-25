@@ -15,7 +15,7 @@ export const verificationSteps = Object.freeze([
   { name: 'standards', group: 'source', args: ['--test', '--test-reporter=tap', 'scripts/luksoStandards.audit.test.js'], tap: true },
   { name: 'design-system', group: 'source', args: ['scripts/designSystemInventory.js', '--check'] },
   { name: 'browser', group: 'browser', args: ['scripts/runBrowserTests.mjs'] },
-  { name: 'build', group: 'production', args: ['node_modules/vite/bin/vite.js', 'build'] },
+  { name: 'build', group: 'production', args: ['node_modules/vite/bin/vite.js', 'build', '--configLoader', 'native'] },
   { name: 'build-budget', group: 'production', args: ['scripts/checkProductionBuild.js'] },
   { name: 'production-startup', group: 'production', args: ['--import', './scripts/browserEnvironment.mjs', '--test', '--test-reporter=tap', 'browser-tests/production-startup.browser.mjs'], tap: true },
 ]);

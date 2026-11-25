@@ -28,7 +28,7 @@ test('embedded WebP thumbnails stay filtered while Inspect prepares original pix
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor });
       page.setDefaultTimeout(10000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 400, seamReview: 'single',
+      await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 400, seamReview: 'single',
         artwork: { url: 'https://quality.invalid/keeper.svg', width: 2048, height: 2048, body: grey } });
       const source = page.locator('.image-module__canvas').first();
       await source.locator('.artwork-svg-document').waitFor();
@@ -150,21 +150,21 @@ test('grey layers and purple WebP head use bounded filtered sources, resize, and
   } finally { await browser.close(); }
 });
 
-test('Focus, Return and subsequent zoom update Image and Display pixels without another click', { timeout: 120000 }, async () => {
+test('Focus, Return and subsequent zoom update Image pixels without another click', { timeout: 120000 }, async () => {
   const browser = await launch();
   try {
     for (const visitor of [false, true]) for (const [width, deviceScaleFactor] of [[1440, 1], [390, 2]]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor });
       page.setDefaultTimeout(10000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 400, seamReview: 'single',
+      await mountGridMotionFixture(page, { origin, visitor, count: 1, shapeWidth: 400, seamReview: 'single',
         artwork: { url: 'https://quality.invalid/keeper.svg', width: 2048, height: 2048, body: grey } });
       const board = page.locator('main.system-workflow').first();
       const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const arrived = async () => { await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]')); await settle(); };
-      for (const kind of ['image', 'display']) {
-        const source = kind === 'image' ? page.locator('.image-module__canvas').first()
-          : page.locator('.system-workflow__presentation-board').locator('.system-workflow__placement[tabindex="0"], .lattice-production-placement[tabindex="0"]').first();
+      {
+        const kind = 'image';
+        const source = page.locator('.image-module__canvas').first();
         await source.locator('.artwork-svg-document').waitFor();
         await source.locator('.artwork-svg-status').waitFor({ state: 'detached' });
         const { iframe, runtime } = await svgRuntime(source);
@@ -198,7 +198,7 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
         };
         const select = async () => {
           await board.focus(); await page.keyboard.press('Escape');
-          const node = page.locator(`[data-workbench-view-id="${kind === 'image' ? 'image:motion-0' : 'display:primary'}"]`);
+          const node = page.locator(`[data-workbench-view-id="image:motion-0"]`);
           const target = await node.getAttribute('data-workbench-selectable') !== null ? node : node.locator('[data-workbench-selectable]').first();
           // Native input lets focus activation commit before group selection.
           await target.focus(); await page.keyboard.press('Shift+Enter');
@@ -226,11 +226,10 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
         await zoom(1);
         await board.focus(); await page.keyboard.press('Escape');
         await source.focus();
-        if (kind === 'image') await page.keyboard.press('i');
-        else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
+        await page.keyboard.press('i');
         await runtime.waitForFunction(() => [...document.querySelectorAll('image')].every(node => node.href.baseVal.startsWith('data:')));
         await page.waitForFunction(kind => {
-          const target = kind === 'image' ? document.querySelector('.image-lift') : document.querySelector('[data-inspection-context="selected"]')?.parentElement;
+          const target = document.querySelector('.image-lift');
           return target?.style.getPropertyValue('--inspection-lift-progress') === '1';
         }, kind);
         await page.keyboard.press('Escape');
@@ -252,7 +251,7 @@ test('live group spreading, item focus and pointer pan retain SVG pixel density 
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
     page.setDefaultTimeout(10000);
-    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 400, seamReview: 'single',
+    await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 400, seamReview: 'single',
       artwork: { url: 'https://quality.invalid/keeper.svg', width: 2048, height: 2048, body: grey } });
     await page.evaluate(() => {
       const draft = JSON.parse(localStorage.getItem(window.__motionKey));

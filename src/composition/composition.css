@@ -1,0 +1,7 @@
+.composition-image { position: relative; width: 100%; height: 100%; min-height: 80px; }
+.composition-artwork, .composition-artwork > :is(svg, [data-svg-artwork-host]) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.composition-media-status { position: absolute; inset: 0; pointer-events: none; }
+.composition-media-status button { pointer-events: auto; }
+.composition-linked-content { position: relative; width: 100%; height: 100%; min-height: 160px; }
+.composition-open-source { min-height: var(--control-target-touch); font: var(--workflow-type-control); }
+.composition-linked-content > .composition-open-source.workflow-tactile-control { position: absolute; bottom: 8px; right: 8px; z-index: 3; font: var(--workflow-type-control); padding: 8px; }

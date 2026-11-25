@@ -4,8 +4,6 @@
 .system-workflow__placement-size label { min-width: 0; }
 .system-workflow__placement-size input { box-sizing: border-box; width: 100%; margin-top: 4px; padding: 5px; font: inherit; }
 .system-workflow__placement-size [role="alert"] { display: block; }
-.system-workflow__resize-handle.is-e, .system-workflow__resize-handle.is-w { cursor: ew-resize; }
-.system-workflow__resize-handle.is-n, .system-workflow__resize-handle.is-s { cursor: ns-resize; }
 .system-workflow__instrument-content {
   box-sizing: border-box;
   min-height: 0;

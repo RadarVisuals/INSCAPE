@@ -1,5 +1,5 @@
 import { isValidPublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
-import { imageResourceIdentity } from '../data/resolveContentUrl.js';
+import { imageResourceIdentity, isInlineImageIdentity } from '../data/resolveContentUrl.js';
 
 export const LIBRARY_WORKSPACE_VERSION = 9;
 
@@ -150,10 +150,32 @@ export function setFolderImage(workspace, folderIdValue, assetId, url, included,
     ? { ...candidate, assetIds, imageSelections, updatedAt: now } : candidate) };
 }
 
+export function moveFolderAssets(workspace, fromId, toId, ids, imageUrl = null) {
+  const source = workspace.folders.find(folder => folder.id === fromId);
+  const target = workspace.folders.find(folder => folder.id === toId);
+  if (!source || !target || fromId === toId || !Array.isArray(ids) || !ids.length
+    || !ids.every(id => source.assetIds.includes(id))) return workspace;
+  if (imageUrl && (ids.length !== 1 || !isValidPublishedAssetUrl(imageUrl))) return workspace;
+  let next = workspace;
+  for (const id of new Set(ids)) {
+    const selected = (source.imageSelections || []).filter(entry => entry.assetId === id);
+    if (imageUrl && selected.length && !selected.some(entry => imageResourceIdentity(entry.url) === imageResourceIdentity(imageUrl))) return workspace;
+    const urls = imageUrl ? [imageUrl] : selected.map(entry => entry.url);
+    const targetHasWholeAsset = target.assetIds.includes(id) && !target.imageSelections?.some(entry => entry.assetId === id);
+    if (!targetHasWholeAsset) {
+      if (urls.length) {
+        for (const url of urls) next = setFolderImage(next, toId, id, url, true);
+      } else next = setFolderAssets(next, toId, [id], true);
+    }
+    next = imageUrl ? setFolderImage(next, fromId, id, imageUrl, false) : setFolderAssets(next, fromId, [id], false);
+  }
+  return next;
+}
+
 export function normalizeCategoryImageSelections(folder) {
   if (folder.imageSelections === undefined) return {};
   if (!Array.isArray(folder.imageSelections) || folder.imageSelections.some(entry => !entry
-    || !folder.assetIds.includes(entry.assetId) || !isValidPublishedAssetUrl(entry.url)))
+    || !folder.assetIds.includes(entry.assetId) || !(isValidPublishedAssetUrl(entry.url) || isInlineImageIdentity(entry.url))))
     throw new TypeError('Saved category image selections are invalid.');
   return { imageSelections: [...new Map(folder.imageSelections.map(({ assetId, url }) =>
     [`${assetId}\n${imageResourceIdentity(url)}`, { assetId, url }])).values()] };

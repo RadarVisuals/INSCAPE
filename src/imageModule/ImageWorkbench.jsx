@@ -1,11 +1,10 @@
 import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 import { lazy, Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Crop, ChevronLeft, ZoomIn, Shrink, Expand } from 'lucide-react';
+import { Crop, ChevronLeft, ZoomIn, Shrink, Expand, X } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
 import ImageArtwork from './ImageArtwork.jsx';
 import { useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import ArtworkTransformTools from '../public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
-import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { resolveImageLibraryArtwork } from './imageLibraryArtwork.js';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
@@ -18,12 +17,12 @@ import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMi
 import { SharedDisplayToolContent } from '../public/ownerSystemWorkflow/SharedDisplayTools.jsx';
 import { ArtworkInfoButton, LayerNameInput } from '../public/ownerSystemWorkflow/ArtworkToolbarControls.jsx';
 import { OwnerSystemWorkflowMetadataContent } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
-import { createProfileDocumentV9AssetDossier } from '../profileDocument/components/profileDocumentV9FocusViewModel.js';
+import { createProfileDocumentV9AssetDossier } from '../profileDocument/components/profileDocumentV9AssetDossier.js';
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
-import { useEditorCells } from '../reception/EditorCellsContext.jsx';
-import { receptionMemberAnchor } from '../reception/editorCellGeometry.js';
+import { useEditorCells } from '../composition/EditorCellsContext.jsx';
+import { compositionMemberAnchor } from '../composition/editorCellGeometry.js';
 import './imageModule.css';
 
 const LibraryPicker = lazy(() => import('../library/ProfileLibraryPicker.jsx'));
@@ -47,7 +46,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     return () => recoveryHost?.removeEventListener('focusin', stop);
   }, [recoveryHost]);
 
-  const source = useRef(null), drag = useRef(null), shortcut = useRef(null), latest = useRef(record), live = useRef(true);
+  const source = useRef(null), drag = useRef(null), latest = useRef(record), live = useRef(true);
   const imageRequest = useRef(0);
   const pointerFocus = useRef(false);
   const cropFocusHost = useRef(null);
@@ -70,7 +69,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const workbenchView = useWorkbenchView();
   const cells = useEditorCells();
   const ownerCell = cells?.cells.find(cell => cell.members.includes(record.id));
-  const cellAnchor = useMemo(() => receptionMemberAnchor(ownerCell, [record.id]), [ownerCell, record.id]);
+  const cellAnchor = useMemo(() => compositionMemberAnchor(ownerCell, [record.id]), [ownerCell, record.id]);
   const sizeLimits = imageSizeLimits(Boolean(ownerCell));
   const presented = Boolean(workbenchView.presentationTransforms?.[record.id]);
   const dossier = useMemo(() => createProfileDocumentV9AssetDossier(artwork?.asset), [artwork?.asset]);
@@ -206,7 +205,6 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const replacementButton = (compact = false) => library && <button type="button"
     className={compact ? 'editor-object-toolbar-button' : 'workflow-tactile-control'}
     disabled={!editable || Boolean(crop || inspect)} onClick={openReplacement}>{artwork ? 'Replace image' : 'Choose image'}</button>;
-  const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'image', record });
   const beginCrop = event => {
     if (!artwork || !editable) return;
     cropFocusHost.current = event?.currentTarget.closest('[data-workbench-inspector], [role="toolbar"]');
@@ -306,9 +304,6 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
       available={Boolean(dossier) && !inactive && !inspect && (!store || workbenchView.selection?.length === 1 && workbenchView.selection[0] === record.id)}>
       <OwnerSystemWorkflowMetadataContent dossier={dossier} />
     </SharedDisplayToolContent>
-    {shortcutMenu.content}
-    {!presentation.open && <button data-workbench-pan ref={shortcut} className="workflow-tactile-control image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
-      onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
     {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
       size={record} viewport={viewport} editable={editable && !crop && !inspect} suspended={suspended || inspect}
       movable={(!store || editable) && !crop}
@@ -320,8 +315,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
           <LayerNameInput compact label="Image layer name" name={record.name} onRename={name => save({ ...record, name }, record)} />
           {fitControls(true)}{cropButton}{replacementButton(true)}<ArtworkInfoButton targetId={record.id} /></>}
         {failure?.surface === 'actions' && <span role="alert" className="image-module__error">{error}</span>}
-      </> : null}
-      onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>
+      </> : null}>
       {renderRectangle => <>
       <button type="button" ref={source} className="workflow-tactile-control image-module__canvas" aria-label={crop ? 'Drag to crop Image' : artwork ? `${focusModules ? 'Focus' : 'Inspect'} ${artwork.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}
         data-artwork-context-id={!inactive && !inspect && artwork ? `${record.id}:${artwork.id}:${artwork.asset.stableAssetId}` : undefined}
@@ -374,6 +368,11 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
             crop={displayedCrop} />}
       </button>
       <span ref={setRecoveryHost} className="image-module__recovery" data-workbench-selection-tools />
+      {!store && !presented && <button type="button" className="workflow-tactile-control image-module__close"
+        aria-label="Close Image" disabled={inspect || suspended} onClick={event => {
+          event.currentTarget.closest('main')?.focus({ preventScroll: true });
+          setPresentation(current => ({ ...current, open: false }));
+        }}><X size={14} /></button>}
       {!crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
         title="Inspect Image (I)" disabled={!artwork || Boolean(inspect || suspended)} onClick={inspectArtwork}
         onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={14} /></button>}

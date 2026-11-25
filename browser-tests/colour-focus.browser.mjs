@@ -49,7 +49,7 @@ test('Color pointer gestures have no focus box; keyboard focus and cancellation 
         assert.equal(await focused.evaluate(node => document.activeElement === node), true);
         assert.equal((await focusPaint(picker))[mode === 'field' ? 0 : 1], 'solid', 'each color control exposes keyboard focus');
         await focused.press('ArrowRight');
-        assert.notEqual(await page.evaluate(() => window.savedDraft().shapes[0].color), before, 'keyboard editing still commits');
+        assert.notEqual(await page.evaluate(async () => (await window.readCommittedDraft()).shapes[0].color), before, 'keyboard editing still commits');
         await pointer(mode); await page.mouse.up();
         assert.deepEqual(await focusPaint(picker), noPointerOutline, 'switching the same focused control to mouse clears keyboard paint');
       }

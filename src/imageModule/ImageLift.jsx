@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import DisplayLiftArtwork from '../public/ownerSystemWorkflow/DisplayLiftArtwork.jsx';
+import ImageLiftArtwork from './ImageLiftArtwork.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import { useWorkbenchInspectionLock } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 
@@ -26,7 +26,7 @@ export default function ImageLift({ source, entry, reducedMotion, onClose, statu
       if (event.key === 'Tab') { event.preventDefault(); returnButton.current?.focus(); }
     }}>
     <div ref={setScene} />
-    <DisplayLiftArtwork scene={scene} source={source} entry={entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={onClose} />
+    <ImageLiftArtwork scene={scene} source={source} entry={entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={onClose} />
     {createPortal(<button id={returnId} ref={returnButton} className="image-lift-return" type="button" aria-label="Return to Image" autoFocus
       onClick={() => setClosing(true)}>Return to Image{status}</button>, overlayHost)}
   </div>, overlayHost);

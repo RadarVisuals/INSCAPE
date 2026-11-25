@@ -18,7 +18,7 @@ test('Add Text uses the context-menu invocation point through pan, zoom, undo an
     await page.locator('main.system-workflow').focus(); await page.keyboard.down('Space');
     await page.mouse.move(1380, 800); await page.mouse.down();
     await page.mouse.move(1180, 700, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space'); await settle(page);
-    const seed = await page.locator('.text-window').boundingBox();
+    const seed = await page.locator('aside.text-window').boundingBox();
     const offset = { x: seed.x - 64 * .5, y: seed.y - 120 * .5 };
     assert.ok(offset.x < -100, 'the fixture has panned away from the origin');
     const point = { x: 1080, y: 780 };

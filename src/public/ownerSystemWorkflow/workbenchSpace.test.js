@@ -18,12 +18,10 @@ test('window movement uses the fixed 2000 by 4000 work area, independent of scre
 });
 
 test('outlying windows round-trip through existing layout storage without a v9 schema change', () => {
-  const profile = `0x${'1'.repeat(40)}`, draft = { grids: [], workbench: createDefaultWorkbenchPresentation() };
+  const profile = `0x${'1'.repeat(40)}`, draft = { workbench: createDefaultWorkbenchPresentation() };
   const values = new Map(), storage = { getItem: key => values.get(key), setItem: (key, value) => values.set(key, value) };
   for (const position of [32, 2200, 7392, 12000]) {
     const layout = createDefaultWorkbenchPresentation();
-    layout.display.window.left = position; layout.display.window.top = position;
-    layout.display.shortcut.position = { left: position, top: position };
     layout.identity.window.left = position;
     assert.equal(isValidWorkbenchPresentation(layout), true);
     assert.equal(saveWorkbenchLayout(profile, draft, layout, {}, storage), true);

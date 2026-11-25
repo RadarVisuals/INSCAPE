@@ -19,7 +19,7 @@ editShape(store, profileAddress, store.getDraft().shapes.find(item => item.id ==
 const object = addShape(store, profileAddress, { position: { left: 544, top: 240 }, size: { width: 100, height: 100 } });
 editShape(store, profileAddress, store.getDraft().shapes.find(item => item.id === object), { name: 'Move me', color: '#b98b62' });
 addShape(store, profileAddress, { kind: 'grid', position: { left: 500, top: 180 }, size: { width: 340, height: 420 } });
-const seed = store.getDraft(); seed.shapes = [seed.shapes[0], seed.shapes[1], seed.shapes[2]]; seed.workbench.display.open = false; seed.workbench.identity.open = false;
+const seed = store.getDraft(); seed.shapes = [seed.shapes[0], seed.shapes[1], seed.shapes[2]]; seed.workbench.identity.open = false;
 store.commitCompletedOperation(seed, { expectedGeneration: store.getGeneration(), historyLabel: 'Prepare pattern review' });
 
 function Review() {

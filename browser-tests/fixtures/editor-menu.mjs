@@ -3,6 +3,11 @@ export async function openEditorMenu(page, name) {
   const trigger = editorMenu(page);
   if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
   if (!name) return page.getByRole('menu', { name: 'Inscape menu', exact: true });
+  if (name === 'Compositions') {
+    const canvas = await openEditorMenu(page, 'Canvas');
+    await canvas.getByRole('menuitem', { name, exact: true }).click();
+    return page.getByRole('menu', { name: 'Compositions options', exact: true });
+  }
   const direct = { Docs: 'Help & Docs', Backup: 'Backup', Settings: 'Settings' };
   if (name === 'Bento') {
     await openEditorMenu(page, 'Tools');
@@ -13,14 +18,13 @@ export async function openEditorMenu(page, name) {
   await root.getByRole('menuitem', { name: direct[name] || name, exact: true }).click();
   return direct[name] ? trigger : page.getByRole('menu', { name: `${name} options`, exact: true });
 }
-export async function receptionPreviewControls(page) {
-  const panel = page.getByRole('dialog', { name: 'Studio preview controls', exact: true });
-  if (!await panel.isVisible()) await page.getByRole('button', { name: 'Studio preview controls', exact: true }).click();
-  await panel.waitFor();
-  return panel;
-}
 export const activeEditorDocument = page => page.locator('.editor-menu-bar[data-document]').getAttribute('data-document');
 export async function editorCommand(page, menu, name, role = 'menuitem') {
+  if (menu === 'Studio') {
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    return page.getByRole('menu', { name: 'Studio', exact: true }).getByRole(role, { name, exact: true }).click();
+  }
+  if (menu === 'Inscape') return (await openEditorMenu(page)).getByRole(role, { name, exact: true }).click();
   if (name === 'Bento settings') return openEditorMenu(page, 'Bento');
   if (name === 'Settings') return openEditorMenu(page, 'Settings');
   if (name === 'Search commands') {
@@ -30,26 +34,34 @@ export async function editorCommand(page, menu, name, role = 'menuitem') {
   const panel = await openEditorMenu(page, menu);
   await panel.getByRole(role, { name, exact: true }).click();
 }
-export const workspacePicker = page => page.locator('.workspace-brand:visible');
+export const editorDocumentTitle = page => page.locator('.editor-menu-bar .editor-workspace-name');
 export async function workspaceDestination(page, name) {
   const panel = await openEditorMenu(page);
   await panel.getByRole('menuitemcheckbox', { name, exact: true }).click();
   return editorMenu(page);
 }
-export async function selectEditorDocument(page, id) {
-  const menu = await openEditorMenu(page, 'Canvas');
-  if (id === 'reception') return menu.locator('[data-command-id="Canvas:profile-bento"]').press('Enter');
+export async function selectEditorDocument(page, id, { keyboard = false } = {}) {
+  let menu;
+  if (keyboard) {
+    // Keep the mouse button held throughout an active artwork gesture.
+    await editorMenu(page).press('ArrowDown');
+    await page.getByRole('menuitem', { name: 'Canvas', exact: true }).press('Enter');
+    await page.getByRole('menuitem', { name: 'Compositions', exact: true }).press('Enter');
+    menu = page.getByRole('menu', { name: 'Compositions options', exact: true });
+  } else {
+    menu = await openEditorMenu(page, 'Compositions');
+  }
   await (typeof id === 'object' ? menu.getByRole('menuitemcheckbox', { name: id.label, exact: true })
-    : menu.locator(`[data-command-id="Canvas:canvas:${id}"]`)).press('Enter');
+    : menu.locator(`[data-command-id="Canvas:compositions:${id}"]`)).press('Enter');
 }
 export async function editorDocumentNames(page) {
-  const menu = await openEditorMenu(page, 'Canvas');
-  const names = await menu.locator('[data-command-id^="Canvas:canvas:"] > span').allTextContents();
+  const menu = await openEditorMenu(page, 'Compositions');
+  const names = await menu.locator('[data-command-id^="Canvas:compositions:"] > span').allTextContents();
   await page.keyboard.press('Escape');
   return names;
 }
 export async function activeEditorDocumentName(page) {
-  const menu = await openEditorMenu(page, 'Canvas');
+  const menu = await openEditorMenu(page, 'Compositions');
   const name = await menu.getByRole('menuitemcheckbox', { checked: true }).locator('span').innerText();
   await page.keyboard.press('Escape');
   return name;
@@ -60,16 +72,16 @@ export async function setEditorSidebarOpen(page, open) {
   if (await trigger.getAttribute('aria-expanded') !== String(open)) await trigger.click();
 }
 export async function editorDestination(page, name) {
-  if (['Profile', 'Gallery', 'Writing', 'Studio', 'Discover'].includes(name)) return workspaceDestination(page, name);
+  if (['Profile', 'Gallery', 'Writing', 'Studio'].includes(name)) return workspaceDestination(page, name);
   const trigger = editorMenu(page);
   await trigger.waitFor();
   if (['Publish', 'Preview'].includes(name) && await page.locator('.editor-menu-bar:visible').count()) {
     const control = page.locator('.editor-menu-bar:visible').getByRole('button', { name, exact: true });
     await control.click(); return control;
   }
-  if (['Library', 'Grids', 'Layers', 'Inspector'].includes(name) && await page.locator('.editor-menu-bar:visible').count()) {
+  if (['Library', 'Layers', 'Inspector'].includes(name) && await page.locator('.editor-menu-bar:visible').count()) {
     const menu = await openEditorMenu(page, 'Tools');
-    await menu.getByRole(['Library', 'Layers', 'Inspector'].includes(name) ? 'menuitemcheckbox' : 'menuitem', { name, exact: true }).click();
+    await menu.getByRole('menuitemcheckbox', { name, exact: true }).click();
   } else {
     const menu = await openEditorMenu(page);
     await menu.getByRole('menuitem', { name: name === 'Docs' ? 'Help & Docs' : name, exact: true }).click();
@@ -77,7 +89,7 @@ export async function editorDestination(page, name) {
   return trigger;
 }
 export async function editorOverview(page) { await page.getByRole('button', { name: 'Back to Gallery', exact: true }).click(); }
-export const editSelectedWork = page => page.getByRole('navigation', { name: 'Canvases', exact: true }).getByRole('button', { name: /^Edit .+ in Studio$/ }).click();
+export const editSelectedWork = page => page.getByRole('complementary', { name: 'Work details', exact: true }).getByRole('button', { name: /^Edit .+ in Studio$/ }).click();
 export async function choosePointer(page, name, visitor = false) {
   if (visitor) return page.getByRole('button', { name: 'Hand tool', exact: true }).click();
   await page.getByRole('button', { name: 'Pointer tools', exact: true }).click();

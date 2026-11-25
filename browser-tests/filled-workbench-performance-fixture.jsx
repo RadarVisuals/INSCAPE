@@ -32,10 +32,6 @@ const layered = { ...sources[0], id: '42:0x' + '8'.repeat(40) + ':0x08', stableA
   imageUrl: mediaOrigin + '/__perf-layered.svg?' + svgQuery,
   originalImageUrl: mediaOrigin + '/__perf-layered.svg?' + svgQuery,
   thumbnailUrl: mediaOrigin + '/__perf-layered.svg?' + svgQuery, imageWidth: 2048, imageHeight: 2048 };
-// Keep the live Keeper identical in every case, including the flattened WebP trial.
-const keeperSource = { ...layered, id: layered.id.replace('0x08', '0x09'), stableAssetId: layered.id.replace('0x08', '0x09'), tokenId: '0x09',
-  ...Object.fromEntries(['src', 'previewSrc', 'imageUrl', 'originalImageUrl', 'thumbnailUrl'].map(key =>
-    [key, mediaOrigin + '/__perf-layered.svg?mode=static'])) };
 const nomads = params.get('nomad') === '1' ? Array.from({ length: 4 }, (_, i) => {
   const tokenId = '0x' + (16 + i).toString(16), id = layered.id.replace('0x08', tokenId);
   const query = new URLSearchParams({ fps: params.get('svgFps') || '0',
@@ -45,11 +41,10 @@ const nomads = params.get('nomad') === '1' ? Array.from({ length: 4 }, (_, i) =>
     ...Object.fromEntries(['src', 'previewSrc', 'imageUrl', 'originalImageUrl', 'thumbnailUrl'].map(key =>
       [key, mediaOrigin + '/__perf-nomad.svg?' + query])) };
 }) : [];
-const assets = [...sources, layered, keeperSource, ...nomads], resolve = createProfileDocumentV9AssetResolver(assets);
-const draft = createEmptySystemWorkflowDraft(profile); draft.grids = [];
+const assets = [...sources, layered, ...nomads], resolve = createProfileDocumentV9AssetResolver(assets);
+const draft = createEmptySystemWorkflowDraft(profile);
 
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 4200, height: 3200 } };
-draft.workbench.display.open = false;
 const numbers = size === 'small' ? { images: 4, texts: 2, shapes: 4, paragraphs: 3 }
   : { images: 16, texts: 12, shapes: 24, paragraphs: 12 };
 draft.imageModules = Array.from({ length: numbers.images }, (_, i) => ({
@@ -76,11 +71,8 @@ draft.shapes = Array.from({ length: numbers.shapes }, (_, i) => ({ id: 'shape:pe
   color: ['#caa080', '#48656b', '#815c72'][i % 3], opacity: .5, visibility: 'PRIVATE' }));
 draft.workbench.shapes = draft.shapes.map((item, i) => ({ id: item.id, open: true,
   window: { left: 30 + (i % 6) * 620, top: 100 + Math.floor(i / 6) * 690, width: 550, height: 540 } }));
-draft.keeperDocks = [{ id: 'keeper:perf', name: 'Shared Keeper', asset: resolve(keeperSource.id), faces: 'right',
-  movement: 'swim', size: 192, visibility: 'PRIVATE' }];
-const empty = createEmptySystemWorkflowDraft(profile); empty.grids = [];
+const empty = createEmptySystemWorkflowDraft(profile);
 empty.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 2000, height: 1600 } };
-empty.workbench.display.open = false;
 if (!localStorage.getItem(key)) {
   let collection = createWorkbenchCollection(draft); collection.workbenches[0].name = 'Filled study';
   for (let i = 1; i < count; i++) collection = appendWorkbench(collection, 'workbench:perf-' + i,

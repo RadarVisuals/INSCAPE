@@ -6,7 +6,7 @@ import { isWorkbenchBackground } from '../public/ownerSystemWorkflow/useWorkbenc
 import { imageDropGeometry } from './imageDropGeometry.js';
 import { resolveImageLibraryArtwork } from './imageLibraryArtwork.js';
 import { addImageModule } from './imageModuleSession.js';
-import { useEditorCells } from '../reception/EditorCellsContext.jsx';
+import { useEditorCells } from '../composition/EditorCellsContext.jsx';
 
 function cellAt(hit, context) {
   const surface = hit?.closest?.('[data-editor-cell-surface], [data-editor-cell], [data-cell-owner], [data-workbench-view-id]');

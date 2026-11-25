@@ -57,6 +57,20 @@ test('ordinary selection movement updates presentation without rewriting content
   assert.deepEqual(f.state.transforms, {});
 });
 
+test('a composition layer has authored position and one Undo without an artwork group', () => {
+  const f = fixture(), [shape, other] = f.ids;
+  const before = f.store.getDraft();
+  f.options.selection = { ...f.options.selection, ids: [shape], selectedIds: [shape], authoredPositions: true };
+  const move = f.create();
+  assert.equal(move.mode, 'authored');
+  move.preview({ x: 20, y: 10 });
+  assert.ok(move.commit());
+  const frame = (draft, id) => draft.workbench.shapes.find(entry => entry.id === id).window;
+  assert.equal(frame(f.store.getDraft(), shape).left, frame(before, shape).left + 20);
+  assert.deepEqual(frame(f.store.getDraft(), other), frame(before, other));
+  assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
+});
+
 test('visitor completion retains only temporary transforms and never calls module presentation writers', () => {
   const f = fixture({ visitor: true }), operation = f.create(), writes = f.writes();
   assert.equal(operation.mode, 'visitor');

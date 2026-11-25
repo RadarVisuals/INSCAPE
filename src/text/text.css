@@ -1,11 +1,8 @@
 @import './fonts.css';
 @import './textTools.css';
-.text-scene-viewport { flex: 1; min-height: 0; overflow: hidden; position: relative; }
-.text-scene-track, .text-scene-page, .text-authoring-viewport, .text-paged-reader { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.text-content-viewport { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.text-authoring-viewport, .text-paged-reader { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .text-authoring-viewport[hidden] { display: none; }
-.text-scene-track { position: relative; }
-.text-scene-page { width: 100%; flex-shrink: 0; }
-.text-scene-incoming { position: absolute; top: 0; }
 .text-page-viewport { flex: 1; min-height: 0; overflow: hidden; perspective: 1000px; }
 .text-page-turn { height: 100%; transform-origin: left center; }
 .text-page-turn[data-turn] { animation: text-page-turn 220ms ease-out; }
@@ -20,15 +17,15 @@
 .text-editor-content .text-page-break::after { content: 'Page break'; font: 11px 'Inscape IBM Plex Sans Condensed'; }
 .text-page-viewport:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
 @keyframes text-page-turn { from { opacity: .25; transform: rotateY(-90deg); } to { opacity: 1; transform: rotateY(0); } }
-@media (prefers-reduced-motion: reduce) { .text-page-turn[data-turn] { animation: none; } .text-scene-viewport[data-settling] .text-scene-track { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .text-page-turn[data-turn] { animation: none; } }
 .text-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
 .text-workbench .system-workflow__instrument-window { z-index: var(--text-z, 46); }
 .text-workbench .system-workflow__instrument-window > .system-workflow__instrument-content { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
 .text-module-body { position: relative; min-height: 0; height: 100%; display: flex; flex-direction: column; }
 .text-window > [data-content-move] { cursor: grab; }
 .text-window > [data-content-move]:active { cursor: grabbing; }
-.text-window .text-scene-viewport, .text-window .text-module-body > .text-status { zoom: var(--workbench-content-scale, 1); }
-.text-window .text-scene-viewport { width: var(--workbench-content-width); }
+.text-window .text-content-viewport { zoom: var(--workbench-content-scale, 1); }
+.text-window .text-content-viewport { width: var(--workbench-content-width); }
 /* Containment alone still permits the browser's elastic edge movement. */
 .text-module-scroll { position: relative; display: flex; flex-direction: column; overflow: auto; min-height: 0; flex: 1; overscroll-behavior: none; }
 .text-module-scroll[data-text-overflow='clip'] { overflow: clip; }
@@ -40,7 +37,7 @@
 .text-workbench :is(.text-module-scroll, .text-settings, textarea) { scrollbar-width: none; }
 .text-workbench :is(.text-module-scroll, .text-settings, textarea)::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .text-module-scroll:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: -1px; }
-.text-module-body :is(button, input, select, textarea), .text-shortcut { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
+.text-module-body :is(button, input, select, textarea) { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
 .text-workbench button { cursor: pointer; }
 .text-workbench button:disabled { opacity: .5; cursor: default; }
 .text-workbench button:where(:not(.editor-object-toolbar-button)):hover:not(:disabled) { color: var(--workflow-ink); background: var(--workflow-panel-raised, var(--workflow-panel)); }
@@ -87,7 +84,7 @@
 /* Keep unfocused title-only Bento labels clean, without unmounting the editor. */
 .text-editor-page[data-title-only]:not(:focus-within) > .text-editor-body { display: none; }
 /* Editing guides use the same light/dark edges as module bounds, independently of authored ink and background. */
-.text-editor-content:focus-visible { outline: none; }
+.text-editor-content:focus-visible { outline: none; caret-color: currentColor; cursor: text; }
 .text-editor-page:not(.text-document--compact) .text-editor-body--empty .text-editor-content { min-height: 64px; }
 .text-editor-placeholder { position: absolute; top: 0; left: 0; max-width: 100%; box-sizing: border-box; padding: 6px 8px; font: var(--workflow-type-control); color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
 .text-document--compact .text-editor-placeholder { padding: 0; font: inherit; color: inherit; background: none; opacity: .6; }
@@ -97,16 +94,15 @@
 .text-artwork-editor { border: 0; padding: 0; margin: 0; }
 .text-artwork-editor.ProseMirror-selectednode { outline: 2px solid var(--workflow-ink); }
 .text-artwork-editor label { font: 12px/1.4 'Inscape IBM Plex Sans Condensed'; margin-top: 6px; }
-.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 80; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .text-workbench .text-window--read { grid-template-rows: minmax(0, 1fr); }
 .text-window--read > .system-workflow__instrument-content { height: 100%; flex: 1; }
 .text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar {
   opacity: 0; pointer-events: none;
 }
-/* Bridge the 28px gap plus the toolbar border, overlapping the frame edge so
+/* Bridge the toolbar gap plus the toolbar border, overlapping the frame edge so
    fractional zoom and pointer rounding cannot break the hover path. */
-.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar::after { content: ''; position: absolute; inset: 100% -1px auto; height: 30px; }
-.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar[data-controls-below] { bottom: auto; top: calc(100% + 28px); }
+.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar::after { content: ''; position: absolute; inset: 100% -1px auto; height: calc(var(--workbench-controls-gap, 28px) + 2px); }
+.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar[data-controls-below] { bottom: auto; top: calc(100% + var(--workbench-controls-gap, 28px)); }
 .text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar[data-controls-below]::after { top: auto; bottom: 100%; }
 .text-workbench .workbench-window--external-controls:is(:hover, :focus-within)[data-window-chrome] > .system-workflow__detached-window-titlebar,
 .text-workbench .workbench-window-controls[data-window-chrome] > .system-workflow__detached-window-titlebar,
@@ -123,15 +119,8 @@
 .text-workbench .text-window[data-window-chrome]::before, .text-workbench .text-window[data-window-chrome]::after { display: none; }
 .text-workbench .text-window[data-window-chrome]:has(.text-save-error) > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
 .text-save-error { border: 1px solid currentColor; background: var(--workflow-panel); color: var(--workflow-ink); }
-.text-move-handle { touch-action: none; cursor: grab; }
 .text-transfer-preview { position: fixed; z-index: 10000; pointer-events: none; border: 1px dashed #ffffff; box-shadow: 0 0 0 1px #101111; box-sizing: border-box; }
 .text-transfer-preview span { position: absolute; left: 0; top: 0; color: #ffffff; background: #101111; padding: 4px 8px; font: 12px 'Inscape IBM Plex Sans Condensed'; }
-.display-text-content--article { white-space: normal; }
-.display-text-edit-actions { position: absolute; right: 2px; top: 2px; z-index: 5; display: flex; gap: calc(3px * var(--workbench-content-scale, 1)); }
-.display-text-edit-actions > * { zoom: var(--workbench-content-scale, 1); }
-.display-text-authoring { position: absolute; inset: 0; }
-.display-text-authoring .text-editor-page { cursor: text; }
-.system-workflow__placement .text-document img { position: static; max-width: 100%; max-height: 480px; object-fit: contain; }
 .text-document--compact { padding: 0; line-height: var(--text-line-height, 1.2); max-width: none; }
 .text-document--compact .text-document { line-height: inherit; max-width: none; }
 .text-document--compact p { margin: 0; }
@@ -146,11 +135,11 @@
   box-sizing: border-box;
 }
 .text-editor-page[data-writing-direction='stacked'] > .text-document-title { width: auto; }
-/* An explicit Reception cell choice; typography and article content stay authored. */
+/* An explicit Composition cell choice; typography and article content stay authored. */
 [data-text-single-line] :is(.text-document, .text-editor-page) { writing-mode: horizontal-tb; inline-size: auto; max-inline-size: none; }
 [data-text-single-line] :is(.text-document-title, .text-editor-content, p, h1, h2, h3, figcaption) { white-space: nowrap; overflow-wrap: normal; }
-.reception-text-measure { position: fixed; top: 0; left: 0; width: max-content; visibility: hidden; pointer-events: none; }
-.reception-text-measure > article { display: flow-root; }
+.composition-text-measure { position: fixed; top: 0; left: 0; width: max-content; visibility: hidden; pointer-events: none; }
+.composition-text-measure > article { display: flow-root; }
 
 /* Shared role defaults project identically into Write, Read and Visitor.
    Inline marks and block attributes retain their more specific overrides. */
@@ -158,3 +147,12 @@
 .text-document .text-document-body h2, .text-editor-content h2 { font-family: var(--text-h2-fontFamily, inherit); font-size: var(--text-h2-fontSize, 1.35em); color: var(--text-h2-color, inherit); line-height: var(--text-h2-lineHeight, 1.3); letter-spacing: var(--text-h2-letterSpacing, inherit); }
 .text-document .text-document-body h3, .text-editor-content h3 { font-family: var(--text-h3-fontFamily, inherit); font-size: var(--text-h3-fontSize, 1.15em); color: var(--text-h3-color, inherit); line-height: var(--text-h3-lineHeight, 1.3); letter-spacing: var(--text-h3-letterSpacing, inherit); }
 .text-document .text-document-body figcaption, .text-editor-content figcaption { font-family: var(--text-caption-fontFamily, inherit); font-size: var(--text-caption-fontSize, .85em); color: var(--text-caption-color, inherit); line-height: var(--text-caption-lineHeight, inherit); letter-spacing: var(--text-caption-letterSpacing, inherit); }
+
+.text-padding-handles { position: absolute; z-index: 7; inset: 0 auto auto 0; width: var(--controls-frame-width); height: var(--controls-frame-height); pointer-events: none; }
+.text-padding-handle { position: absolute; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; }
+.text-padding-handle.at-left, .text-padding-handle.at-top { translate: -50% -50%; }
+.text-padding-handle.at-right, .text-padding-handle.at-bottom { translate: 50% 50%; }
+.text-padding-handle[aria-orientation="horizontal"] { cursor: ew-resize; }
+.text-padding-handle[aria-orientation="vertical"] { cursor: ns-resize; }
+.text-padding-handle::after { content: ''; display: block; box-sizing: border-box; width: 9px; height: 9px; margin: auto; border: 1.5px solid #171717; border-radius: 50%; background: white; }
+.text-padding-handle:focus-visible { outline: 2px solid var(--editor-accent); border-radius: 50%; }

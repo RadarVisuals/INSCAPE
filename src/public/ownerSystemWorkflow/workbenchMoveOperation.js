@@ -36,7 +36,7 @@ export function createWorkbenchMoveOperation({
   const generation = owner ? origin.store.getGeneration() : null;
   const draft = owner ? origin.store.getSnapshot() : null;
   const members = draft ? workbenchMemberIds(draft, ids) : [];
-  const authored = owner && (members.some(id => id.startsWith('image:'))
+  const authored = owner && (selection.authoredPositions || members.some(id => id.startsWith('image:'))
     || blocks.some(windows => windows.every(id => ids.includes(id)))
     || draft?.workbenchGroups?.some(group => group.memberIds.some(id => members.includes(id))));
   const mode = !owner ? 'visitor' : authored ? 'authored' : 'presentation';

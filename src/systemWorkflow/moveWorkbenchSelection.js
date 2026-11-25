@@ -14,8 +14,7 @@
  * @returns {{position?: Position, window?: Position} | undefined}
  */
 function frameEntry(layout, id, live) {
-  if (id === 'display:primary') return layout.display;
-  for (const key of /** @type {const} */ (['displays', 'texts', 'imageModules', 'shapes', 'keeperDocks'])) {
+  for (const key of /** @type {const} */ (['texts', 'imageModules', 'shapes', 'keeperDocks'])) {
     const entry = layout[key]?.find(item => item.id === id);
     if (entry) return entry;
     const missing = live?.[key]?.find(item => item.id === id);

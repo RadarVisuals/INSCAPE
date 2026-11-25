@@ -18,8 +18,8 @@ function HeaderSession({ component: Header = VisitorHeader, ...props }) {
   };
   return <>
     <Header {...props} onPanel={(id, trigger) => setPanel({ id, trigger })} />
-    {panel && props.account?.address && <Suspense fallback={<span role="status">Opening panel…</span>}>
-      <PublicUtilityPanel panel={panel.id} profileAddress={props.account.address} onClose={close} />
+    {panel && (panel.id === 'settings' || props.account?.address) && <Suspense fallback={<span role="status">Opening panel…</span>}>
+      <PublicUtilityPanel panel={panel.id} profileAddress={props.account?.address} onClose={close} />
     </Suspense>}
   </>;
 }

@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useLibraryStore } from './state/useLibraryStore.js';
+import { curatedAssetIds, curatedDisplayAssets, curatedImages } from './curationStore.js';
 import useOwnerLatticeBrowser from '../public/useOwnerLatticeBrowser.js';
 import useOwnerSystemWorkflowDevelopmentAuthorities from '../public/ownerSystemWorkflow/useOwnerSystemWorkflowDevelopmentAuthorities.js';
 import {
@@ -21,6 +23,7 @@ const EMPTY_REFERENCES = Object.freeze([]);
 export default function useProfileLibrary({
   profileAddress,
   libraryOpen,
+  curatedPicker = false,
   referencedAssetIds = EMPTY_REFERENCES,
   usedAssetIds = EMPTY_REFERENCES,
   reviewAssets,
@@ -33,9 +36,28 @@ export default function useProfileLibrary({
     categories: reviewCategories,
     enabled: Boolean(fixtureAssets),
   });
-  const browser = useOwnerLatticeBrowser(profileAddress, libraryOpen && browserEnabled, referencedAssetIds);
-  const assets = fixtureAssets || browser.data.assets;
-  const records = fixtureAssets || browser.records;
+  const useCurated = curatedPicker && !fixtureAssets;
+  const workspace = useLibraryStore(state => useCurated && state.workspace?.profileAddress === profileAddress?.toLowerCase()
+    ? state.workspace : null);
+  const curated = useMemo(() => {
+    if (!workspace) return null;
+    const ids = curatedAssetIds(workspace);
+    return {
+      assets: curatedDisplayAssets(workspace, ids).map(asset => asset.isCollection ? {...asset, collectionRole:'cover'} : asset),
+      images: new Map(ids.map(id => [id, curatedImages(workspace, id)])),
+    };
+  }, [workspace]);
+  const references = useMemo(() => useCurated
+    ? referencedAssetIds.filter(id => workspace && !workspace.curatedSnapshots?.[id])
+    : referencedAssetIds, [useCurated, referencedAssetIds, workspace]);
+  const browser = useOwnerLatticeBrowser(profileAddress, !useCurated && libraryOpen && browserEnabled, references, useCurated);
+  const assets = fixtureAssets || (useCurated ? curated?.assets || EMPTY_REFERENCES : browser.data.assets);
+  const records = useMemo(() => {
+    if (fixtureAssets) return fixtureAssets;
+    if (!useCurated) return browser.records;
+    const missing = new Set(references);
+    return [...browser.records.filter(record => missing.has(record.id)), ...assets.flatMap(a => a.assetRecord || [])];
+  }, [fixtureAssets, useCurated, browser.records, references, assets]);
   const refineAsset = useCallback(
     asset => ownerSystemWorkflowDecodedAsset(asset, decodedDimensions.get(asset?.stableAssetId || asset?.id)),
     [decodedDimensions]
@@ -92,8 +114,13 @@ export default function useProfileLibrary({
     decodedDimensions,
     registerAssetDimensions,
     resolveAssetDimensions,
-    libraryData,
-    categoryCommands: reviewAuthorities?.categoryCommands || browser.commands,
+    libraryData: useCurated ? {
+      curatedPicker:true, assets:resolvedAssets, ownerContext:profileAddress, workspaceReady:Boolean(workspace),
+      status:workspace ? 'ready' : 'loading', categories:workspace?.folders || EMPTY_REFERENCES,
+      categoryOrganization:workspace?.categoryOrganization, favorites:workspace?.favorites || EMPTY_REFERENCES,
+      curatedImages:curated?.images, usedAssetIds, readOnly:true,
+    } : libraryData,
+    categoryCommands: useCurated ? null : reviewAuthorities?.categoryCommands || browser.commands,
   };
 }
 

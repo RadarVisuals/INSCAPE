@@ -65,8 +65,8 @@ for (const kind of ['raster', 'svg']) test(`Image ${kind} Retry isolates attempt
       // This isolated fixture forces its dock open even on narrow screens.
       // Move it using its real keyboard controls to uncover the Image.
       const dockMove = page.locator('.workbench-tool-dock .workbench-tool-panel-grip');
-      if (await dockMove.count()) {
-        await dockMove.focus();
+      if (owner) {
+        await dockMove.waitFor(); await dockMove.focus();
         for (let i = 0; i < 32; i++) await dockMove.press('Shift+ArrowDown');
       }
       await page.getByRole('status').filter({ hasText: 'Artwork unavailable' }).waitFor().catch(async error => {
@@ -136,10 +136,10 @@ for (const kind of ['raster', 'svg']) test(`Image ${kind} Retry isolates attempt
       if (!owner) {
         const originalCanvas = await canvas.elementHandle();
         await canvas.focus();
-        const close = page.getByRole('button', { name: 'Close Loading test', exact: true });
+        const close = page.getByRole('button', { name: 'Close Image', exact: true });
         if (touch) await close.tap(); else await close.click();
-        await page.getByRole('button', { name: 'Loading test', exact: true }).focus();
-        await page.keyboard.press('Enter');
+        await frame.waitFor({ state: 'detached' });
+        await page.evaluate(() => imageFitFixture.openArtwork('image:load'));
         await ready();
         assert.equal(await originalCanvas.evaluate(node => node.isConnected), false, 'Visitor close and reopen mounts a fresh media instance');
         assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), saved);

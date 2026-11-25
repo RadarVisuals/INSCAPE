@@ -21,11 +21,11 @@ for (const [width, theme] of [[1440, 'dark'], [800, 'light']]) test(`Library has
         return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
       return route.abort();
     });
-    await page.goto(origin + '/browser-tests/reception-editor-fixture.html?sample&image-choices&session=panel-' + theme);
+    await page.goto(origin + '/browser-tests/composition-native-editor-fixture.html?sample&image-choices&session=panel-' + theme);
     const trigger = page.getByRole('button', { name: 'Artwork library', exact: true });
     await trigger.waitFor();
-    if (theme === 'light') await page.getByRole('button', { name: 'Switch to Light', exact: true }).click();
-    const before = await page.evaluate(() => JSON.stringify(window.receptionFixture.root.getDraft()));
+    if (theme === 'light') await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
+    const before = await page.evaluate(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft()));
     await trigger.click();
     const library = page.getByRole('region', { name: 'Library workspace', exact: true });
     await library.waitFor(); await settle(page);
@@ -65,7 +65,7 @@ for (const [width, theme] of [[1440, 'dark'], [800, 'light']]) test(`Library has
     assert.equal(await sharedToolPanel(page, 'Inspector').getByRole('tab', { name: 'Library', exact: true }).count(), 1, 'reopening retains the joined group');
     assert.equal(await search.inputValue(), 'nomad');
     await search.fill('');
-    await library.getByRole('button', { name: 'Library display options', exact: true }).click();
+    await library.getByRole('button', { name: 'Library view options', exact: true }).click();
     await page.getByRole('button', { name: 'Icons', exact: true }).click();
     await page.getByRole('slider', { name: 'Card size', exact: true }).fill('80');
     await page.keyboard.press('Escape');
@@ -81,7 +81,7 @@ for (const [width, theme] of [[1440, 'dark'], [800, 'light']]) test(`Library has
     assert.equal(await page.locator('.system-workflow__library').count(), 1);
     const sizes = await library.locator('.lattice-browser-asset__media').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return [r.width, r.height]; }));
     assert.ok(sizes.length > 0); assert.ok(sizes.every(([w, h]) => Math.abs(w - h) < 1));
-    assert.equal(await page.evaluate(() => JSON.stringify(window.receptionFixture.root.getDraft())), before, 'panel changes never author content');
+    assert.equal(await page.evaluate(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft())), before, 'panel changes never author content');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

@@ -3,7 +3,7 @@ import './workbenchGroups.css';
 
 // The Visitor receives a validated publication, with no store or authoring
 // callbacks. Navigation derives the same temporary presentation as the owner.
-export default function PublishedWorkbenchGroups({ view, content, hostRef, navigation, sceneRef, disabled, locked }) {
+export default function PublishedWorkbenchGroups({ view, content, hostRef, navigation, sceneRef, disabled, locked, positionArtwork }) {
   const scene = useWorkbenchGroupScene({ view, content, navigation, sceneRef, disabled });
-  return <WorkbenchGroupStacks {...{ content, hostRef, scene, locked }} />;
+  return <WorkbenchGroupStacks {...{ content, hostRef, scene, locked, positionArtwork }} />;
 }

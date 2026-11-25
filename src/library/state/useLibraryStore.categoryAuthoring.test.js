@@ -197,3 +197,26 @@ test('creating within a section persists one complete organization and rejects s
   assert.equal(commands.createCategory('Wrong profile', sectionId), null);
   assert.equal(storage.writes.length, 0);
 });
+
+test('moving a folder selection commits both memberships together, including an already-filed image', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const parent = commands.createCategory('Parent');
+  const child = commands.createCategory('Child', null, parent);
+  const sibling = commands.createCategory('Other');
+  const a = 'https://art.test/a.webp', b = 'https://art.test/b.webp';
+  for (const url of [a, b]) commands.setCategoryImage(parent, ASSET_ID, url, true, [ASSET_ID]);
+  commands.setCategoryImage(child, ASSET_ID, a, true, [ASSET_ID]);
+  commands.setCategoryAssets(sibling, [ASSET_ID], true, [ASSET_ID]);
+  assert.equal(commands.moveCategoryAssets(parent, child, [ASSET_ID], a), true);
+  const saved = () => loadLibraryWorkspace(storage, PROFILE).workspace.folders;
+  assert.deepEqual(saved()[0].imageSelections, [{ assetId: ASSET_ID, url: b }]);
+  commands.setCategoryAssets(parent, [SECOND_ASSET_ID], true, [SECOND_ASSET_ID]);
+  assert.equal(commands.moveCategoryAssets(parent, child, [ASSET_ID, SECOND_ASSET_ID]), true);
+  const folders = saved();
+  assert.deepEqual(folders.map(folder => folder.assetIds), [[], [ASSET_ID, SECOND_ASSET_ID], [ASSET_ID]]);
+  assert.deepEqual(folders[1].imageSelections.map(entry => entry.url), [a, b]);
+  assert.equal(commands.moveCategoryAssets(child, 'missing', [ASSET_ID]), false);
+  assert.deepEqual(saved(), folders);
+});

@@ -22,6 +22,16 @@ test('deleted opening category falls back to All; no chosen category preserves t
   const saved = { ...defaultBrowserPreferences(), startCategoryId: 'deleted', view: { kind: 'category', id: 'deleted' } };
   assert.equal(libraryOpeningPreferences(saved, []).startCategoryId, null);
   assert.deepEqual(libraryOpeningPreferences(saved, []).view, { kind: 'all', id: null });
-  const ordinary = { ...defaultBrowserPreferences(), query: 'dragon', relationshipView: 'created' };
+  const ordinary = { ...defaultBrowserPreferences(), query: 'dragon' };
   assert.equal(libraryOpeningPreferences(ordinary, []), ordinary);
+});
+
+test('retired navigation items reopen at All Assets and preserve search', () => {
+  for (const overrides of [{ relationshipView: 'created' }, { relationshipView: 'owned' }, { view: { kind: 'unsorted', id: null } }]) {
+    const saved = { ...defaultBrowserPreferences(), query: 'dragon', ...overrides };
+    const opened = libraryOpeningPreferences(saved, []);
+    assert.deepEqual(opened.view, { kind: 'all', id: null });
+    assert.equal(opened.relationshipView, 'all');
+    assert.equal(opened.query, 'dragon');
+  }
 });

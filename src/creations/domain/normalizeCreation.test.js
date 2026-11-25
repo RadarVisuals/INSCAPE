@@ -28,6 +28,23 @@ test('normalizes contract-level LSP4 attribution with Library-compatible stable 
   assert.equal(creation.fieldProvenance.creators.scope, 'contract');
 });
 
+test('missing or invalid holder data stays unknown, including after merging duplicate paths', () => {
+  for (const holders of [undefined, null, [null], [{ profile_id: PROFILE, balance: null }]]) {
+    const unknown = normalizeCreatorAttribution(assetRow({ holders }), PROFILE);
+    assert.equal(unknown.ownershipKnown, false);
+    assert.equal(unknown.isOwnedByViewedProfile, null);
+    for (const balance of ['0', '1']) {
+      const known = normalizeCreatorAttribution(assetRow({ holders: [{ profile_id: PROFILE, balance }] }), PROFILE);
+      for (const paths of [[known, unknown], [unknown, known]]) {
+        const [merged] = deduplicateCreations(paths);
+        assert.equal(merged.ownershipKnown, true);
+        assert.equal(merged.isOwnedByViewedProfile, balance === '1');
+        assert.equal(merged.currentOwnerAddress, balance === '1' ? PROFILE : null);
+      }
+    }
+  }
+});
+
 test('keeps multiple authored images separate from resolution variants and uses authored index zero as primary', () => {
   const creation = normalizeCreatorAttribution(assetRow({ images: [
     { index: 1, src: 'https://example.com/second.png', width: 2400, height: 2400 },

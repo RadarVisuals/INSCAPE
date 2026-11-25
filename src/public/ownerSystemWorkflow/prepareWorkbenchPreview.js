@@ -1,51 +1,47 @@
 import { ownerSystemWorkflowDecodedAsset } from './ownerSystemWorkflowAssetDimensions.js';
 import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecovery.js';
 
-export default async function prepareWorkbenchPreview({
-  current,
-  draft,
-  store,
-  profileAddress,
-  workbench,
-  projectionError,
-  library,
-  publicationProfile,
-  reviewAssets,
-}) {
-  const { assetsById, resolveAssetDimensions, records, decodedDimensions } = library;
-  const { buildOwnerSystemWorkflowPreviewDocument, preloadOwnerSystemWorkflowPreviewEntryMedia } =
+async function projectCanvas({ current, draft, profileAddress, workbench, library, publicationProfile }) {
+  const { records, decodedDimensions } = library;
+  const { buildOwnerSystemWorkflowPreviewDocument } =
     await import('../ownerSystemWorkflowPreviewDocument.js');
   if (!current()) return null;
-  if (projectionError) throw new Error(projectionError);
-  const referencedIds = new Set(
-    [draft, ...(draft.displays || [])]
-      .flatMap(module =>
-        module.grids.flatMap(grid => grid.placements.map(placement => placement.stableAssetId))
-      )
-      .filter(Boolean)
-  );
-  const decodedEntries = await Promise.all(
-    [...referencedIds].map(async id => {
-      const asset = assetsById.get(id);
-      return [id, asset ? await resolveAssetDimensions(asset) : null];
-    })
-  );
-  if (!current()) return null;
-  const previewDimensions = new Map(decodedEntries.filter(([, dimensions]) => dimensions));
   const previewRecords = records.map(asset =>
     ownerSystemWorkflowDecodedAsset(
       asset,
-      previewDimensions.get(asset?.id) || decodedDimensions.get(asset?.id)
+      decodedDimensions.get(asset?.id)
     )
   );
-  const document = buildOwnerSystemWorkflowPreviewDocument({
+  return buildOwnerSystemWorkflowPreviewDocument({
     assetRecords: previewRecords,
     profile: publicationProfile,
     profileAddress,
     systemWorkflowDraft: draft,
     workbench,
   });
-  await preloadOwnerSystemWorkflowPreviewEntryMedia(document, reviewAssets ? { timeoutMs: 500 } : undefined);
+}
+
+export default async function prepareWorkbenchPreview(input) {
+  const { current, store, profileAddress, workbench, projectionError, composition, activeWork, publishedDocument } = input;
+  if (!current()) return null;
+  if (projectionError || !workbench) throw new Error(projectionError || 'The layout is not ready.');
   if (textRecoveries(store, profileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
-  return document;
+
+  const [{ projectCompositionEditorDocument }, { publishedPresentationSnapshot }] = await Promise.all([
+    import('../../composition/compositionEditorDocument.js'),
+    import('../../presentation/presentationSources.js'),
+  ]);
+  if (!current()) return null;
+  const draft = composition
+    ? { profileAddress, composition: projectCompositionEditorDocument({ ...composition, workbench }) }
+    : await projectCanvas(input);
+  if (!current() || !draft) return null;
+  if (textRecoveries(store, profileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+
+  const entry = { id: activeWork.id, name: activeWork.name, draft };
+  const published = publishedDocument?.profile?.address === profileAddress ? publishedPresentationSnapshot(publishedDocument) : null;
+  // Only this work is being previewed. Links to other works use their public versions.
+  const snapshot = { kind: 'preview', profileAddress, revision: store.getGeneration(),
+    entries: [...(published?.entries || []).filter(item => item.id !== entry.id), entry] };
+  return { entry, snapshot };
 }
