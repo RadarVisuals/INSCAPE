@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { aggregateVerification } from './aggregateVerification.mjs';
+import { aggregateVerification, partitionHostIdentity } from './aggregateVerification.mjs';
 import { fileInventory, passingTap } from './releaseEvidence.mjs';
 import { verificationIdentity } from './verificationIdentity.mjs';
 import { verificationPlan } from './verificationPlan.mjs';
@@ -16,6 +16,36 @@ const success = { code: 0, signal: null, cleanup: { status: 'verified', checkpoi
 const jobs = { source: { result: 'success' }, production: { result: 'success' }, browser: { result: 'success' } };
 const writeJson = (path, value) => writeFile(path, JSON.stringify(value));
 const readJson = async path => JSON.parse(await readFile(path, 'utf8'));
+
+const hostedIdentity = {
+  sourceSha256: 'a'.repeat(64), lockfileSha256: 'b'.repeat(64), publicConfigurationSha256: 'c'.repeat(64),
+  git: { commit: 'd'.repeat(40), dirty: false }, ci: { attempt: '1' },
+  runtime: { node: process.version, platform: 'linux', arch: 'x64', osRelease: '7.0.0-1014-aws',
+    runnerImage: 'ubuntu24', runnerImageVersion: '20261116.133.1' },
+};
+const azureHost = '7.0.0-1017-azure|ubuntu24|20261116.376.1';
+
+test('partition evidence must match its independently recorded Actions host in a mixed-cloud run', () => {
+  const builds = new Map();
+  const azure = partitionHostIdentity(hostedIdentity, azureHost, builds);
+  const aws = partitionHostIdentity(hostedIdentity, '7.0.0-1014-aws|ubuntu24|20261116.133.1', builds);
+  const azureReport = { ...hostedIdentity, runtime: { ...hostedIdentity.runtime,
+    osRelease: '7.0.0-1017-azure', runnerImageVersion: '20261116.376.1' } };
+  assertIdentity(azureReport, azure);
+  assertIdentity(hostedIdentity, aws);
+  assert.throws(() => assertIdentity(azureReport, aws), /Mismatched runtime osRelease/u);
+  assert.throws(() => assertIdentity(hostedIdentity, azure), /Mismatched runtime osRelease/u);
+});
+
+test('missing host evidence, mixed releases and build drift within a cloud are rejected', () => {
+  const builds = new Map();
+  partitionHostIdentity(hostedIdentity, azureHost, builds);
+  for (const invalid of [undefined, '', azureHost.replace('ubuntu24', 'ubuntu22'), azureHost.replace('azure', 'other'),
+    azureHost.replace('7.0.0', '7.1.0'), azureHost.replace('20261116', '20261123'),
+    azureHost.replace('1017', '1018'), azureHost.replace('.376.', '.377.')]) {
+    assert.throws(() => partitionHostIdentity(hostedIdentity, invalid, builds));
+  }
+});
 
 test('Windows evidence requires the same complete process inventory executable identity', () => {
   const identity = { sourceSha256: 'a'.repeat(64), lockfileSha256: 'b'.repeat(64), publicConfigurationSha256: 'c'.repeat(64),

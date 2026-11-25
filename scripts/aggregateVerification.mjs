@@ -9,6 +9,29 @@ import { loadBrowserSuiteCatalog, browserSelection, selectBrowserSuites } from '
 import { assertIdentity, validateBrowserEvidence, validatePartition } from './verificationEvidence.mjs';
 const json = async path => JSON.parse(await readFile(path, 'utf8'));
 
+// GitHub schedules the same Ubuntu label on AWS and Azure. The kernel
+// package and image build number identify the provider-specific build.
+// Bind every artifact to the host recorded independently by its Actions job.
+export function partitionHostIdentity(identity, recordedHost, providerBuilds) {
+  if (!identity.ci) return identity;
+  assert.equal(identity.runtime.platform, 'linux', 'Expected the Ubuntu verification workflow');
+  const fields = recordedHost?.split('|');
+  assert.equal(fields?.length, 3, 'Missing or invalid Actions runner identity');
+  const [osRelease, image, runnerImageVersion] = fields;
+  assert.ok(image && image === identity.runtime.runnerImage, 'Mismatched runner image');
+  for (const [kernel, version] of [[identity.runtime.osRelease, identity.runtime.runnerImageVersion], [osRelease, runnerImageVersion]]) {
+    const match = /^(\d+\.\d+\.\d+)-\d+-(aws|azure)$/u.exec(kernel);
+    assert.ok(match, 'Unknown hosted runner kernel');
+    assert.match(version || '', /^\d{8}(?:\.\d+)+$/u, 'Missing or invalid hosted image version');
+    assert.equal(match[1], identity.runtime.osRelease.split('-')[0], 'Mismatched kernel release series');
+    assert.equal(version.split('.')[0], identity.runtime.runnerImageVersion.split('.')[0], 'Mismatched runner image release date');
+    const build = { kernel, version }, previous = providerBuilds.get(match[2]);
+    if (previous) assert.deepEqual(build, previous, 'Mismatched runner build within one cloud');
+    else providerBuilds.set(match[2], build);
+  }
+  return { ...identity, runtime: { ...identity.runtime, osRelease, runnerImageVersion } };
+}
+
 export async function aggregateVerification({ root, input, build, output, environment = process.env, jobs }) {
   assertEvidencePath(root, output);
   await mkdir(dirname(output), { recursive: true }); await mkdir(output);
@@ -22,20 +45,22 @@ export async function aggregateVerification({ root, input, build, output, enviro
     const parts = [{ scope: 'source' }, { scope: 'production' }, ...Array.from({ length: BROWSER_SHARDS }, (_, index) => ({ scope: 'browser', shard: index + 1 }))];
     const partName = ({ scope, shard }) => `verification-${scope}${shard ? `-${shard}` : ''}-${attempt}`;
     assert.deepEqual((await readdir(input)).sort(), parts.map(partName).sort(), 'Missing, extra or duplicate verification artifact');
-    const seen = [], summaries = [];
+    const seen = [], summaries = [], providerBuilds = new Map();
     let production;
     for (const part of parts) {
       const folder = resolve(input, partName(part)), summary = await json(resolve(folder, 'verification.json'));
-      await validatePartition(summary, { ...part, output: folder, identity });
+      const host = jobs[part.scope].outputs?.[part.shard ? `host_${part.shard}` : 'host'];
+      const partIdentity = partitionHostIdentity(identity, host, providerBuilds);
+      await validatePartition(summary, { ...part, output: folder, identity: partIdentity });
       assert.deepEqual(await json(resolve(folder, 'source-manifest.json')), source, 'Partition source manifest differs from current checkout');
-      summaries.push({ ...part, artifact: partName(part), finishedAt: summary.finishedAt });
+      summaries.push({ ...part, artifact: partName(part), finishedAt: summary.finishedAt, runtime: summary.runtime });
       if (part.scope === 'production') production = summary;
       if (part.scope === 'browser') {
         const browserFolder = resolve(folder, 'browser'), browser = await json(resolve(browserFolder, 'browser.json'));
         const selection = browserSelection(catalog, [`--shard=${part.shard}/${BROWSER_SHARDS}`]);
-        await validateBrowserEvidence(browser, { output: browserFolder, selection, identity });
+        await validateBrowserEvidence(browser, { output: browserFolder, selection, identity: partIdentity });
         assertIdentity(browser.identity, summary, { browser: true });
-        assertIdentity(browser.identity, production, { browser: true });
+        assert.deepEqual(browser.identity.runtime.browser, production.runtime.browser, 'Mismatched browser environment');
         assert.deepEqual(await json(resolve(browserFolder, 'source-manifest.json')), source, 'Browser source manifest differs from current checkout');
         seen.push(...browser.results.map(result => result.name));
       }

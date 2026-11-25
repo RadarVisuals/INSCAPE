@@ -11,6 +11,8 @@ import { measureGalleryScroll } from './measureGalleryScroll.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-overview';
 
+const committedDraftJson = page => page.evaluate(async () => JSON.stringify(await window.readCommittedDraft()));
+
 async function seedMirroredImages(page, transparentSvg = false) {
   const source = await page.evaluate(() => {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 96;
@@ -81,7 +83,7 @@ test('mirrored Image joins stay seamless in list, grid and canvas presentation',
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: density, reducedMotion: 'reduce' });
       await open(page); await seedMirroredImages(page, transparentSvg);
       await editorOverview(page); await settlePreview(page);
-      const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+      const saved = await committedDraftJson(page);
       for (const mode of ['list', 'grid', 'modal', 'expanded']) {
         if (mode === 'grid') await menuAction(page, 'Grid');
         if (mode === 'modal') await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).click({ position: { x: 20, y: 100 } });
@@ -93,7 +95,7 @@ test('mirrored Image joins stay seamless in list, grid and canvas presentation',
         assert.equal(result.badPixels.length, 0, `${width}@${density} ${mode}: ${JSON.stringify(result)}`);
         if (transparentSvg) assert.deepEqual(result.hole.slice(0, 3), result.background, 'transparent SVG cutouts stay transparent');
       }
-      assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved, 'browsing preserves exact authored positions, crop and mirroring');
+      assert.equal(await committedDraftJson(page), saved, 'browsing preserves exact authored positions, crop and mirroring');
       await page.close();
     }
   } finally { await browser.close(); }
@@ -181,6 +183,7 @@ async function seedGallery(page) {
   });
   await page.reload();
   await editorOverview(page);
+  await page.locator('.workbench-overview').waitFor();
 }
 
 
@@ -190,7 +193,7 @@ test('normal motion reverses a partial canvas lift without a jump and menu and d
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page); await seedPresentation(page); await menuAction(page, 'Grid');
-    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const saved = await committedDraftJson(page);
     await page.locator('.workbench-overview-navigation').evaluate(async node => { await Promise.all(node.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {}))); });
     const menuSample = await page.getByRole('button', { name: 'View options', exact: true }).evaluate(async trigger => {
       const host = trigger.closest('header'); trigger.click();
@@ -280,7 +283,7 @@ test('normal motion reverses a partial canvas lift without a jump and menu and d
     }
     await dialog.evaluate(node => node.getAnimations({ subtree: true }).forEach(animation => animation.finish()));
     await dialog.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    assert.equal(await committedDraftJson(page), saved);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -313,6 +316,8 @@ test('card size changes actual bounds for one canvas, and touch arrangement work
     await dragHandle.scrollIntoViewIfNeeded(); await settlePreview(touch);
     const handle = await dragHandle.boundingBox();
     const target = await touch.locator('[data-gallery-cycle="0"] .workbench-overview-card').nth(1).boundingBox();
+    const done = await touch.getByRole('button', { name: 'Done', exact: true }).boundingBox();
+    assert.ok(done.y + done.height <= target.y, 'arrangement controls leave the first row available for dragging');
     const cdp = await touch.context().newCDPSession(touch);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }] });
     await touch.locator('.workbench-overview-drag-label').waitFor();
@@ -373,19 +378,20 @@ test('gallery keeps artwork on hover, reveals bounded titles and actions, and co
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page); await seedPresentation(page);
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       const store = window.guardedStore(), draft = store.getDraft(), original = store.getWorkbenchId();
-      store.updateWorkbenchDetails(original, { name: 'Horizon', introduction: 'Collected fragments of a landscape.' });
+      if (!store.updateWorkbenchDetails(original, { name: 'Horizon', introduction: 'Collected fragments of a landscape.' }))
+        throw Error('Rename reveal fixture failed');
       for (const [name, color] of [['A long composition title with enough room for one more study', '#b8a078'], ['Quiet study', '#97a5bb']]) {
         if (!store.createWorkbench(name)) throw Error('Create reveal fixture failed');
         draft.shapes[0].color = color;
         if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Save reveal fixture failed');
       }
-      store.switchWorkbench(original);
+      if (!store.switchWorkbench(original) || !await store.whenCommitted()) throw Error('Could not persist the reveal fixture before reload');
     });
     await page.reload(); await editorOverview(page);
     await menuAction(page, 'Grid');
-    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const saved = await committedDraftJson(page);
     const card = page.getByRole('button', { name: 'Open Horizon', exact: true }).locator('..');
     await page.mouse.move(1, 1); await settlePreview(page);
     assert.equal(await card.locator('.workbench-overview-card-reveal').evaluate(node => getComputedStyle(node).opacity), '0', 'no title or actions at rest');
@@ -427,7 +433,7 @@ test('gallery keeps artwork on hover, reveals bounded titles and actions, and co
       }));
       await menu(page, false);
     }
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    assert.equal(await committedDraftJson(page), saved);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -439,7 +445,7 @@ test('canvas inspection fits 5K, reuses source metadata and saved views, and ret
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page); await seedPresentation(page);
     await menuAction(page, 'Grid');
-    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const saved = await committedDraftJson(page);
     const gallery = page.getByRole('region', { name: 'Workbench gallery' });
     const scroll = await gallery.evaluate(node => node.scrollTop);
     await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).click();
@@ -499,7 +505,7 @@ test('canvas inspection fits 5K, reuses source metadata and saved views, and ret
     assert.equal(await page.locator('.owner-works .workbench-overview[data-layout="grid"]').count(), 1,
       'one Escape closes inspection without leaving the overview');
     await page.waitForFunction(() => document.activeElement.getAttribute('aria-label') === 'Open Workbench 1');
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    assert.equal(await committedDraftJson(page), saved);
     assert.equal(await gallery.evaluate(node => node.scrollTop), scroll);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -512,7 +518,7 @@ test('inspection supports touch details, one info panel and closing during the l
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page); await seedPresentation(page);
     await menuAction(page, 'Grid', true);
-    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const saved = await committedDraftJson(page);
     const trigger = page.getByRole('button', { name: 'Open Workbench 1', exact: true });
     await revealCard(page, 'Workbench 1', true);
     assert.equal(await page.getByRole('dialog').count(), 0, 'first touch reveals the existing card actions');
@@ -541,7 +547,7 @@ test('inspection supports touch details, one info panel and closing during the l
       assert.equal(await dialog.evaluate(node => node.contains(document.activeElement)), true);
     }
     await dialog.getByRole('button', { name: 'Close canvas', exact: true }).tap(); await dialog.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    assert.equal(await committedDraftJson(page), saved);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -617,7 +623,7 @@ test('eight-canvas wrap preserves painted content at every frame and unloads dis
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 913 }, deviceScaleFactor: 1.25 });
     await open(page); await seedGallery(page); await menuAction(page, 'Grid'); await settlePreview(page);
-    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const saved = await committedDraftJson(page);
     const frames = await measureGalleryScroll(page);
     await mkdir(output, { recursive: true });
     await writeFile(path.join(output, 'wrap-eight-frames.json'), JSON.stringify(frames));
@@ -630,7 +636,7 @@ test('eight-canvas wrap preserves painted content at every frame and unloads dis
     await page.getByRole('slider', { name: 'Card size' }).fill('3');
     await menu(page, false);
     await page.waitForFunction(() => document.querySelector('.workbench-overview-card:not(:has(.workbench-overview-preview))'));
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    assert.equal(await committedDraftJson(page), saved);
   } finally { await browser.close(); }
 });
 
@@ -640,7 +646,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page); await seedGallery(page);
-    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const saved = await committedDraftJson(page);
     await menuAction(page, 'Grid');
     const gallery = page.getByRole('region', { name: 'Workbench gallery' });
     await gallery.waitFor();
@@ -663,7 +669,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
         return Math.abs(node.scrollTop - expected) < 2;
       }, { offset, radius });
     }
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved, 'view changes and wrapping never persist or activate');
+    assert.equal(await committedDraftJson(page), saved, 'view changes and wrapping never persist or activate');
     assert.equal(await gallery.locator('iframe, [contenteditable="true"]').count(), 0);
     assert.ok(await gallery.locator('.workbench-overview-preview').count() <= 8 * copies, 'preview copies remain bounded to the visual cycles');
     await gallery.getByRole('button', { name: 'Open Workbench 1', exact: true }).focus();
@@ -729,7 +735,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
       }
       throw Error('No repeated tile visible');
     });
-    const beforeInspection = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const beforeInspection = await committedDraftJson(page);
     const beforeInspectionScroll = await gallery.evaluate(node => node.scrollTop);
     await page.mouse.click(repeated.x, repeated.y);
     await page.getByRole('dialog', { name: `View ${repeated.name}`, exact: true }).waitFor();
@@ -737,7 +743,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     await page.getByRole('dialog').getByRole('button', { name: 'Close canvas', exact: true }).click();
     await page.getByRole('dialog').waitFor({ state: 'hidden' });
     assert.equal(await gallery.evaluate(node => node.scrollTop), beforeInspectionScroll, 'closing a repeated tile retains the wrapped gallery position');
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), beforeInspection);
+    assert.equal(await committedDraftJson(page), beforeInspection);
     await page.mouse.click(repeated.x, repeated.y);
     await revealPresentation(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).click();
@@ -766,7 +772,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
     await open(page);
     await editorOverview(page);
-    const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const before = await committedDraftJson(page);
     await menuAction(page, 'Grid', true);
     const gallery = page.getByRole('region', { name: 'Workbench gallery' });
     await gallery.waitFor();
@@ -778,7 +784,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
     assert.equal(await page.getByRole('dialog').count(), 0, 'first tap reveals controls without opening');
     await page.getByRole('button', { name: 'Information for Workbench 1', exact: true }).tap();
     assert.equal(await page.locator('.workbench-overview-detail').count(), 0);
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before);
+    assert.equal(await committedDraftJson(page), before);
     await page.getByRole('button', { name: 'Composition actions' }).tap();
     await page.getByRole('button', { name: 'New composition', exact: true }).tap();
     await page.getByLabel('Composition name', { exact: true }).fill('An empty composition');
@@ -824,7 +830,7 @@ test('failed departure keeps the live editor and mixed-content previews preserve
       draft.workbench.shapes = [{ id: 'shape:preview', open: true, window: { left: 430, top: 30, width: 710, height: 400 } }];
       draft.imageModules = [{ id: 'image:preview', name: 'Mountain study', width: 340, height: 340, visibility: 'PRIVATE', artwork: { id: 'artwork:preview', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
       draft.workbench.imageModules = [{ id: 'image:preview', open: true, position: { left: 580, top: 40 } }];
-      if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Fixture save failed');
+      if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }) || !await store.whenCommitted()) throw Error('Fixture save failed');
     });
     await page.reload(); await editorOverview(page);
     await page.locator('.workbench-overview').waitFor();

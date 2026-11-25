@@ -4,6 +4,8 @@ import { EventEmitter } from 'node:events';
 import { stat } from 'node:fs/promises';
 import { launchOwnedChromium, ownedChromiumArguments } from './owned-chromium.mjs';
 
+const browserPath = '/devtools/browser/fe23ea17-3920-462b-aa7d-8b4c0bbb4320';
+
 function fixture({ rootIdentity, connectError, endpointMissing = false } = {}) {
   const child = new EventEmitter();
   Object.assign(child, { pid: 45000, exitCode: null, signalCode: null, stderr: { resume() {} } });
@@ -22,7 +24,7 @@ function fixture({ rootIdentity, connectError, endpointMissing = false } = {}) {
     },
     inventory: async () => child.exitCode === null ? [{ pid: child.pid, parentPid: process.pid, identity: rootIdentity || `/Date(${startedAt})/` }] : [],
     terminateProcess: async entry => { calls.push(['terminate', entry.pid]); exit(); },
-    readEndpoint: async () => { if (endpointMissing) throw Object.assign(Error('not ready'), { code: 'ENOENT' }); return '19000\n/devtools/browser/test-owned\n'; },
+    readEndpoint: async () => { if (endpointMissing) throw Object.assign(Error('not ready'), { code: 'ENOENT' }); return `19000\n${browserPath}\n`; },
     connect: async (endpoint, options) => {
       calls.push(['connect', endpoint, options]); if (connectError) throw Error(connectError); connected = true; return browser;
     },
@@ -49,7 +51,7 @@ test('owned launch, CDP connection and graceful close keep unique profile owners
   assert.equal(mock.calls[0][3].windowsHide, true);
   assert.ok(mock.calls[0][2].includes(`--user-data-dir=${mock.session.profile}`));
   const connect = mock.calls.find(call => call[0] === 'connect');
-  assert.equal(connect[1], 'ws://127.0.0.1:19000/devtools/browser/test-owned');
+  assert.equal(connect[1], 'ws://127.0.0.1:19000' + browserPath);
   assert.equal(connect[2].artifactsDir, 'artifacts'); assert.equal(connect[2].slowMo, 2);
   const first = launched.browser.close(); assert.equal(first, launched.browser.close()); await first;
   assert.deepEqual(mock.calls.slice(-2), [['Browser.close'], ['disconnect']]);
@@ -112,4 +114,22 @@ test('a persistently locked port file fails and cleans up within the same launch
   await assert.rejects(launchOwnedChromium({ executablePath: 'chrome', timeout: 10 }, mock.dependencies), /launch deadline/u);
   assert.ok(mock.calls.some(call => call[0] === 'terminate'));
   await assert.rejects(stat(mock.session.profile), { code: 'ENOENT' });
+});
+
+test('Chromium connects only after the complete endpoint is visible in its own profile', async () => {
+  const mock = fixture();
+  const writes = ['', '19000\n', '19000\n' + browserPath.slice(0, -1), '19000\n' + browserPath];
+  mock.dependencies.readEndpoint = async () => writes.shift();
+  const launched = await launchOwnedChromium({ executablePath: 'chrome' }, mock.dependencies);
+  assert.deepEqual(writes, []);
+  assert.deepEqual(mock.calls.filter(call => call[0] === 'connect').map(call => call[1]), ['ws://127.0.0.1:19000' + browserPath]);
+  await launched.browser.close();
+});
+
+test('an invalid endpoint never connects and the owned process is cleaned up', async () => {
+  const mock = fixture();
+  mock.dependencies.readEndpoint = async () => '65536\n' + browserPath;
+  await assert.rejects(launchOwnedChromium({ executablePath: 'chrome', timeout: 50 }, mock.dependencies), /invalid debugging endpoint/u);
+  assert.ok(!mock.calls.some(call => call[0] === 'connect'));
+  assert.ok(mock.calls.some(call => call[0] === 'terminate'));
 });

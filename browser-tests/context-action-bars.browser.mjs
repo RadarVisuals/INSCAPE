@@ -1,3 +1,4 @@
+import { routeLocalWorkflowArtwork } from './fixtures/legacy-workflow-artwork.mjs';
 import test from 'node:test';
 import { artworkCommand } from './fixtures/artwork-menu.mjs';
 import assert from 'node:assert/strict';
@@ -18,11 +19,7 @@ async function mount(browser, viewport = { width: 1440, height: 1000 }, theme = 
   const page = await browser.newPage({ viewport, hasTouch, reducedMotion: 'reduce' });
   page.setDefaultTimeout(10000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
-    const path = new URL(route.request().url()).pathname.split('/public/')[1];
-    await route.fulfill({ response: await route.fetch({ url: `${origin}/${path}` }) });
-  });
+  await routeLocalWorkflowArtwork(page, origin);
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=actions&theme=${theme}`);
   await page.locator('.image-module__canvas').waitFor();
   await setEditorSidebarOpen(page, false);
@@ -98,7 +95,7 @@ test('crop stays in the module panel, cancels without saving and commits one und
       assert.deepEqual(await draft(page), before, 'crop preview never saves');
       await button(cropPanel, 'Cancel').click();
       assert.deepEqual(await draft(page), before);
-      assert.equal(await (actions).locator('button:focus').count(), 1, 'focus returns to an available action');
+      await button(actions, 'Crop').and(actions.locator(':focus')).waitFor();
       await button(actions, 'Crop').click(); await zoom.fill('2');
       await button(cropPanel, 'Done').click();
       assert.notDeepEqual(await draft(page), before);

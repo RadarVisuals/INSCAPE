@@ -115,6 +115,7 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     assert.equal(await page.getByRole('button', { name: 'Expand right sidebar', exact: true }).isVisible(), true);
     await page.getByRole('button', { name: 'Expand right sidebar', exact: true }).click();
     await editorDestination(page, 'Preview');
+    await page.getByRole('dialog', { name: 'Composition preview' }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).isVisible(), false, 'Preview has no editor handles');
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).waitFor();
