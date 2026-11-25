@@ -126,6 +126,7 @@ test('portrait margins contract while prepared docked tools stay above the artwo
     await undockWindow(page, dock);
     await dock.getByRole('button', { name: / window options$/ }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Dock on right', exact: true }).click();
+    await dock.locator('.workbench-tool-panel-grip:focus').waitFor();
     const keeperDockButton = page.locator('.keeper-dock-window').getByRole('button', { name: 'Keeper window options', exact: true });
     await keeperDockButton.press('Enter');
     await page.getByRole('menuitemcheckbox', { name: 'Dock on left', exact: true }).click();
