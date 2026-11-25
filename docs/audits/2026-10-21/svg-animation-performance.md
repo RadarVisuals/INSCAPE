@@ -195,7 +195,7 @@ gehasht. Geen bestand ontbreekt. Alleen de twee bewust uitgebreide benchmark-
 bestanden en de browserrunner verschillen; de andere 183 zijn bytegelijk.
 De oorspronkelijke Keeper-SVG blijft SHA-256
 `b21e786cab2be4382a4b1fc3ac06d7a79df49d6e011a1108a7dbbb95b0799825`.
-De bestaande Keeper-proef en opslag/HTML-wijzigingen zijn behouden.
+De bestaande opslag/HTML-wijzigingen zijn behouden.
 
 De [CI-run voor de gecommitteerde HEAD](https://github.com/RadarVisuals/INSCAPE/actions/runs/39416407131)
 was groen. Dat zegt niets over deze niet-gecommitteerde wijzigingen; daarvoor

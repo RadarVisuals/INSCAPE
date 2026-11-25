@@ -11,12 +11,12 @@ export default function useApplicationNavigation(authority) {
   const { changeRoute } = motion;
   const destination = resolveApplicationDestination(route, authority);
 
-  const navigate = useCallback((next, { replace = false, receptionParent = null, worksParent = null } = {}) => {
+  const navigate = useCallback((next, { replace = false, profileParent = null, worksParent = null } = {}) => {
     const previous = current.current;
     const origin = next.editor ? studioOrigin(previous, next.address, window.history.state?.inscapeStudioOrigin) : null;
     current.current = next;
     window.history[replace ? 'replaceState' : 'pushState'](
-      { inscapeReceptionParent: receptionParent, inscapeWorksParent: worksParent, inscapeStudioOrigin: origin, ...(next.curation && { inscapeCurationParent: true }) }, '',
+      { inscapeProfileParent: profileParent, inscapeWorksParent: worksParent, inscapeStudioOrigin: origin, ...(next.curation && { inscapeCurationParent: true }) }, '',
       applicationRouteUrl(window.location, next));
     changeRoute(previous, next, setRoute);
   }, [changeRoute]);
@@ -36,15 +36,6 @@ export default function useApplicationNavigation(authority) {
     navigate(returnToConnectedProfile && normalized === authority.profileAddress?.toLowerCase()
       ? { kind: 'home' } : { kind: 'profile', address: normalized });
   }, [authority.profileAddress, navigate]);
-  const openReception = useCallback((address, reception = true) => {
-    const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, reception });
-  }, [navigate]);
-  const editReception = useCallback((address, options) => {
-    const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'reception' },
-      { replace: current.current.editor && current.current.address === normalized, ...options });
-  }, [navigate]);
   const openStudio = useCallback((address, { create = false, reviewPublication = false } = {}) => {
     const normalized = normalizeProfileAddress(address);
     if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'studio', ...(create && { newComposition: true }), ...(reviewPublication && { reviewPublication: true }) },
@@ -72,7 +63,7 @@ export default function useApplicationNavigation(authority) {
   }, [navigate]);
   const closeCuration = useCallback(() => {
     if (window.history.state?.inscapeCurationParent) window.history.back();
-    else navigate({ kind: 'profile', address: current.current.address, reception: 'published' }, { replace: true });
+    else navigate({ kind: 'profile', address: current.current.address }, { replace: true });
   }, [navigate]);
   const openWriting = useCallback(address => {
     const normalized = normalizeProfileAddress(address);
@@ -81,13 +72,13 @@ export default function useApplicationNavigation(authority) {
   const openCanvas = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized) return;
-    navigate({ kind: 'profile', address: normalized, canvas: true, reception: 'published', ...(target ? { target } : {}) });
+    navigate({ kind: 'profile', address: normalized, gallery: true, ...(target ? { target } : {}) });
   }, [navigate]);
   const openWork = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized || !target?.moduleId) return;
-    navigate({ kind: 'profile', address: normalized, target, ...(current.current.reception ? { reception: current.current.reception } : {}) },
-      { receptionParent: normalized });
+    navigate({ kind: 'profile', address: normalized, target },
+      { profileParent: normalized });
   }, [navigate]);
   const editWork = useCallback((address, workId, { replace = false } = {}) => {
     const next = { kind: 'profile', address: normalizeProfileAddress(address), editor: 'canvas', workId };
@@ -95,26 +86,26 @@ export default function useApplicationNavigation(authority) {
     const previous = current.current;
     const switching = Boolean(previous.editor) && previous.address === next.address;
     if (switching && previous.workId === workId) return;
-    const fromWorks = previous.canvas && previous.reception === 'published' && !previous.target && previous.address === next.address;
+    const fromWorks = previous.gallery && !previous.target && previous.address === next.address;
     const hasWorksParent = (!replace && fromWorks) || (switching && window.history.state?.inscapeWorksParent === next.address);
     navigate(next, { replace: replace || switching, worksParent: hasWorksParent ? next.address : null });
   }, [authority, navigate]);
   const returnToWorks = useCallback(address => {
     const normalized = normalizeProfileAddress(address);
-    if (!normalized || (current.current.canvas && current.current.reception === 'published' && !current.current.target && current.current.address === normalized)) return;
+    if (!normalized || (current.current.gallery && !current.current.target && current.current.address === normalized)) return;
     if (current.current.editor && window.history.state?.inscapeWorksParent === normalized) window.history.back();
-    else if (current.current.editor && window.history.state?.inscapeStudioOrigin === 'Profile') navigate({ kind: 'profile', address: normalized, reception: 'published' }, { replace: true });
-    else navigate({ kind: 'profile', address: normalized, canvas: true, reception: 'published' }, { replace: Boolean(current.current.editor) });
+    else if (current.current.editor && window.history.state?.inscapeStudioOrigin === 'Profile') navigate({ kind: 'profile', address: normalized }, { replace: true });
+    else navigate({ kind: 'profile', address: normalized, gallery: true }, { replace: Boolean(current.current.editor) });
   }, [navigate]);
   const closeWork = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized) return;
-    if (window.history.state?.inscapeReceptionParent === normalized) window.history.back();
-    else navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: current.current.reception } : {}) }, { replace: true });
+    if (window.history.state?.inscapeProfileParent === normalized) window.history.back();
+    else navigate({ kind: 'profile', address: normalized }, { replace: true });
   }, [navigate]);
   const openOverview = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, reception: 'published' });
+    if (normalized) navigate({ kind: 'profile', address: normalized });
   }, [navigate]);
   const beginDisconnect = useCallback(() => {
     if (disconnecting.current) return null;
@@ -128,6 +119,6 @@ export default function useApplicationNavigation(authority) {
       if (success && current.current === origin && next !== origin) navigate(next, { replace: true });
     };
   }, [authority, navigate]);
-  const studioReturnLabel = window.history.state?.inscapeStudioOrigin || (route.editor === 'reception' ? 'Profile' : 'Gallery');
-  return { motion, route, destination, openCuration, closeCuration, studioReturnLabel, visitProfile, openReception, editReception, openCanvas, openStudio, openWriting, consumePublicationReview, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, beginDisconnect };
+  const studioReturnLabel = window.history.state?.inscapeStudioOrigin || 'Gallery';
+  return { motion, route, destination, openCuration, closeCuration, studioReturnLabel, visitProfile, openCanvas, openStudio, openWriting, consumePublicationReview, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, beginDisconnect };
 }

@@ -88,7 +88,7 @@
 .text-editor-page:not(.text-document--compact) .text-editor-body--empty .text-editor-content { min-height: 64px; }
 .text-editor-placeholder { position: absolute; top: 0; left: 0; max-width: 100%; box-sizing: border-box; padding: 6px 8px; font: var(--workflow-type-control); color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
 .text-document--compact .text-editor-placeholder { padding: 0; font: inherit; color: inherit; background: none; opacity: .6; }
-.text-editor-body:focus-within .text-editor-placeholder { visibility: hidden; }
+.text-editor-page:not(.text-document--compact) .text-editor-body:focus-within .text-editor-placeholder { visibility: hidden; }
 .text-document p:empty::before { content: '\00a0'; }
 .text-status { flex-shrink: 0; border-top: 1px solid var(--workflow-border); padding: 6px 10px; margin: 0; font-family: 'Inscape IBM Plex Sans Condensed'; font-size: 12px; overflow-wrap: anywhere; }
 .text-artwork-editor { border: 0; padding: 0; margin: 0; }
@@ -135,11 +135,11 @@
   box-sizing: border-box;
 }
 .text-editor-page[data-writing-direction='stacked'] > .text-document-title { width: auto; }
-/* An explicit Reception cell choice; typography and article content stay authored. */
+/* An explicit Composition cell choice; typography and article content stay authored. */
 [data-text-single-line] :is(.text-document, .text-editor-page) { writing-mode: horizontal-tb; inline-size: auto; max-inline-size: none; }
 [data-text-single-line] :is(.text-document-title, .text-editor-content, p, h1, h2, h3, figcaption) { white-space: nowrap; overflow-wrap: normal; }
-.reception-text-measure { position: fixed; top: 0; left: 0; width: max-content; visibility: hidden; pointer-events: none; }
-.reception-text-measure > article { display: flow-root; }
+.composition-text-measure { position: fixed; top: 0; left: 0; width: max-content; visibility: hidden; pointer-events: none; }
+.composition-text-measure > article { display: flow-root; }
 
 /* Shared role defaults project identically into Write, Read and Visitor.
    Inline marks and block attributes retain their more specific overrides. */

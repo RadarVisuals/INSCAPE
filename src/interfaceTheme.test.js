@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createInterfaceThemeStore, INTERFACE_THEME_KEY, INTERFACE_PALETTE_KEY, interfacePalettes } from './interfaceTheme.js';
 import { createEmptySystemWorkflowDraft, assertValidSystemWorkflowDraft } from './systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, assertValidWorkbenchCollection } from './systemWorkflow/domain/workbenchCollection.js';
-import { createReception } from './profileDocument/domain/receptionPresentation.js';
 
 test('one device appearance persists independently of profile and artwork records', () => {
   const records = new Map([['composition', 'authored content']]);
@@ -35,18 +34,15 @@ test('failed persistence stays explicit, retries, and storage events synchronize
 test('existing drafts discard retired interface choices without rewriting artwork or their input', () => {
   const draft = createEmptySystemWorkflowDraft(`0x${'1'.repeat(40)}`);
   draft.appearance.menuSurfaceId = 'paper'; draft.appearance.dossierSurfaceId = 'slate';
-  draft.identityPresentation.dossierSurface = 'mist'; draft.reception = createReception(); draft.reception.branding.theme = 'carbon';
+  draft.identityPresentation.dossierSurface = 'mist';
   const before = structuredClone(draft), clean = assertValidSystemWorkflowDraft(draft);
   assert.deepEqual(draft, before);
   assert.deepEqual(clean.grids, draft.grids); assert.equal(clean.appearance.surfaceId, draft.appearance.surfaceId);
   assert.equal(Object.hasOwn(clean.appearance, 'menuSurfaceId'), false);
   assert.equal(Object.hasOwn(clean.identityPresentation, 'dossierSurface'), false);
-  assert.equal(Object.hasOwn(clean.reception.branding, 'theme'), false);
   const collection = createWorkbenchCollection(clean); collection.shared.menuSurfaceId = 'graphite';
-  collection.shared.reception.branding.theme = 'mist';
   const result = assertValidWorkbenchCollection(collection);
   assert.equal(Object.hasOwn(result.shared, 'menuSurfaceId'), false);
-  assert.equal(Object.hasOwn(result.shared.reception.branding, 'theme'), false);
   assert.deepEqual(result.workbenches, collection.workbenches);
 });
 

@@ -50,8 +50,8 @@ export const designDecisions = [
 ];
 export const themes = ['dark', 'light'];
 export const tokenSources = [
-  { path: 'src/reception/reception.css', role: 'Reception', purpose: 'Rectangular partition, responsive flow, navigation contour and separate editor geometry using shared material controls.' },
-  { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs and Profile.' },
+  { path: 'src/composition/compositionDocument.css', role: 'Composition viewer', purpose: 'Composition cells, responsive artwork and linked content.' },
+  { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive publication and profile panels.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchGroups.css', role: 'Groups', purpose: 'Compact Folio cards and group navigation using shared Editor materials.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchIndex.css', role: 'Index', purpose: 'Saved-view rows, compact navigation and shared Editor fields.' },
   { path: 'src/public/ownerLatticePublicationRack.css', role: 'Publication', purpose: 'Publication review, progress, recovery and support within the shared flat shell.' },
@@ -156,7 +156,7 @@ export const typography = [
 ];
 const owner = 'src/public/ownerSystemWorkflow/';
 export const components = [
-  { id: 'destinations', name: 'Docs and Profile', kind: 'Sidebar destinations', material: 'Flat Carbon / Mist',
+  { id: 'destinations', name: 'Publish and Profile', kind: 'Sidebar destinations', material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchDestinationPanel.jsx', evidence: 'browser-tests/destination-panels.browser.mjs',
     contract: 'The existing panels share window chrome, navigation clearance, contained scrolling and visible keyboard focus. Their existing controllers retain content, access and actions.' },
   { id: 'groups', name: 'Groups', kind: 'Navigation tool', material: 'Flat Carbon / Mist',
@@ -446,17 +446,6 @@ export const components = [
     status: 'Production',
   },
   {
-    id: 'reception',
-    name: 'Reception',
-    kind: 'Presentation',
-    material: 'Static bento / flat tactile controls',
-    source: 'src/profileDocument/components/ProfileOverview.jsx',
-    contract:
-      'One region renderer for public reading and a separate owner editor. Reception owns geometry, mobile order, surfaces and canonical Image/Text records. Workbench and Reception share movable/resizable ToolPanel windows and Library drag operation; window frames remain private preferences. Navigation clips the same surface/media silhouette. Multi-object cells are an isolated development experiment, not production data. Canvases and exploration retain their existing routes.',
-    evidence: 'browser-tests/reception-native-editor.browser.mjs',
-    status: 'Production',
-  },
-  {
     id: 'focus-writing',
     name: 'Focus writing',
     kind: 'Pattern',
@@ -509,7 +498,7 @@ export const principles = [
   ],
   [
     'Continuity across hosts',
-    'Owner, Visitor and reception share the same module rendering, with different available actions.',
+    'Owner, Visitor and composition share the same module rendering, with different available actions.',
   ],
   [
     'Change with evidence',

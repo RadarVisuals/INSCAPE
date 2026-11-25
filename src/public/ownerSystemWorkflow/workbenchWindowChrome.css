@@ -17,7 +17,7 @@
   background: var(--editor-panel); color: var(--editor-ink);
   font: 400 11px/1.2 'Inscape Sora', sans-serif; pointer-events: auto;
 }
-.reception-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar {
+.composition-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar {
   --toolbar-left: calc(var(--workbench-left-dock-width, 0px) + 8px);
   --toolbar-right: calc(100dvw - var(--workbench-right-dock-width, 0px) - 8px);
   max-width: max(0px, calc(var(--toolbar-right) - var(--toolbar-left)));

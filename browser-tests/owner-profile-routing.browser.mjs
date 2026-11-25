@@ -77,17 +77,14 @@ async function savedOwnerDraft() {
   }, PROFILE_A);
 }
 
-async function waitForInitialWalletSettlement() {
-  await page.evaluate(async () => {
+async function waitForRoutingEntry() {
+  // Standalone sign-in can keep wallet discovery dormant until the user connects.
+  // Both entry states are ready for the isolated routing fixture.
+  await page.waitForFunction(async () => {
     const { useWalletStore } = await import('/src/store/useWalletStore.js');
-    if (useWalletStore.getState().authorityLifecycleStatus === 'complete') return;
-    await new Promise((resolveSettlement) => {
-      const unsubscribe = useWalletStore.subscribe((state) => {
-        if (state.authorityLifecycleStatus !== 'complete') return;
-        unsubscribe(); resolveSettlement();
-      });
-    });
-  });
+    return useWalletStore.getState().authorityLifecycleStatus === 'complete' ||
+      [...document.querySelectorAll('button')].some(node => node.textContent.trim() === 'Connect profile' && node.getClientRects().length);
+  }, undefined, { timeout: 15_000 });
 }
 
 async function detachWalletLifecycle() {
@@ -177,7 +174,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
 
   test('pending implicit authority is neutral and makes no publication, owner graph, or owner storage request', async () => {
     assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
-    await waitForInitialWalletSettlement();
+    await waitForRoutingEntry();
     await detachWalletLifecycle();
     await page.evaluate(async () => {
       const { publishedProfileResolutionStore } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
@@ -244,171 +241,10 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     assert.equal(new URL(page.url()).searchParams.get('work'), null);
   });
 
-  test('owner Reception shows saved local content and returns without disconnecting or changing compositions', async () => {
-    await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_A,
-      isWalletConnected: true, isHostProfileOwner: true });
-    await setUrl('');
-    await page.getByRole('button', { name: 'Studio', exact: true }).click();
-    await waitForOwnerShell('Owner before reception');
-    const back = () => page.locator('.visitor-header').getByRole('button', { name: 'Studio', exact: true });
-    const openReception = async () => {
-      await setUrl('?view=' + PROFILE_A + '&reception=1');
-      await back().waitFor();
-      assert.match(page.url(), new RegExp(`view=${PROFILE_A}`));
-      assert.match(page.url(), /[?&]reception=1/);
-      assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
-    };
-    await openReception();
-    await page.locator('.reception-canvas').waitFor();
-    assert.equal(await page.locator('.published-profile-status').count(), 0);
-    await page.evaluate(async (address) => {
-      const { publishedProfileResolutionStore: store } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
-      store.repository = { resolve: () => new Promise((_, reject) => { window.__failReceptionRead = reject; }) };
-      void store.resolve(address);
-    }, PROFILE_A);
-    await page.locator('.reception-canvas').waitFor();
-    assert.equal(await page.locator('.published-profile-status').count(), 0);
-    assert.equal(await back().isEnabled(), true);
-    await page.evaluate(() => window.__failReceptionRead(new Error('Fixture network failure')));
-    await page.locator('.reception-canvas').waitFor();
-    assert.equal(await page.locator('.published-profile-status').count(), 0);
-    assert.equal(await back().isEnabled(), true);
-    await back().click();
-    await waitForOwnerShell('Unpublished reception returns to owner');
-    assert.equal(new URL(page.url()).searchParams.get('editor'), 'studio');
-
-    await openReception();
-    // Seed while the editor is unmounted, preserving its concurrent-write guard.
-    // A local repository fixture supplies only public data; the real App,
-    // navigation hook, owner menu and public boundary remain in use.
-    await page.evaluate(async (address) => {
-      const { buildProfileDocumentV9 } = await import('/src/profileDocument/domain/profileDocumentV9Builder.js');
-      const { createEmptySystemWorkflowDraft } = await import('/src/systemWorkflow/domain/systemWorkflowDraft.js');
-      const { publishedProfileResolutionStore: store } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
-      const draft = createEmptySystemWorkflowDraft(address);
-      const document = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Reception owner' }, assetRecords: [], systemWorkflowDraft: draft });
-      store.repository = { resolve: async (target) => target === address
-        ? { status: 'RESOLVED', address: target, document }
-        : { status: 'UNAVAILABLE', address: target, document: null } };
-      await store.resolve(address);
-      const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
-      const { createReception } = await import('/src/profileDocument/domain/receptionPresentation.js');
-      const { createArticle } = await import('/src/text/domain/article.js');
-      const local = createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage });
-      const scope = local.acquireReceptionScope();
-      try {
-        const reception = createReception(), article = createArticle();
-        article.title = 'Saved local Reception';
-        reception.texts = [{ id: 'text:reception-local', article, visibility: 'PUBLIC' }];
-        reception.regions[0].content = reception.texts[0].id;
-        const { createReceptionEditorDocument } = await import('/src/reception/receptionEditorDocument.js');
-        if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception: createReceptionEditorDocument(reception) }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
-      } finally { scope.release(); }
-    }, PROFILE_A);
-    await back().click();
-    await waitForOwnerShell('Owner after publication fixture');
-    for (const width of [1440, 640, 390]) {
-      await page.setViewportSize({ width, height: 900 });
-      await openReception();
-      if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, 'profile-' + width + '.png') });
-      await page.locator('.reception-page').waitFor();
-      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
-      await back().click();
-      await page.locator('[data-reception-editor]').waitFor();
-      await editorDestination(page, 'Profile');
-      await page.locator('.visitor-profile-card').waitFor();
-      assert.match(page.url(), /[?&]reception=published/u);
-      assert.equal(await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).count(), 0);
-      assert.equal(await page.locator('.reception-cell-actions, .reception-divider, .reception-tool-panel').count(), 0);
-      await back().click();
-      await waitForOwnerShell('Return from the published Profile');
-      await openReception();
-      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
-      assert.equal(await back().evaluate(node => !!node.closest('.visitor-tools')), true,
-        'The public header opens Studio for the profile owner');
-      assert.ok(await back().evaluate(node => { const b = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), 'Owner return is exposed and clickable');
-      assert.equal(await back().count(), 1);
-      await back().focus();
-      if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, `reception-${width}.png`) });
-      const box = await back().boundingBox();
-      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= 900);
-      await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
-      const savedDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
-      assert.ok(savedDraft, 'Fixture owner has a saved draft to preserve after the editor round trip');
-      await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Gallery' }).click();
-      await page.locator('.workbench-overview').waitFor();
-      assert.match(page.url(), /[?&]tab=gallery/);
-      assert.doesNotMatch(page.url(), /[?&]reception=1/);
-      assert.equal(await page.locator('main.system-workflow[data-overview]').count(), 0);
-      assert.equal(await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).isVisible(), false);
-      await back().waitFor();
-      assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), savedDraft,
-        'Opening the owner collection does not change its saved compositions');
-      await page.goBack(); await page.locator('.reception-page').waitFor();
-      await page.goForward(); await page.locator('.workbench-overview').waitFor();
-      assert.doesNotMatch(page.url(), /[?&]reception=1/);
-      await openReception();
-      await page.locator('.reception-page').waitFor();
-      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
-      const beforeRoom = await savedOwnerDraft();
-      await page.getByRole('button', { name: /^Explore/ }).click();
-      await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
-      await page.locator('.keeper-dock').waitFor();
-      const roomDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
-      const afterRoom = await savedOwnerDraft();
-      assert.equal(afterRoom.keeperDocks.length, Math.max(1, beforeRoom.keeperDocks?.length || 0));
-      assert.deepEqual(afterRoom.imageModules, beforeRoom.imageModules);
-      assert.match(page.url(), /[?&]reception=1/);
-      assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
-      assert.equal(await back().count(), 1);
-      const publicState = await page.evaluate(async () => {
-        const { useWalletStore } = await import('/src/store/useWalletStore.js');
-        return { connected: useWalletStore.getState().isWalletConnected, storage: [...window.__routingStorageOperations] };
-      });
-      assert.equal(publicState.connected, true);
-      assert.ok(publicState.storage.length > 0, 'Verified owner opens the existing local draft for Keeper editing');
-      const overviewReturn = page.getByRole('button', { name: 'Back to Profile', exact: true });
-      const ownerBox = await back().boundingBox(), overviewBox = await overviewReturn.boundingBox();
-      assert.ok(ownerBox.x >= overviewBox.x + overviewBox.width || overviewBox.x >= ownerBox.x + ownerBox.width
-        || ownerBox.y >= overviewBox.y + overviewBox.height || overviewBox.y >= ownerBox.y + ownerBox.height,
-        'Owner return and profile overview controls do not overlap');
-      await overviewReturn.click();
-      await page.locator('.reception-page').waitFor();
-      assert.match(page.url(), /[?&]reception=1/);
-      await back().focus();
-      await page.keyboard.press('Enter');
-      await waitForOwnerShell('Published reception returns to owner');
-      assert.equal(new URL(page.url()).searchParams.get('editor'), 'studio');
-      assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), roomDraft);
-      await page.goBack(); await page.locator('.reception-page').waitFor();
-      assert.equal(await back().count(), 1);
-      await page.goForward(); await waitForOwnerShell('Forward returns to editing');
-    }
-    await openReception();
-    await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_B,
-      isWalletConnected: true, isHostProfileOwner: true });
-    assert.equal(await back().count(), 0, 'Account changes remove the old owner action');
-    await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
-      isWalletConnected: false, isHostProfileOwner: false });
-    assert.equal(await back().count(), 0, 'Signed-out visitors cannot enter owner editing');
-    assert.equal(await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).count(), 0,
-      'Local Reception content disappears when owner authority is lost');
-    assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
-    await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
-    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Gallery' }).click();
-    await page.locator('.workbench-overview').waitFor();
-    assert.match(page.url(), /[?&]tab=gallery/);
-    assert.equal(await page.getByRole('button', { name: /^Edit / }).count(), 0);
-    assert.deepEqual(await page.evaluate(() => window.__routingStorageOperations), [], 'Visitors only open the published collection');
-    assert.equal(await back().count(), 0);
-    assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
-    await page.goBack(); await page.locator('.reception-page').waitFor();
-  });
-
 
   test('signed-out root and an explicit artist visit remain distinct', async () => {
     assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
-    await waitForInitialWalletSettlement();
+    await waitForRoutingEntry();
     await detachWalletLifecycle();
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
@@ -418,7 +254,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     assert.equal(await page.getByRole('button', { name: 'Studio', exact: true }).count(), 0);
 
     assert.ok((await page.goto(`${baseUrl}/?profile=${PROFILE_A}`, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
-    await waitForInitialWalletSettlement();
+    await waitForRoutingEntry();
     await detachWalletLifecycle();
     await page.evaluate(async () => {
       const { publishedProfileResolutionStore } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');

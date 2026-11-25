@@ -15,7 +15,7 @@ export default function useTextExcerpt(host, content, { article, enabled = true,
       const box = host.current, page = content.current;
       const bounds = box.getBoundingClientRect();
       // Native Editor camera zoom scales DOM rectangles; CSS clipping uses local
-      // layout pixels. Public Reception usually has scale 1, but uses this same path.
+      // layout pixels. Public Composition usually has scale 1, but uses this same path.
       // clientWidth/Height round fractional layout pixels. That can turn a
       // fitting first line into a partial line in responsive or zoomed frames.
       const scaleX = bounds.width / frameSize.width || 1, scaleY = bounds.height / frameSize.height || 1;

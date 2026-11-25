@@ -20,17 +20,12 @@ export function validPublicationDestinations(value) {
   return Array.isArray(value) && value.length > 0 && value.length <= publicationDestinations.length
     && value.every((target, index) => publicationDestinations.includes(target) && value.indexOf(target) === index);
 }
-function compositionDestinations(id, destinations) {
-  return destinations || (id === 'reception' ? ['profile'] : ['gallery']);
-}
-
 // Read placement from publication metadata without cloning any artwork into Studio.
 export function publishedCompositionDestinations(document, id) {
-  if (id === 'reception') return document.reception ? compositionDestinations(id, document.receptionDestinations) : [];
   if (document.canvas === null) return [];
   const first = document.canvas || { id: FIRST_WORKBENCH_ID };
   const entry = first.id === id ? first : document.canvases?.find(item => item.id === id);
-  return entry ? compositionDestinations(id, entry.destinations) : [];
+  return entry ? entry.destinations || ['gallery'] : [];
 }
 
 // A receipt recovered after reload has no Studio selection. Use the placements
@@ -39,7 +34,6 @@ export function publicationViewDestination(document, selectedIds) {
   const ids = selectedIds ?? [
     ...(document.canvas === null ? [] : [document.canvas?.id || FIRST_WORKBENCH_ID]),
     ...(document.canvases || []).map(entry => entry.id),
-    ...(document.reception ? ['reception'] : []),
   ];
   return ids.some(id => {
     const placements = publishedCompositionDestinations(document, id);
@@ -48,13 +42,11 @@ export function publicationViewDestination(document, selectedIds) {
 }
 
 export function publishedCompositionEntries(document, destination) {
-  const entries = publishedCanvasEntries(document).map(item => ({ ...item, destinations: compositionDestinations(item.id, item.destinations) }));
-  if (document.reception) entries.push({ id: 'reception', name: 'Bento', reception: document.reception,
-    destinations: compositionDestinations('reception', document.receptionDestinations) });
+  const entries = publishedCanvasEntries(document).map(item => ({ ...item, destinations: item.destinations || ['gallery'] }));
   return destination ? entries.filter(item => item.destinations.includes(destination)) : entries;
 }
 export function canvasDocument(document, entry) {
-  const shared = Object.fromEntries(Object.entries(document).filter(([key]) => !CANVAS_CONTENT_KEYS.includes(key) && !['canvas', 'canvases', 'reception', 'receptionDestinations'].includes(key)));
+  const shared = Object.fromEntries(Object.entries(document).filter(([key]) => !CANVAS_CONTENT_KEYS.includes(key) && !['canvas', 'canvases'].includes(key)));
   return { ...shared, ...entry.content };
 }
 export function validatePublishedCanvases(document, validate, fail) {

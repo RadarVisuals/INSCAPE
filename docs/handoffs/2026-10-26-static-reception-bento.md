@@ -292,8 +292,8 @@ to delete every file on the list.
 
 | Responsibility | Current source and observed behavior |
 | --- | --- |
-| Reception renderer | `src/profileDocument/components/ProfileOverview.jsx`: fixed identity, links, introduction, details and space blocks. A separate Explore action opens the temporary exploration room. Uses verified identity view-model data. No split, resize, merge or content-placement editor. |
-| Reception CSS | `src/profileDocument/components/profileOverview.css`: hard-coded four-column `.reception-bento` with 8px gaps; fixed grid-area selectors; 24px block padding; breakpoint overrides at 900 and 600px. The same file also contains exploration and visitor-return styles, which must not be blindly deleted. |
+| Reception renderer | `src/profileDocument/components/ProfileOverview.jsx`: fixed identity, links, introduction, details and space blocks. Uses verified identity view-model data. No split, resize, merge or content-placement editor. |
+| Reception CSS | `src/profileDocument/components/profileOverview.css`: hard-coded four-column `.reception-bento` with 8px gaps; fixed grid-area selectors; 24px block padding; breakpoint overrides at 900 and 600px. The same file also contains visitor-return styles, which must not be blindly deleted. |
 | Public route selection | `src/profileDocument/components/ProfileDocumentV9Preview.jsx`: Reception, published gallery and direct-module visitor canvas are selected through the existing entry/target route. It imports `profileOverview.css` independently of the Reception component. |
 | Application routing | `src/App.jsx`, `src/profileDiscovery/applicationNavigation.js`, `src/profileDiscovery/useApplicationNavigation.js`. Preserve profile address, route state, browser Back/Forward and explicit public targets. |
 | Old Reception data shape | `src/profileDocument/domain/receptionPresentation.js`: `validReception` currently accepts only `{ version: 1, items: [...] }`, a bounded unique list of Image/Text/Display IDs. `projectReception` filters that list through allowed public modules. This is retired selection/curation data, not geometry. The wireframe does not render it. |
@@ -795,8 +795,7 @@ the superseded code within the same completed task.
 The word grid has several legitimate meanings here: Workbench canvas alignment,
 Grid Shape, experimental Display scenes and the Aerra gallery. They are not the
 Reception bento. Do not delete them because a search matches grid/bento wording.
-Similarly, exploration/Keeper and visitor-return styles share a CSS file with
-Reception but have independent consumers. Preserve or deliberately relocate
+Visitor-return styles share a CSS file with Reception and have independent consumers. Preserve or deliberately relocate
 those live rules without creating a second copy.
 
 Historical audit reports and screenshots describe prior states and can remain
@@ -885,7 +884,7 @@ strings or class names.
 | Reception publication | Selecting the shared Reception section publishes its eligible placed content through the existing publisher; private and unplaced records stay out. Leaving that section unchecked preserves the previous public Reception. No hidden Workbench is created to satisfy publication prerequisites. |
 | Partial publication | Updating Reception or a selected canvas preserves unselected public canvases and validates all cross-canvas references. |
 | Visitor routing | Signed-out About/Canvases/Discover, direct work links, missing targets, Back/Forward and owner return work without activating a private editor. |
-| Retained functionality | Existing Workbench gallery/viewer, exploration/Keeper and affected Image/Text/Display behavior still work. |
+| Retained functionality | Existing Workbench gallery/viewer and affected Image/Text/Display behavior still work. |
 | Cleanup | One canonical production path; retired selectors, imports, fixtures, schema branches and stale registry entries have an explicit disposition. |
 
 Inspect at least 1440px and a wide desktop, 768px, 390px and 320px, plus a short

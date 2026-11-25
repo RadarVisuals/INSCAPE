@@ -2,7 +2,7 @@ export const INSCAPE_PROFILE_DOCUMENT_TYPE = 'INSCAPE_PROFILE';
 export const INSCAPE_PROFILE_DOCUMENT_VERSION = 9;
 
 // Update the service capability whenever the canonical upload format changes incompatibly.
-export const PROFILE_PUBLICATION_FORMAT = 'v9-studio-publication-3';
+export const PROFILE_PUBLICATION_FORMAT = 'v9-studio-publication-4';
 
 export const PROFILE_DOCUMENT_PUBLICATION_VERSIONS = Object.freeze([
   INSCAPE_PROFILE_DOCUMENT_VERSION,

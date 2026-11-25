@@ -23,7 +23,7 @@ function StudioCollectionHeader({ ownerDestinations, onEdit, onPanel }) {
   </header>;
 }
 
-export default function OwnerWorkbenchOverview({ store, preferences, profileModel, account, view, onViewChange, onEdit, onOpenReception, onOpenGallery, onOpenWriting, ownerDestinations, workspace }) {
+export default function OwnerWorkbenchOverview({ store, preferences, profileModel, account, view, onViewChange, onEdit, onOpenProfile, onOpenGallery, onOpenWriting, ownerDestinations, workspace }) {
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const { galleryCardSize } = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
   const preferenceError = useSyncExternalStore(preferences.subscribe, preferences.getError);
@@ -52,10 +52,10 @@ export default function OwnerWorkbenchOverview({ store, preferences, profileMode
     inert={moving ? '' : undefined} aria-hidden={workspace.exiting || undefined}>
     <VisitorLightField paused={moving} />
     <PublicWorkspaceHeader component={StudioCollectionHeader} model={profileModel} account={account} current="Studio"
-      onEdit={openEditor(() => onEdit(selectedId))} ownerDestinations={{ Profile: onOpenReception, Gallery: onOpenGallery,
+      onEdit={openEditor(() => onEdit(selectedId))} ownerDestinations={{ Profile: onOpenProfile, Gallery: onOpenGallery,
         Writing: onOpenWriting, ...ownerDestinations, Studio: openEditor(() => onEdit(selectedId)) }} />
     {navigationError && <p role="alert" className="visitor-notice">{navigationError}</p>}
-    <CompositionSources snapshot={snapshot} profile={profileModel}><WorkbenchOverview collectionManager visitorHeader items={items} selected={selected} model={model} previews={previews} view={view} onViewChange={onViewChange} onSelect={setSelectedId}
+    <CompositionSources snapshot={snapshot}><WorkbenchOverview collectionManager visitorHeader items={items} selected={selected} model={model} previews={previews} view={view} onViewChange={onViewChange} onSelect={setSelectedId}
       cardSize={galleryCardSize} onCardSize={value => preferences.update(current => ({ ...current, galleryCardSize: value }))}
       preferenceError={preferenceError} onRetryPreferences={preferences.retry}
       onDeleteDraft={id => { if (!store.deleteWorkbench(id, { fromManager: true })) throw workbenchSaveError(store); }}

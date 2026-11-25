@@ -1,3 +1,6 @@
+import WorkspaceBoundary from '../src/workspace/WorkspaceBoundary.jsx';
+import { createStudioComposition } from '../src/systemWorkflow/domain/studioComposition.js';
+import { createCompositionExample } from '../design-system/lab/compositionExample.js';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import CurationPage from '../src/library/CurationPage.jsx';
@@ -11,7 +14,6 @@ import { saveMissingSnapshots } from '../src/library/curatedSnapshots.js';
 import { systemWorkflowDraftKey, createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchCollection, appendWorkbench } from '../src/systemWorkflow/domain/workbenchCollection.js';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
-import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
 import { createArticle } from '../src/text/domain/article.js';
 import { applyWorkspaceRestore, exportWorkspaceBackup, serializeWorkspaceRecovery, previewWorkspaceRestore, serializeWorkbenchBackup, parseWorkbenchBackup, restoreWorkbenchBackup } from '../src/systemWorkflow/workbenchBackup.js';
 import { bindWorkbenchTextRecovery, retainTextRecovery, clearTextRecovery, textRecoveries } from '../src/text/textEditRecovery.js';
@@ -74,11 +76,39 @@ function mount(address = profile) {
   const root = createRoot(document.getElementById('root'));
   root.render(React.createElement(CurationPage, {profileAddress:address, destinations:{}, onBack() { root.unmount(); }}));
 }
-function seedReceptionRecovery() {
-  const draft = createEmptySystemWorkflowDraft(profile);
-  draft.reception = createReception();
-  draft.reception.branding.name = 'Previous Reception';
-  localStorage.setItem('inscape.reception-recovery.v1:' + profile, serializeWorkbenchBackup(draft));
+function seedStudio() {
+  const source = createEmptySystemWorkflowDraft(profile);
+  source.composition = createStudioComposition('canvas');
+  const text = { id: 'text:source', visibility: 'PUBLIC', article: createArticle('Linked text') };
+  source.composition.texts.push(text);
+  source.composition.workbench.texts.push({ id: text.id, open: true, window: { left: 64, top: 80, width: 320, height: 200 } });
+  source.composition.artworkLayers.push(text.id);
+  const bento = createStudioComposition('bento');
+  const image = createCompositionExample().imageModules[0];
+  bento.imageModules.push(image);
+  bento.workbench.imageModules.push({ id: image.id, open: true, position: { left: 80, top: 60 } });
+  bento.cells[0].members.push(image.id);
+  bento.artworkLayers.push(image.id);
+  bento.texts.push({ ...text, id: 'text:caption', article: createArticle('Free caption') });
+  bento.workbench.texts.push({ ...source.composition.workbench.texts[0], id: 'text:caption' });
+  bento.artworkLayers.push('text:caption');
+  bento.links = [{ id: 'link:story', kind: 'source', source: { profileAddress: profile, canvasId: 'workbench:main', moduleId: text.id }, destination: null }];
+  bento.cells[1].content = bento.links[0].id;
+  const record = appendWorkbench(createWorkbenchCollection(source), 'workbench:last', 'The Last one',
+    { ...createEmptySystemWorkflowDraft(profile), composition: bento });
+  record.workbenches[0].name = 'Source canvas';
+  record.shared.reception = { damaged: true };
+  record.workbenches[1].content.composition.branding = { name: '', logo: null };
+  localStorage.setItem(keys[1], JSON.stringify(record));
+}
+async function mountStudio() {
+  const { default: Studio } = await import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx');
+  function Editor() {
+    const [store] = React.useState(wb);
+    return React.createElement(Studio, { profileAddress: profile, rootStore: store, reviewAssets: [], reviewCategories: [],
+      reviewActivity: [], reviewProfile: { name: 'Local artist' } });
+  }
+  createRoot(document.getElementById('root')).render(React.createElement(WorkspaceBoundary, { profile }, React.createElement(Editor)));
 }
 function nestedLibrary() {
   const state = library(), ws = state.workspace;
@@ -109,4 +139,4 @@ function editTabWork() {
     ...expected, article: { ...expected.article, title: 'Tab article recovery' },
   }, { message: 'Interrupted', reason: 'write_failed' });
 }
-window.fixture = {mount, editTabWork, nestedLibrary, seedReceptionRecovery, exportWorkspaceBackup, serializeWorkspaceRecovery, previewWorkspaceRestore, applyWorkspaceRestore, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};
+window.fixture = {mount, mountStudio, seedStudio, wb, editTabWork, nestedLibrary, exportWorkspaceBackup, serializeWorkspaceRecovery, previewWorkspaceRestore, applyWorkspaceRestore, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};

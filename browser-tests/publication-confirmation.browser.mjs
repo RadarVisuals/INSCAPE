@@ -215,7 +215,8 @@ for (const width of [1440, 390]) {
         useWalletStore.setState(patch);
       }, { profile, signer: UPLOAD_TEST_SIGNER.address, transactionHash });
       await page.locator('.startveil').waitFor({ state: 'detached' });
-      await editorDestination(page, 'Publish');
+      await editorDestination(page, 'Studio');
+      await page.locator('.editor-menu-bar').getByRole('button', { name: 'Publish', exact: true }).click();
       if (width === 390) {
         const work = page.locator('.publication-work:has(> label > input:checked)');
         await work.getByRole('checkbox', { name: 'Profile', exact: true }).check();
@@ -249,10 +250,7 @@ for (const width of [1440, 390]) {
       assert.match(viewUrl, new RegExp(`view=${profile}`));
       const publicLink = new URL(viewUrl, origin);
       if (width === 1440) assert.equal(publicLink.searchParams.get('tab'), 'gallery');
-      else {
-        assert.equal(publicLink.searchParams.get('reception'), 'published');
-        assert.equal(publicLink.searchParams.has('tab'), false);
-      }
+      else assert.deepEqual([...publicLink.searchParams], [['view', profile]], 'Profile opens directly');
       await page.evaluate(() => window.finishFixtureRefresh());
       await page.getByRole('button', { name: 'Publish', exact: true }).waitFor();
       await notice.waitFor();

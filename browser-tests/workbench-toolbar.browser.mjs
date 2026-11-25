@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { choosePointer, editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
+import { closeSharedTool } from './fixtures/shared-tools.mjs';
 import { mkdir } from 'node:fs/promises';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
@@ -38,7 +39,8 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
       const errors = await mount(page);
       const toolbar = page.getByRole('toolbar', { name: 'Creation tools' });
       const buttons = toolbar.getByRole('button');
-      assert.equal(await buttons.count(), 7);
+      assert.deepEqual(await buttons.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))),
+        ['Select tool', 'Pointer tools', 'Cell tool', 'Rectangle tool', 'Shapes', 'Text tool', 'Artwork library', 'Actions']);
       const bar = await toolbar.boundingBox(); within(bar, width, height, 'toolbar');
       assert.equal(await toolbar.evaluate(node => getComputedStyle(node).fontFamily), '"Inter Variable", Arial, sans-serif');
       if (width > 520) {
@@ -55,7 +57,7 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
         assert.ok(box.x >= bar.x && box.x + box.width <= bar.x + bar.width + .5 && box.y >= bar.y && box.y + box.height <= bar.y + bar.height + .5, 'keys stay inside their shell');
       }
       assert.equal(await page.locator('.workbench-view-controls').count(), 0, 'one central toolbar in the Editor');
-      assert.equal(await buttons.evaluateAll(nodes => new Set(nodes.map(node => node.getBoundingClientRect().y)).size), 1, 'all seven tools share one row');
+      assert.equal(await buttons.evaluateAll(nodes => new Set(nodes.map(node => node.getBoundingClientRect().y)).size), 1, 'all creation tools share one row');
       await page.screenshot({ path: `${output}/toolbar-${width}.png` });
       if (width === 1576) await page.screenshot({ path: `${output}/reference-toolbar.png`, clip: { x: bar.x - 16, y: bar.y - 12, width: bar.width + 32, height: bar.height + 28 } });
       await editorCommand(page, 'Edit', 'Search commands');
@@ -120,7 +122,7 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
     assert.equal(await page.getByRole('toolbar', { name: 'Creation tools' }).locator('[aria-pressed="true"]').count(), 1);
     const selectTool = page.getByRole('button', { name: 'Select tool', exact: true });
     assert.notEqual((await appearance(library)).background, (await appearance(selectTool)).background, 'open Library stays distinct from the selected cursor');
-    await library.click();
+    await closeSharedTool(page, 'Library');
     assert.equal(await library.getAttribute('aria-expanded'), 'false');
     assert.equal(await selectTool.getAttribute('aria-pressed'), 'true', 'closing Library preserves the cursor tool');
     await editorCommand(page, 'Edit', 'Search commands');
@@ -170,7 +172,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
         const icon = getComputedStyle(node.querySelector('svg.lucide > *'));
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
-      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#faf9f6' : '#2a2c2b', radius: '5px 0px 0px 5px', shellRadius: '11px', stroke: '1.5px', vector: 'non-scaling-stroke' });
+      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#2b2b2b', radius: '5px 0px 0px 5px', shellRadius: '11px', stroke: '1.5px', vector: 'non-scaling-stroke' });
       // The shared header replaced the navigation sidebar; Navigator and tools remain.
       // Keep an explicit surface boundary, including the otherwise classless dock material root.
       const migrated = await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => {

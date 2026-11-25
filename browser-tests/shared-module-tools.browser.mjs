@@ -115,7 +115,7 @@ test('Image, Text and Shape bounds follow activation rather than hover, includin
       await mountTextToolsFixture(page, origin, { surfaces: true });
       await exposeText(page);
       await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-      const text = page.locator('.text-window'), image = page.locator('.image-module__window'), shape = page.locator('.shape-window');
+      const text = page.locator('aside.text-window'), image = page.locator('.image-module__window'), shape = page.locator('.shape-window');
       const visible = async () => ({
         text: await text.locator('.text-window-bounds').evaluate(node => getComputedStyle(node).opacity),
         image: await page.locator('.image-module__bounds').evaluate(node => getComputedStyle(node).opacity),

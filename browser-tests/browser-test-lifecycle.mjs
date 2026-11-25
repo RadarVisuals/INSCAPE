@@ -11,7 +11,7 @@ export const BROWSER_LIFECYCLE_TIMEOUTS = Object.freeze({
   commandMs: 3_000,
   // A fresh PowerShell/CIM snapshot includes process startup. Under browser
   // load that can exceed the generic command budget; keep a separate bound.
-  processInventoryMs: 6_000,
+  processInventoryMs: process.platform === 'win32' ? 15_000 : 6_000,
   processObservationMs: 1_000,
   processTerminationMs: 4_000,
   browserCloseMs: 3_000,

@@ -1,3 +1,4 @@
+import { choosePointer } from '../../browser-tests/fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -28,34 +29,9 @@ test('live artboards isolate state, inspect production sources and reset in both
       external.push(url.origin); return route.abort();
     });
     await page.goto(origin + '/design-lab.html');
-    await page.getByRole('navigation', { name: 'Reception navigation' }).waitFor();
-    await page.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
-    const storageBefore = await page.evaluate(() => { localStorage.setItem('inscape:lab-test-sentinel', 'preserve'); return { ...localStorage }; });
-    await page.getByRole('button', { name: 'Inspect source', exact: true }).click();
-    await page.getByRole('button', { name: 'Explore', exact: true }).click();
-    const selected = JSON.parse(await page.getByLabel('Selected component context').inputValue());
-    assert.match(selected.selection.source, /^src\/reception\/ReceptionOverview.jsx:\d+$/u);
-    assert.equal(selected.selection.owner, 'ReceptionPage');
-    assert.equal(await page.getByRole('region', { name: 'Exploration room' }).count(), 0, 'inspection does not activate Explore');
-    await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Explore', exact: true }).click();
-    await page.getByRole('region', { name: 'Exploration room' }).waitFor();
-    await page.getByRole('button', { name: 'Reset', exact: true }).click();
-    await page.getByRole('region', { name: 'Reception layout' }).waitFor();
-    assert.equal(await page.getByRole('region', { name: 'Exploration room' }).count(), 0);
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
-    await page.getByText('Edit Reception selected. This study previews Reception; that destination is not connected here.', { exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Reset', exact: true }).click();
-    assert.deepEqual(await page.evaluate(() => ({ ...localStorage })), storageBefore);
     const output = resolve(root, 'output/design-lab/verification'); await mkdir(output, { recursive: true });
-    for (const mode of ['LIGHT', 'DARK']) {
-      await page.getByRole('button', { name: mode, exact: true }).click();
-      await page.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
-      assert.equal(await page.locator('html').getAttribute('data-interface-theme'), mode.toLowerCase());
-      await page.screenshot({ path: resolve(output, `reception-${mode.toLowerCase()}.png`), fullPage: true });
-    }
     await page.getByLabel('Artboard', { exact: true }).selectOption('artboards/toolbar');
-    await page.getByRole('button', { name: 'Hand tool', exact: true }).click();
+    await choosePointer(page, 'Hand');
     assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).getAttribute('aria-pressed'), 'true');
     await page.getByRole('button', { name: 'Reset', exact: true }).click();
     assert.equal(await page.getByRole('button', { name: 'Select tool', exact: true }).getAttribute('aria-pressed'), 'true');
@@ -69,37 +45,19 @@ test('live artboards isolate state, inspect production sources and reset in both
     await page.getByRole('searchbox', { name: 'Search', exact: true }).fill('Arch study');
     assert.equal(await page.locator('.system-workflow__library-item').count(), 1);
     await page.screenshot({ path: resolve(output, 'workspace.png'), fullPage: true });
-    assert.equal(await page.getByLabel('Artboard', { exact: true }).locator('option[value="experiments/reception-study"]').count(), 0, 'the retired editor is absent from the lab');
-    await page.getByLabel('Artboard', { exact: true }).selectOption('artboards/reception-editor');
-    const editor = page.frameLocator('iframe[title="Reception Editor"]');
-    await editor.getByRole('region', { name: 'Editor documents', exact: true }).waitFor();
+    const storageBefore = await page.evaluate(() => ({ ...localStorage }));
+    await page.getByLabel('Artboard', { exact: true }).selectOption('artboards/studio-editor');
+    const editor = page.frameLocator('iframe[title="Composition Editor"]');
     await editor.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    assert.equal(await editor.getByRole('combobox', { name: 'Active document', exact: true }).inputValue(), 'reception');
-    assert.equal(await editor.locator('main[data-reception-editor]').count(), 1);
-    assert.equal(await editor.getByRole('button', { name: 'Done', exact: true }).count(), 0);
     await editor.getByRole('button', { name: 'Preview', exact: true }).click();
-    await editor.getByRole('region', { name: 'Reception responsive preview', exact: true }).waitFor();
-    await editor.getByRole('button', { name: 'Phone', exact: true }).click();
-    await editor.locator('.reception-document-canvas[data-mobile]').waitFor();
-    await page.screenshot({ path: resolve(output, 'editor-phone-preview.png'), fullPage: false });
+    await editor.locator('.composition-document-canvas').waitFor();
     await editor.getByRole('button', { name: 'Back to editing', exact: true }).click();
-    await editor.getByRole('combobox', { name: 'Active document', exact: true }).selectOption({ label: 'Workbench 1' });
-    await editor.locator('main[data-canvas-context="canvas"]').waitFor();
-    await editor.getByRole('combobox', { name: 'Active document', exact: true }).selectOption('reception');
-    await editor.locator('main[data-canvas-context="reception"]').waitFor();
-    await page.screenshot({ path: resolve(output, 'shared-reception-editor.png'), fullPage: false });
-    await page.getByRole('button', { name: 'Reset', exact: true }).click();
-    await editor.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    await page.setViewportSize({ width: 430, height: 1000 });
-    await editor.getByRole('region', { name: 'Editor documents', exact: true }).waitFor();
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    await page.screenshot({ path: resolve(output, 'shared-editor-narrow.png'), fullPage: false });
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
     const remaining = await page.evaluate(() => ({ ...localStorage })); delete remaining['inscape:interface-theme']; delete storageBefore['inscape:interface-theme'];
-    for (const key of Object.keys(remaining)) if (key.startsWith('inscape:design-lab:reception-editor:')) delete remaining[key];
+    for (const key of Object.keys(remaining)) if (key.startsWith('inscape:design-lab:composition-editor:')) delete remaining[key];
     // Visiting the ordinary sample canvas also mounts the native Display's
     // existing shortcut preference, keyed by this fixture profile on the lab
-    // origin. It is not a Reception document or a second editor store.
+    // origin. It is not a Composition document or a second editor store.
     delete remaining['inscape:workbench:presentation-board:0x1111111111111111111111111111111111111111'];
     assert.deepEqual(remaining, storageBefore, 'Editor sample storage stays separate from application storage');
   } catch (error) {

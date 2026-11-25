@@ -31,8 +31,7 @@ publication inclusion rules remain authoritative.
 
 The existing window host owns movement and fitting. Settings open above or
 beside Keeper; a tighter optional screen boundary keeps their scroller clear of
-the dock, including after viewport resize. The exploration host's top edge also
-keeps settings below its navigation. The prior navigation-width reservation for
+the dock, including after viewport resize. The prior navigation-width reservation for
 an upper-left Keeper was removed. Minimap design/implementation is deferred.
 
 ## Verification
@@ -41,16 +40,15 @@ an upper-left Keeper was removed. Minimap design/implementation is deferred.
   presentation capture and local layout storage. These include shared edits,
   failed/stale saves, Undo, publication and the exclusion of Keeper positions
   from canvas capture.
-- 13 unique browser cases pass across focused runs: three Keeper lifecycle
-  cases, three dialogue cases, three exploration/shared-record cases, two
+- The focused browser runs cover three Keeper lifecycle
+  cases, three dialogue cases, two
   reference/style checks and two new screen-position cases.
 - The new cases exercise actual canvas zoom and pan, keyboard dock movement,
   unchanged authored content, creation/switching of two Workbenches, retention
   of screen position, and a name edit visible in both Workbenches with the same
   Keeper ID. They run at 1440px and 390px.
 - Initial runs exposed inherited pointer suppression from the canvas container,
-  settings covering Return after viewport changes, and exploration navigation
-  covering its close control. These were fixed and the affected cases rerun.
+  and settings covering Return after viewport changes. These were fixed and the affected cases rerun.
   Earlier geometry assertions in the Keeper lifecycle test were updated to the
   requested screen-corner/reload behavior, preserving its drop, recovery,
   publication, reduced-motion and Undo assertions.

@@ -11,7 +11,7 @@ test('Profile and Gallery keep header controls on the same row', async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&collection=1`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&collection=1`);
     const header = page.locator('.visitor-header');
     const tab = name => header.getByRole('button', { name, exact: true });
     const positions = () => header.locator('.workspace-brand, .visitor-tabs, .visitor-tools').evaluateAll(nodes =>
@@ -40,7 +40,7 @@ test('open Profile shares its published Gallery selection, camera and layout and
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&collection=1`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&collection=1&bulk=1`);
     const button = name => page.getByRole('button', { name, exact: true });
     await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
     await page.locator('main.visitor-profile-card').getByText('Human underneath', { exact: true }).waitFor();
@@ -72,7 +72,7 @@ test('open Profile shares its published Gallery selection, camera and layout and
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await profile.getByText('Underneath', { exact: true }).waitFor();
     await button('Open Bento').click();
-    await page.getByRole('dialog', { name: 'View Bento' }).locator('.reception-canvas, .reception-document-canvas').first().waitFor();
+    await page.getByRole('dialog', { name: 'View Bento' }).locator('.composition-canvas, .composition-document-canvas').first().waitFor();
     await page.getByRole('dialog', { name: 'View Bento' }).press('Tab');
     await button('Close canvas').click();
     await page.getByRole('dialog', { name: 'View Bento' }).waitFor({ state: 'detached' });
@@ -169,7 +169,7 @@ test('stepped Gallery zoom accumulates around the pointer and reverses from the 
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1`);
     await page.getByRole('radio', { name: 'List view' }).check();
     const frame = page.locator('.composition-explorer-viewport[data-camera-scale]');
     const results = await frame.evaluate(async el => {
@@ -198,7 +198,7 @@ test('tile inspection returns by Escape or backdrop while direct List browsing s
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1`);
     const layout = name => page.getByRole('radio', { name });
     const frame = page.locator('.composition-explorer-viewport');
     await layout('Grid view').check();
@@ -225,7 +225,7 @@ test('Gallery remembers independent rails without moving the zoomed canvas', asy
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1`);
     const layout = name => page.getByRole('radio', { name });
     const button = name => page.getByRole('button', { name, exact: true });
     await layout('List view').check();
@@ -264,7 +264,7 @@ test('List frame grows outward, keeps both rails and caps height above the camer
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 700 }, reducedMotion: 'reduce' });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1`);
     await page.getByRole('radio', { name: 'List view' }).check();
     await page.getByRole('button', { name: 'Gallery options' }).click();
     const frame = page.locator('.composition-explorer-viewport'), slider = page.getByLabel('Viewport size');
@@ -310,7 +310,7 @@ test('Quick view returns to the clicked wrap copy and keeps the grid position', 
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&large-gallery=1&landscape-gallery=1&reception=published`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&large-gallery=1&landscape-gallery=1`);
     const switcher = page.getByRole('radiogroup', { name: 'Gallery layout' });
     assert.ok(await switcher.getByRole('radio', { name: 'List view' }).isChecked());
     assert.equal(await switcher.getByRole('radio').count(), 2);
@@ -405,7 +405,7 @@ test('the first List to Grid flight lands while later script requests are held',
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
     await page.addInitScript(address => sessionStorage.setItem('inscape.gallery.view.' + address,
       JSON.stringify({ layout: 'list', selectedId: 'workbench:anatomy' })), address);
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published&owner=1`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&tab=gallery&collection=1&owner=1`);
     await page.locator('.composition-explorer-viewport .workbench-overview-canvas').waitFor();
     await page.route('**/*', async route => {
       if (['script', 'stylesheet'].includes(route.request().resourceType())) await held;
@@ -447,7 +447,7 @@ test('a short wrapped gallery centres its rows and paints the full backdrop duri
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published&theme=light`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&theme=light`);
     const grid = page.getByRole('radio', { name: 'Grid view' }), list = page.getByRole('radio', { name: 'List view' });
     await list.check();
     await page.locator('.composition-explorer-viewport').waitFor();
@@ -500,7 +500,7 @@ test('published wrap keeps every visible SVG preview painted through wheel and t
     for (const touch of [false, true]) {
       const page = await browser.newPage({ viewport: { width: 390, height: 900 }, hasTouch: touch, deviceScaleFactor: 2 });
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-      await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=1&collection=1&large-gallery=1&canvas=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&composition=1&collection=1&large-gallery=1&canvas=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await enterGallery(page);
       await page.waitForTimeout(700);
       const frames = await measureGalleryScroll(page, { touch });
@@ -521,7 +521,7 @@ for (const width of [390, 1440]) test(`published gallery, wrap, shared viewer, m
     const page = await browser.newPage({ viewport: { width, height: 900 }, hasTouch: width === 390 });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=1&collection=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&composition=1&collection=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.getByRole('button', { name: 'Gallery', exact: true }).click();
     await enterGallery(page);
     const before = await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), local: JSON.stringify(window.__galleryStore.getBackupSnapshot()), storage: JSON.stringify({ ...localStorage }) }));
@@ -635,7 +635,7 @@ test('returning to the List inspector clips the artwork above the controls', asy
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published&landscape-gallery=1&theme=light`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&landscape-gallery=1&theme=light`);
     await page.getByRole('radio', { name: 'List view' }).check();
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
     await page.getByRole('button', { name: 'Expand canvas' }).click();

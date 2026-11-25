@@ -1,15 +1,15 @@
 import { createImagePresentation } from '../../imageModule/imageModule.js';
 import { createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
-import { createReceptionEditorDocument, reconcileReceptionCells } from '../../reception/receptionEditorDocument.js';
-import { applyReceptionLayout, RECEPTION_LAYOUT_DEFAULTS } from '../../reception/receptionLayoutGenerator.js';
+import { createCompositionEditorDocument, reconcileCompositionCells } from '../../composition/compositionEditorDocument.js';
+import { applyCompositionLayout, COMPOSITION_LAYOUT_DEFAULTS } from '../../composition/compositionLayoutGenerator.js';
 import { createShapePresentation } from '../../shapes/shapes.js';
 import { artworkLayers } from './artworkLayers.js';
 import { validateSystemWorkflowDraft } from './systemWorkflowDraft.js';
 import { DEFAULT_WORKBENCH_AREA } from './workbenchArea.js';
 
 export function createStudioComposition(layout) {
-  const blank = createReceptionEditorDocument();
-  if (layout === 'bento') return reconcileReceptionCells(blank, applyReceptionLayout(blank, RECEPTION_LAYOUT_DEFAULTS, 1));
+  const blank = createCompositionEditorDocument();
+  if (layout === 'bento') return reconcileCompositionCells(blank, applyCompositionLayout(blank, COMPOSITION_LAYOUT_DEFAULTS, 1));
   if (layout !== 'canvas') throw new Error('Choose Canvas or Bento.');
   return { ...blank, workbench: { ...blank.workbench, area: { ...DEFAULT_WORKBENCH_AREA } } };
 }
@@ -45,8 +45,8 @@ export function enableStudioCells(draft) {
 export function canvasModuleDraft(draft) {
   const { composition, ...rest } = draft;
   if (!composition) return null;
-  const { cells, branding, version, shapes, texts, imageModules, workbench, artworkLayers: layers, ...bentoSettings } = composition;
-  if (version !== 3 || cells.length || branding.name || branding.logo || Object.keys(bentoSettings).length) return null;
+  const { cells, version, shapes, texts, imageModules, workbench, artworkLayers: layers, ...bentoSettings } = composition;
+  if (version !== 3 || cells.length || Object.keys(bentoSettings).length) return null;
   const artwork = { shapes, texts, imageModules, workbench, artworkLayers: layers };
   if (Object.keys(artwork).some(key => Object.hasOwn(rest, key))) return null;
   const next = { ...rest, ...artwork };

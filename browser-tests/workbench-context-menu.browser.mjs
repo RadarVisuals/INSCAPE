@@ -83,7 +83,7 @@ try {
   await page.screenshot({ path: `${output}/workbench-menu-wide.png` });
   await page.keyboard.press('Escape');
   const before = await page.evaluate(() => JSON.stringify(review.getDraft()));
-  const height = await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight);
+  const height = await page.locator('main.system-workflow').first().evaluate(node => node.clientHeight);
   assert.equal(height, page.viewportSize().height, 'sidebar does not reserve a bottom rail');
   assert.equal(await page.locator('.workbench-sidebar').count(), 0);
   assert.equal(await page.evaluate(() => JSON.stringify(review.getDraft())), before);
@@ -110,7 +110,7 @@ try {
   await desktop();
   await page.getByRole('menuitem', { name: 'ADD', exact: true }).click();
   await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).click();
-  await page.waitForFunction(() => review.getDraft().imageModules?.length === 1);
+  await page.waitForFunction(count => review.getDraft().imageModules.length === count + 1, JSON.parse(before).imageModules.length);
   // Narrow and edge-opening menus remain inside the viewport and traversable.
   await page.setViewportSize({ width: 390, height: 844 });
   await desktop(380, 12);
@@ -121,7 +121,7 @@ try {
   }))) assert.ok(bounds.left >= 0 && bounds.right <= 390 && bounds.bottom <= 844, JSON.stringify(bounds));
   await page.screenshot({ path: `${output}/workbench-menu-narrow.png` });
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), 844);
+  assert.equal(await page.locator('main.system-workflow').first().evaluate(node => node.clientHeight), 844);
   await page.screenshot({ path: `${output}/workbench-hidden-dock-narrow.png` });
   assert.deepEqual(errors, []);
   console.log('Workbench menu: gap traversal, menu remount/layout, keyboard and narrow bounds passed.');

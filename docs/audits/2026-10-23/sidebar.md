@@ -76,7 +76,7 @@ The full release suite, production-browser suite and remote deployment were
 not run. This is local focused evidence, not a release certification. Existing
 destination-window and Library-browser styling remains outside this migration;
 the sidebar and their placement were updated. Camera index, new composition
-navigation models and exploration-world behavior remain outside scope.
+navigation models remain outside scope.
 
 The runtime still owns destination lifetimes and passes its actions through an
 adapter. This removes the duplicate visual navigation path, not every runtime

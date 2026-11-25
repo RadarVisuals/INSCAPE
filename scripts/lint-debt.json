@@ -23,16 +23,6 @@
       "reason": "snake is derived only from immutable rig.kind; replacing rig recreates the imperative handle. Paint/reset own refs and the pose is reset by motion lifecycle. Evidence: step-19 Keeper layered7/7; rig motion unit coverage. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
     {
-      "file": "src/keeper/useKeeperMotion.js",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 43,
-      "column": 6,
-      "message": "React Hook useCallback has unnecessary dependencies: 'movement' and 'size'. Either exclude them or remove the dependency array.",
-      "sourceSha256": "edff95fbdd8ccd45cd629c8019b86f057407909c6084cea2c9346b5f6acf8d9a",
-      "planStep": "19",
-      "reason": "Extra size/movement inputs cause bounded callback refresh, not stale state. Paint reads effective size from viewport and movement mode through rigged; leave optimization to measured step27 rather than deleting gates blindly. Evidence: Keeper motion/layered tests; no performance improvement claimed. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
-    },
-    {
       "file": "src/profileDocument/components/VisitorEntryFocus.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
       "line": 23,
@@ -101,46 +91,6 @@
       "sourceSha256": "0130bdd78a6889112e139d764ae583fdca6a098ceaf5d9edacce6d39b52f818c",
       "planStep": "10",
       "reason": "Behouden: `workbenchAreaBounds` gebruikt uitsluitend left/top/width/height; alle vier worden gevolgd. Een preview is bovendien aan dezelfde draftidentiteit gebonden en vervalt bij een nieuwe accepted draft. S: area-helper en previewguard; U geometrie."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasControls.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 65,
-      "column": 6,
-      "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
-      "sourceSha256": "9ccccfbb73f1bb31b6195a0071a9991f4783597ed458567c96b14ecef8d4e925",
-      "planStep": "13",
-      "reason": "The layout subscription reads only camera.subscribeCameraPaint, explicitly listed; it never reads camera.scale/offset/getCamera. Camera events pass next snapshot. Active resize stores its start camera; differing paint cancels it, and ResizeObserver cancellation happens before viewport update. finish is stable and clears current drag/unlocks/preview. open/hostRef/subscriber replacement disconnects observer and unsubscribes. Independent source/caller review: WorkbenchCanvasControls.jsx22–33,52–62; WorkbenchView.jsx1421; WorkbenchCamera.jsx API. No separate browser run by reviewer; final shared verification remains required. Numeric canvas input review (2026-10-29): hook body and dependency list are unchanged; the added form submits through the existing resize operation and does not subscribe to camera state. The camera-controls and workbench-canvas-crop browser suites passed 15/15, including desktop/mobile camera, fit, resize, undo and Visitor coverage. Re-reviewed 2026-11-01: menu bar replacement changes rail clearance and controlled canvas-panel visibility only. Existing reviewed camera/pan member dependencies and listener lifetimes are unchanged."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasControls.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 66,
-      "column": 75,
-      "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
-      "sourceSha256": "9ccccfbb73f1bb31b6195a0071a9991f4783597ed458567c96b14ecef8d4e925",
-      "planStep": "13",
-      "reason": "The synchronization effect calls camera.getCamera and uses camera.scale/offset solely as invalidation signals; all these members plus open are explicitly listed. Other camera facade members cannot change its result. The camera paint subscription at52–62 supplies animation frames independently. This effect initializes/reconciles the snapshot when opening or React camera state changes. Independent source/caller review: WorkbenchCanvasControls.jsx63; WorkbenchCamera.jsx; WorkbenchView.jsx1421. No separate browser run by reviewer; final shared verification remains required. Numeric canvas input review (2026-10-29): hook body and dependency list are unchanged; the added form submits through the existing resize operation and does not subscribe to camera state. The camera-controls and workbench-canvas-crop browser suites passed 15/15, including desktop/mobile camera, fit, resize, undo and Visitor coverage. Re-reviewed 2026-11-01: menu bar replacement changes rail clearance and controlled canvas-panel visibility only. Existing reviewed camera/pan member dependencies and listener lifetimes are unchanged."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 61,
-      "column": 6,
-      "message": "React Hook useLayoutEffect has a missing dependency: 'saved'. Either include it or remove the dependency array.",
-      "sourceSha256": "2e71821e2b4a0c4ed0c76e1100a0516a09b6ee8d1729dad30a9f2c07efc0915a",
-      "planStep": "10",
-      "reason": "Behouden: JSON-key representeert de volledige gevalideerde saved-presentatie. previousKey onderscheidt een echte opgeslagen verandering van gewoon renderen/heropenen. Alleen een gesloten module neemt de nieuwe saved-presentatie over en behoudt open=false. S; F closed Image/blockmove/Undo; U capture. Huidige annotaties hebben regels verplaatst. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 123,
-      "column": 6,
-      "message": "React Hook useLayoutEffect has missing dependencies: 'frame' and 'savedFrame'. Either include them or remove the dependency array.",
-      "sourceSha256": "2e71821e2b4a0c4ed0c76e1100a0516a09b6ee8d1729dad30a9f2c07efc0915a",
-      "planStep": "10",
-      "reason": "Behouden: savedKey representeert het volledige savedFrame; frame left/top/width/height, resizeTarget en previewFrame staan expliciet in deps. Tijdens gesturepreview wordt niet hersteld. De map bewaart hoogstens 51 oude frames voor Undo vóór de eerste authored frame-entry. S; U history/layout; F blockmove en Undo/reload. Dit is geen tweede persistente cache. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
     },
     {
       "file": "src/text/useTextEditSession.js",

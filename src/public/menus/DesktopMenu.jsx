@@ -93,7 +93,8 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
       : submenu.length * rowHeight + 2;
     const childViewportTop = Math.max(8, Math.min(desiredChildTop, window.innerHeight - childHeight - 8));
     const childTop = childViewportTop - panelViewportTop - 1;
-    const childViewportLeft = panelViewportLeft + (opensLeft ? -1 : 1) * (panelWidth - 1);
+    const adjacentLeft = panelViewportLeft + (opensLeft ? -1 : 1) * (panelWidth - 1);
+    const childViewportLeft = viewportSubmenus ? Math.max(8, Math.min(adjacentLeft, window.innerWidth - panelWidth - 8)) : adjacentLeft;
     return <>
       {panelCommands.map((command) => {
         const hasSubmenu = submenuFor(command).length > 0;

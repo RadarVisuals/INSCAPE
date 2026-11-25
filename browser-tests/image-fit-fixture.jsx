@@ -46,10 +46,10 @@ export function mount({ persistent = false } = {}) {
     const hostRef = useRef(null), view = useWorkbenchView(), camera = useWorkbenchCamera();
     const [target, setTarget] = useState('image:one');
     useEffect(() => { view.focusModule(target); }, [target, view.focusModule]);
-    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers']; return createToolDockStore(layout); });
+    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Library']; return createToolDockStore(layout); });
     const [preferences, setPreferences] = useState({ edge: true, grid: true });
     const [single, setSingle] = useState(false);
-    Object.assign(api, { select: id => { setTarget(id); view.selectArtwork(id); }, single: setSingle, setPreferences, selection: view.setSelection,
+    Object.assign(api, { openArtwork: view.openArtwork, select: id => { setTarget(id); view.selectArtwork(id); }, single: setSingle, setPreferences, selection: view.setSelection,
       camera: (scale, offset) => { view.setScale(scale); camera.setOffset(offset); },
       frame: id => ({ ...view.frames.get(id)?.current }),
     });

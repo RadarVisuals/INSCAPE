@@ -1,6 +1,6 @@
 const DATABASE = 'inscape-workspaces';
 const META = 'profiles', DATA = 'records';
-const kinds = ['library', 'workbenches', 'receptionRecovery', 'textRecovery'];
+const kinds = ['library', 'workbenches', 'textRecovery'];
 
 function bookkeeping(header) {
   return {

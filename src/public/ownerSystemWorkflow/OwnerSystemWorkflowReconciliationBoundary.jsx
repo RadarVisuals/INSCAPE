@@ -8,7 +8,7 @@ import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 const OwnerSystemWorkflowRuntime = lazy(() => import('./OwnerSystemWorkflowRuntime.jsx'));
 
 export default function OwnerSystemWorkflowReconciliationBoundary(props) {
-  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenReception && (() => props.onOpenReception('published'))} viewLabel="View published profile">
+  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenProfile} viewLabel="View published profile">
     <ReconciliationSession key={props.profileAddress} {...props} />
   </ProfileEditingBoundary>;
 }

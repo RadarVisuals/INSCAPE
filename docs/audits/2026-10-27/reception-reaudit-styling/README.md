@@ -118,7 +118,6 @@ De [inventaris](stylesheet-inventory.json) bevat directe importers, statische/la
 
 - reception.css telt 124 rule-blokken en 13.303 bronbytes. Geen important-declaraties, exact herhaalde selectorblokken in dezelfde at-rule-context of dubbele properties binnen een rule gevonden. Dit sluit cross-file-overlap niet uit: de bewezen problemen zitten juist in inheritance en specificiteit.
 - Het ene important in textTools.css is de expliciete hidden-regel. Geen bewijs dat die moet verdwijnen.
-- profileOverview.css definieert exploration-room__origin tweemaal met complementaire eigenschappen op 8/20. Samenvoegbare onderhoudskans, geen renderingfout.
 - De dubbele class in workbenchBackup.css:2 verhoogt bewust specificiteit. Niet mechanisch verwijderen als “duplicatie”; de fixture toont correcte tekst-/themakleuren.
 - Brede descendantselectors onder chrome, text-tools en identity maken het hostcontract belangrijker dan de React-componentnaam. Componenthergebruik garandeert niet automatisch dezelfde presentatie.
 - Geen lijst “dode CSS” afgeleid uit alleen bezochte schermen. Andere states/routes kunnen die regels gebruiken.

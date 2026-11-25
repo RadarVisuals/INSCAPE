@@ -367,17 +367,17 @@ test('retry cannot apply an operation to a different externally selected Workben
   }
 });
 
-test('shared Keeper edits survive switching and room-style reopening without duplicating configuration', () => {
+test('shared Keeper edits survive switching and reopening the editor without duplicating configuration', () => {
   const { store, storage, raw } = fixture();
   addKeeperDock(store, profile);
   const keeper = store.getDraft().keeperDocks[0];
   store.createWorkbench('B');
   assert.ok(saveKeeperDock(store, profile, keeper, { name: 'Shared inhabitant' }));
   assert.ok(store.switchWorkbench(FIRST_WORKBENCH_ID));
-  const room = createSystemWorkflowDraftStore({ profileAddress: profile, storage, requireEditor: true });
-  assert.equal(room.getDraft().keeperDocks.length, 1);
-  assert.equal(room.getDraft().keeperDocks[0].name, 'Shared inhabitant');
-  assert.ok(saveKeeperDock(room, profile, room.getDraft().keeperDocks[0], { size: 120 }));
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage, requireEditor: true });
+  assert.equal(reopened.getDraft().keeperDocks.length, 1);
+  assert.equal(reopened.getDraft().keeperDocks[0].name, 'Shared inhabitant');
+  assert.ok(saveKeeperDock(reopened, profile, reopened.getDraft().keeperDocks[0], { size: 120 }));
   const collection = JSON.parse(raw());
   assert.equal(collection.shared.keeperDocks.length, 1);
   assert.ok(collection.workbenches.every(item => !Object.hasOwn(item.content, 'keeperDocks')));

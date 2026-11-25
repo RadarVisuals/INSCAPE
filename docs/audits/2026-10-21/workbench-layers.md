@@ -7,7 +7,7 @@
 De UI-migratie begint met echte Layers voor Images, Text en Shapes. De gekozen
 Carbon/Mist-richting en compositieregels zijn toegepast op de bestaande
 Workbench. De vervolgstap met gedeelde Color/Transform/Artwork info en
-detach/rejoin is nog niet uitgevoerd. Reception, Library, de Keeper-proef,
+detach/rejoin is nog niet uitgevoerd. Reception, Library,
 meerdere lokale Workbenches en bestaand artwork zijn behouden.
 
 Werkplek: `remediation-2026-10-19-shared-checkpoint/work`, branch

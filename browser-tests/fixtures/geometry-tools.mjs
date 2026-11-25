@@ -8,8 +8,7 @@ export async function parkGeometryTools(page) {
   }
   const navigator = page.locator('.workbench-navigator');
   if (await navigator.getAttribute('data-dock-side') !== 'right') {
-    const undock = navigator.getByRole('button', { name: 'Undock Navigator', exact: true });
-    if (await undock.count()) await undock.click();
-    await navigator.getByRole('button', { name: 'Dock Navigator on right', exact: true }).click();
+    await navigator.getByRole('button', { name: 'Navigator window options', exact: true }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Dock on right', exact: true }).click();
   }
 }

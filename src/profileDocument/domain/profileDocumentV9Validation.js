@@ -1,8 +1,9 @@
 import { isRecord as record, hasExactKeys as exactKeys, hasAllowedKeys as allowedKeys } from '../../recordValidation.js';
-import { validReception, receptionReferenceCount } from './receptionPresentation.js';
-import { receptionLinkProblems } from './receptionLinks.js';
+import { compositionReferenceCount } from '../../composition/compositionReferenceCount.js';
+import { validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
+import { compositionLinkProblems } from './compositionLinks.js';
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
-import { validPublicationDestinations, validatePublishedCanvases } from './publishedCanvases.js';
+import { validatePublishedCanvases } from './publishedCanvases.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { validPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -108,7 +109,7 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   // collection envelope must not consume the composition's existing depth budget.
   const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
   if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition', 'canvas', 'canvases'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -133,11 +134,8 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
     fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   }
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validReception(input.composition, true)))
+  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validCompositionEditorDocument(input.composition, true)))
     fail('composition', 'invalid_composition', 'Invalid published Studio composition');
-  if (Object.hasOwn(input, 'receptionDestinations') && (!input.reception || !validPublicationDestinations(input.receptionDestinations)))
-    fail('receptionDestinations', 'invalid_destinations', 'Choose Gallery, Profile or both for the Bento.');
-  if (Object.hasOwn(input, 'reception') && !validReception(input.reception, true)) fail('reception', 'invalid_reception', 'Invalid published Bento layout');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
@@ -151,19 +149,19 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   if (Object.hasOwn(input, 'workbenchGroups') && !validPublishedWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid public Workbench groups or unavailable members');
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench, [], { published: true })) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
   const documentAssetReferences = (input.identityPresentation?.avatar?.asset ? 1 : 0)
-    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception) + receptionReferenceCount(input.composition);
+    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + compositionReferenceCount(input.composition);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('$', 'too_many_asset_references', 'Too many total asset references');
   }
   validatePublishedCanvases(input, document => validateDocument(document, {}, false), fail);
   if (checkLinks && !errors.length) {
-    const linkedLayouts = [['reception', input.reception, 'Bento'], ['composition', input.composition, input.canvas?.name || 'Canvas'],
+    const linkedLayouts = [['composition', input.composition, input.canvas?.name || 'Canvas'],
       ...(input.canvases || []).map(item => ['canvases.' + item.id + '.composition', item.content.composition, item.name])]
       .filter(([, layout]) => layout?.links?.length);
     if (linkedLayouts.length) {
       const snapshot = publishedPresentationSnapshot(input);
-      for (const [path, layout, compositionName] of linkedLayouts) for (const issue of receptionLinkProblems(layout, snapshot))
-        errors.push({ path: path + '.links.' + issue.id, code: 'unavailable_reception_link', message: issue.reason, compositionName });
+      for (const [path, layout, compositionName] of linkedLayouts) for (const issue of compositionLinkProblems(layout, snapshot))
+        errors.push({ path: path + '.links.' + issue.id, code: 'unavailable_composition_link', message: issue.reason, compositionName });
     }
   }
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };

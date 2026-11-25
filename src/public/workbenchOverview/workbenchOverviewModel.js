@@ -8,8 +8,6 @@ import { workbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
 // module registry or a second persisted preview document.
 export function workbenchOverviewModel(draft) {
   const composition = draft.composition;
-  if (composition?.version === 2) return { composition, area: { left: 0, top: 0, width: 1440, height: composition.height }, items: [],
-    contains: `${composition.regions.length} cells` };
   if (composition) draft = composition;
   const presentation = draft.workbench || createDefaultWorkbenchPresentation();
   const area = workbenchArea(presentation), artwork = new Map();

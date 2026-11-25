@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 103,
-    "definitions": 868,
-    "names": 462
+    "files": 99,
+    "definitions": 843,
+    "names": 446
   },
   "sources": [
     {
@@ -35,7 +35,7 @@
     {
       "path": "design-system/lab/lab.css",
       "role": "Reference local",
-      "sha256": "5433c2f26b92bf6ccfca3edb923142510760d7379c3fbc42e31acbee8fa8f04d",
+      "sha256": "9446608550b38593b5fd04870f00726ea4c7baf665b40f9a1c102ad89998c126",
       "definitions": [],
       "references": [
         "--color-text-secondary",
@@ -809,9 +809,254 @@
       ]
     },
     {
+      "path": "src/composition/cellNumber.css",
+      "role": "Local",
+      "sha256": "43414279e3e611bd45df6f65386925cc3dd26eed7ebe8e3100e59ea4b10ad28e",
+      "definitions": [],
+      "references": [
+        "--tactile-ink"
+      ]
+    },
+    {
+      "path": "src/composition/composition.css",
+      "role": "Local",
+      "sha256": "ed5497b608ac89447e101d432c236228fc20f5f02a5954147b0f5e5c800c3a5c",
+      "definitions": [],
+      "references": [
+        "--control-target-touch",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/composition/compositionBento.css",
+      "role": "Local",
+      "sha256": "9c326d4d0100232036e887fb0ef57c536dc84282d634d06e19dcd958728be059",
+      "definitions": [
+        {
+          "name": "--tool-control-height",
+          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
+          "scope": [
+            ".composition-bento-panel"
+          ],
+          "line": 11,
+          "references": [
+            "--control-height-sm",
+            "--tool-touch-target"
+          ]
+        },
+        {
+          "name": "--tool-icon-target",
+          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
+          "scope": [
+            ".composition-bento-panel"
+          ],
+          "line": 11,
+          "references": [
+            "--control-height-sm",
+            "--tool-touch-target"
+          ]
+        }
+      ],
+      "references": [
+        "--control-height-sm",
+        "--editor-accent",
+        "--editor-ink",
+        "--editor-panel",
+        "--tactile-accent",
+        "--tactile-control-edge",
+        "--tactile-edge",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-radius-control",
+        "--tactile-well",
+        "--tool-control-height",
+        "--tool-touch-target",
+        "--workbench-toolbar-clearance",
+        "--workbench-toolbar-offset",
+        "--workflow-border",
+        "--workflow-dock-height",
+        "--workflow-ink",
+        "--workflow-panel",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/composition/compositionCellGrain.css",
+      "role": "Local",
+      "sha256": "f7d9b0d36cc4d1e97f9379afb71e763a46d5239e244f55587f8a8f7b5276975a",
+      "definitions": [],
+      "references": []
+    },
+    {
+      "path": "src/composition/compositionDocument.css",
+      "role": "Composition viewer",
+      "sha256": "03ef856638b5ac9dd9812667964774eb08b91f3fd8e82923082f5b0f00a01b45",
+      "definitions": [
+        {
+          "name": "--text-stack-height",
+          "value": "100cqh",
+          "scope": [
+            ".composition-text-preview[data-stacked]"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".composition-cell-group[data-swiping] > .composition-document-cell"
+          ],
+          "line": 25,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".composition-cell-group[data-swiping] > .composition-document-layer,\n.composition-cell-group[data-swiping] > .composition-document-cell > .composition-document-cell-content"
+          ],
+          "line": 33,
+          "references": []
+        },
+        {
+          "name": "--cell-slide-offset",
+          "value": "calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1)",
+          "scope": [
+            ".composition-cell-group[data-swiping] > .composition-document-layer,\n.composition-cell-group[data-swiping] > .composition-document-cell > .composition-document-cell-content"
+          ],
+          "line": 34,
+          "references": [
+            "--layer-slide",
+            "--slide-position",
+            "--slide-count"
+          ]
+        },
+        {
+          "name": "--swipe-pan",
+          "value": "pan-x",
+          "scope": [
+            ".composition-cell-group[data-vertical-swipe]"
+          ],
+          "line": 42,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "right center",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "left center",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center bottom",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center top",
+          "scope": [
+            ".composition-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
+          "references": []
+        }
+      ],
+      "references": [
+        "--cell-slide-offset",
+        "--composition-frame-fill",
+        "--composition-frame-fill-opacity",
+        "--composition-frame-line",
+        "--composition-frame-line-opacity",
+        "--glow-edge",
+        "--glow-size",
+        "--interface-environment",
+        "--interface-window",
+        "--layer-slide",
+        "--slide-count",
+        "--slide-position",
+        "--slide-x",
+        "--slide-y",
+        "--swipe-pan",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/composition/compositionInnerLines.css",
+      "role": "Local",
+      "sha256": "b98f7f218812aa34a1b29d398b202838b1174c9d9e2281e2e1ea76a32ebdabc6",
+      "definitions": [],
+      "references": []
+    },
+    {
+      "path": "src/composition/editorCells.css",
+      "role": "Local",
+      "sha256": "03aac30b77b7eb709696b5e3395c97ed757ea1ba33a4e065f2e52926165557e2",
+      "definitions": [],
+      "references": [
+        "--tactile-edge",
+        "--tactile-ink",
+        "--workbench-content-scale",
+        "--workflow-ink",
+        "--workflow-type-control"
+      ]
+    },
+    {
       "path": "src/imageModule/imageModule.css",
       "role": "Local",
-      "sha256": "ead926df17cb7d357e233df1e84f3b46c80756cfe31b9bccb60a5904ddd0eacd",
+      "sha256": "d620308f27779fe4d06ef12409be12238ee55652e4549805c15324130585657b",
       "definitions": [],
       "references": [
         "--editor-accent",
@@ -3178,22 +3423,18 @@
     {
       "path": "src/library/profileLibraryPicker.css",
       "role": "Local",
-      "sha256": "6a59d76d366727dcb7b9757e6202a22b35dc41935e31f2ce0a8adc1d3056b610",
+      "sha256": "b4debc8c238d60cb450068537c89abbb6d6ee1ae932fbb685259c1534eb12318",
       "definitions": [],
       "references": []
     },
     {
       "path": "src/profileDocument/components/profileOverview.css",
       "role": "Local",
-      "sha256": "eeab700ddabdb239fc65560a437ed6c44e86321b96e2d66db059496509953239",
+      "sha256": "c8411bf5a6e6fabd4b677bc62313ab2275db98a0fbe5111355c5d4db7e6471bb",
       "definitions": [],
       "references": [
-        "--control-radius",
-        "--control-shell-radius",
         "--tactile-edge",
-        "--tactile-face",
-        "--tactile-muted",
-        "--tactile-well"
+        "--tactile-muted"
       ]
     },
     {
@@ -3273,13 +3514,12 @@
     {
       "path": "src/profileDocument/components/publishedCompositions.css",
       "role": "Local",
-      "sha256": "7aa818d7b901affb10ef287875c40fb5aaaa0c33126c79daf2a0dbe17bdb6e59",
+      "sha256": "9f7bf0ff076068a69a684333167c019a5e70eae8e08d3a256b44c06c8f0f1fed",
       "definitions": [],
       "references": [
         "--font-interface",
         "--interface-environment",
         "--spread-heading",
-        "--spread-height",
         "--spread-muted"
       ]
     },
@@ -3506,7 +3746,7 @@
     {
       "path": "src/profileDocument/components/visitorProfile.css",
       "role": "Local",
-      "sha256": "7e7433dde7fd19c2d67aff9ab015c4939fdb99908421e60732fa8f67eae5e295",
+      "sha256": "def24d8cc1507842eb56441cb8760120963c37923f6d758476b3e7ddac925592",
       "definitions": [
         {
           "name": "--field-tint",
@@ -4012,41 +4252,12 @@
           ]
         },
         {
-          "name": "--field-fallback-mask",
-          "value": "url('/assets/visitor/field-range.png')",
-          "scope": [
-            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
-          ],
-          "line": 57,
-          "references": []
-        },
-        {
-          "name": "--field-fallback-face",
-          "value": "var(--field-high)",
-          "scope": [
-            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
-          ],
-          "line": 58,
-          "references": [
-            "--field-high"
-          ]
-        },
-        {
-          "name": "--field-fallback-opacity",
-          "value": "1",
-          "scope": [
-            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
-          ],
-          "line": 58,
-          "references": []
-        },
-        {
           "name": "--spread-heading",
           "value": "var(--palette-ink)",
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 59,
+          "line": 57,
           "references": [
             "--palette-ink"
           ]
@@ -4057,7 +4268,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 59,
+          "line": 57,
           "references": [
             "--palette-ink"
           ]
@@ -4068,7 +4279,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 60,
+          "line": 58,
           "references": [
             "--palette-ink",
             "--palette-canvas"
@@ -4080,7 +4291,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 61,
+          "line": 59,
           "references": [
             "--spread-body"
           ]
@@ -4091,7 +4302,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 61,
+          "line": 59,
           "references": [
             "--palette-ink",
             "--palette-canvas"
@@ -4103,7 +4314,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 62,
+          "line": 60,
           "references": [
             "--palette-ink",
             "--palette-canvas"
@@ -4115,7 +4326,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 63,
+          "line": 61,
           "references": [
             "--spread-secondary"
           ]
@@ -4126,7 +4337,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 63,
+          "line": 61,
           "references": [
             "--spread-secondary"
           ]
@@ -4137,7 +4348,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 64,
+          "line": 62,
           "references": [
             "--palette-glass"
           ]
@@ -4148,7 +4359,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 64,
+          "line": 62,
           "references": [
             "--palette-ink",
             "--palette-glass"
@@ -4160,7 +4371,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 65,
+          "line": 63,
           "references": [
             "--palette-glass"
           ]
@@ -4171,7 +4382,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 65,
+          "line": 63,
           "references": [
             "--palette-glass"
           ]
@@ -4182,7 +4393,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 66,
+          "line": 64,
           "references": [
             "--palette-glass",
             "--palette-accent"
@@ -4194,7 +4405,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 67,
+          "line": 65,
           "references": [
             "--palette-glass"
           ]
@@ -4205,7 +4416,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 68,
+          "line": 66,
           "references": [
             "--card-light",
             "--card-material",
@@ -4218,7 +4429,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 69,
+          "line": 67,
           "references": [
             "--palette-ink"
           ]
@@ -4229,7 +4440,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 69,
+          "line": 67,
           "references": [
             "--palette-accent"
           ]
@@ -4240,7 +4451,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 70,
+          "line": 68,
           "references": [
             "--palette-accent",
             "--palette-glass"
@@ -4252,7 +4463,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 71,
+          "line": 69,
           "references": [
             "--palette-ink"
           ]
@@ -4263,7 +4474,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 71,
+          "line": 69,
           "references": [
             "--palette-ink"
           ]
@@ -4274,7 +4485,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='dark'] .visitor-publication"
           ],
-          "line": 75,
+          "line": 72,
           "references": [
             "--palette-canvas"
           ]
@@ -4285,7 +4496,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 78,
+          "line": 75,
           "references": [
             "--palette-glass"
           ]
@@ -4296,7 +4507,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 79,
+          "line": 76,
           "references": [
             "--palette-glass",
             "--palette-ink"
@@ -4309,7 +4520,7 @@
             "@media (max-width: 1250px)",
             ".visitor-publication:has(.visitor-toolbar-slot:not(:empty))"
           ],
-          "line": 114,
+          "line": 110,
           "references": []
         },
         {
@@ -4318,7 +4529,7 @@
           "scope": [
             ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 175,
+          "line": 171,
           "references": []
         },
         {
@@ -4327,7 +4538,7 @@
           "scope": [
             ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 175,
+          "line": 171,
           "references": [
             "--inner-rim"
           ]
@@ -4347,9 +4558,6 @@
         "--card-shadow",
         "--color-text-primary",
         "--color-text-secondary",
-        "--field-fallback-face",
-        "--field-fallback-mask",
-        "--field-fallback-opacity",
         "--field-high",
         "--field-low",
         "--field-tint",
@@ -4380,7 +4588,7 @@
     {
       "path": "src/public/identity/identityCardContent.css",
       "role": "Local",
-      "sha256": "3ff1e2861398b7f0aa28cf8296865f2db0cc9810a07f0afd1b66562468d97808",
+      "sha256": "e3021a7ab3cb6ad6244fd7ba8ed9b14d1a7401b59c7b47878d9d69736440fd73",
       "definitions": [
         {
           "name": "--identity-capacity",
@@ -5045,7 +5253,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "c1c64c52c395565775da8b9af99ff667b479f5330c51f5a96116c6bf88871069",
+      "sha256": "d3cf297f7925fa2bd313a7f66f6833729a4381f6f8be467f5a6cfe1f589f4a12",
       "definitions": [
         {
           "name": "--editor-workspace-radius",
@@ -6380,7 +6588,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchDestinationPanel.css",
       "role": "Destinations",
-      "sha256": "9b801fb4dbcf5928617a904e39b08c837821106f5d068eca209e84a4a8d98d3d",
+      "sha256": "2351b03a81b1279a701b3e69313935610364bcd6d68344b149ed6fae3a2ade15",
       "definitions": [
         {
           "name": "--destination-inset",
@@ -6492,20 +6700,11 @@
         },
         {
           "name": "--destination-width",
-          "value": "540px",
-          "scope": [
-            ".system-workflow__manual"
-          ],
-          "line": 36,
-          "references": []
-        },
-        {
-          "name": "--destination-width",
           "value": "300px",
           "scope": [
             ".system-workflow__profile"
           ],
-          "line": 46,
+          "line": 36,
           "references": []
         },
         {
@@ -6515,7 +6714,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".workbench-destination-panel.workbench-tool-panel"
           ],
-          "line": 60,
+          "line": 50,
           "references": []
         }
       ],
@@ -7300,7 +7499,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchWindowChrome.css",
       "role": "Window",
-      "sha256": "845f8ebd9cab382313c86241ff4601199bd07819823a2a11be7e59db09fd7de0",
+      "sha256": "3f901d22e5b254d8d72777a411a724c90a5835637092ba3a8b00c5c630fc7110",
       "definitions": [
         {
           "name": "--tool-control-size",
@@ -7324,7 +7523,7 @@
           "name": "--toolbar-left",
           "value": "calc(var(--workbench-left-dock-width, 0px) + 8px)",
           "scope": [
-            ".reception-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
+            ".composition-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
           ],
           "line": 21,
           "references": [
@@ -7335,7 +7534,7 @@
           "name": "--toolbar-right",
           "value": "calc(100dvw - var(--workbench-right-dock-width, 0px) - 8px)",
           "scope": [
-            ".reception-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
+            ".composition-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar"
           ],
           "line": 22,
           "references": [
@@ -9296,7 +9495,7 @@
     {
       "path": "src/public/workbenchOverview/compositionIndex.css",
       "role": "Local",
-      "sha256": "75df68a570b944566964156fb348529b142e91ed46f245f0175b17cd72f3f901",
+      "sha256": "3c64521f63423c2cbdbeb6f5802604f96b39b3f643648b090c76567a4b37c6fe",
       "definitions": [
         {
           "name": "--index-width",
@@ -9322,7 +9521,7 @@
           "scope": [
             ".composition-explorer-controls button"
           ],
-          "line": 44,
+          "line": 41,
           "references": []
         },
         {
@@ -9331,7 +9530,7 @@
           "scope": [
             ".composition-explorer-controls button"
           ],
-          "line": 44,
+          "line": 41,
           "references": []
         },
         {
@@ -9341,7 +9540,7 @@
             "@media (max-width: 800px)",
             ".composition-index"
           ],
-          "line": 65,
+          "line": 62,
           "references": []
         }
       ],
@@ -9566,7 +9765,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "4fb5d1e8013417c5ddd97b7860b8f7c3d989f7ae6d77c4eecd664661b8de61a0",
+      "sha256": "f49b382e14242c88414c62afc8665a95352ad2ada74b726bc27e5840b1d76abf",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -9674,7 +9873,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 95,
+          "line": 96,
           "references": [
             "--interface-panel"
           ]
@@ -9686,7 +9885,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 95,
+          "line": 96,
           "references": []
         },
         {
@@ -9696,7 +9895,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 95,
+          "line": 96,
           "references": []
         },
         {
@@ -9705,7 +9904,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-selecting]"
           ],
-          "line": 103,
+          "line": 104,
           "references": []
         }
       ],
@@ -9755,7 +9954,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "4ea21f15e1fd0c0da4d20021632dcb3efc6e2868efcfe15ddbe7535061316fec",
+      "sha256": "8c4a3488f35129f213897919de852c5d86b5c174218b49b68631da635e709e57",
       "definitions": [
         {
           "name": "--gallery-columns",
@@ -9949,549 +10148,6 @@
       ]
     },
     {
-      "path": "src/reception/cellNumber.css",
-      "role": "Local",
-      "sha256": "525aab740708e5a9114e2af8d254304efe3dff4bfc6b1dbd3f86269a58cdb99e",
-      "definitions": [],
-      "references": [
-        "--tactile-ink"
-      ]
-    },
-    {
-      "path": "src/reception/editorCells.css",
-      "role": "Local",
-      "sha256": "03aac30b77b7eb709696b5e3395c97ed757ea1ba33a4e065f2e52926165557e2",
-      "definitions": [],
-      "references": [
-        "--tactile-edge",
-        "--tactile-ink",
-        "--workbench-content-scale",
-        "--workflow-ink",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/reception.css",
-      "role": "Reception",
-      "sha256": "bd6c61532b80deb94cb47b28637a458986301612f58d4e2e6dd9bcc55c8c86e0",
-      "definitions": [
-        {
-          "name": "--reception-page-padding",
-          "value": "12px",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-width",
-          "value": "100%",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-height",
-          "value": "100%",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-border",
-          "value": "0px",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-window-background",
-          "value": "transparent",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-header-border",
-          "value": "0px",
-          "scope": [
-            ".reception-page[data-frameless]"
-          ],
-          "line": 2,
-          "references": []
-        }
-      ],
-      "references": [
-        "--control-shell-radius",
-        "--control-target-touch",
-        "--font-interface",
-        "--font-technical",
-        "--interface-environment",
-        "--reception-align-x",
-        "--reception-align-y",
-        "--reception-gutter",
-        "--reception-header-border",
-        "--reception-page-background",
-        "--reception-page-padding",
-        "--reception-radius",
-        "--reception-window-background",
-        "--reception-window-border",
-        "--reception-window-height",
-        "--reception-window-width",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well",
-        "--tool-control-height",
-        "--workflow-type-control",
-        "--workspace-header-height"
-      ]
-    },
-    {
-      "path": "src/reception/receptionAtmosphere.css",
-      "role": "Local",
-      "sha256": "d88028d92790ce25bc1e27efe3f7ad264bf642fc4d11bae00fea2a5959332dbc",
-      "definitions": [
-        {
-          "name": "--reception-light-origin",
-          "value": "clamp(calc(26% + 16px), var(--reception-light-position), calc(74% - 16px))",
-          "scope": [
-            ".reception-atmosphere"
-          ],
-          "line": 1,
-          "references": [
-            "--reception-light-position"
-          ]
-        },
-        {
-          "name": "--reception-light-edge",
-          "value": "0%",
-          "scope": [
-            ".reception-atmosphere-light[data-side=\"down\"]"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--reception-light-edge",
-          "value": "100%",
-          "scope": [
-            ".reception-atmosphere-light[data-side=\"up\"]"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--reception-light-depth",
-          "value": "74px",
-          "scope": [
-            ".reception-atmosphere-sample-header"
-          ],
-          "line": 8,
-          "references": []
-        }
-      ],
-      "references": [
-        "--interface-environment",
-        "--reception-content-inset",
-        "--reception-light-color",
-        "--reception-light-depth",
-        "--reception-light-edge",
-        "--reception-light-origin",
-        "--reception-light-position",
-        "--reception-light-spread",
-        "--reception-light-strength",
-        "--reception-page-background",
-        "--tactile-edge",
-        "--tactile-muted",
-        "--tactile-radius-control",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/receptionBento.css",
-      "role": "Local",
-      "sha256": "333de6eb3f2328c7562bdc6852c3b6044c93ad22007aa9fdf7fd6b02621650ed",
-      "definitions": [
-        {
-          "name": "--tool-control-height",
-          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
-          "scope": [
-            ".reception-bento-panel"
-          ],
-          "line": 11,
-          "references": [
-            "--control-height-sm",
-            "--tool-touch-target"
-          ]
-        },
-        {
-          "name": "--tool-icon-target",
-          "value": "max(var(--control-height-sm), var(--tool-touch-target))",
-          "scope": [
-            ".reception-bento-panel"
-          ],
-          "line": 11,
-          "references": [
-            "--control-height-sm",
-            "--tool-touch-target"
-          ]
-        }
-      ],
-      "references": [
-        "--control-height-sm",
-        "--editor-accent",
-        "--editor-ink",
-        "--editor-panel",
-        "--tactile-accent",
-        "--tactile-control-edge",
-        "--tactile-edge",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-radius-control",
-        "--tactile-well",
-        "--tool-control-height",
-        "--tool-touch-target",
-        "--workflow-border",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/receptionCellGrain.css",
-      "role": "Local",
-      "sha256": "d7663b237a2d61aa4277c31a07b9f05577b85e45bf4cdb73adc133c2c81da95c",
-      "definitions": [],
-      "references": []
-    },
-    {
-      "path": "src/reception/receptionDocument.css",
-      "role": "Local",
-      "sha256": "f572d42abc7d533f8dd868cf75fa3254621158a3d3c61917926ecb34deca87ae",
-      "definitions": [
-        {
-          "name": "--text-stack-height",
-          "value": "100cqh",
-          "scope": [
-            ".reception-text-preview[data-stacked]"
-          ],
-          "line": 13,
-          "references": []
-        },
-        {
-          "name": "--slide-position",
-          "value": "inherit",
-          "scope": [
-            ".reception-cell-group[data-swiping] > .reception-document-cell"
-          ],
-          "line": 25,
-          "references": []
-        },
-        {
-          "name": "--slide-position",
-          "value": "inherit",
-          "scope": [
-            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
-          ],
-          "line": 33,
-          "references": []
-        },
-        {
-          "name": "--cell-slide-offset",
-          "value": "calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1)",
-          "scope": [
-            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
-          ],
-          "line": 34,
-          "references": [
-            "--layer-slide",
-            "--slide-position",
-            "--slide-count"
-          ]
-        },
-        {
-          "name": "--swipe-pan",
-          "value": "pan-x",
-          "scope": [
-            ".reception-cell-group[data-vertical-swipe]"
-          ],
-          "line": 42,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "4px 38%",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"left\"]"
-          ],
-          "line": 47,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "right center",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"left\"]"
-          ],
-          "line": 47,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "4px 38%",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"right\"]"
-          ],
-          "line": 48,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "left center",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"right\"]"
-          ],
-          "line": 48,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "38% 4px",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"up\"]"
-          ],
-          "line": 49,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "center bottom",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"up\"]"
-          ],
-          "line": 49,
-          "references": []
-        },
-        {
-          "name": "--glow-size",
-          "value": "38% 4px",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"down\"]"
-          ],
-          "line": 50,
-          "references": []
-        },
-        {
-          "name": "--glow-edge",
-          "value": "center top",
-          "scope": [
-            ".reception-swipe-glow[data-advance=\"down\"]"
-          ],
-          "line": 50,
-          "references": []
-        }
-      ],
-      "references": [
-        "--cell-slide-offset",
-        "--glow-edge",
-        "--glow-size",
-        "--interface-environment",
-        "--interface-window",
-        "--layer-slide",
-        "--reception-frame-fill",
-        "--reception-frame-fill-opacity",
-        "--reception-frame-line",
-        "--reception-frame-line-opacity",
-        "--reception-page-background",
-        "--slide-count",
-        "--slide-position",
-        "--slide-x",
-        "--slide-y",
-        "--swipe-pan"
-      ]
-    },
-    {
-      "path": "src/reception/receptionInnerLines.css",
-      "role": "Local",
-      "sha256": "6b2783c05ee654a817b2bbe43ce5a764120e1aff96459289015b729bfe5e5de7",
-      "definitions": [],
-      "references": []
-    },
-    {
-      "path": "src/reception/receptionPreview.css",
-      "role": "Local",
-      "sha256": "5ef4ca20bc636d8bbab6d8b112a66cbed7b95f1748f649d39737a3743f61f865",
-      "definitions": [
-        {
-          "name": "--editor-accent",
-          "value": "var(--interface-ink)",
-          "scope": [
-            ".editor-object-toolbar-button.reception-preview-menu-trigger"
-          ],
-          "line": 3,
-          "references": [
-            "--interface-ink"
-          ]
-        },
-        {
-          "name": "--editor-selection",
-          "value": "color-mix(in srgb, var(--interface-ink) 8%, transparent)",
-          "scope": [
-            ".editor-object-toolbar-button.reception-preview-menu-trigger"
-          ],
-          "line": 3,
-          "references": [
-            "--interface-ink"
-          ]
-        },
-        {
-          "name": "--tactile-selected",
-          "value": "var(--editor-accent)",
-          "scope": [
-            ".reception-viewport-presets"
-          ],
-          "line": 18,
-          "references": [
-            "--editor-accent"
-          ]
-        },
-        {
-          "name": "--tactile-selected-ink",
-          "value": "var(--editor-on-accent)",
-          "scope": [
-            ".reception-viewport-presets"
-          ],
-          "line": 18,
-          "references": [
-            "--editor-on-accent"
-          ]
-        },
-        {
-          "name": "--tactile-selected",
-          "value": "Highlight",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".reception-viewport-presets"
-          ],
-          "line": 32,
-          "references": []
-        },
-        {
-          "name": "--tactile-selected-ink",
-          "value": "HighlightText",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".reception-viewport-presets"
-          ],
-          "line": 32,
-          "references": []
-        }
-      ],
-      "references": [
-        "--editor-accent",
-        "--editor-ink",
-        "--editor-muted",
-        "--editor-on-accent",
-        "--editor-panel",
-        "--font-interface",
-        "--interface-environment",
-        "--interface-ink",
-        "--tactile-accent",
-        "--tactile-divider",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-radius-control",
-        "--tactile-well",
-        "--workflow-type-control"
-      ]
-    },
-    {
-      "path": "src/reception/receptionProfile.css",
-      "role": "Local",
-      "sha256": "d7058b3d8d445828d65e37753342110e06024a1793670d156c001ccaa6406b16",
-      "definitions": [
-        {
-          "name": "--reception-portrait-width",
-          "value": "64px",
-          "scope": [
-            ".reception-window-header[data-profile-header]"
-          ],
-          "line": 1,
-          "references": []
-        },
-        {
-          "name": "--reception-profile-gap",
-          "value": "16px",
-          "scope": [
-            ".reception-window-header[data-profile-header]"
-          ],
-          "line": 1,
-          "references": []
-        },
-        {
-          "name": "--reception-page-inset",
-          "value": "clamp(20px, 4%, 64px)",
-          "scope": [
-            ".reception-page[data-profile-page], .reception-preview-page"
-          ],
-          "line": 22,
-          "references": []
-        },
-        {
-          "name": "--reception-content-inset",
-          "value": "max(var(--reception-page-inset), calc((100% - var(--reception-bento-width)) / 2))",
-          "scope": [
-            ".reception-page[data-profile-page], .reception-preview-page"
-          ],
-          "line": 22,
-          "references": [
-            "--reception-page-inset",
-            "--reception-bento-width"
-          ]
-        },
-        {
-          "name": "--reception-page-padding",
-          "value": "0px",
-          "scope": [
-            ".reception-page[data-profile-page]"
-          ],
-          "line": 23,
-          "references": []
-        }
-      ],
-      "references": [
-        "--font-interface",
-        "--font-technical",
-        "--interface-environment",
-        "--interface-ink",
-        "--reception-bento-width",
-        "--reception-content-inset",
-        "--reception-page-background",
-        "--reception-page-inset",
-        "--reception-portrait-width",
-        "--reception-profile-gap",
-        "--tactile-muted"
-      ]
-    },
-    {
-      "path": "src/reception/receptionScene.css",
-      "role": "Local",
-      "sha256": "ac4b4cb26a21a28a18b6ee43de065760c2cc7d5a4947fa36b795838b8f440427",
-      "definitions": [],
-      "references": []
-    },
-    {
       "path": "src/recovery/creepsMetadataRecovery.css",
       "role": "Local",
       "sha256": "d1df208410f9dbab18109aeaf7ca4f417bf37aff9e5a695f208e1f68f2c2da67",
@@ -10659,7 +10315,7 @@
     {
       "path": "src/text/text.css",
       "role": "Local",
-      "sha256": "020b37bfc1b777cf166cae53fccc25b9e6cf043005398201753262901ddf8012",
+      "sha256": "06a8d5e7207782b50630216c3a2370ad52cf00e578c3c1cd75a2bda0cf9e342d",
       "definitions": [
         {
           "name": "--text-automatic-padding",

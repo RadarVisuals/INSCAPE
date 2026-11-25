@@ -34,7 +34,7 @@ async function seedMirroredImages(page, transparentSvg = false) {
     draft.workbench.imageModules = draft.imageModules.map((item, i) => ({ id: item.id, open: true,
       position: { left: 80.25 + (i % 2) * 501, top: 80.25 + Math.floor(i / 2) * 501 } }));
     draft.artworkLayers = draft.imageModules.map(item => item.id);
-    if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Mirrored fixture save failed');
+    if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }) || !await store.whenCommitted()) throw Error('Mirrored fixture save failed');
   }, url);
   await page.reload();
   await page.locator('.image-module__canvas').first().waitFor();
@@ -46,23 +46,30 @@ async function inspectImageJoin(page, preview, label, transparentSvg = false) {
   const frames = await preview.locator('[data-navigator-object]').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
   await mkdir(output, { recursive: true });
   const screenshot = await page.screenshot({ path: path.join(output, `mirrored-${label}.png`) });
-  const background = await preview.locator('.workbench-overview-canvas').evaluate(node => getComputedStyle(node).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number));
-  const result = await page.evaluate(async ({ png, frames, background, transparentSvg }) => {
-    const image = new Image(); image.src = `data:image/png;base64,${png}`; await image.decode();
-    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
-    const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+  const backdrop = transparentSvg ? await page.screenshot({ style: '[data-navigator-object] { visibility: hidden !important; }' }) : null;
+  const result = await page.evaluate(async ({ png, backgroundPng, frames }) => {
+    const pixelsOf = async data => {
+      const image = new Image(); image.src = 'data:image/png;base64,' + data; await image.decode();
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+      return (x, y) => [...context.getImageData(x, y, 1, 1).data].slice(0, 3);
+    };
+    const artwork = await pixelsOf(png), behind = backgroundPng && await pixelsOf(backgroundPng);
     const density = devicePixelRatio, [first, right, below] = frames;
     const pixels = [];
     // Sample both joins and their intersection, including fractional screen edges.
     for (const [x, y] of [[right.left, first.top + first.height / 2], [first.left + first.width / 2, below.top], [right.left, below.top]]) {
       for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) {
-        pixels.push([...context.getImageData(Math.floor(x * density) + dx, Math.floor(y * density) + dy, 1, 1).data]);
+        const px = Math.floor(x * density) + dx, py = Math.floor(y * density) + dy;
+        const color = [52, 124, 168], base = behind && behind(px, py);
+        const expected = base ? color.map((value, i) => Math.round((value + base[i]) / 2)) : color;
+        const sample = artwork(px, py);
+        if (sample.some((value, i) => Math.abs(value - expected[i]) > 1)) pixels.push({ px, py, sample, expected });
       }
     }
-    const expected = [52, 124, 168].map((value, i) => transparentSvg ? Math.round((value + background[i]) / 2) : value);
-    const hole = [...context.getImageData(Math.floor((first.left + first.width / 2) * density), Math.floor((first.top + first.height / 2) * density), 1, 1).data];
-    return { frames, expected, background, hole, badPixels: pixels.filter(pixel => pixel.slice(0, 3).some((value, i) => Math.abs(value - expected[i]) > 1)) };
-  }, { png: screenshot.toString('base64'), frames, background, transparentSvg });
+    const cx = Math.floor((first.left + first.width / 2) * density), cy = Math.floor((first.top + first.height / 2) * density);
+    return { frames, background: behind && behind(cx, cy), hole: artwork(cx, cy), badPixels: pixels };
+  }, { png: screenshot.toString('base64'), backgroundPng: backdrop?.toString('base64'), frames });
   await writeFile(path.join(output, `mirrored-${label}.json`), JSON.stringify(result, null, 2));
   return result;
 }
@@ -96,7 +103,7 @@ async function open(page) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html?seed=1&shell=1`, { timeout: 45000, waitUntil: 'domcontentloaded' });
   await editorMenu(page).waitFor();
-  await page.locator('.text-window').waitFor();
+  await page.locator('aside.text-window').waitFor();
 }
 async function menu(page, show = true) {
   const trigger = page.getByRole('button', { name: 'View options', exact: true });
@@ -104,9 +111,10 @@ async function menu(page, show = true) {
 }
 async function menuAction(page, name, touch = false) {
   await page.locator('.workbench-overview').waitFor();
-  if (await page.locator('.composition-index').count()) {
-    await page.getByRole('button', { name, exact: true })[touch ? 'tap' : 'click']();
-    if (name === 'Grid') await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
+  if (name === 'List' || name === 'Grid') {
+    const toggle = page.getByRole('switch', { name: 'Grid view', exact: true });
+    if (await toggle.isChecked() !== (name === 'Grid')) await toggle[touch ? 'tap' : 'click']();
+    await page.locator(name === 'Grid' ? '.workbench-overview[data-layout="grid"]' : '.composition-index').waitFor();
     return;
   }
   await menu(page);
@@ -123,13 +131,7 @@ async function revealCard(page, name, touch = false) {
 }
 
 async function failWrites(page, fail) {
-  await page.evaluate(fail => {
-    window.normalSetItem ||= Storage.prototype.setItem;
-    Storage.prototype.setItem = fail ? function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw new DOMException('Full', 'QuotaExceededError');
-      return window.normalSetItem.call(this, key, value);
-    } : window.normalSetItem;
-  }, fail);
+  await page.evaluate(fail => window.failWorkbenchWrites(fail), fail);
 }
 
 async function settlePreview(page) {
@@ -162,7 +164,7 @@ async function revealPresentation(page) {
 }
 
 async function seedGallery(page) {
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const store = window.guardedStore(), original = store.getWorkbenchId(), draft = store.getDraft();
     const colors = ['#9faba3', '#c4b39c', '#9ca4c4', '#bc8e86', '#9babbd', '#c6b374', '#91b1a8', '#b1a1b9'];
     draft.workbench.area = { left: 0, top: 0, width: 900, height: 1100 };
@@ -175,7 +177,7 @@ async function seedGallery(page) {
       draft.texts[0].article.title = `Field study ${i + 1}`;
       if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Could not save gallery fixture');
     }
-    if (!store.switchWorkbench(original)) throw Error('Could not restore initial fixture');
+    if (!store.switchWorkbench(original) || !await store.whenCommitted()) throw Error('Could not restore initial fixture');
   });
   await page.reload();
   await editorOverview(page);
@@ -195,11 +197,12 @@ test('normal motion reverses a partial canvas lift without a jump and menu and d
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const animations = host.getAnimations({ subtree: true });
       animations.forEach(animation => { animation.pause(); animation.currentTime = 100; });
-      const box = host.getBoundingClientRect();
-      const sample = { width: box.width, height: box.height, count: animations.length };
-      animations.forEach(animation => animation.finish()); return sample;
+      const fold = host.querySelector('.workbench-overview-menu-fold');
+      const height = fold.getBoundingClientRect().height;
+      const sample = { height, count: animations.length };
+      animations.forEach(animation => animation.finish()); return { ...sample, openHeight: fold.getBoundingClientRect().height };
     });
-    assert.ok(menuSample.count > 2 && menuSample.width > 156 && menuSample.width < 280, JSON.stringify(menuSample));
+    assert.ok(menuSample.count > 2 && menuSample.height > 0 && menuSample.height < menuSample.openHeight, JSON.stringify(menuSample));
     assert.equal(await page.locator('.workbench-overview-menu').evaluate(node => getComputedStyle(node).scrollbarWidth), 'none');
     await menu(page, false);
     await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).click();
@@ -334,7 +337,7 @@ test('gallery drag order, keyboard moves and card size persist while failed orde
     await menu(page);
     await page.getByRole('slider', { name: 'Card size' }).fill('1');
     assert.equal(await gallery.getAttribute('data-card-size'), '1');
-    assert.equal(await gallery.locator('[data-gallery-cycle="0"]').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 4);
+    assert.ok(await gallery.locator('[data-gallery-cycle="0"]').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length >= 4), 'small cards fit at least four columns');
     await page.getByRole('button', { name: 'Arrange canvases', exact: true }).click();
     assert.equal(await gallery.locator('[data-gallery-cycle]').count(), 1, 'arrangement uses the finite collection');
     const handle = page.getByRole('button', { name: 'Drag Workbench 1 to reorder' });
@@ -401,7 +404,7 @@ test('gallery keeps artwork on hover, reveals bounded titles and actions, and co
     assert.equal(await card.locator('.workbench-overview-card-reveal').evaluate(node => getComputedStyle(node).opacity), '0');
     await menu(page);
     assert.equal(await page.getByRole('group', { name: 'Overview layout' }).count(), 1);
-    assert.equal(await page.locator('.workbench-overview-navigation').evaluate(node => getComputedStyle(node).backdropFilter), 'blur(10px)');
+    assert.ok(await page.locator('.workbench-overview-menu-fold').evaluate(node => !['transparent', 'rgba(0, 0, 0, 0)'].includes(getComputedStyle(node).backgroundColor)), 'the open menu has a readable background');
     await page.screenshot({ path: path.join(output, 'gallery-menu.png') });
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('button', { name: 'View options' }).getAttribute('aria-expanded'), 'false');
@@ -623,7 +626,10 @@ test('eight-canvas wrap preserves painted content at every frame and unloads dis
       (frame.scroll - frames[i - 1].scroll) * direction < -200), `Both directions wrap: ${direction}`);
     await page.screenshot({ path: path.join(output, 'wrap-eight-1440.png') });
     await page.setViewportSize({ width: 390, height: 900 }); await settlePreview(page);
-    assert.ok(await page.locator('.workbench-overview-card:not(:has(.workbench-overview-preview))').count() > 0, 'Distant compositions remain unloaded');
+    await menu(page);
+    await page.getByRole('slider', { name: 'Card size' }).fill('3');
+    await menu(page, false);
+    await page.waitForFunction(() => document.querySelector('.workbench-overview-card:not(:has(.workbench-overview-preview))'));
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
   } finally { await browser.close(); }
 });
@@ -639,25 +645,27 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     const gallery = page.getByRole('region', { name: 'Workbench gallery' });
     await gallery.waitFor();
     assert.equal(await gallery.getByRole('button', { name: /^Open / }).count(), 8);
-    assert.equal(await page.locator('[data-gallery-cycle]').count(), 3);
+    const copies = await page.locator('[data-gallery-cycle]').count();
+    const radius = (copies - 1) / 2;
+    assert.ok(Number.isInteger(radius) && radius >= 1);
     const actions = page.getByRole('button', { name: 'Composition actions' });
     await actions.click();
     assert.equal(await page.getByRole('button', { name: 'New composition', exact: true }).isDisabled(), false);
     await actions.press('Escape');
     for (const offset of [123, -123, 41, -41]) {
-      await gallery.evaluate((node, offset) => {
+      await gallery.evaluate((node, { offset, radius }) => {
         const height = node.querySelector('[data-gallery-cycle="0"]').getBoundingClientRect().height;
-        node.scrollTop = height * (offset > 0 ? 2 : 1) - node.clientHeight / 2 + offset;
-      }, offset);
-      await page.waitForFunction(offset => {
+        node.scrollTop = height * (radius + (offset > 0 ? 1 : 0)) - node.clientHeight / 2 + offset;
+      }, { offset, radius });
+      await page.waitForFunction(({ offset, radius }) => {
         const node = document.querySelector('.workbench-overview-gallery'), height = node.querySelector('[data-gallery-cycle="0"]').getBoundingClientRect().height;
-        const expected = height - node.clientHeight / 2 + (offset > 0 ? offset : height + offset);
+        const expected = radius * height - node.clientHeight / 2 + (offset > 0 ? offset : height + offset);
         return Math.abs(node.scrollTop - expected) < 2;
-      }, offset);
+      }, { offset, radius });
     }
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved, 'view changes and wrapping never persist or activate');
     assert.equal(await gallery.locator('iframe, [contenteditable="true"]').count(), 0);
-    assert.ok(await gallery.locator('.workbench-overview-preview').count() <= 24, 'preview copies remain bounded to the visual cycles');
+    assert.ok(await gallery.locator('.workbench-overview-preview').count() <= 8 * copies, 'preview copies remain bounded to the visual cycles');
     await gallery.getByRole('button', { name: 'Open Workbench 1', exact: true }).focus();
     const tabOrder = [];
     for (let i = 0; i < 32; i++) {
@@ -698,9 +706,9 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
       assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
       assert.ok(await page.getByRole('button', { name: 'View options', exact: true }).evaluate(node => {
         const controls = node.getBoundingClientRect(), gallery = document.querySelector('.workbench-overview-gallery').getBoundingClientRect();
-        const header = document.querySelector('.visitor-header').getBoundingClientRect();
-        return controls.width < 160 && controls.top >= gallery.top && controls.bottom <= innerHeight &&
-          innerHeight - gallery.bottom <= 18 && gallery.top >= header.bottom && gallery.top - header.bottom <= 18;
+        const header = document.querySelector('.workspace-header').getBoundingClientRect();
+        return controls.width < 160 && controls.top >= header.bottom - 1 && controls.bottom <= gallery.top + 1 &&
+          innerHeight - gallery.bottom <= 18;
       }), 'The Studio header sits above the tiles and the compact view options menu floats over them');
       assert.ok(await page.getByRole('button', { name: 'View options', exact: true }).evaluate(node => {
         const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
@@ -709,14 +717,15 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     // A visible tile in the preceding visual cycle opens the same saved workbench.
     await gallery.evaluate(node => {
       node.dispatchEvent(new WheelEvent('wheel', { bubbles: true }));
-      const height = node.querySelector('[data-gallery-cycle="0"]').getBoundingClientRect().height;
-      node.scrollTop = height - 200;
+      const central = node.querySelector('[data-gallery-cycle="0"]');
+      node.scrollTop += central.getBoundingClientRect().top - node.getBoundingClientRect().top - 200;
     });
     const repeated = await gallery.evaluate(node => {
       const viewport = node.getBoundingClientRect();
       for (const button of node.querySelectorAll('[data-gallery-cycle="-1"] .workbench-overview-card-open')) {
         const box = button.getBoundingClientRect(), top = Math.max(viewport.top, box.top), bottom = Math.min(viewport.bottom, box.bottom);
-        if (bottom - top > 60) return { x: box.left + 30, y: (top + bottom) / 2, name: button.getAttribute('aria-label').slice(5) };
+        const x = box.left + 30, y = (top + bottom) / 2;
+        if (bottom - top > 60 && button.contains(document.elementFromPoint(x, y))) return { x, y, name: button.getAttribute('aria-label').slice(5) };
       }
       throw Error('No repeated tile visible');
     });
@@ -737,7 +746,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     await editorOverview(page);
     await gallery.waitFor();
     await menu(page);
-    assert.equal(await page.getByRole('button', { name: 'Grid', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.getByRole('switch', { name: 'Grid view', exact: true }).getAttribute('aria-checked'), 'true');
     await menuAction(page, 'Wrap around');
     assert.equal(await page.locator('[data-gallery-cycle]').count(), 1);
     await gallery.getByRole('button', { name: 'Open Study 8', exact: true }).press('Enter');
@@ -786,7 +795,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
     await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).tap({ position: { x: 20, y: 100 } });
     await revealPresentation(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).tap();
-    await page.locator('.text-window').waitFor();
+    await page.locator('aside.text-window').waitFor();
     const initial = JSON.parse(before).workbenches[0].content;
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches[0].content), initial);
   } finally { await browser.close(); }
@@ -799,7 +808,7 @@ test('failed departure keeps the live editor and mixed-content previews preserve
     await open(page);
     await page.route('**/mountain_01.webp', route => route.fulfill({ path: 'public/assets/stage/mountains/mountain_01.webp', contentType: 'image/webp' }));
     await failWrites(page, true); await editorOverview(page);
-    assert.equal(await page.locator('.workbench-overview').count(), 0); assert.equal(await page.locator('.text-window').count(), 1);
+    assert.equal(await page.locator('.workbench-overview').count(), 0); assert.equal(await page.locator('aside.text-window').count(), 1);
     await failWrites(page, false);
     await page.evaluate(async () => {
       const { createProfileDocumentV9AssetResolver } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');

@@ -33,13 +33,13 @@
    navigation sidebar. Their content and lifetimes still belong to panels. */
 .system-workflow[data-editor-menu] .system-workflow__panel-presence { z-index: 90; }
 .system-workflow[data-editor-menu] .system-workflow__workspace-window:not([data-library-embedded]) { top: calc(var(--workspace-navigation-top, var(--workspace-header-height)) + 4px); left: 12px; max-width: calc(100vw - 24px); min-width: 0; }
-.editor-menu-form, .editor-menu-error { position: absolute; top: 100%; left: 8px; box-sizing: border-box; width: min(300px, calc(100vw - 16px)); padding: 12px; margin: 0; border: 1px solid var(--tactile-edge); border-radius: var(--editor-control-radius); background: var(--tactile-face); }
+.editor-menu-feedback { position: absolute; top: 100%; left: 8px; width: min(300px, calc(100vw - 16px)); max-height: calc(100dvh - var(--workspace-header-height)); overflow-y: auto; }
+.editor-menu-form, .editor-menu-error { box-sizing: border-box; width: 100%; padding: 12px; margin: 0; border: 1px solid var(--tactile-edge); border-radius: var(--editor-control-radius); background: var(--tactile-face); }
 .editor-menu-form { display: grid; gap: 12px; }
 .editor-menu-form label { display: grid; gap: 6px; }
 .editor-menu-form :is(input, select) { box-sizing: border-box; min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--tactile-edge); background: var(--tactile-well); color: inherit; font: inherit; }
 .editor-menu-form > div { display: flex; gap: 8px; }
 .editor-menu-form button, .editor-menu-error button { padding: 8px 12px; border: 1px solid var(--tactile-edge); background: var(--tactile-face); color: inherit; font: inherit; }
-.editor-menu-form ~ .editor-menu-error { top: calc(100% + 140px); }
 .editor-menu-shell > .editor-cell-editing { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--tactile-face); max-width: calc(100vw - 24px); }
 @media (max-width: 900px) {
   .editor-menu-start { gap: 10px; }
@@ -64,4 +64,7 @@
   .editor-header-actions .studio-header-tools > button:last-child { min-width: 0; padding-inline: 2px; }
   .editor-return-link span { display: none; }
   .editor-return-link { min-width: 28px; justify-content: center; padding-inline: 4px; }
+}
+@media (max-width: 319px) {
+  .editor-menu-bar { grid-template-columns: minmax(120px, 1fr) auto auto; overflow-x: auto; }
 }

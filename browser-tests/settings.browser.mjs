@@ -52,7 +52,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await mount(browser, theme, width, height), before = await saved(page);
-      const material = await page.locator('.keeper-dock-window').evaluate(node => ({ background: getComputedStyle(node).backgroundColor, radius: getComputedStyle(node).borderRadius }));
+      const material = { background: theme === 'carbon' ? 'rgb(43, 43, 43)' : 'rgb(235, 236, 231)', radius: '9px' };
       const trigger = await open(page), panel = settings(page), close = panel.getByRole('button', { name: 'Close Settings' });
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/settings-${theme}-${width}-top.png` });
@@ -78,7 +78,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       await background.click();
       const menu = page.getByRole('listbox'); const menuBox = await menu.boundingBox();
       assert.ok(menuBox.y >= 0 && menuBox.y + menuBox.height <= height, 'selector stays inside the viewport');
-      assert.equal(await menu.evaluate(node => getComputedStyle(node).backgroundColor), material.background, 'portalled menu uses the window material');
+      assert.equal(await menu.evaluate(node => getComputedStyle(node).backgroundColor), theme === 'carbon' ? 'rgb(8, 8, 8)' : material.background, 'the menu uses its themed popup material');
       assert.equal(await background.evaluate(node => getComputedStyle(node, '::after').content), 'none', 'no old heavy active bar');
       await page.keyboard.press('ArrowDown');
       assert.equal(await menu.locator(':focus').evaluate(hit), true, 'keyboard options remain reachable');
@@ -132,8 +132,8 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     await openEditorMenu(page, 'Backup');
     const backup = page.getByRole('dialog', { name: 'Backup', exact: true });
     await backup.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') });
-    await backup.getByRole('status').waitFor();
-    assert.match(await backup.getByRole('status').innerText(), /backup|JSON/i);
+    await backup.getByRole('status').filter({ hasText: /invalid|not valid|could not|cannot|JSON/i }).waitFor();
+    assert.match(await backup.getByRole('status').filter({ hasText: /invalid|not valid|could not|cannot|JSON/i }).innerText(), /backup|JSON/i);
     assert.deepEqual(await saved(page), changed, 'an invalid backup does not replace the draft');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

@@ -17,19 +17,19 @@ test('two real tabs have one editor, separate profiles remain independent, and c
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const context = await browser.newContext(), a = await context.newPage(), b = await context.newPage();
-    await open(a); await a.locator('.text-window').waitFor();
+    await open(a); await a.locator('aside.text-window').waitFor();
     await open(b); await b.getByRole('heading', { name: 'This tab is view-only' }).waitFor();
     await mkdir(output, { recursive: true });
     for (const width of [1440, 390]) { await b.setViewportSize({ width, height: 1000 }); await b.screenshot({ path: path.join(output, `view-only-${width}.png`) }); }
-    assert.equal(await b.locator('.text-window').count(), 0);
+    assert.equal(await b.locator('aside.text-window').count(), 0);
     const refusal = await b.evaluate(() => { const s = window.guardedStore(), d = s.getDraft(); d.identityPresentation.alias = 'Rejected'; return { saved: s.commitCompletedOperation(d, { expectedGeneration: s.getGeneration() }), reason: s.getLastCommitFailure() }; });
     assert.deepEqual(refusal, { saved: false, reason: 'editor_unavailable' });
-    const c = await context.newPage(); await open(c, `${url}&profile=0x${'2'.repeat(40)}`); await c.locator('.text-window').waitFor();
+    const c = await context.newPage(); await open(c, `${url}&profile=0x${'2'.repeat(40)}`); await c.locator('aside.text-window').waitFor();
     await a.evaluate(() => { window.staleStore = window.guardedStore(); window.leaveEditor(); });
     assert.equal(await a.evaluate(() => window.staleStore.commitCompletedOperation(window.staleStore.getDraft(), { expectedGeneration: window.staleStore.getGeneration() })), false);
-    await b.getByRole('button', { name: 'Try editing here' }).click(); await b.locator('.text-window').waitFor();
+    await b.getByRole('button', { name: 'Try editing here' }).click(); await b.locator('aside.text-window').waitFor();
     await b.close();
-    const d = await context.newPage(); await open(d); await d.locator('.text-window').waitFor();
+    const d = await context.newPage(); await open(d); await d.locator('aside.text-window').waitFor();
     await mkdir(output, { recursive: true }); await writeFile(path.join(output, 'two-tabs.json'), JSON.stringify({ competingWrite: refusal, profileIsolation: true, staleWriteRejected: true, closeReleases: true }, null, 2));
   } finally { await browser.close(); }
 });
@@ -38,7 +38,7 @@ for (const width of [1440, 390]) test(`full private backup downloads, validates,
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 1000 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await open(page); await page.locator('.text-window').waitFor();
+    await open(page); await page.locator('aside.text-window').waitFor();
     let panel = await settings(page);
     const downloading = page.waitForEvent('download'); await panel.getByRole('button', { name: 'Download workspace backup', exact: true }).click();
     const source = await readFile(await (await downloading).path(), 'utf8'), backup = JSON.parse(source);
@@ -55,10 +55,10 @@ for (const width of [1440, 390]) test(`full private backup downloads, validates,
     await panel.getByRole('button', { name: 'Confirm Replace' }).click();
     await page.waitForFunction(() => window.savedDraft()?.workbenches?.[0].content.texts[0].article.title === 'Restored private composition');
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.workspace.workbenches);
-    await page.reload(); await page.locator('.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.workspace.workbenches);
+    await page.reload(); await page.locator('aside.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.workspace.workbenches);
     const projectedLeft = await page.locator('main.system-workflow').evaluate(host =>
         110 * Number(host.dataset.workbenchCameraScale) + Number(host.dataset.workbenchCameraX));
-      assert.ok(Math.abs((await page.locator('.text-window').boundingBox()).x - projectedLeft) < 1, 'the restored authored position is painted through the current camera after reload');
+      assert.ok(Math.abs((await page.locator('aside.text-window').boundingBox()).x - projectedLeft) < 1, 'the restored authored position is painted through the current camera after reload');
     await page.screenshot({ path: path.join(output, `restored-${width}.png`) });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -67,7 +67,7 @@ for (const width of [1440, 390]) test(`full private backup downloads, validates,
 test('an unpublished corrupt draft exposes backup recovery without deleting the corrupt record first', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
-    const page = await browser.newPage(); await open(page); await page.locator('.text-window').waitFor();
+    const page = await browser.newPage(); await open(page); await page.locator('aside.text-window').waitFor();
     const draft = await page.evaluate(() => window.savedDraft());
     await page.evaluate(() => window.externalWorkbenchWrite('{broken'));
     await page.reload(); await page.getByRole('heading', { name: 'Local workspace could not be opened' }).waitFor();
@@ -75,14 +75,14 @@ test('an unpublished corrupt draft exposes backup recovery without deleting the 
     const panel = page.getByRole('region', { name: 'Workbench backup', exact: true });
     await upload(panel, JSON.stringify({ type: 'inscape-private-workbench', version: 1, createdAt: new Date().toISOString(), draft }));
     await panel.getByRole('button', { name: 'Confirm Replace' }).click();
-    await page.locator('.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), draft);
+    await page.locator('aside.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), draft);
   } finally { await browser.close(); }
 });
 
 test('restore errors retain saved bytes and a delayed file cannot replace subsequently edited work', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
-    const page = await browser.newPage(); await open(page); await page.locator('.text-window').waitFor();
+    const page = await browser.newPage(); await open(page); await page.locator('aside.text-window').waitFor();
     let panel = await settings(page);
     const original = await page.evaluate(() => window.savedDraft());
     const changed = structuredClone(original); changed.texts[0].article.title = 'Backup replacement';
@@ -96,10 +96,10 @@ test('restore errors retain saved bytes and a delayed file cannot replace subseq
     await page.evaluate(() => { const draft = window.savedDraft(); draft.identityPresentation.alias = 'Externally changed'; return window.externalWorkbenchWrite(JSON.stringify(draft)); });
     await panel.getByRole('button', { name: 'Confirm Replace' }).click();
     await panel.getByText(/Workspace changed since preview/).waitFor();
-    await page.reload(); await page.locator('.text-window').waitFor();
+    await page.reload(); await page.locator('aside.text-window').waitFor();
     assert.equal(await page.evaluate(() => window.savedDraft().identityPresentation.alias), 'Externally changed');
     assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.title), 'Private draft');
-    await page.reload(); await page.locator('.text-window').waitFor(); panel = await settings(page);
+    await page.reload(); await page.locator('aside.text-window').waitFor(); panel = await settings(page);
     await page.evaluate(() => { const text = File.prototype.text; File.prototype.text = async function() { const value = await text.call(this); await new Promise(resolve => { window.finishRead = resolve; }); return value; }; });
     await upload(panel, source); await page.waitForFunction(() => Boolean(window.finishRead));
     await page.getByRole('button', { name: 'Close Backup' }).click();
@@ -115,9 +115,9 @@ test('without Web Locks the editor fails closed and the published-view action st
   try {
     const page = await browser.newPage(); await page.addInitScript(() => Object.defineProperty(navigator, 'locks', { value: undefined }));
     await open(page); await page.getByRole('heading', { name: 'This tab is view-only' }).waitFor();
-    assert.equal(await page.locator('.text-window').count(), 0);
+    assert.equal(await page.locator('aside.text-window').count(), 0);
     assert.equal(await page.evaluate(() => { const store = window.guardedStore(); return store.restoreBackup(store.getDraft(), { expectedGeneration: 0 }); }), false);
-    await page.getByRole('button', { name: 'View published workspace' }).click();
+    await page.getByRole('button', { name: 'View published profile' }).click();
     await page.getByText('Published view requested').waitFor();
   } finally { await browser.close(); }
 });
@@ -222,7 +222,7 @@ test('Studio creates one named Bento with free artwork and cell content, then re
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page);
     await createStudioDocument(page, 'bento', 'With cells');
-    const studio = page.locator('main[data-reception-editor]');
+    const studio = page.locator('main[data-composition-editor]');
     await studio.waitFor();
     const active = () => page.evaluate(() => {
       const record = window.savedDraft();
@@ -286,7 +286,7 @@ test('a newly created Canvas opens its full module tools and can undo the transi
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page);
     await createStudioDocument(page, 'canvas', 'Module study');
-    const native = page.locator('main[data-reception-editor]');
+    const native = page.locator('main[data-composition-editor]');
     await native.waitFor();
     const id = await activeEditorDocument(page);
     await editorCommand(page, 'Canvas', 'Use canvas modules');
@@ -305,7 +305,7 @@ test('a newly created Canvas opens its full module tools and can undo the transi
 test('workspace backup previews merge conflicts and exports the current revision before confirmation', async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
-    const page = await browser.newPage(); await open(page); await page.locator('.text-window').waitFor();
+    const page = await browser.newPage(); await open(page); await page.locator('aside.text-window').waitFor();
     const panel = await settings(page);
     const original = await page.evaluate(() => window.savedDraft());
     const incoming = structuredClone(original);

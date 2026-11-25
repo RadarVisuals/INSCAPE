@@ -1,10 +1,10 @@
 // Historical design-system artboard only. Production uses OwnerEditorMenuBar.
-import { Bell, ChevronDown, ChevronRight, Eye, FileText, Home, Images, Layers, List,
+import { Bell, ChevronDown, ChevronRight, Eye, Home, Images, Layers, List,
   PanelsTopLeft, Settings2, Upload, UserRound } from 'lucide-react';
 import './referenceWorkspaceNavigation.css';
 
 // Presentation only. The host owns destinations, panel lifetimes and authority.
-export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onLayers, onOverview, onReception,
+export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onLayers, onOverview,
   openPanels = [], onOpen, onPreview, onPublish, publicationOpen = false, unreadCount = 0,
   navigationHost, onNavigate, reference = false, documentControls = false, destination = 'editor', className = '', style }) {
   const editor = documentControls && destination === 'editor';
@@ -31,7 +31,6 @@ export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onColl
     </div>}
     <div className="workspace-navigation-scroll">
       <nav aria-label="Workspace navigation">
-        {!editor && link('Reception', Home, onReception)}
         {!editor && onOverview && link('My Inscape', List, onOverview, { 'aria-current': destination === 'overview' && !openPanels.length && !publicationOpen ? 'page' : undefined })}
         {!editor && link('Editor', PanelsTopLeft, onWorkbench, { 'aria-current': destination === 'editor' && !openPanels.length && !publicationOpen ? 'page' : undefined })}
         {editor && link('Layers', Layers, onLayers)}
@@ -47,7 +46,7 @@ export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onColl
         </nav>
         {reference && !collapsed && <small className="workspace-navigation-note">Account & sharing: available in the app</small>}
         {!editor && <div className="workspace-navigation-utilities" role="toolbar" aria-label="Workspace utilities">
-          {[[UserRound, 'Profile', 'profile'], ...(!documentControls ? [[FileText, 'Docs', 'docs'], [Settings2, 'Settings', 'settings']] : [])].map(([Icon, label, id]) =>
+          {[[UserRound, 'Profile', 'profile'], ...(!documentControls ? [[Settings2, 'Settings', 'settings']] : [])].map(([Icon, label, id]) =>
             <button key={id} type="button" className={`workspace-navigation-link${id === 'profile' ? '' : ' workspace-navigation-utility'}`}
               aria-label={label} title={label} data-system-workflow-panel-trigger
               aria-expanded={openPanels.includes(id)} data-active={openPanels.includes(id) || undefined} disabled={!onOpen || reference}

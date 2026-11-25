@@ -4,6 +4,7 @@ import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
@@ -69,7 +70,7 @@ test('typing crosses a frame boundary, cross-frame selection edits one range, an
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } }); page.setDefaultTimeout(12000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seed(page);
-    await page.locator('.text-window').first().hover(); await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
     await revealFrameControls(page);
     await page.locator('.text-continuation-window').first().hover(); await page.getByRole('button', { name: 'Add linked frame after 2', exact: true }).click(); await settle(page);
     const first = page.getByRole('textbox', { name: 'Article text', exact: true }), second = page.getByRole('textbox', { name: 'Article text in frame 2', exact: true });
@@ -151,12 +152,10 @@ test('different frame sizes retain lists, artwork and captions in Write, Read an
     for(let i=0;i<3;i++)write.push(await visibleText(editors.nth(i)));
     await page.screenshot({path:'.browser-test-runtime/text-linked-rich-write-390.png'});
     const before=await page.evaluate(()=>window.savedDraft().texts[0].article);
-    await page.getByRole('button',{name:'Read',exact:true}).focus(); await page.keyboard.press('Enter'); await settle(page);
-    const bodies=page.locator('.text-flow-visible article > .text-document-body');
-    for(let i=0;i<3;i++)assert.equal(await visibleText(bodies.nth(i)),write[i],`rich content matches in frame ${i+1}`);
-    assert.equal(await page.locator('.text-flow-visible article img').count(),1,'artwork belongs to exactly one reading frame');
     await mountTextToolsFixture(page,origin,{visitor:true}); await setWorkbenchZoom(page,.5); await settle(page);
+    const bodies=page.locator('.text-flow-visible article > .text-document-body');
     await page.waitForFunction(()=>[...document.querySelectorAll('.text-flow-visible img')].some(n=>n.complete&&n.naturalWidth)); await settle(page);
+    assert.equal(await page.locator('.text-flow-visible article img').count(),1,'artwork belongs to exactly one reading frame');
     for(let i=0;i<3;i++)assert.equal(await visibleText(bodies.nth(i)),write[i],`Visitor retains frame ${i+1}`);
     await assertPainted(page,page.locator('.text-flow-visible .text-document-title'));
     await page.screenshot({path:'.browser-test-runtime/text-linked-rich-visitor-390.png'});
@@ -224,7 +223,7 @@ async function seed(page) {
     const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
   }, story);
-  await mountTextToolsFixture(page, origin); await settle(page);
+  await mountTextToolsFixture(page, origin); await resetCameraTestView(page);
   await revealFrameControls(page);
 }
 async function exposedTextPoint(body) {
@@ -265,7 +264,7 @@ test('linked frames share live editing, formatting and one undo history, preserv
     await seed(page);
     const original = await page.getByRole('textbox', { name: 'Article text', exact: true }).elementHandle();
     const before = await page.evaluate(() => window.savedDraft().texts[0].article);
-    await page.locator('.text-window').first().hover(); await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
     await revealFrameControls(page);
     const second = page.getByRole('textbox', { name: 'Article text in frame 2', exact: true }); await second.waitFor(); await settle(page);
     assert.equal(await page.getByRole('textbox', { name: 'Article text', exact: true }).evaluate((node, old) => node === old, original), true);
@@ -324,8 +323,7 @@ test('linked frames share live editing, formatting and one undo history, preserv
     const clickPoint = await exposedTextPoint(empty); await page.mouse.click(clickPoint.x,clickPoint.y); await page.keyboard.type(' TEST'); await settle(page);
     assert.equal(await page.getByRole('textbox',{name:'Article text',exact:true}).evaluate(n=>n.editor.state.doc.textContent),changed.content.content[0].content.map(n=>n.text).join('')+' TEST','clicking an empty continuation appends to the article without replacing hidden text');
     await page.keyboard.press('Control+z'); await settle(page);
-    await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter'); await settle(page);
-    const read = page.locator('.text-flow-visible article > .text-document-body');
+    const read = page.locator('.text-flow-visible [role="textbox"]');
     const reading = []; for (let i = 0; i < await read.count(); i++) reading.push(await visibleText(read.nth(i)));
     assert.equal(reading.join(''), changed.content.content[0].content.map(node => node.text).join(''), 'complete story flows through all frames once');
     await mountTextToolsFixture(page, origin, { visitor: true }); await settle(page);

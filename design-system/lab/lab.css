@@ -25,4 +25,4 @@ body { margin: 0; background: var(--interface-environment); color: var(--interfa
 .lab-toolbar-stage { min-height: 480px; position: relative; }
 .lab-toolbar-stage .workbench-toolbar { position: absolute; }
 .lab-toolbar-stage > p { font-size: 13px; color: var(--color-text-secondary); }
-.lab-reception-stage { position: relative; height: 1000px; }
+.lab-composition-stage { position: relative; height: 1000px; }

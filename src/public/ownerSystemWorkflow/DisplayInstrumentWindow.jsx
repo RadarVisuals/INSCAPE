@@ -15,9 +15,11 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, paintWor
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, objectToolbar = false, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, surfacePreviewFrame, resizeTarget, committedFrame, externalControls = false, frameControls, controlsGap = 28, cssPixelSurface = false, subpixelEdges = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom, viewportInsets }) {
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, objectToolbar = false, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, surfacePreviewFrame, resizeTarget, committedFrame, externalControls = false, frameControls, controlsGap = 28, cssPixelSurface = false, subpixelEdges = false, externalControlsHost: controlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom, viewportInsets }) {
   const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
   const view = useWorkbenchHostView();
+  // A hidden artwork's toolbar belongs with its inert window, outside the portal.
+  const externalControlsHost = viewId && (view.hiddenModuleIds?.includes(viewId) || view.editorHiddenIds?.includes(viewId)) ? null : controlsHost;
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
   const isCompact = Boolean(compact);
   const transformed = Boolean(viewId) && !compact;
@@ -115,7 +117,10 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       element.style.setProperty('--controls-frame-height', `${screen.height}px`);
       bar.style.setProperty('--toolbar-screen-x', `${x}px`);
       // Keep the header clear of the handles; the artwork retains its own clip.
-      const top = Math.max((view.navigationTop || 0) + 8, Math.min(y - height - controlsGap, viewport.height - height - 8));
+      const minimumTop = (view.navigationTop || 0) + 8, maximumTop = viewport.height - height - 8;
+      const above = y - height - controlsGap, below = y + screen.height + controlsGap;
+      const top = above < minimumTop && below <= maximumTop
+        ? Math.max(minimumTop, below) : Math.max(minimumTop, Math.min(above, maximumTop));
       bar.style.top = `${top - y}px`;
     };
     const update = () => { ({ height } = bar.getBoundingClientRect()); paintControls(getCamera()); };

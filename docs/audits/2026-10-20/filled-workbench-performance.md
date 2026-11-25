@@ -2,7 +2,7 @@
 
 20 oktober 2026. Makeropdracht: meerdere Workbenches behouden met één actieve;
 het ruimtelijke overzicht uitstellen en eerst meten wat een goed gevuld canvas
-werkelijk belast. Bestaande wijzigingen en Keeper-proef behouden. Geen commit,
+werkelijk belast. Bestaande wijzigingen behouden. Geen commit,
 push, upload of deployment.
 
 **Resultaat:** één actieve Workbench is de juiste scheiding om te behouden.
@@ -31,9 +31,7 @@ Elk gevuld canvas is 4200 × 3200 eenheden. De twaalf teksten bevatten samen 144
 paragrafen, ongeveer 95.000 tekens. De afbeeldingen gebruiken bestaande WebP's
 en een bestaande SVG met acht ingebedde WebP-lagen; de proef voegt een
 gecontroleerde animatie toe. De twee HTML-bestanden zijn eenvoudige, lokaal
-bediende animatieproeven. Een gedeelde Keeper staat in zijn dock. Deze proef
-test geen rondzwemmende Keeper of exploratiekamer; die bestaande proef is
-ongewijzigd behouden.
+bediende animatieproeven. Een gedeelde Keeper staat in zijn dock.
 
 Windows, Intel i5-12600KF, 16 logische processors, ongeveer 32 GiB RAM,
 Chrome 155.0.8059.85, headless, venster 1440 × 1000, pixelverhouding 1.
@@ -131,8 +129,7 @@ browser en server. Er zijn geen nieuwe pakketafhankelijkheden.
 ## Werkstand
 
 Alleen benchmarkbestanden en documentatie zijn voor deze opdracht toegevoegd
-of bijgewerkt. Productcode, de bestaande ongecommitte wijzigingen en de
-Keeper-proef zijn behouden. Branch codex/audit-checkpoint-2026-10-19,
+of bijgewerkt. Productcode en de bestaande ongecommitte wijzigingen zijn behouden. Branch codex/audit-checkpoint-2026-10-19,
 basis-HEAD 32d9418843d996afc2e5203afa4552a6cd2d459a.
 Geen commit, push of deployment. Externe CI op de basis-HEAD is geen bewijs
 voor deze lokale proef of werkboom.

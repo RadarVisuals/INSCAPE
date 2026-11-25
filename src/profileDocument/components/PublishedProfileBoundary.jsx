@@ -12,7 +12,6 @@ import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 import useDeferredFocusReturn from '../../public/useDeferredFocusReturn.js';
 const VisitorProfile = lazy(() => import('./VisitorProfile.jsx'));
 const GalleryRemovalReview = lazy(() => import('./GalleryRemovalReview.jsx'));
-const OwnerReception = lazy(() => import('../../reception/OwnerReception.jsx'));
 const PublishedCanvasGallery = lazy(() => import('./PublishedCanvasGallery.jsx'));
 const PublishedWriting = lazy(() => import('./PublishedWriting.jsx'));
 const emptyEntries = [];
@@ -110,7 +109,7 @@ function OwnerGallery({ resolution, getWalletPublicationContext, onRetry, onPubl
 export default function PublishedProfileBoundary({
   address, resolution, onRetry, onReviewReplacement, connectedProfile, returnProfileAddress, ownerDestinations, onReturnToWorkbench,
   getWalletPublicationContext, onPublicationConfirmed,
-  onManageWorks, onNewComposition, onEditComposition, onEditReception, onVisitProfile, onConnect, onDisconnect,
+  onManageWorks, onNewComposition, onEditComposition, onVisitProfile, onConnect, onDisconnect,
   entry, onOpenOverview, onOpenCanvas, onOpenWriting,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
@@ -118,17 +117,11 @@ export default function PublishedProfileBoundary({
   const returnToWorkbench = ownProfile ? onReturnToWorkbench : null;
   const returnHome = returnProfileAddress && !ownProfile ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   const editComposition = returnToWorkbench ? onEditComposition : undefined;
-  const editProfile = returnToWorkbench ? onEditReception : undefined;
   const createComposition = returnToWorkbench ? onNewComposition : undefined;
   const manageWorks = returnToWorkbench ? onManageWorks : undefined;
   const navigation = { onManageWorks: manageWorks, onNewComposition: createComposition, account: connectedProfile, ownerDestinations, onConnect, onDisconnect, onOpenWriting, onOpenOverview, onOpenCanvas,
-    onReturnToWorkbench: returnToWorkbench, onEditReception: editProfile, onEditComposition: editComposition };
+    onReturnToWorkbench: returnToWorkbench, onEditComposition: editComposition };
   const reviewReplacement = returnToWorkbench && canReplaceInvalidPublication(resolution, address) ? onReviewReplacement : undefined;
-  if (!reviewReplacement && returnToWorkbench && entry?.surface === 'overview' && !entry.target && entry?.reception !== 'published') {
-    return <Suspense fallback={<p role="status">Opening Profile…</p>}>
-      <OwnerReception key={address} address={address} document={visibleDocument} {...navigation} />
-    </Suspense>;
-  }
   if (!visibleDocument) return <UnpublishedProfilePage address={address} account={connectedProfile} entry={entry}
     state={resolution} onRetry={onRetry} onReviewReplacement={reviewReplacement} onNewComposition={createComposition} onManageWorks={manageWorks}
     onProfile={onOpenOverview} onWorks={onOpenCanvas} onWriting={onOpenWriting}

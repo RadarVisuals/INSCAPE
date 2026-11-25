@@ -1,5 +1,5 @@
 import { undockWindow } from './fixtures/undock-window.mjs';
-import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
+import { editorDestination, editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -64,16 +64,15 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await mount(browser); await page.emulateMedia({ reducedMotion });
-      const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-      const trigger = editorMenu(page, 'Docs');
-      const panel = page.getByRole('dialog', { name: 'Docs', exact: true });
-      await trigger.click(); await panel.waitFor();
-      await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
+      const trigger = editorMenu(page);
+      const panel = page.getByRole('dialog', { name: 'Backup', exact: true });
+      await editorDestination(page, 'Backup'); await panel.waitFor();
+      await panel.getByRole('button', { name: 'Close Backup', exact: true }).click();
       await panel.waitFor({ state: 'detached' });
       await page.waitForFunction(node => document.activeElement === node, await trigger.elementHandle());
-      await trigger.click(); await panel.waitFor(); await holdFrames(page);
-      await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
-      const next = editorMenu(page, 'Canvas'); await next.focus();
+      await editorDestination(page, 'Backup'); await panel.waitFor(); await holdFrames(page);
+      await panel.getByRole('button', { name: 'Close Backup', exact: true }).click();
+      const next = page.getByRole('button', { name: 'Studio', exact: true }); await next.focus();
       await panel.waitFor({ state: 'detached' });
       await page.evaluate(() => window.releaseHeldFrames());
       assert.equal(await next.evaluate(n => n === document.activeElement), true, 'closing animation and deferred return preserve newer focus');

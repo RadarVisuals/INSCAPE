@@ -194,7 +194,7 @@ checkpointing does not back up browser drafts or prove release readiness.
 ## Reception wireframe replacement (2026-10-20)
 
 Historical implementation: the static customizable Reception section above
-supersedes the fixed Reception cards. Exploration/Keeper remains a live route.
+supersedes the fixed Reception cards.
 
 **Implemented locally following explicit founder authorization.** The founder
 approved replacing the previous Reception rather than retaining it behind a
@@ -204,10 +204,6 @@ custom fields. It does not auto-populate an artwork carousel. The old card
 expansion, artwork inspection host, carousel lifecycle and Reception-specific
 curation/crop editor have been removed, including their unused components.
 
-Explore on the right opens a separate temporary empty exploration wireframe;
-Back to Reception or Escape returns focus to its trigger. The owner Keeper
-trial below adds existing movement; this is not yet a world renderer,
-interior collision feature or persistent/shareable room route.
 The original disabled composition entrance is superseded by the 26 October
 repair: **Enter Inscape** opens the existing published canvas through application
 navigation, with **View published canvas** as its description. The profile
@@ -227,101 +223,7 @@ is erased and no document migration or new saved schema is introduced.
 
 This supersedes the older implemented Reception carousel/editor descriptions
 under Cover, entry, and Discover. It does not supersede the longer-term visual
-direction or activate the optional world. [Implementation and verification](../../../audits/2026-10-20/reception-wireframe.md).
-
----
-
-## Keeper dock in the exploration trial (2026-10-20)
-
-## Keeper dock in the exploration trial (2026-10-20)
-
-**Implemented locally after explicit founder authorization.** In the owner's
-Reception → Explore room, reuse the existing Keeper dock, Library drag/drop,
-artwork host, movement modes, swim speed, settings and recall. The existing
-profile draft remains authoritative: reuse its first Keeper (choose when there
-are several), or create one empty private dock with Layered swim selected.
-Artwork and parameter changes are shared with the Workbench Keeper. The room
-dock position and flight are temporary, not another saved composition/habitat.
-
-Only a verified owner can open this editor, under the existing single-editor
-lease. A missing/unreadable draft requires recovery through the Workbench;
-it must not be replaced with an empty room draft. Visitors have no private
-Library/editor. Leaving the room releases motion and the editing lease.
-Room bounds constrain the existing motion. The next authorized trial places one
-founder-supplied static environment image and makes its outlined upper beam a
-solid rectangle for free flight. Keeper uses a simple body footprint and slides
-along the beam; illustrative protrusions and the right wall are not colliders.
-Direct recall intentionally bypasses this trial collider as a recovery action.
-The original SVG is retained; the room uses a transparent lossless WebP at
-1200 × 1200 for a maximum 320 CSS-pixel presentation. This is not a zoom-quality
-or full-world performance claim. Rigged dock previews reuse parsed artwork
-parts rather than attempting to display the source SVG as a flat image.
-General scene collision, camera-follow, world zoom, authored scenery placement
-and public habitat presentation remain pending.
-This small trial does not implement multiple Workbenches or prove full-world
-performance. [Evidence and use](../../../audits/2026-10-20/exploration-keeper.md).
-
-The [first environment/collision evidence](../../../audits/2026-10-20/exploration-collision.md)
-records source integrity, rendering and the deliberately limited collision rule.
-
----
-
-## Superseded exploration sequence
-
-### Larger exploration trial with Keeper camera follow (2026-10-20)
-
-Subsequent founder feedback exposed the combined wall/zoom focus shift. Latest
-implementation removes positional follow lag: Keeper's existing smooth motion
-is the sole source of travel smoothing; the camera keeps its core at the room
-viewport centre. The lens is allowed outside the physical room so 50% overview
-does not shift Keeper sideways when camera bounds meet a nearby metal wall.
-Physical actor bounds and metal collision remain intact. Trial core margin is
-now 8% of world-rendered size, tightened from 16%; it remains an approximation.
-This supersedes the damped/clamped-camera and earlier footprint descriptions
-below. F uses the shared inspection curve on the same motion clock; no zoom RAF.
-
-Latest shortcut refinement: the founder replaced J with **F**, matching existing
-Workbench muscle memory. Reuse `LATTICE_PRODUCTION_FOCUS_OPENING_MS` (460ms)
-and `latticeProductionFocusOpeningProgress` for the room's 100%/50% transition;
-Keeper remains the room focus, not a newly selectable scenery object. F toggles
-in both directions, J no longer does. A reported movement/zoom jitter was
-traced to an independent zoom clock resetting camera centring every sample.
-The replacement advances zoom on the existing Keeper motion clock and preserves
-its current screen anchor before normal camera-follow damping. Rapid reversal
-starts from the live scale. Docked/reduced-motion zoom is immediate.
-
-Later explicit zoom choice, implemented locally: start at 100%; one toggle
-switches to a true 50% overview and back to 100%. The founder assigned **J**
-to both directions. The visible toggle carries that shortcut. No wheel zoom,
-continuous zoom control or scale above 100%. Camera follow remains active;
-artwork and Keeper scale together while world speed, body collision geometry
-and authored state remain unchanged. Ignore J while typing, using modifiers,
-key repeat/composition, or working in Library. The shortcut is scoped to the
-room and cleaned up when leaving. New room sessions start at 100%.
-
-Explicitly authorized and locally implemented: a 2800 × 1800 temporary room,
-two 600-unit copies of the same environment source, fixed 1:1 camera scale and
-damped camera follow. The founder tried the result and positively confirmed
-the feel of camera follow. This does not settle zoom, final scenery or a public
-world/editor. Only the straight horizontal/vertical metal beams collide;
-the founder explicitly excluded organic interior detail from collision.
-
-`explorationSpace.js` owns room geometry, screen/world conversion and temporary
-camera presentation. Existing Keeper integration remains the motion owner.
-World positions, speed and beams do not change when the camera moves. Pointer
-destinations are converted to world space; a held right button continuously
-updates that destination under the camera. Dock and Library stay in screen
-space. Rig pose and conversation anchors receive projected screen positions.
-Camera, flight and scenery do not write into the profile draft. Return directly
-recalls to the room start, then restores the starting view; leaving releases
-the existing motion loop and editor lease. Reduced motion retains stationary
-Keeper behavior without animated camera follow.
-
-The trial body collision footprint is tightened from 30% to 16% of rendered
-size, while ordinary Workbench behavior retains its defaults. This remains a
-simple body approximation, not pixel/tentacle collision. The previous single
-viewport-space beam trial is superseded by these world-space metal beams.
-See [camera trial evidence](../../../audits/2026-10-20/exploration-camera.md).
+direction. [Implementation and verification](../../../audits/2026-10-20/reception-wireframe.md).
 
 ---
 

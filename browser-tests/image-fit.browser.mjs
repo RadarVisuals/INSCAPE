@@ -36,12 +36,17 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     const scale = 1.0976232973106559, offset = { x: -3541.289770546675 + 3552 * scale, y: -1519.0376733143444 };
     await page.evaluate(({ scale, offset }) => imageFitFixture.camera(scale, offset), { scale, offset }); await settle(page);
     const initial = await page.evaluate(() => imageFitFixture.store.getDraft());
-    const report = await page.evaluate(async ({ scale, offset }) => {
-      const { measure } = await import('/browser-tests/fixtures/measure-grid-seams.js');
-      return measure(document.querySelector('main'), scale, offset);
-    }, { scale, offset });
-    assert.ok(report.imageJoins.every(join => join.canvasGapPhysicalPx === 0));
-    assert.ok(report.imageJoins.some(join => join.mediaRectangleGapPhysicalPx > 2), 'reproduces the uploaded report: frames touch, native image rectangles do not');
+    const joins = await page.evaluate(async () => {
+      const { measureImageJoins } = await import('/browser-tests/fixtures/imageSeamGeometry.js');
+      const images = [...document.querySelectorAll('.image-module__canvas')].map(canvas => ({
+        moduleId: canvas.closest('[data-image-module]').dataset.imageModule,
+        canvas: { rect: canvas.getBoundingClientRect() },
+        svgImage: { rect: canvas.querySelector('image').getBoundingClientRect() },
+      }));
+      return measureImageJoins(images, devicePixelRatio);
+    });
+    assert.ok(joins.length > 0 && joins.every(join => join.canvasGapPhysicalPx === 0));
+    assert.ok(joins.some(join => join.mediaRectangleGapPhysicalPx > 2), 'frames touch while native image rectangles leave a seam');
     const geometry = () => page.locator('.image-module__window').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
     const beforeFrames = await geometry();
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-before.png` });

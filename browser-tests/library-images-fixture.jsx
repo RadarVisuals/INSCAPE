@@ -20,6 +20,9 @@ let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...as
     variants: name === 'transparent' ? [{ url: 'https://images.inscape.test/transparent-fallback.webp' }] : [],
   })),
 });
+const folders = new URLSearchParams(location.search).has('long-navigation')
+  ? [...categories, ...Array.from({ length: 12 }, (_, i) => ({ id: 'study-' + i, name: 'Study ' + (i + 1), public: false, assetIds: [] }))]
+  : categories;
 const seed = createOwnerSystemWorkflowReviewStorage();
 if (new URLSearchParams(location.search).has('empty')) {
   const key = systemWorkflowDraftKey(profile), draft = JSON.parse(seed.getItem(key));
@@ -40,7 +43,7 @@ window.__imageTest = {
 const root = createRoot(document.getElementById('root'));
 const render = () => root.render(<OwnerSystemWorkflowShell ownerAuthoringEnabled
   workspaceProfileAddress={profile} viewedProfileAddress={profile} reviewStorage={storage}
-  reviewAssets={fixtures} reviewCategories={categories} reviewProfile={{ name: 'Image selection fixture' }} />);
+  reviewAssets={fixtures} reviewCategories={folders} reviewProfile={{ name: 'Image selection fixture' }} />);
 window.__imageTest.replaceCover = (url) => {
   fixtures = fixtures.map((asset, index) => index ? asset : { ...asset,
     imageUrl: url, thumbnailUrl: url, originalImageUrl: url, src: url, previewSrc: url, previewCandidates: [url],

@@ -53,8 +53,8 @@ test('production graph rejects owner modules in the initial static entry closure
   assert.throws(() => assertOwnerRuntimeGraph(graph), /entry\.js -> owner\.js/);
 });
 
-test('Reception readers cannot pull the editor or owner Library through a shared chunk', () => {
-  for (const reader of ['reception/OwnerReception', 'profileDocument/components/ProfileOverview']) {
+test('Composition readers cannot pull the editor or owner Library through a shared chunk', () => {
+  for (const reader of ['profileDocument/components/ProfileOverview']) {
     const graph = createOwnerRuntimeGraph({
       'entry.js': chunk('entry.js', { entry: true }),
       'about.js': chunk('about.js', { imports: ['shared.js'], modules: { ['/repo/src/' + reader + '.jsx']: {} } }),

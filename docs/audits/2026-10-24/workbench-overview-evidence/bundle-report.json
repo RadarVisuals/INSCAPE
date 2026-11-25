@@ -2318,11 +2318,6 @@
       "gzip": 2830
     },
     {
-      "file": "assets/ExplorationKeeper-C85T0AOK.js",
-      "raw": 7407,
-      "gzip": 3451
-    },
-    {
       "file": "assets/ownerSystemWorkflowPreviewDocument-Dn6_7i4f.js",
       "raw": 7355,
       "gzip": 2939
@@ -2544,10 +2539,6 @@
     {
       "file": "assets/actors/skull_reaper/full.webp",
       "raw": 456186
-    },
-    {
-      "file": "exploration/environment.webp",
-      "raw": 420746
     }
   ],
   "chunkModuleGroups": {
@@ -3251,12 +3242,6 @@
       {
         "group": "node_modules/events",
         "renderedBytes": 14318
-      }
-    ],
-    "assets/ExplorationKeeper-C85T0AOK.js": [
-      {
-        "group": "src/keeper",
-        "renderedBytes": 12369
       }
     ],
     "assets/extractRpcUrls-DXOAEtHW.js": [

@@ -7,9 +7,9 @@ import { Ellipsis, Plus, GripVertical } from 'lucide-react';
 import TextPaddingHandles from './TextPaddingHandles.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchHostView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
-import { useEditorCellLayout } from '../reception/EditorCellsContext.jsx';
-import { CellPositionButton } from '../reception/EditorCellPositionControls.jsx';
-import { transformedCellWindow } from '../reception/editorCellGeometry.js';
+import { useEditorCellLayout } from '../composition/EditorCellsContext.jsx';
+import { CellPositionButton } from '../composition/EditorCellPositionControls.jsx';
+import { transformedCellWindow } from '../composition/editorCellGeometry.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
@@ -38,7 +38,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const cell = cells?.cells.find(cell => cell.members.includes(record.id));
   const limits = cell ? CELL_TEXT_WINDOW_LIMITS : TEXT_WINDOW_LIMITS;
   const editingCell = cell?.id === cells?.editingCellId ? cell : null;
-  const reception = Boolean(store?.getCells);
+  const composition = Boolean(store?.getCells);
   const view = workbenchModuleTransform(workbenchView, record.id);
   const scope = textRecoveryScope(profileAddress, record.id);
   const saveLabel = useWorkspaceSaveLabel(scope.profile, 'Saved in this browser');
@@ -75,8 +75,9 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const [colourPreview, setColourPreview] = useState(null);
   const paginated = working.pagination === 'pages';
   const baseArticle = colourPreview?.source === working ? colourPreview.article : working.article;
-  const article = active && paddingPreview?.source === baseArticle
-    ? { ...baseArticle, appearance: { ...textAppearance(baseArticle), padding: paddingPreview.padding } } : baseArticle;
+  const article = useMemo(() => active && paddingPreview?.source === baseArticle
+    ? { ...baseArticle, appearance: { ...textAppearance(baseArticle), padding: paddingPreview.padding } } : baseArticle,
+  [active, paddingPreview, baseArticle]);
   const appearance = textAppearance(article);
   const flow = useArticleFlow(article, [record.id, ...(presentation.frames || []).map(frame => frame.id)]);
   const { id: miniatureFrame, from: miniatureFrom, to: miniatureTo } = flow.ranges.length > 1 ? flow.ranges[0] : {};
@@ -96,10 +97,11 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const changeArticle = value => {
     if (!editBlocked) change({ ...edit.getSnapshot().value, article: value });
   };
+  const canFocusEmptyText = active && (!cell || Boolean(cellId));
   const setEditor = useCallback(value => {
     editor.current = value; setColourEditor(value);
-    if (active && (!cell || cellId) && !article.title && value?.isEmpty && value.isEditable) value.commands.focus();
-  }, [cellId, cell?.id, active, article.title]);
+    if (canFocusEmptyText && !article.title && value?.isEmpty && value.isEditable) value.commands.focus();
+  }, [canFocusEmptyText, article.title]);
   useEffect(() => {
     if (!colourEditor || colourEditor.isDestroyed) return;
     const selectBody = () => setColourTarget('body');
@@ -143,7 +145,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame, setError, limits]);
   const name = article.title || 'Untitled article';
   const changeFrames = frames => {
-    if (reception || editBlocked || failed) return;
+    if (composition || editBlocked || failed) return;
     try { setPresentation(changeTextFrames(store, profileAddress, edit.getSnapshot().record, presentation, frames, workbenchView.getPresentation?.())); setError(''); return true; }
     catch (error) { setError(error.message); return false; }
   };
@@ -161,7 +163,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
       store={store} scopeKey={`${profileAddress}:${record.id}`} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
       onPreview={value => setColourPreview(value ? { source: working, article: value } : null)} />
   </Suspense>;
-  const textControls = (hostTools = {}) => <TextToolsContent {...hostTools} sharedColour={sharedColour} titleInput={reception} defaultOverflow={reception ? 'clip' : 'scroll'} frameLayout={reception} targetId={record.id} available={presentation.open && !suspended} article={article} onChange={changeArticle}
+  const textControls = (hostTools = {}) => <TextToolsContent {...hostTools} sharedColour={sharedColour} titleInput={composition} defaultOverflow={composition ? 'clip' : 'scroll'} frameLayout={composition} targetId={record.id} available={presentation.open && !suspended} article={article} onChange={changeArticle}
       onBackToCell={cell ? () => cells.leaveCell(true) : undefined}
       onEditText={cell && !editingCell && !view.presented ? () => {
         if (editBlocked || failed || !presentation.open) return;
@@ -174,7 +176,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         {failed && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true })}>Retry local save</button>}
         {reason === 'conflict' && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
       </div> : <p className="text-save-summary" role="status">{saveLabel}</p>}
-      readOptions={!reception && !linked && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
+      readOptions={!composition && !linked && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
         const next = { ...edit.getSnapshot().value }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
       }} />Read as pages</label>}
       publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...edit.getSnapshot().value, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>}>
@@ -205,7 +207,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         {editingCell && active && !suspended && <CellPositionButton cellId={cell.id} memberIds={[record.id]} disabled={editBlocked || failed} />}
         {!cell && <><button ref={toolsTrigger} type="button" className="editor-object-toolbar-button" aria-label="Open text inspector"
           title="Open text inspector" onClick={() => setSettings(true)}><Ellipsis /></button>
-        {!reception && <button className="editor-object-toolbar-button" type="button" aria-label="Add linked Text frame" title={working.pagination ? 'Turn off Read as pages first' : 'Add linked frame'}
+        {!composition && <button className="editor-object-toolbar-button" type="button" aria-label="Add linked Text frame" title={working.pagination ? 'Turn off Read as pages first' : 'Add linked frame'}
           disabled={editBlocked || failed || Boolean(working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>}</>}
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}>
       <div className="text-module-body" ref={surface} onClick={event => {
@@ -213,8 +215,8 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         if (event.target.closest('.text-module-scroll') && window.getSelection()?.isCollapsed) editor.current?.commands.focus('end');
       }} data-text-single-line={cell?.singleLine || undefined} style={textOutputStyle(article, fontPreviewFrame || view.frame || presentation.window)}>
           <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
-            defaultOverflow={reception ? 'clip' : 'scroll'} excerpt={excerpt}>
-                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor saveStatus={saveLabel} sharedColour={sharedColour} titlePlaceholder={!reception} article={article}
+            defaultOverflow={composition ? 'clip' : 'scroll'} excerpt={excerpt}>
+                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor saveStatus={saveLabel} sharedColour={sharedColour} titlePlaceholder={!composition} article={article}
                     quickToolsHost={!failed && !view.presented ? quickToolsHost : null} quickColor={target => colorTools(target, true)}
                     onFitFontPreview={editingCell?.fitText?.includes(record.id) && store?.previewFittedTextFrame ? fitFontPreview : undefined}
                     onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}

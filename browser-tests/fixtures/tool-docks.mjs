@@ -10,7 +10,6 @@ export async function mountToolDockFixture(page, options = {}) {
   await page.locator('.editor-menu-bar').waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
-    const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     const draft = layersDraft();
     if (options.closed) draft.workbench.imageModules[0].open = false;
     if (options.outside) draft.workbench.imageModules[0].position.left = 2400;
@@ -31,7 +30,8 @@ export async function mountToolDockFixture(page, options = {}) {
     }
     if (options.shapeGrain !== undefined) draft.shapes[0].grain = options.shapeGrain;
     if (options.grouped) draft.artworkLayers = ['shape:landscape', 'text:mist', { id: 'composition:person', name: 'Person', children: ['image:body', 'image:eyes'] }];
-    window.leaveEditor(); localStorage.setItem(systemWorkflowDraftKey(window.fixtureProfile), JSON.stringify(draft));
+    await window.seedWorkbenchDraft(draft);
+    window.leaveEditor();
   }, options);
   await page.reload();
   await page.getByRole('button', { name: options.grouped ? 'Select Person' : 'Select Eyes', exact: true }).waitFor();

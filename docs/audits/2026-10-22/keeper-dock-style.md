@@ -7,8 +7,7 @@ and shared artwork-slot implementation remain current.
 22 October 2026. Local, uncommitted work on
 `codex/audit-checkpoint-2026-10-19`, HEAD
 `32d9418843d996afc2e5203afa4552a6cd2d459a`. The checkout already contains substantial
-uncommitted work, including the earlier tool-window migrations and exploration
-trial. This report covers this bounded Keeper visual migration, not that entire
+uncommitted work, including the earlier tool-window migrations. This report covers this bounded Keeper visual migration, not that entire
 diff. Nothing was committed, pushed or deployed.
 
 ## Result and ownership
@@ -36,18 +35,16 @@ The visual reuse removes the separate preview artwork-slot recipe. Flat chrome
 is an explicit option on the existing window host rather than a second movement
 implementation. Navigation is passed to Keeper as the existing element reference
 and handled by the host's existing avoidance function. The larger dock exposed
-two concrete placement dependencies: narrow Workbench navigation now leaves
-enough width, and the exploration trial derives its dock offset from the shared
-dock dimensions instead of old small-dock constants. Settings stack above ordinary
+a placement dependency: narrow Workbench navigation now leaves
+enough width. Settings stack above ordinary
 tool panes while leaving navigation reachable. These are placement repairs, not
 a broader navigation or persistence redesign.
 
 ## Verification and limits
 
 - Nine Keeper state tests pass.
-- Twelve unique Keeper browser cases pass across the focused runs: three basic
-  drop/save/recovery cases, three dialogue cases, three exploration/shared-Keeper
-  cases, one swim-tuning case, and two new wide/narrow reference-parity cases.
+- The focused Keeper browser runs cover three basic
+  drop/save/recovery cases, three dialogue cases, one swim-tuning case, and two new wide/narrow reference-parity cases.
 - The new cases compare the real reference material and artwork-slot geometry,
   exercise settings movement, save, scrolling, closing, focus recovery and
   keyboard reopening, and verify that window arrangement does not change the

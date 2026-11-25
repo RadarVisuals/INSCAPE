@@ -1,0 +1,45 @@
+import { layerIds, reorderArtwork } from '../systemWorkflow/domain/artworkLayers.js';
+import { compositionModuleWindow, withCompositionModuleWindow, pruneCellMembers, withCompositionMemberAnchors } from './compositionEditorDocument.js';
+import { backgroundsBehindContents } from './compositionLayerOrder.js';
+import { positionCompositionMembers } from './editorCellGeometry.js';
+
+// Explicit ownership changes keep native identities, sizes and relative offsets.
+// Canvas drops preserve the drag offset. List drops centre the selection in the cell.
+export function moveCompositionMembers(value, ids, targetId, placement, offsets) {
+  const selected = new Set(ids), order = layerIds(value.artworkLayers);
+  const target = targetId === null ? null : value.cells.find(cell => cell.id === targetId);
+  if (!selected.size || selected.size !== ids.length || ids.some(id => !order.includes(id) || value.cells.some(cell => cell.id === id)))
+    throw new Error('Select Image, Text or Shape layers, without cell backgrounds.');
+  if (targetId !== null && !target) throw new Error('The destination cell is no longer available.');
+  const owners = ids.map(id => value.cells.find(cell => cell.members.includes(id)));
+  if (owners.every(owner => owner?.id === target?.id)) return value;
+  const affected = new Set([...ids, ...value.cells.flatMap(cell => (cell.memberAnchors || [])
+    .filter(anchor => anchor.members.some(id => selected.has(id))).flatMap(anchor => anchor.members))]);
+  if (value.cells.some(cell => cell.lockedMembers?.some(id => affected.has(id))))
+    throw new Error('Unlock these layers before moving them to another cell.');
+  const moving = order.filter(id => selected.has(id)), remaining = new Set(order.filter(id => !selected.has(id)));
+  const fitted = value.cells.flatMap(cell => cell.fitText || []).filter(id => selected.has(id));
+  const cells = value.cells.map(cell => {
+    // Release intersecting group anchors so the members left behind do not jump.
+    const next = pruneCellMembers(withCompositionMemberAnchors(cell,
+      (cell.memberAnchors || []).filter(anchor => !anchor.members.some(id => selected.has(id)))), remaining);
+    return cell.id !== targetId ? next : { ...next, members: [...next.members, ...moving],
+      ...(fitted.length ? { fitText: [...(next.fitText || []), ...fitted] } : {}) };
+  });
+  let next = { ...value, cells, artworkLayers: backgroundsBehindContents(value.artworkLayers, cells) };
+  if (offsets) {
+    for (const id of moving) {
+      const frame = compositionModuleWindow(value, id), delta = offsets[id];
+      if (!frame || !Number.isFinite(delta?.x) || !Number.isFinite(delta?.y)) throw Error('Invalid drop position.');
+      next = withCompositionModuleWindow(next, id, { ...frame, left: frame.left + delta.x, top: frame.top + delta.y });
+    }
+  } else if (target) {
+    const frames = Object.fromEntries(moving.map(id => [id, compositionModuleWindow(value, id)]));
+    const placed = positionCompositionMembers(compositionModuleWindow(value, targetId), frames,
+      { members: moving, alignX: 'center', alignY: 'center', paddingX: 0, paddingY: 0 });
+    for (const [id, frame] of Object.entries(placed)) next = withCompositionModuleWindow(next, id, frame);
+  }
+  if (placement) next.artworkLayers = backgroundsBehindContents(
+    reorderArtwork(next.artworkLayers, ids, placement.direction, placement.targetId, placement.edge), cells);
+  return next;
+}

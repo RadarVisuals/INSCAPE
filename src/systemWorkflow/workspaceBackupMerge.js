@@ -1,4 +1,4 @@
-import { createWorkbenchCollection, isWorkbenchCollection } from './domain/workbenchCollection.js';
+import { currentLocalDraft, createWorkbenchCollection, isWorkbenchCollection, assertValidWorkbenchCollection } from './domain/workbenchCollection.js';
 import { normalizeWorkspace } from '../library/storage/libraryWorkspaceStorage.js';
 
 export function equivalent(a, b) {
@@ -13,23 +13,23 @@ function classify(stats, label, local, incoming) {
 }
 const union = (a = [], b = []) => [...new Set([...a, ...b])];
 export const assetIds = library => union(library?.curatedAssetIds, library?.folders.flatMap(folder => folder.assetIds));
-const collection = draft => isWorkbenchCollection(draft) ? draft : createWorkbenchCollection(draft);
+const collection = draft => isWorkbenchCollection(draft) ? assertValidWorkbenchCollection(draft) : createWorkbenchCollection(currentLocalDraft(draft));
 
 export function visitCanvasReferences(workbenches, visit) {
-  const surfaces = [workbenches.shared.reception, ...workbenches.workbenches.map(item => item.content.composition)];
+  const surfaces = workbenches.workbenches.map(item => item.content.composition);
   for (const surface of surfaces) for (const link of surface?.links || []) {
-    for (const ref of [link.destination, link.source, link.controller, ...Object.values(link.sources || {})])
+    for (const ref of [link.destination, link.source])
       if (ref?.profileAddress === workbenches.profileAddress && ref.canvasId) visit(ref);
   }
 }
 
 function mergeWorks(local, incoming, stats, ids) {
-  if (!incoming) return local;
+  if (!incoming) return local ? collection(local) : null;
   const source = collection(incoming);
-  const target = local && structuredClone(collection(local));
+  const target = local && collection(local);
   if (!target) {
     stats.new.push(...source.workbenches.map(item => item.name));
-    return incoming;
+    return source;
   }
   const localById = new Map(target.workbenches.map(item => [item.id, item]));
   // A seemingly identical canvas may link to an imported conflict. Copy that
@@ -40,7 +40,7 @@ function mergeWorks(local, incoming, stats, ids) {
     for (const item of source.workbenches) {
       if (!localById.has(item.id) || ids.has(item.id)) continue;
       let copy = !equivalent(localById.get(item.id), item);
-      visitCanvasReferences({ ...source, shared: {}, workbenches: [item] }, ref => { if (ids.has(ref.canvasId)) copy = true; });
+      visitCanvasReferences({ ...source, workbenches: [item] }, ref => { if (ids.has(ref.canvasId)) copy = true; });
       if (copy) ids.set(item.id, 'workbench:' + crypto.randomUUID());
     }
   } while (ids.size !== previousCount);
@@ -59,12 +59,12 @@ function mergeWorks(local, incoming, stats, ids) {
     } else stats.new.push(item.name);
     added.push(copy);
   }
-  visitCanvasReferences({ ...source, shared, workbenches: added }, ref => {
+  visitCanvasReferences({ ...source, workbenches: added }, ref => {
     ref.canvasId = ids.get(ref.canvasId) ?? ref.canvasId;
   });
   Object.assign(target.shared, shared);
   target.workbenches.push(...added);
-  return added.length || Object.keys(shared).length ? target : local;
+  return target;
 }
 
 function mergeLibrary(local, incoming, stats) {
@@ -144,7 +144,5 @@ export function mergeBackup(local, incoming) {
     }
     contexts.set(dest, merged);
   }
-  if (incoming.receptionRecovery) classify(stats, 'Reception recovery', local.receptionRecovery ?? undefined, incoming.receptionRecovery);
-  return { workspace: { library, workbenches, textRecovery: contexts.size ? [...contexts] : null,
-    receptionRecovery: local.receptionRecovery ?? incoming.receptionRecovery }, stats };
+  return { workspace: { library, workbenches, textRecovery: contexts.size ? [...contexts] : null }, stats };
 }

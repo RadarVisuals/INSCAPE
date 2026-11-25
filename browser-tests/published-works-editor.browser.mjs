@@ -10,7 +10,17 @@ import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/published-works-editor';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
-const url = origin + '/browser-tests/profile-overview-fixture.html?view=0x' + '1'.repeat(40) + '&reception=published&canvas=1&collection=1';
+const url = origin + '/browser-tests/profile-overview-fixture.html?view=0x' + '1'.repeat(40) + '&tab=gallery&collection=1';
+
+// Zoom is animated. The departure and the return must use the settled camera.
+async function zoomIn(page) {
+  const viewport = page.locator('.composition-explorer-viewport');
+  const target = Number(await viewport.getAttribute('data-camera-scale')) * 1.25;
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.waitForFunction(scale =>
+    Math.abs(Number(document.querySelector('.composition-explorer-viewport')?.dataset.cameraScale) - scale) < 1e-9,
+  target);
+}
 
 test('open a published Gallery work missing from Studio beside an existing private draft', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -94,7 +104,7 @@ test('published Gallery and Studio move the same canvas from the list, tile and 
       return { from, to };
     };
     await button('Open Anatomy').click();
-    await button('Zoom in').click();
+    await zoomIn(page);
     const viewport = page.locator('.composition-explorer-viewport');
     const originalScale = await viewport.getAttribute('data-camera-scale');
     await button('Edit Anatomy in Studio').click();
@@ -155,7 +165,7 @@ test('one artwork surface holds the Gallery crop across a cold Studio route moun
     await page.goto(url + '&owner=1');
     await page.getByRole('radio', { name: 'Grid view' }).check();
     await button('Open Anatomy').click();
-    await button('Zoom in').click();
+    await zoomIn(page);
     const published = page.locator('.composition-explorer-viewport .workbench-overview-canvas');
     const box = await published.boundingBox();
     await button('Edit Anatomy in Studio').click();
@@ -370,6 +380,7 @@ test('reversing a Gallery flight or requesting reduced motion retires the moving
     const flying = page.locator('.owner-canvas-journey');
     await page.goto(url + '&owner=1');
     await page.getByRole('radio', { name: 'Grid view' }).check();
+    await page.locator('.workbench-overview[data-layout="grid"]:not([data-layout-journey])').waitFor();
     await button('Open Anatomy').hover({ position: { x: 10, y: 10 } });
     await button('Edit Anatomy').click();
     await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="editor"]')?.getAnimations().length);
@@ -412,7 +423,7 @@ test('Gallery shows only published work to its owner and Studio preserves draft 
     await page.locator('.editor-menu-bar[data-document="workbench:anatomy"]').waitFor();
     await page.getByRole('button', { name: 'Back to Gallery' }).click();
     await index.getByRole('button', { name: 'Open Vision' }).waitFor();
-    await page.goto(url.replace('&reception=published', '') + '&owner=1');
+    await page.goto(url.replace('&tab=gallery', '&canvas=1') + '&owner=1');
     await index.getByRole('button', { name: 'Open Vision' }).waitFor();
     assert.equal(await editButtons.count(), 1);
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
@@ -501,7 +512,7 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     const button = name => page.getByRole('button', { name, exact: true });
     const name = 'First composition';
     const text = 'The shape of a new world.';
-    await page.goto(url.replace('&canvas=1', '') + '&owner=1');
+    await page.goto(url.replace('&tab=gallery', '') + '&owner=1');
     await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
     await button('Gallery').click();
     await button('Gallery actions').click();
@@ -513,9 +524,9 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     assert.equal(new URL(page.url()).searchParams.get('work'), id);
     await page.mouse.click(750, 240);
     const textbox = page.getByRole('textbox', { name: 'Article text', exact: true });
-    await page.locator('.text-window').waitFor();
+    await page.locator('.text-window[data-workbench-view-id]').waitFor();
     if (!await textbox.isVisible()) {
-      await page.locator('.text-window').click({ position: { x: 80, y: 90 } });
+      await page.locator('.text-window[data-workbench-view-id]').click({ position: { x: 80, y: 90 } });
       const tools = await openSharedTool(page, 'Text');
       const edit = tools.getByRole('button', { name: 'Edit text', exact: true });
       if (await edit.count()) await edit.click();
@@ -529,11 +540,11 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     await page.getByRole('switch', { name: 'Grid view' }).check();
     await button(`Open ${name}`).hover({ position: { x: 10, y: 10 } });
     await button(`Edit ${name}`).click();
-    await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
+    await page.locator('.text-window[data-workbench-view-id]').getByText(text, { exact: true }).waitFor();
     await page.goBack();
     await button(`Open ${name}`).waitFor();
     await page.goForward();
-    await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
+    await page.locator('.text-window[data-workbench-view-id]').getByText(text, { exact: true }).waitFor();
     await page.evaluate(() => {
       const setItem = Storage.prototype.setItem;
       window.allowFixtureSave = () => { Storage.prototype.setItem = setItem; };
@@ -545,7 +556,7 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     await page.goBack();
     await page.getByText('The document could not be saved. Retry its save first.', { exact: true }).waitFor();
     assert.equal(new URL(page.url()).searchParams.get('work'), id, 'Failed browser Back restores the editor URL');
-    await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
+    await page.locator('.text-window[data-workbench-view-id]').getByText(text, { exact: true }).waitFor();
     await page.evaluate(() => window.allowFixtureSave());
     await editorCommand(page, 'Inscape', 'Manage compositions');
     await button(`Open ${name}`).waitFor();
@@ -554,7 +565,7 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     await page.reload();
     await index.getByRole('button', { name: `Open ${name}` }).click();
     await button(`Edit ${name} in Studio`).click();
-    await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
+    await page.locator('.text-window[data-workbench-view-id]').getByText(text, { exact: true }).waitFor();
     assert.equal(await page.locator('.editor-menu-bar[data-document]').getAttribute('data-document'), id);
     await page.goto(url);
     await page.getByRole('radio', { name: 'List view' }).check();
@@ -584,10 +595,10 @@ test('Studio saves privately, publishes to Gallery, and returns to that composit
     const id = await editor.getAttribute('data-document');
     await button('Text tool').click();
     await page.mouse.click(720, 240);
-    await page.locator('.text-window').waitFor();
+    await page.locator('.text-window[data-workbench-view-id]').waitFor();
     const textbox = page.getByRole('textbox', { name: 'Article text', exact: true });
     if (!await textbox.isVisible()) {
-      await page.locator('.text-window').click({ position: { x: 80, y: 90 } });
+      await page.locator('.text-window[data-workbench-view-id]').click({ position: { x: 80, y: 90 } });
       const tools = await openSharedTool(page, 'Text');
       const edit = tools.getByRole('button', { name: 'Edit text', exact: true });
       if (await edit.count()) await edit.click();
@@ -601,6 +612,17 @@ test('Studio saves privately, publishes to Gallery, and returns to that composit
     await button('Publish').click();
     const candidate = page.getByRole('checkbox', { name: new RegExp(name) });
     await candidate.waitFor();
+    const rows = page.locator('.publication-work');
+    assert.equal(await rows.filter({ hasText: /^Bento\s*·\s*First publication/iu }).count(), 0);
+    const row = rows.filter({ has: candidate });
+    const gallery = row.getByRole('checkbox', { name: 'Gallery', exact: true });
+    const profile = row.getByRole('checkbox', { name: 'Profile', exact: true });
+    assert.ok(await gallery.isChecked());
+    await profile.check();
+    assert.ok(await gallery.isChecked() && await profile.isChecked());
+    await gallery.uncheck();
+    assert.ok(!await gallery.isChecked() && await profile.isChecked());
+    await gallery.check(); await profile.uncheck();
     assert.ok(await candidate.isChecked(), await page.locator('.owner-lattice-publication-rack__summary').locator('..').innerText());
     assert.ok(await button('Prepare publication').isEnabled(), await page.locator('.owner-lattice-publication-rack__summary').locator('..').innerText());
     await button('Prepare publication').click();
@@ -612,6 +634,10 @@ test('Studio saves privately, publishes to Gallery, and returns to that composit
     await button('Dismiss publication confirmation').click();
     await local.getByText('In Gallery', { exact: true }).waitFor();
     assert.equal(network.writes, 1);
+    const publicDocument = JSON.parse(network.bytes);
+    const published = [publicDocument.canvas, ...publicDocument.canvases].find(entry => entry?.id === id);
+    assert.deepEqual(published.destinations, ['gallery']);
+    assert.doesNotMatch(network.bytes, /"reception(?:Destinations)?"/iu);
     await button('Back to Gallery').click();
     const selected = button('Edit ' + name + ' in Studio');
     await selected.waitFor();
@@ -696,7 +722,7 @@ test('the public header and Studio share one anchor and keep account actions sco
         });
         assert.ok(await activeTabVisible(), 'Gallery is visible on direct entry');
         const writing = new URL(url);
-        writing.searchParams.delete('canvas'); writing.searchParams.delete('reception');
+        writing.searchParams.delete('canvas'); writing.searchParams.delete('composition');
         writing.searchParams.set('tab', 'writing'); writing.searchParams.set('owner', '1');
         await page.goto(writing.href);
         await page.getByRole('heading', { name: 'Writing', exact: true }).waitFor();
@@ -1057,7 +1083,7 @@ test('Studio Preview opens a single image from Gallery and on direct editor entr
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
         const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
         const raster = ctx.getImageData(0, 0, image.width, image.height).data;
-        return raster.some((channel, i) => i % 4 === 0 && channel === 211 && raster[i + 1] === 208 && raster[i + 2] === 200);
+        return raster.some((channel, i) => i % 4 === 0 && channel === 0xbd && raster[i + 1] === 0x95 && raster[i + 2] === 0x6b);
       }, pixels), 'the published portrait colour is painted in Preview');
       assert.equal(await page.locator('.visitor-grid-world').count(), 0);
       assert.equal(await preview.getByRole('navigation').count(), 0);

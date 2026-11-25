@@ -1,4 +1,4 @@
-import { restoreReception } from './receptionPresentation.js';
+import { restoreCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { restoreWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { artworkLayers, artworkRecords, projectArtworkLayers, reconcileArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { restorePublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -65,8 +65,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
   const restored = {
     ...createBlankWorkbenchDraft(document.profile.address),
     identityPresentation: restoredIdentity(document.identityPresentation),
-    ...(document.reception ? { reception: restoreReception(document.reception) } : {}),
-    ...(document.composition ? { composition: restoreReception(document.composition) } : {}),
+    ...(document.composition ? { composition: restoreCompositionEditorDocument(document.composition) } : {}),
     ...(workbench ? { workbench } : {}),
     ...((document.shapes || currentDraftInput?.shapes) ? { shapes } : {}),
     ...((document.keeperDocks || currentDraftInput?.keeperDocks) ? { keeperDocks } : {}),

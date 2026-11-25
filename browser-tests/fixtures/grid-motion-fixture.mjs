@@ -100,8 +100,14 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
     }
     const Component = visitor ? (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default
       : (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
+    // Motion cases inspect and reseed these disposable bytes between mounts.
+    const reviewStorage = {
+      getItem: name => localStorage.getItem(name),
+      setItem: (name, value) => localStorage.setItem(name, value),
+      removeItem: name => localStorage.removeItem(name),
+    };
     const props = visitor ? { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: profile, assetRecords: assets }) }
-      : { profileAddress: profile, reviewStorage: localStorage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Motion measurement' } };
+      : { profileAddress: profile, reviewStorage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Motion measurement' } };
     window.__motionDocument = props.document;
     window.__motionCommits = 0; window.__motionRenderMs = 0;
     window.__motionRoot = createRoot(document.getElementById('root'));

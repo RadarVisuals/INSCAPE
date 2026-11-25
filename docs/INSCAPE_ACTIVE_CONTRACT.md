@@ -12,6 +12,16 @@ Read the current focus and product map first, then the affected detailed
 section. Section dates identify decisions, not today's release status. Execution
 history belongs in dated audits; check the current checkout and CI for status.
 
+## Profile and Studio compositions (founder decision, 2026-11-24)
+
+Profile opens directly with the artist's Universal Profile information and
+works placed there through Publish. Gallery opens directly with its selected
+works. Reception, its owner-authored profile Bento, separate publication
+candidate and recovery data are retired. This supersedes all earlier Reception
+directions. Canvas and Bento remain ordinary Studio compositions with the
+same editor, Gallery/Profile destinations, and offline JSON backup and restore.
+Preserve current work when loading a workspace containing retired profile data.
+
 ## Current cleanup and entry points (founder decision, 2026-11-23)
 
 The founder is the sole user and explicitly declines backward compatibility.
@@ -719,7 +729,7 @@ control with destinations supplied by the host for the current visitor or owner.
 Wider adoption follows as other app headers are revised.
 
 The founder approved a thin, fixed full-width Editor menu: the supplied Inscape
-wordmark, Canvas, Edit, View, Tools, Docs and Backup. The workspace begins below
+wordmark, Canvas, Edit, View, Tools and Backup. The workspace begins below
 it. The wordmark toggles the whole sidebar; there is no remaining icon rail.
 The desktop bar visibly identifies the active document as **Editing Reception**
 or **Editing canvas · [name]**, derived from the existing session and saved name.
@@ -743,8 +753,7 @@ keyboard access and reduced-motion/reduced-transparency preferences.
 Canvas opens Reception or an existing canvas, creates and renames ordinary
 canvases, opens their dimensions and starts the existing preview. Edit exposes
 Search commands, Undo, Redo and Settings. View exposes camera and grid/snapping controls. Tools
-shows or hides the drawing toolbar and existing tool panes. Docs and Backup
-open their existing content directly. Backup is no longer inside Settings.
+shows or hides the drawing toolbar and existing tool panes. Backup opens directly from the menu.
 These entries share the existing document, save/recovery, camera, history and
 preference owners. The movable document picker and its saved position are
 retired. Back to cells stays reachable below the bar. Reset, duplicate and wipe
@@ -1610,7 +1619,7 @@ Defer the spatial overview with neighbouring canvases. First measure a well
 populated ordinary Workbench, including navigation, active artwork, editing,
 save cost and switching. This does not authorize mounting inactive compositions,
 building frozen overview previews, or replacing the model with one giant canvas.
-Keep the existing local changes and Keeper trial; no commit, push or deployment.
+Keep the existing local changes; no commit, push or deployment.
 The [filled-Workbench measurement](audits/2026-10-20/filled-workbench-performance.md)
 records twelve local runs: inactive compositions do not retain executable
 artwork frames; visible animation, collection-wide saving and navigation peaks
@@ -1626,8 +1635,7 @@ persistence and failure/recovery behavior remain enforced. The collection still
 uses one synchronous browser-storage record; serialization and writing therefore
 still grow with the collection. No deferred-save success or additional cache is
 introduced. See the [follow-up measurements and checks](audits/2026-10-21/storage-html-performance.md).
-The spatial overview remains deferred; existing changes and the Keeper trial are
-retained. No commit, push, upload or deployment is authorized by this follow-up.
+The spatial overview remains deferred; existing changes are retained. No commit, push, upload or deployment is authorized by this follow-up.
 
 **Accepted behavior.**
 The owner can name the existing Workbench, create an empty named Workbench,
@@ -1648,9 +1656,7 @@ accepts both the departing layout and arriving ID together; failed persistence
 keeps the current context open. Pending Text recovery and unfinished crops or
 canvas gestures block context changes.
 
-The existing profile editor lease remains in force. The exploration trial
-still edits the shared Keeper and retains its existing movement, camera,
-collision and F-zoom behavior. This slice adds no habitat/world behavior.
+The existing profile editor lease remains in force.
 Collection backups explicitly cover all Workbenches and shared settings;
 restoration explicitly replaces the whole local collection. A single-Workbench
 backup cannot silently replace an existing collection. Additive import remains
@@ -1688,7 +1694,7 @@ the content area within that same frame. Canvas flips into My Inscape one letter
 at a time, with a small letter stagger and a smaller stagger between menu buttons.
 My Inscape provides creation and opening; Edit provides names/introduction,
 thumbnail cropping and arrangement; View provides List/Grid, card size, wrapping
-and immersive browsing. Docs and Backup keep their existing destinations. Tools
+and immersive browsing. Backup keeps its existing destination. Tools
 belongs to the Editor. The glass wordmark menu remains in immersive Grid browsing.
 
 Opening a preview moves its artwork into the Editor while the preview's empty
@@ -1896,60 +1902,17 @@ the separate canvas CSS transition is removed. This is a local rendering fix,
 not a saved-geometry change. See the
 [seam reproduction and verification](audits/2026-10-25/gallery-image-seams/README.md).
 
-## Keeper and optional exploration direction (2026-10-20)
+## Keeper direction (2026-10-20)
 
-The separate Keeper and exploration intents remain distinct from navigation
-and presentation reference choices:
-a configurable habitat and optional accompaniment serve different purposes;
-the exact inhabitant count, habitat ownership and visitor behavior remain open.
-An exploration world is optional, with free movement at the visitor's own pace.
-Its actor, collision and camera details require their own scoped design work.
-Keeper/artwork commerce remains a creative ambition rather than transaction
-authority or an implemented protocol. Current trial behavior is recorded below.
+A configurable habitat and optional accompaniment serve different purposes.
+The exact inhabitant count, habitat ownership and visitor behavior remain open.
+Keeper/artwork commerce remains a creative ambition.
 
 ## Reception wireframe replacement (2026-10-20)
 
 Historical replacement record: the static bento and linked Reception rules above
 own current behavior. The fixed wireframe and its selection-only editor are
 retired. [Original evidence](audits/2026-10-20/reception-wireframe.md).
-
-## Keeper dock in the exploration trial (2026-10-20)
-
-The owner-only Explore room reuses the existing Keeper dock, Library, artwork
-host, movement modes, swim speed, settings and recall. The profile draft owns
-artwork/settings; the room does not create another saved habitat. Reuse the
-first Keeper, choosing when several exist, or create an empty private dock with
-Layered swim. A missing/unreadable draft requires Workbench recovery, never
-replacement with an empty room draft. Use the profile's exclusive editor lease.
-Visitors have no private Library or room editor. Leaving releases motion and
-the lease. General scene authoring and public habitat presentation remain open.
-
-### Larger exploration trial with Keeper camera follow (2026-10-20)
-
-The temporary room is 2800 × 1800 with two 600-unit environment copies. Only
-straight horizontal/vertical metal beams collide; organic interior detail does
-not. The body's collision approximation is 8% of world-rendered size, not pixel
-or tentacle collision. Direct recall bypasses colliders for recovery.
-
-Start at 100%; F toggles a true 50% overview and returns to 100%. J, wheel zoom,
-continuous zoom and scales above 100% are excluded. Ignore F while typing, using
-modifiers, key repeat/composition or Library. Clean up the room-scoped shortcut.
-Use the existing 460ms inspection curve on Keeper's motion clock, with reversal
-from the live scale; do not create a separate zoom animation loop.
-
-Keeper's existing motion owns travel smoothing. The camera keeps its core at the
-viewport centre without follow lag and may extend outside the physical room.
-World geometry, speed and collision remain unchanged. Pointer destinations are
-converted into world space; held-right-button movement updates that destination.
-Dock/Library stay in screen space; rig/conversation anchors are projected.
-Camera, flight and scenery never write the draft. Return recalls to the start
-and restores the initial view. Reduced motion keeps Keeper stationary without
-animated camera follow; docked/reduced-motion zoom is immediate.
-
-Evidence: [dock](audits/2026-10-20/exploration-keeper.md),
-[collision](audits/2026-10-20/exploration-collision.md),
-[camera](audits/2026-10-20/exploration-camera.md). These bounded trials do not prove
-full-world performance or implement an authored public world.
 
 ## Development data and compatibility (2026-10-16)
 
@@ -2455,7 +2418,7 @@ Color, Transform, module properties, Artwork info, dock/tab grouping and
 detach/rejoin remain the next migration slice. Joining a part to an existing
 block currently requires ungrouping and reforming it; no implicit drag-to-join
 semantics were added. Tool layout persistence/reset is not yet part of this
-companion. Existing navigation groups/stacks, Keeper trial, Reception and
+companion. Existing navigation groups/stacks, Reception and
 Library behavior remain separate. See the
 [implementation and verification record](audits/2026-10-21/workbench-layers.md).
 
@@ -5199,8 +5162,7 @@ a frame. Keeper and tools are not composition objects. Camera painting updates
 the projection and viewport frame without reconstructing the media tree. The
 reference and app share Navigator controls and pointer/keyboard logic.
 
-This adds no persisted document fields or migrations. Sidebar, camera index and
-exploration-world development remain outside this change. The local verification
+This adds no persisted document fields or migrations. Sidebar and camera index remain outside this change. The local verification
 and its limits are recorded in [Navigator evidence](audits/2026-10-23/navigator.md).
 
 ### Workspace sidebar migration (2026-10-23)
@@ -5220,7 +5182,7 @@ reference share this presentation.
 The founder approved continuing with the design-system sidebar after Navigator.
 The owner workspace now uses the reference's flat Carbon/Mist sidebar in place
 of the old bottom application bar. Workbench, Display-scoped Grids, Library,
-Discover, Activity, Preview, Publish, Profile, Docs and Settings call their
+Discover, Activity, Preview, Publish, Profile and Settings call their
 existing actions. This adds no destination or publication authority. Creation
 tools and the Workbench selector remain independent.
 
@@ -5249,8 +5211,7 @@ from accessibility and does not reserve tool space. Embedded Discover and
 screen-space companion windows respect the existing sidebar clearance. Phone
 Discover search uses its own row. See [panel regression verification](audits/2026-10-23/panel-regressions.md).
 
-No document fields, migrations, dependency additions, camera-index or
-exploration-world features are introduced. Library's wider panel styling and
+No document fields, migrations, dependency additions, or camera-index features are introduced. Library's wider panel styling and
 the existing destination windows are not redesigned by this migration.
 See [sidebar verification](audits/2026-10-23/sidebar.md) for local evidence and
 remaining verification limits.
@@ -5428,7 +5389,7 @@ multiple published Workbenches. See [implementation and checks](audits/2026-10-2
 ### Remaining Workbench window finishing (2026-10-23)
 
 The founder authorized continuing through the remaining existing window chrome
-without stopping after each surface. Publish, its confirmed result, Docs, Profile
+without stopping after each surface. Publish, its confirmed result, Profile
 and the retained Grids panel share `WorkbenchDestinationPanel`, the existing
 flat Carbon/Mist material and titlebar/control tokens. Content scrolls inside the
 window; Publish keeps its action below the scroll area. The owner host supplies
@@ -5439,8 +5400,7 @@ Groups and Index retain their existing movable `WorkbenchWindow` and domain
 controllers with flat chrome, fields and invisible Index resize targets. Opening
 these tools keeps them above floating utilities. Their explicit screen boundary
 allows useful content height on short screens; authored camera anchoring, group
-geometry and destination semantics are unchanged. Docs describes the current
-Image/Text/Shape workflow, shared tools and local preference saving.
+geometry and destination semantics are unchanged.
 
 No new document fields, migration, wallet action or publication route is added.
 The redundant older panel styles are removed. Focus writing and authored Identity,
@@ -5819,12 +5779,12 @@ Use the current lockfile and fresh verification for maintenance or release.
 
 The founder chose to implement the approved Reception design incrementally in
 Inscape instead of rebuilding an interactive prototype. This supersedes the
-horizontal Canvas/Edit/View/Tools/Docs/Backup header and the wordmark-controlled
+horizontal Canvas/Edit/View/Tools/Backup header and the wordmark-controlled
 navigation sidebar for the owner workspace.
 
 - The wordmark opens one shared keyboard-accessible cascade menu. Workspace
-  destinations, existing document commands, camera controls, tools, Settings,
-  Help & Docs and Backup keep their existing action and persistence owners.
+  destinations, existing document commands, camera controls, tools, Settings
+  and Backup keep their existing action and persistence owners.
 - A single 40px header shows the workspace context beside the wordmark, and keeps
   the profile name, theme, Preview and publication entry on the right. Publication
   remains labelled Publish in this first slice; Save/publication semantics and

@@ -40,7 +40,7 @@ test('Text surfaces meet at their saved window edges without hidden chrome gaps'
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(([v, l]) => window.showEdgeFixture(v, l), [vertical, legacy]);
       await page.waitForTimeout(100);
-      const windows = page.locator('.text-window'), surfaces = page.locator('.text-module-body');
+      const windows = page.locator('aside.text-window'), surfaces = page.locator('.text-module-body');
       const first = await surfaces.nth(0).boundingBox(), second = await surfaces.nth(1).boundingBox();
       assert.deepEqual(first, await windows.nth(0).boundingBox());
       assert.deepEqual(second, await windows.nth(1).boundingBox());

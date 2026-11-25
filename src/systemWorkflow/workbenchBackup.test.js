@@ -1,3 +1,4 @@
+import { createStudioComposition } from './domain/studioComposition.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
@@ -109,7 +110,7 @@ test('merge keeps local order, nested filing, selections and shared work when a 
   incoming.curatedImageSelections = [{ assetId:'one', url:'https://example.test/incoming.webp' }];
   incoming.folders[0].name = 'Other name'; incoming.folders[0].assetIds.push('two');
   incoming.folders[1].assetIds = ['two'];
-  const rows = library => ({library, workbenches:null, textRecovery:null, receptionRecovery:null});
+  const rows = library => ({library, workbenches:null, textRecovery:null});
   const { workspace, stats } = mergeBackup(rows(local), rows(incoming));
   assert.deepEqual(workspace.library.curatedAssetIds, ['one','local-only','two']);
   assert.deepEqual(workspace.library.favorites, ['local-only','two']);
@@ -119,4 +120,20 @@ test('merge keeps local order, nested filing, selections and shared work when a 
   assert.deepEqual(workspace.library.folders[0].assetIds,['one','two']);
   assert.deepEqual(props.assetIds,['one']);
   assert.ok(stats.conflicts.some(item => item.includes('Image selection')));
+});
+
+test('opening a mixed single Studio draft preserves artwork and only saves current fields', () => {
+  const draft = createEmptySystemWorkflowDraft(profile);
+  draft.composition = createStudioComposition('bento');
+  const raw = JSON.stringify({ ...draft, reception: { invalid: true } });
+  const { store, records } = setup(raw);
+  assert.equal(store.getRecordState().status, 'valid');
+  assert.equal(records.get(systemWorkflowDraftKey(profile)), raw);
+  assert.deepEqual(store.getDraft().composition, draft.composition);
+  assert.equal(Object.hasOwn(store.getDraft(), 'reception'), false);
+  assert.ok(store.renameWorkbench('The Last one'));
+  const saved = records.get(systemWorkflowDraftKey(profile));
+  assert.doesNotMatch(saved, /"reception"/iu);
+  const copy = parseWorkbenchBackup(serializeWorkbenchBackup(store.getBackupSnapshot()), profile);
+  assert.deepEqual(copy.draft.workbenches[0].content.composition, draft.composition);
 });

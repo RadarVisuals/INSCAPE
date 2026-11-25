@@ -40,8 +40,7 @@ No push, live upload, wallet prompt, signature, transaction or deployment.
 - Removed superseded panel styles from the old workflow and sidebar stylesheets.
   The design-system registry/inventory records the actual production components.
 
-Focus writing, authored Identity/Reception artwork, group-stack artwork and the
-optional exploration world are outside this window-chrome round. Existing Index
+Focus writing, authored Identity/Reception artwork, and group-stack artwork are outside this window-chrome round. Existing Index
 open/pin behavior remains document-owned; this did not redesign persistence.
 
 ## Verification

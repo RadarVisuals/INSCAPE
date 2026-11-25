@@ -3,8 +3,7 @@
 21 oktober 2026. Expliciete makeropdracht: de twee bevindingen uit de
 [vorige gevulde-Workbench-proef](../2026-10-20/filled-workbench-performance.md)
 aanpakken en dezelfde inhoud opnieuw meten. Meerdere Workbenches, één actieve;
-het ruimtelijke overzicht blijft uitgesteld. Bestaande wijzigingen en de
-Keeper-proef behouden. Geen commit, push, upload, walletactie of deployment.
+het ruimtelijke overzicht blijft uitgesteld. Bestaande wijzigingen behouden. Geen commit, push, upload, walletactie of deployment.
 
 ## Wat is veranderd
 
@@ -132,7 +131,7 @@ wallet/netwerkvertraging, GPU-bezetting of langdurige geheugenlekken.
   slagen; de volledige Node-suite slaagt met 1287 tests.
 - De laatste gerichte browserresultaten tellen 22 geslaagde tests: HTML-geometrie
   (1), gewone Mini Apps (1), lokale Workbenches (2), opslag (6), herstel (1),
-  Text-herstel/positie (8) en Keeper-exploratie (3).
+  Text-herstel/positie (8).
 - Eén tussentijdse herhaling van de bestaande Mini App-proef liep vast op
   wachten op de nep-microfoon. Een eerdere en de laatste herhaling slagen;
   de laatste is zonder aanpassing van die proef uitgevoerd. Die intermitterende
@@ -154,7 +153,7 @@ Bewijsbestanden staan in [storage-html-performance](storage-html-performance/):
 testlogs en buildlogs. De meetwaarden van 20 oktober zijn behouden.
 Een [hashvergelijking](storage-html-performance/preservation.json) van 135 reeds
 gewijzigde/nieuwe bestanden bevestigt dat 129 byte-identiek behouden zijn,
-inclusief de Keeper-proef, de oorspronkelijke fixture en de oude meetresultaten.
+inclusief de oorspronkelijke fixture en de oude meetresultaten.
 De zes gewijzigde bestanden uit die set zijn uitsluitend de bedoelde store,
 collectietests, meetrunner, browserrunner, ontwerpinventaris en actief contract.
 De actuele branch blijft codex/audit-checkpoint-2026-10-19, op basiscommit

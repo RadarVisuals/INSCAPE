@@ -91,6 +91,8 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey));
+        draft.texts = draft.texts.filter(text => text.id === 'text:overflow');
+        draft.workbench.texts = draft.workbench.texts.filter(text => text.id === 'text:overflow');
         draft.workbenchGroups = [{ id: 'workbench-group:mixed', name: 'Mixed study', memberIds: ['image:motion-0', 'text:overflow', 'shape:motion'], position: { left: 80, top: 300 } }];
         localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
       });
@@ -98,7 +100,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       await page.waitForFunction(() => document.querySelector('[data-workbench-view-id="text:overflow"] .tiptap'));
       await hideWorkspaceSidebar(page);
       const initial = await saved(page);
-      await page.evaluate(() => { window.mixedNodes = [...document.querySelectorAll('[data-workbench-view-id], .tiptap')]; });
+      await page.evaluate(() => { window.mixedNodes = [...document.querySelectorAll('[data-workbench-artwork][data-workbench-view-id], .tiptap')]; });
       const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
       if (await closeTools.isVisible()) await closeTools.click();
       const open = async () => { await stack.getByRole('button', { name: 'Open Mixed study group', exact: true }).click(); await settle(page); };

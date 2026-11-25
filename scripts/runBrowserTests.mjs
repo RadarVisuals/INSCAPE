@@ -1,4 +1,4 @@
-import { openSync, closeSync } from 'node:fs';
+import { openSync, closeSync, realpathSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,13 @@ import { assertEvidencePath, verificationIdentity, probeBrowser } from './verifi
 import { closeViteWithinDeadline } from '../browser-tests/browser-test-lifecycle.mjs';
 
 export function createBrowserTestServer(root, port, options = {}) {
-  return createServer({ configLoader: 'native', ...options, root, server: { ...options.server, host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [...(options.plugins || []), {
+  // On Windows, alias the parent and run from its checkout subdirectory. A drive
+  // root gives Vite two module URLs for one file, splitting singleton stores.
+  // Keep dependency resolution on that drive, including the esbuild prebundle.
+  const aliased = process.platform === 'win32' && resolve(realpathSync.native(root)).toLowerCase() !== resolve(root).toLowerCase();
+  return createServer({ configLoader: 'native', ...(aliased && {
+    resolve: { preserveSymlinks: true }, optimizeDeps: { esbuildOptions: { preserveSymlinks: true } },
+  }), ...options, root, server: { ...options.server, host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [...(options.plugins || []), {
     name: 'inscape-browser-verification',
     configResolved(config) {
       // Vite's config merge drops inline null overrides of the project's watch options.
@@ -77,7 +83,7 @@ export async function runBrowserTests({ root, output, args = [], environment = p
         Object.assign(result, await runOwnedCommand({ args: ['--import', './scripts/browserEnvironment.mjs', '--test', '--test-reporter=tap',
           '--test-concurrency=1', `browser-tests/${name}.browser.mjs`], cwd: root, stdio: ['ignore', fd, fd],
           env: { ...env, INSCAPE_BROWSER_OUTPUT: screenshots, INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR: screenshots,
-            INSCAPE_RECEPTION_CAPTURE_DIR: screenshots, INSCAPE_SCREENSHOT_DIR: screenshots },
+            INSCAPE_COMPOSITION_CAPTURE_DIR: screenshots, INSCAPE_SCREENSHOT_DIR: screenshots },
           timeoutMs: SUITE_TIMEOUT_MS, signal: controller.signal }));
         requireSuccessfulCommand(result, name);
         Object.assign(result, passingTap(await readFile(logPath, 'utf8')));

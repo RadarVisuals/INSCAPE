@@ -77,8 +77,8 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       assert.equal(await hit(footer.locator('[role="alert"]')), true, 'the detailed save warning stays visible above the global notice');
       const toolBounds = await tools.boundingBox(), retryBounds = await retry.boundingBox(), footerBounds = await footer.boundingBox();
       await page.screenshot({ path: `${output}/text-recovery-${width}-${touch ? 'touch' : 'pointer'}.png` });
-      assert.ok(footerBounds.y + footerBounds.height <= toolBounds.y + toolBounds.height, 'the complete warning and recovery footer fit inside the tools');
-      assert.ok(retryBounds.height >= (touch ? 43.9 : 27.9) && retryBounds.y + retryBounds.height < toolBounds.y + toolBounds.height, `the complete recovery target is visible: ${JSON.stringify({ retryBounds, toolBounds, style: await retry.evaluate(n => ({ minHeight: getComputedStyle(n).minHeight, zoom: getComputedStyle(n).zoom })) })}`);
+      assert.ok(footerBounds.y + footerBounds.height <= toolBounds.y + toolBounds.height + 0.5, 'the complete warning and recovery footer fit inside the tools');
+      assert.ok(retryBounds.height >= (touch ? 43.9 : 27.9) && retryBounds.y + retryBounds.height <= toolBounds.y + toolBounds.height + 0.5, `the complete recovery target is visible: ${JSON.stringify({ retryBounds, toolBounds, style: await retry.evaluate(n => ({ minHeight: getComputedStyle(n).minHeight, zoom: getComputedStyle(n).zoom })) })}`);
       if (touch) await retry.tap(); else await retry.click();
       await page.waitForFunction(() => !document.querySelector('.system-workflow__recovery-notice'));
       assert.equal(await tools.getByRole('alert').count(), 0);

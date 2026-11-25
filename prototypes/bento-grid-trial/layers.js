@@ -1,4 +1,4 @@
-import { projectReceptionCellMembers } from '../../src/reception/editorCellGeometry.js';
+import { projectCompositionCellMembers } from '../../src/composition/editorCellGeometry.js';
 import { fitNativeMediaRectangle } from '../../src/lattice/rendering/latticeGeometry.js';
 import { projectCroppedMediaRectangle } from '../../src/lattice/rendering/latticeCrop.js';
 
@@ -13,7 +13,7 @@ export function projectLayerStudy(width, height, mode = 'relative', anchor = 'bo
     { members: ['nomad'], alignX: 'left', alignY: anchor, paddingX: 16, paddingY: 16 },
     { members: ['eye'], alignX: 'right', alignY: 'top', paddingX: 16, paddingY: 16 },
   ] } : {};
-  const boxes = projectReceptionCellMembers(reference, frame, members, cell);
+  const boxes = projectCompositionCellMembers(reference, frame, members, cell);
   const place = (box, media) => fit === 'cover'
     ? projectCroppedMediaRectangle(box, media, { x: .5, y: .5, zoom: 1 })
     : fitNativeMediaRectangle(box, media);

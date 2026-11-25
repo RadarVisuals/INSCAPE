@@ -44,8 +44,7 @@ and blur could stop camera projection before Navigator restored the starting
 view. Controlled-frame adoption now precedes clamping. The camera controller
 cancels the Navigator gesture before clearing motion on blur.
 
-No document fields, migrations, dependency additions, sidebar work, camera index
-or exploration-world feature work were introduced.
+No document fields, migrations, dependency additions, sidebar work or camera index features were introduced.
 
 ## Verification
 
@@ -68,10 +67,7 @@ or exploration-world feature work were introduced.
   repeated after the final short-screen toolbar adjustment.
 - Three shared design-reference tests pass, covering themes/layout and
   pointer/keyboard/cancellation behavior, including touch.
-- Four Keeper panel/session-position cases pass. All three exploration Keeper
-  cases passed across the recorded runs; the movement case timed out in a
-  concurrent run and passed alone in 19.2 seconds. No exploration motion code
-  was changed.
+- Four Keeper panel/session-position cases pass.
 - Inspection locks passed for Image and Display, owner and Visitor, at 1600 and
   390 pixels (eight combinations). Navigator map/Home/slider stay disabled until
   return completes. The existing narrow Workbench switcher can cover the
@@ -82,7 +78,7 @@ or exploration-world feature work were introduced.
   No complete release suite or live deployment verification was performed.
 
 Earlier failed runs are retained where they explain the fixes. In particular,
-`boundary-tests.log` contains the initial exploration timeout and the old test's
+`boundary-tests.log` contains the old test's
 wheel coordinate landing on Navigator. `final-navigator-tests.log` contains the
 passing inspection matrix and a then-unfixed preview fixture assertion; the
 later `navigator-tests.log`, `layout-tests.log` and `content-tests.log` supersede

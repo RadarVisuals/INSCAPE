@@ -1,6 +1,6 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { createArticle, MAX_TEXT_MODULES } from './domain/article.js';
-import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS, MIN_RECEPTION_CELL_SIZE } from '../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS, MIN_COMPOSITION_CELL_SIZE } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
 export function prepareTextResize(draft, { expected }) {
@@ -38,8 +38,8 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
       const cellId = placed.cellId ?? store.getEditingCell?.();
       const inCell = cellId && store.getCells?.().some(cell => cell.id === cellId);
       const limits = inCell ? CELL_TEXT_WINDOW_LIMITS : TEXT_WINDOW_LIMITS;
-      const minimumWidth = inCell ? MIN_RECEPTION_CELL_SIZE.width : limits.minimumWidth;
-      const minimumHeight = inCell ? MIN_RECEPTION_CELL_SIZE.height : limits.minimumHeight;
+      const minimumWidth = inCell ? MIN_COMPOSITION_CELL_SIZE.width : limits.minimumWidth;
+      const minimumHeight = inCell ? MIN_COMPOSITION_CELL_SIZE.height : limits.minimumHeight;
       if (!Number.isFinite(width) || !Number.isFinite(height) || width < minimumWidth || height < minimumHeight
         || width > limits.maximumWidth || height > limits.maximumHeight)
         throw new Error(`Text needs at least ${minimumWidth} × ${minimumHeight} px. Enlarge the cell before adding Text.`);
@@ -82,7 +82,7 @@ export function duplicateTextModule(store, profile, expected, workbench) {
 
 const messages = {
   locked: 'Unlock this layer before editing it. Your unsaved text is still here.',
-  reception_command: 'This command is unavailable in this Bento composition. Your unsaved text is still here.',
+  composition_command: 'This command is unavailable in this Bento composition. Your unsaved text is still here.',
   editor_unavailable: 'This tab no longer has editing access. Your unsaved text is still here.',
   profile: 'This profile is no longer active. Your unsaved text is still here.',
   conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',

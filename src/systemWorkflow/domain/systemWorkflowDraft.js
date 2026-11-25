@@ -1,6 +1,7 @@
 import { isRecord as record, hasExactKeys as exactKeys } from '../../recordValidation.js';
 import { retiredInterfaceKeys, stripRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
-import { validReception, receptionReferenceCount } from '../../profileDocument/domain/receptionPresentation.js';
+import { compositionReferenceCount } from '../../composition/compositionReferenceCount.js';
+import { validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { validWorkbenchIndex } from './workbenchIndex.js';
 import { validArtworkLayers } from './artworkLayers.js';
 import { validWorkbenchGroups } from './workbenchGroups.js';
@@ -180,9 +181,11 @@ export function isValidSystemWorkflowPlacementGeometry(value) {
 }
 
 export function validateSystemWorkflowDraft(input) {
+  if (record(input?.composition) && (Object.hasOwn(input.composition, 'branding') || Object.hasOwn(input.composition, 'lighting')))
+    input = stripRetiredInterfaceAppearance(structuredClone(input));
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'composition'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -205,9 +208,8 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validReception(input.composition)))
+  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validCompositionEditorDocument(input.composition)))
     fail('composition', 'invalid_composition', 'Invalid Studio composition');
-  if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid Bento layout');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid Workbench Index');
   if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid artwork order or composition block');
   if (Object.hasOwn(input, 'workbenchGroups') && !validWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid Workbench groups');
@@ -220,7 +222,7 @@ export function validateSystemWorkflowDraft(input) {
   if (Array.isArray(input.workbench?.imageModules) && input.workbench.imageModules.some(item => !Array.isArray(input.imageModules) || !input.imageModules.some(image => image?.id === item?.id))) fail('workbench.imageModules', 'unknown_image', 'Window refers to an unavailable Image module');
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
-  const allReferences = receptionReferenceCount(input.composition) + receptionReferenceCount(input.reception)
+  const allReferences = compositionReferenceCount(input.composition)
     + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules)
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0);
   if (allReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('$', 'too_many_asset_references', 'Too many asset references');

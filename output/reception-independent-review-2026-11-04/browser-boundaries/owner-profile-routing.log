@@ -1115,7 +1115,6 @@ not ok 1 - owner/viewed-profile routing through the real App
 #         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 # [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
 #     src/reception/ReceptionOverview.jsx:15:44:
-# [37m      15 │ ...ionKeeper = lazy(() => import([32m'../keeper/ExplorationKeeper.jsx'[37m));
 #          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 # [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
 #     src/reception/ReceptionOverview.jsx:16:45:

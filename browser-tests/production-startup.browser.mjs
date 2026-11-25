@@ -202,14 +202,14 @@ test('built fresh entry stays below 1 MB JS without wallet/owner acquisition; bu
       // Check actual built imports as well as the manifest: both read routes
       // must stay usable without evaluating editor or owner Library code.
       const ownerOnly = new Set(report.ownerRuntimeGraph.ownerChunks.map(chunk => '/' + chunk.file));
-      for (const name of ['publicAbout', 'ownerAbout', 'receptionEditing']) {
-        const route = report.receptionRoutes[name];
+      for (const name of ['publicAbout', 'publicGallery', 'studioEditing']) {
+        const route = report.workspaceRoutes[name];
         assert.ok(route, 'Missing route report: ' + name);
         assert.ok(route.entryFile, 'Missing built route entry: ' + name);
         const start = requests.length;
         assert.equal(await page.evaluate(async file => Object.values(await import('/' + file)).some(value =>
           typeof value === 'function' || value && typeof value.default === 'function'), route.entryFile), true);
-        if (name !== 'receptionEditing') assert.deepEqual(requests.slice(start).filter(path => ownerOnly.has(path)), []);
+        if (name !== 'studioEditing') assert.deepEqual(requests.slice(start).filter(path => ownerOnly.has(path)), []);
       }
       await page.close();
     }
@@ -362,7 +362,7 @@ test('built wallet connects, restores, follows account and chain changes, and di
     assert.deepEqual(result.errors, []);
     assert.deepEqual(mobileRequests, [], 'Extension connect/restore must never acquire the mobile runtime');
     assert.deepEqual(pageErrors, []);
-    // Reception also requests public metadata while the wallet is unopened.
+    // Composition also requests public metadata while the wallet is unopened.
     // Every RPC stays read-only; each simulated profile must be UP-validated.
     assert.ok(rpcCalls.every(call => call.method === 'eth_call'), 'Only read-only RPC calls are allowed');
     for (const address of ['0x1111111111111111111111111111111111111111', '0x2222222222222222222222222222222222222222']) {

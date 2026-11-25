@@ -1,5 +1,5 @@
 @import '../../ui/toolControlSizing.css';
-/* Content and editing primitives shared by Identity and Reception. No host chrome. */
+/* Content and editing primitives shared by Identity and Composition. No host chrome. */
 .identity-editor-content { min-width: 0; font: var(--workflow-type-body); }
 .identity-editor-content :is(input, textarea, select, button):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
 .identity-editor-content select { box-sizing: border-box; max-width: 100%; min-height: var(--tool-control-height); padding: 8px; border: 1px solid var(--workflow-border-strong); border-radius: var(--control-radius); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); font-size: var(--tool-field-font-size, 11px); }

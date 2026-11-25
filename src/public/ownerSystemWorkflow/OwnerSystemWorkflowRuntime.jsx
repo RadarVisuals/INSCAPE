@@ -110,7 +110,7 @@ export function WorkbenchSession({
   getWalletPublicationContext,
   onConnect,
   onDisconnect,
-  onOpenReception,
+  onOpenProfile,
   onOpenWriting,
   onOpenGallery,
   onReturnToWorks,
@@ -120,7 +120,6 @@ export function WorkbenchSession({
   onNewOpened,
   ownerDestinations,
   returnLabel = 'Gallery',
-  onEditReception,
   onOpenWorkbenchOverview,
   onPublicationConfirmed,
   profileAddress,
@@ -139,10 +138,11 @@ export function WorkbenchSession({
   navigatorPosition,
   editorPreferences,
   workbenchPreferenceStore,
-  reception,
+  compositionBackup,
   documentNavigation,
   overview,
 }) {
+  const composition = Boolean(sharedStore.getComposition);
   useStartupDestinationReady();
   const workbenchController = useWorkbenchController(profileAddress, { storage: reviewStorage, sharedStore });
   const layoutSession = useWorkbenchLayoutSession({
@@ -190,26 +190,23 @@ export function WorkbenchSession({
   const selectionState = useWorkbenchSelection(workbenchController.draft, {
     initialTargetId: workbenchController.draft.texts?.some(text => text.id === sharedTools.targetId)
       ? sharedTools.targetId
-      : initialTextTools.targetId ?? sharedTools.targetId,
+      : (initialTextTools.targetId ?? sharedTools.targetId),
     readContent: workbenchController.store.getSnapshot,
   });
   const activeModuleId = selectionState.targetId;
   const activateArtwork = selectionState.selectArtwork;
   const modules = useWorkbenchModuleRegistry();
-  const {
-    identity: identityTargetRef,
-    module: moduleTargetsRef,
-  } = modules.targets;
+  const { identity: identityTargetRef, module: moduleTargetsRef } = modules.targets;
   const savedWorkbenchPreferences = useSyncExternalStore(
     workbenchPreferenceStore.subscribe,
     workbenchPreferenceStore.getSnapshot
   );
   const workbenchPreferences = useMemo(
     () =>
-      reception
+      composition
         ? { ...savedWorkbenchPreferences, gridMode: 'NONE', edgeSnap: false }
         : savedWorkbenchPreferences,
-    [reception, savedWorkbenchPreferences]
+    [composition, savedWorkbenchPreferences]
   );
   const workbenchPreferenceError = useSyncExternalStore(
     workbenchPreferenceStore.subscribe,
@@ -235,7 +232,7 @@ export function WorkbenchSession({
     pendingText.length ? TEXT_RECOVERY_MESSAGE : null
   );
   const [identityOpen, setIdentityOpen] = useState(() => {
-    if (reception) return false;
+    if (composition) return false;
     const mode = loadIdentityShortcut(profileAddress)?.mode;
     return mode ? mode !== 'closed' : Boolean(initialWorkbench.current?.identity.open);
   });
@@ -269,7 +266,9 @@ export function WorkbenchSession({
     close: closePublication,
     toggle: togglePublication,
   } = useWorkbenchPublicationPanel({
-    closePanel: panels.closePanel, initialPublicationReview, onPublicationReviewOpened,
+    closePanel: panels.closePanel,
+    initialPublicationReview,
+    onPublicationReviewOpened,
   });
   const panel = panels.activePanel;
   const artworkLayersOpen = layersVisible;
@@ -295,7 +294,7 @@ export function WorkbenchSession({
   });
   const workbench = workbenchProjection.value;
   const saveBeforeDeparture = (browsing = false) => {
-    if (reception) {
+    if (composition) {
       sharedStore.checkTransition();
       if (textRecoveries(sharedStore, profileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
       if (!workbenchProjection.value)
@@ -330,7 +329,7 @@ export function WorkbenchSession({
     const draft = { ...workbenchController.draft, workbench };
     const item = sharedStore.listWorkbenches().find(item => item.id === sharedStore.getWorkbenchId());
     const source =
-      !reception && item
+      !composition && item
         ? workspaceMotion.current?.capture(workbenchOverviewModel(draft), item.name, item.id)
         : null;
     onOpenWorkbenchOverview(source);
@@ -343,23 +342,41 @@ export function WorkbenchSession({
   };
   const compositionId = documentNavigation?.activeId;
   const resolution = publishedResolution;
-  const verified = !resolution?.busy && resolution?.status === 'RESOLVED' &&
+  const verified =
+    !resolution?.busy &&
+    resolution?.status === 'RESOLVED' &&
     resolution.document?.profile.address === profileAddress;
   const placements = verified ? publishedCompositionDestinations(resolution.document, compositionId) : [];
   const inGallery = placements.includes('gallery');
-  const incoming = useGalleryStudioEndpoint('editor', browsing ? null : profileAddress, id => {
-    if (!inGallery || (id && id !== compositionId)) return null;
-    rememberGalleryView(profileAddress, { selectedId: compositionId });
-    // Only geometry crosses back into the published view. Gallery supplies its verified artwork.
-    const model = { area: workbenchArea(workbench) };
-    const moving = workspaceMotion.current?.captureActive(model, '', compositionId);
-    const frame = moving || workspaceMotion.current?.captureEditor(model, '', compositionId);
-    return frame && { id: compositionId, frame: frame.frame, paint: frame.paint, fitPublished: !moving, radius: frame.radius, background: frame.background };
-  }, workspaceRef, CanvasJourney);
+  const incoming = useGalleryStudioEndpoint(
+    'editor',
+    browsing ? null : profileAddress,
+    id => {
+      if (!inGallery || (id && id !== compositionId)) return null;
+      rememberGalleryView(profileAddress, { selectedId: compositionId });
+      // Only geometry crosses back into the published view. Gallery supplies its verified artwork.
+      const model = { area: workbenchArea(workbench) };
+      const moving = workspaceMotion.current?.captureActive(model, '', compositionId);
+      const frame = moving || workspaceMotion.current?.captureEditor(model, '', compositionId);
+      return (
+        frame && {
+          id: compositionId,
+          frame: frame.frame,
+          paint: frame.paint,
+          fitPublished: !moving,
+          radius: frame.radius,
+          background: frame.background,
+        }
+      );
+    },
+    workspaceRef,
+    CanvasJourney
+  );
   const routeJourney = incoming?.source.id === compositionId ? incoming : null;
   const journey = overview?.journey || routeJourney;
   const onProfile = placements.includes('profile');
-  const knownEmpty = !resolution?.busy && resolution?.status === 'UNAVAILABLE' && resolution.address === profileAddress;
+  const knownEmpty =
+    !resolution?.busy && resolution?.status === 'UNAVAILABLE' && resolution.address === profileAddress;
   let publicationState = resolution?.busy ? 'Checking publication' : 'Publication unverified';
   if (verified || knownEmpty) {
     if (inGallery) publicationState = onProfile ? 'In Gallery and on Profile' : 'In Gallery';
@@ -367,28 +384,40 @@ export function WorkbenchSession({
   }
   const workspaceDestinations = {
     Curation: ownerDestinations?.Curation && (() => leaveForDestination(ownerDestinations.Curation)),
-    Profile: onOpenReception && (() => { saveBeforeDeparture(); onOpenReception('published'); }),
+    Profile:
+      onOpenProfile &&
+      (() => {
+        saveBeforeDeparture();
+        onOpenProfile();
+      }),
     Gallery: onOpenGallery ? () => leaveForDestination(onOpenGallery, true) : showWorkbenchOverview,
-    Writing: onOpenWriting && (() => { saveBeforeDeparture(); onOpenWriting(); }),
+    Writing:
+      onOpenWriting &&
+      (() => {
+        saveBeforeDeparture();
+        onOpenWriting();
+      }),
   };
   const activity = useOwnerSystemWorkflowActivity({
     active: panel === 'activity',
     fixture: reviewActivity,
     profileAddress,
   });
-  const panelOccupied = Boolean(publicationPresence.present || panel
-    || Object.values(panels.presence).some(({ present }) => present));
+  const panelOccupied = Boolean(
+    publicationPresence.present || panel || Object.values(panels.presence).some(({ present }) => present)
+  );
   const noticeMessage = workbenchController.error || notice?.message;
-  const dismissNotice = workbenchController.error
-      ? workbenchController.clearError
-      : dismissHostNotice;
+  const dismissNotice = workbenchController.error ? workbenchController.clearError : dismissHostNotice;
   useEffect(() => {
     if (!noticeMessage || noticeMessage === restoreWarning) return undefined;
     const timeout = globalThis.setTimeout(dismissNotice, 4_500);
     return () => globalThis.clearTimeout(timeout);
   }, [noticeMessage, dismissNotice, restoreWarning]);
-  const publishedProfile = ['RESOLVED', 'STALE'].includes(publishedResolution?.status) ? publishedResolution.document?.profile : null;
-  const cachedIdentity = publishedProfile?.address === profileAddress ? publishedProfile.cachedIdentity : null;
+  const publishedProfile = ['RESOLVED', 'STALE'].includes(publishedResolution?.status)
+    ? publishedResolution.document?.profile
+    : null;
+  const cachedIdentity =
+    publishedProfile?.address === profileAddress ? publishedProfile.cachedIdentity : null;
   const profileModel = useMemo(
     () =>
       createProductionIdentityDossierViewModel({
@@ -398,7 +427,13 @@ export function WorkbenchSession({
         cachedIdentity,
         identityPresentation: workbenchController.draft?.identityPresentation,
       }),
-    [assetsById, contractFacts, workbenchController.draft?.identityPresentation, profileIdentity, cachedIdentity]
+    [
+      assetsById,
+      contractFacts,
+      workbenchController.draft?.identityPresentation,
+      profileIdentity,
+      cachedIdentity,
+    ]
   );
   const publicationProfile = useMemo(
     () => ({
@@ -428,8 +463,11 @@ export function WorkbenchSession({
           projectionError: workbenchProjection.error,
           library,
           publicationProfile,
-          activeWork: documentNavigation?.items.find(item => item.id === compositionId) || { id: sharedStore.getWorkbenchId(), name: 'Composition' },
-          composition: sharedStore.getReception?.(),
+          activeWork: documentNavigation?.items.find(item => item.id === compositionId) || {
+            id: sharedStore.getWorkbenchId(),
+            name: 'Composition',
+          },
+          composition: sharedStore.getComposition?.(),
           publishedDocument: publishedProfile ? resolution.document : null,
         }),
       () => livePreviewPresentation.current === previewPresentation,
@@ -466,7 +504,7 @@ export function WorkbenchSession({
     openPreview,
     togglePublication,
     setWorkspaceMenu,
-    reception: Boolean(reception),
+    composition: Boolean(composition),
   });
   const previewing = Boolean(preview);
   const canvasSuspended = previewing || browsing || leavingEditor;
@@ -491,10 +529,17 @@ export function WorkbenchSession({
     if (!overview?.saveBeforeRoute) return;
     const ref = overview.saveBeforeRoute;
     ref.current = () => {
-      try { saveBeforeDeparture(true); return true; }
-      catch (failure) { setNotice(failure.message); return false; }
+      try {
+        saveBeforeDeparture(true);
+        return true;
+      } catch (failure) {
+        setNotice(failure.message);
+        return false;
+      }
     };
-    return () => { ref.current = null; };
+    return () => {
+      ref.current = null;
+    };
   });
   return (
     <>
@@ -538,10 +583,10 @@ export function WorkbenchSession({
                   data-editor-menu
                   data-overview={browsing || undefined}
                   data-workspace-journey={journey?.direction}
-                    data-gallery-entry={routeJourney?.direction === 'editor' || undefined}
+                  data-gallery-entry={routeJourney?.direction === 'editor' || undefined}
                   data-creation-toolbar={!toolbarHidden || undefined}
-                  data-canvas-context={reception ? 'reception' : 'canvas'}
-                  data-reception-editor={reception ? true : undefined}
+                  data-canvas-context={composition ? 'composition' : 'canvas'}
+                  data-composition-editor={composition ? true : undefined}
                   data-layout={layout.mode}
                   onContextMenu={event => {
                     if (!browsing && event.target === event.currentTarget) {
@@ -595,11 +640,17 @@ export function WorkbenchSession({
                         navigationRef={workbenchNavigationRef}
                         focusOnMount={focusWorkbench}
                         hidden={previewing || browsing}
+                        preserveHeaderSpace={leavingEditor}
                         documentNavigation={
                           documentNavigation && { ...documentNavigation, select: selectDocument }
                         }
-                        onReturnToWorks={returnLabel === 'Profile' && workspaceDestinations.Profile ? workspaceDestinations.Profile
-                          : onReturnToWorks ? () => leaveForDestination(onReturnToWorks, true) : showWorkbenchOverview}
+                        onReturnToWorks={
+                          returnLabel === 'Profile' && workspaceDestinations.Profile
+                            ? workspaceDestinations.Profile
+                            : onReturnToWorks
+                              ? () => leaveForDestination(onReturnToWorks, true)
+                              : showWorkbenchOverview
+                        }
                         onManageCompositions={showWorkbenchOverview}
                         initialNew={initialNew}
                         onNewOpened={onNewOpened}
@@ -632,7 +683,7 @@ export function WorkbenchSession({
                     onRevealCreationTools={() => {
                       if (!creationBarVisible) creationBarPreference.update(true);
                     }}
-                    showIdentity={!reception}
+                    showIdentity={!composition}
                     onOpenSharedTool={section => changeTool({ type: 'open', tab: 'Inspector', section })}
                     hostRef={workspaceRef}
                     artworkLayersOpen={artworkLayersOpen}
@@ -667,14 +718,18 @@ export function WorkbenchSession({
                   <ContextToolbar hidden={Boolean(preview) || instrumentsObscured} />
                   <WorkbenchToolDocks
                     controller={toolDocks}
-                    libraryOnly={browsing}
+                    libraryOnly={browsing && !leavingEditor}
                     returnFocusRefs={{ Library: libraryTrigger }}
                     libraryProps={{
                       preferenceStore: editorPreferences.section('library'),
-                      workbenchImageTargetRef, moduleAssetTargetRef: moduleTargetsRef,
-                      workspaceRef, placementScope: profileAddress,
-                      authoringLocked: browsing, categoryCommands: library.categoryCommands,
-                      data: { ...libraryData, onOpenCuration: workspaceDestinations.Curation }, resolveAssetDimensions,
+                      workbenchImageTargetRef,
+                      moduleAssetTargetRef: moduleTargetsRef,
+                      workspaceRef,
+                      placementScope: profileAddress,
+                      authoringLocked: browsing,
+                      categoryCommands: library.categoryCommands,
+                      data: { ...libraryData, onOpenCuration: workspaceDestinations.Curation },
+                      resolveAssetDimensions,
                     }}
                     colourPreference={editorPreferences.section('colourPickers')}
                     hidden={Boolean(preview) || panelOccupied}
@@ -709,10 +764,9 @@ export function WorkbenchSession({
                     onDisconnect={onDisconnect}
                     profileAddress={profileAddress}
 
-
                     backupControls={
-                      reception ? (
-                        reception.backupControls
+                      composition ? (
+                        compositionBackup
                       ) : (
                         <WorkbenchBackupControls
                           store={workbenchController.store}
@@ -733,13 +787,12 @@ export function WorkbenchSession({
                       )
                     }
                     workbenchPreferences={workbenchPreferences}
-                    canvasGuides={!reception}
+                    canvasGuides={!composition}
                     onWorkbenchPreferencesChange={change =>
                       setWorkbenchPreferences(current => ({ ...current, ...change }))
                     }
                     onClose={() => panels.closePanel()}
-                    onOpenReception={onOpenReception && (() => leaveForDestination(onOpenReception))}
-                    onEditReception={reception ? undefined : () => leaveForDestination(onEditReception)}
+                    onOpenProfile={onOpenProfile && (() => leaveForDestination(onOpenProfile))}
                     onOpenIdentity={event => {
                       openIdentity(
                         event.currentTarget
@@ -803,8 +856,7 @@ export function WorkbenchSession({
                         onDisconnect={onDisconnect}
                         onOpenWriting={onOpenWriting}
                         onOpenGallery={onOpenGallery}
-                        onOpenReception={onOpenReception && (() => onOpenReception('published'))}
-                        onEditReception={onEditReception}
+                        onOpenProfile={onOpenProfile && (() => onOpenProfile())}
                         workspace={{
                           memory: overview.memory,
                           exiting: !browsing,
@@ -842,10 +894,10 @@ export function WorkbenchSession({
                           ...(workbenchController.draft.shapes?.length
                             ? [{ id: 'shapes', label: 'SHAPES' }]
                             : []),
-                          ...(!reception ? [{ id: 'identity', label: 'IDENTITY' }] : []),
+                          ...(!composition ? [{ id: 'identity', label: 'IDENTITY' }] : []),
                           { id: 'library', label: 'LIBRARY' },
                           { id: 'preview', label: 'PREVIEW' },
-                          ...(!reception ? [{ id: 'publish', label: 'PUBLISH' }] : []),
+                          { id: 'publish', label: 'PUBLISH' },
                         ]}
                         getSubmenuCommands={id =>
                           id === 'tools'
@@ -937,9 +989,11 @@ export function WorkbenchSession({
           </SharedTextToolsProvider>
         </SharedDisplayToolsProvider>
       </ContextToolbarProvider>
-      {preview && <Suspense fallback={<p role="status">Opening composition preview.</p>}>
-        <CompositionPreview entry={preview.entry} snapshot={preview.snapshot} profile={profileModel} onClose={closePreview} />
-      </Suspense>}
+      {preview && (
+        <Suspense fallback={<p role="status">Opening composition preview.</p>}>
+          <CompositionPreview entry={preview.entry} snapshot={preview.snapshot} onClose={closePreview} />
+        </Suspense>
+      )}
     </>
   );
 }

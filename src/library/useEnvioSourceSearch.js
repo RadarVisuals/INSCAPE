@@ -36,7 +36,7 @@ export default function useEnvioSourceSearch(profile, criteria, enabled) {
       });
     const accumulated = { ownedAssets: new Map(), createdAssets: new Map() };
     let busy = false;
-    function useLoadedItems() {
+    function failSearch() {
       if (signal.aborted) return;
       setResult({ key, failed: true });
       controller.abort();
@@ -44,7 +44,7 @@ export default function useEnvioSourceSearch(profile, criteria, enabled) {
     async function read() {
       if (signal.aborted || busy) return;
       busy = true;
-      const deadline = setTimeout(useLoadedItems, 15000);
+      const deadline = setTimeout(failSearch, 15000);
       setResult(prev => ({ ...(prev?.key === key ? prev : {}), key, loading: true }));
       try {
         await Promise.all(
@@ -68,7 +68,7 @@ export default function useEnvioSourceSearch(profile, criteria, enabled) {
             }),
           });
       } catch {
-        useLoadedItems();
+        failSearch();
       } finally {
         clearTimeout(deadline);
         busy = false;

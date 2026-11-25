@@ -70,7 +70,7 @@ export async function launchOwnedChromium(options, {
   const stopRoot = () => { if (alive()) child.kill('SIGKILL'); };
   const observe = () => {
     observing = true;
-    observation = observation.then(() => tree.observe()).finally(() => { observing = false; });
+    observation = observation.catch(() => undefined).then(() => tree.observe()).finally(() => { observing = false; });
     return observation;
   };
   const close = () => closePromise ||= (async () => {

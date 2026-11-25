@@ -199,7 +199,7 @@ try {
       h('details', { className: 'inspection' }, h('summary', {}, 'Posities en pakketgrootte'), h('p', { id: 'bundle-weight' }, weight),
         h('p', {}, 'RGL verzorgt slepen en rendering. Invoegregels en responsieve onderverdeling zijn maatwerk in deze proef. De meting hierboven betreft alleen de CDN-library.'),
         h('pre', { 'aria-label': 'Actuele celposities' }, JSON.stringify(projection.frames.map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'number' ? Math.round(v) : v]))), null, 2))),
-      h('footer', {}, 'Losse proef met eigen opslag. Reception, native artworktools, publicatie en scèneanimatie zijn niet gekoppeld.'),
+      h('footer', {}, 'Losse proef met eigen opslag. Composition, native artworktools, publicatie en scèneanimatie zijn niet gekoppeld.'),
     );
   }
   createRoot(root).render(h(Trial));

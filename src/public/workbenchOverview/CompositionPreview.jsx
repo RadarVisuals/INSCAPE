@@ -6,7 +6,7 @@ import { workbenchOverviewModel } from './workbenchOverviewModel.js';
 import './workbenchOverview.css';
 import './compositionPreview.css';
 
-export default function CompositionPreview({ entry, snapshot, profile, onClose }) {
+export default function CompositionPreview({ entry, snapshot, onClose }) {
   const dialog = useRef(null);
   const model = useMemo(() => workbenchOverviewModel(entry.draft), [entry.draft]);
   useLayoutEffect(() => {
@@ -24,7 +24,7 @@ export default function CompositionPreview({ entry, snapshot, profile, onClose }
     <header><button type="button" onClick={() => onClose()} autoFocus>
       <ArrowLeft size={16} aria-hidden="true" />Back to editing
     </button></header>
-    <CompositionSources snapshot={snapshot} profile={profile}>
+    <CompositionSources snapshot={snapshot}>
       <WorkbenchOverviewPreview model={model} name={entry.name} presenting emptyHint="" />
     </CompositionSources>
   </dialog>;

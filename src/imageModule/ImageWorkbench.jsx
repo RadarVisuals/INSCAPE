@@ -1,6 +1,6 @@
 import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 import { lazy, Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Crop, ChevronLeft, ZoomIn, Shrink, Expand } from 'lucide-react';
+import { Crop, ChevronLeft, ZoomIn, Shrink, Expand, X } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
 import ImageArtwork from './ImageArtwork.jsx';
 import { useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
@@ -21,8 +21,8 @@ import { createProfileDocumentV9AssetDossier } from '../profileDocument/componen
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
-import { useEditorCells } from '../reception/EditorCellsContext.jsx';
-import { receptionMemberAnchor } from '../reception/editorCellGeometry.js';
+import { useEditorCells } from '../composition/EditorCellsContext.jsx';
+import { compositionMemberAnchor } from '../composition/editorCellGeometry.js';
 import './imageModule.css';
 
 const LibraryPicker = lazy(() => import('../library/ProfileLibraryPicker.jsx'));
@@ -69,7 +69,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const workbenchView = useWorkbenchView();
   const cells = useEditorCells();
   const ownerCell = cells?.cells.find(cell => cell.members.includes(record.id));
-  const cellAnchor = useMemo(() => receptionMemberAnchor(ownerCell, [record.id]), [ownerCell, record.id]);
+  const cellAnchor = useMemo(() => compositionMemberAnchor(ownerCell, [record.id]), [ownerCell, record.id]);
   const sizeLimits = imageSizeLimits(Boolean(ownerCell));
   const presented = Boolean(workbenchView.presentationTransforms?.[record.id]);
   const dossier = useMemo(() => createProfileDocumentV9AssetDossier(artwork?.asset), [artwork?.asset]);
@@ -368,6 +368,11 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
             crop={displayedCrop} />}
       </button>
       <span ref={setRecoveryHost} className="image-module__recovery" data-workbench-selection-tools />
+      {!store && !presented && <button type="button" className="workflow-tactile-control image-module__close"
+        aria-label="Close Image" disabled={inspect || suspended} onClick={event => {
+          event.currentTarget.closest('main')?.focus({ preventScroll: true });
+          setPresentation(current => ({ ...current, open: false }));
+        }}><X size={14} /></button>}
       {!crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
         title="Inspect Image (I)" disabled={!artwork || Boolean(inspect || suspended)} onClick={inspectArtwork}
         onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={14} /></button>}

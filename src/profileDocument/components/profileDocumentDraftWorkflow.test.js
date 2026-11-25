@@ -10,7 +10,7 @@ const appSource = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8'
 
 test('Studio opens the selected composition in its read-only viewer', () => {
   assert.match(runtimeSource, /<CompositionPreview\b/u);
-  assert.doesNotMatch(runtimeSource, /<ProfileDocumentV9Preview\b|<ReceptionEditorPreview\b/u);
+  assert.doesNotMatch(runtimeSource, /<ProfileDocumentV9Preview\b|<CompositionEditorPreview\b/u);
 });
 
 test('System Workflow persistence uses the profile-isolated draft v4 store', () => {

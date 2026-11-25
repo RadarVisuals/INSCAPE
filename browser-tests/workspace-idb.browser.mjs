@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { editorCommand, openEditorMenu } from './fixtures/editor-menu.mjs';
 import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
@@ -104,7 +105,7 @@ test('obsolete hydration cannot switch the active Library back or seed invalid l
 
 test('an interrupted seed cannot become authoritative with different legacy bytes', () => withPage(async page => {
   const result = await page.evaluate(async () => {
-    const scope = [42, fixture.profile], seed = {library:'old',workbenches:null,receptionRecovery:null,textRecovery:null};
+    const scope = [42, fixture.profile], seed = {library:'old',workbenches:null,textRecovery:null};
     let n = 0, mismatch;
     try {
       await fixture.openWorkspaceDatabase(indexedDB, scope, () => ({...seed,library:++n === 1 ? 'old' : 'changed'}), () => {});
@@ -149,7 +150,7 @@ async function downloadTabRecovery(page) {
 
 test('Curation downloads the losing writer and restores its edits without touching the winning tab', () => withPage(async a => {
   await a.context().route('https://**/*', route => route.abort());
-  await a.evaluate(async () => { fixture.seed(); fixture.seedReceptionRecovery(); await fixture.start(); fixture.mount(); });
+  await a.evaluate(async () => { fixture.seed(); await fixture.start(); fixture.mount(); });
   const b = await a.context().newPage();
   // A suspended tab can miss a commit notification. Keep its hydrated revision stale.
   await b.addInitScript(() => { window.BroadcastChannel = undefined; });
@@ -169,7 +170,7 @@ test('Curation downloads the losing writer and restores its edits without touchi
   assert.deepEqual(file.workspace.library.folders.map(folder => folder.name), ['Props', 'Tab folder']);
   assert.equal(file.workspace.workbenches.workbenches[1].name, 'Tab composition');
   assert.equal(file.workspace.textRecovery[0][1][0].value.article.title, 'Tab article recovery');
-  assert.equal(file.workspace.receptionRecovery.draft.reception.branding.name, 'Previous Reception');
+  assert.deepEqual(Object.keys(file.workspace).sort(), ['library', 'textRecovery', 'workbenches']);
   assert.equal(file.workspaceRevision, 1);
   assert.equal(await b.evaluate(() => fixture.workspaceSession(fixture.profile).state.status), 'unsaved');
   await a.reload(); await a.waitForFunction(() => !!window.fixture);
@@ -256,19 +257,19 @@ test('Curation waits for delayed hydration before mounting its editable destinat
 
 test('offline restore into empty origin storage preserves a complete portable workspace', () => withPage(async page => {
   const source = await page.evaluate(async () => {
-    fixture.seed(); fixture.seedReceptionRecovery(); await fixture.start(); fixture.nestedLibrary();
+    fixture.seed(); await fixture.start(); fixture.nestedLibrary();
     let source;
     await fixture.exportWorkspaceBackup(fixture.profile, value => { source = value; });
     return source;
   });
   const copy = JSON.parse(source);
   assert.equal(copy.kind, 'inscape-workspace-backup');
-  assert.equal(copy.workspace.receptionRecovery.draft.reception.branding.name, 'Previous Reception');
+  assert.deepEqual(Object.keys(copy.workspace).sort(), ['library', 'textRecovery', 'workbenches']);
   assert.equal(copy.workspace.library.folders[1].parentId, copy.workspace.library.folders[0].id);
   assert.equal(copy.workspace.library.curatedImageSelections.length, 2);
   assert.equal(copy.workspace.workbenches.workbenches.length, 2);
-  assert.equal(copy.schemaVersion, 2);
-  for (const record of [copy.workspace.workbenches, copy.workspace.receptionRecovery.draft]) {
+  assert.equal(copy.schemaVersion, 3);
+  for (const record of [copy.workspace.workbenches]) {
     for (const { content } of record.workbenches || [{ content: record }]) {
       assert.equal('grids' in content || 'displays' in content, false);
       assert.equal('display' in (content.workbench || {}) || 'displays' in (content.workbench || {}), false);
@@ -418,4 +419,71 @@ test('legacy inline artwork exports its selection identity without image bytes a
   });
   assert.equal(result.inline,false); assert.match(result.identity,/^ni:\/\/\/sha-256;/);
   assert.equal(result.identity,result.resource); assert.match(result.message,/Insufficient/); assert.ok(result.intact);
+}));
+
+test('Studio cells, free layers and canvas links survive a downloaded backup, Merge and Replace', () => withPage(async writer => {
+  const localOnly = page => page.route('https://**/*', route => route.abort());
+  await localOnly(writer);
+  await writer.evaluate(async () => { fixture.seedStudio(); await fixture.mountStudio(); });
+  await openEditorMenu(writer, 'Backup');
+  const download = writer.waitForEvent('download');
+  await writer.getByRole('button', { name: 'Download workspace backup' }).click();
+  const source = await readFile(await (await download).path(), 'utf8');
+  const file = JSON.parse(source);
+  assert.deepEqual(Object.keys(file.workspace).sort(), ['library', 'textRecovery', 'workbenches']);
+  assert.doesNotMatch(source, /"reception(?:Recovery)?"|"branding"/iu);
+  const works = file.workspace.workbenches.workbenches;
+  const work = works.find(item => item.name === 'The Last one').content.composition;
+  assert.equal(works.length, 2);
+  assert.equal(work.cells[0].members[0], work.imageModules[0].id);
+  assert.equal(work.cells[1].content, work.links[0].id);
+  assert.equal(work.links[0].source.canvasId, works[0].id);
+  assert.equal(work.artworkLayers.at(-1), 'text:caption');
+  const clean = await writer.context().browser().newContext();
+  try {
+    const page = await clean.newPage();
+    await localOnly(page);
+    const open = async () => {
+      await page.goto(writer.url());
+      await page.waitForFunction(() => !!window.fixture);
+    };
+    const restore = async mode => {
+      await page.evaluate(() => fixture.mountStudio());
+      await openEditorMenu(page, 'Backup');
+      await page.getByLabel('Restore mode').selectOption(mode.toLowerCase());
+      await page.getByLabel('Open Workbench backup').setInputFiles({
+        name: 'studio.json', mimeType: 'application/json', buffer: Buffer.from(source),
+      });
+      await page.getByRole('button', { name: 'Confirm ' + mode }).click();
+      await page.waitForFunction(() => fixture.workspaceSession(fixture.profile)?.rows?.workbenches &&
+        JSON.parse(fixture.workspaceSession(fixture.profile).rows.workbenches).workbenches.some(item => item.name === 'The Last one'));
+      await page.getByRole('button', { name: 'Confirm ' + mode }).waitFor({ state: 'hidden' });
+    };
+    await open(); await restore('Replace');
+    await open(); await page.evaluate(() => fixture.mountStudio());
+    await page.locator('.editor-menu-bar[data-document="workbench:last"]').waitFor();
+    await page.locator('[data-editor-cell-surface]').first().waitFor();
+    assert.deepEqual(await page.evaluate(() => fixture.wb().getDraft().composition), work);
+    await editorCommand(page, 'Studio', 'New composition');
+    await page.getByLabel('Composition name', { exact: true }).fill('After backup');
+    await page.getByRole('button', { name: 'Create composition' }).click();
+    await page.waitForFunction(() => fixture.wb().listWorkbenches().some(item => item.name === 'After backup'));
+    assert.equal(await page.evaluate(() => fixture.confirmWorkspaceSaved(fixture.profile)), true);
+    await editorCommand(page, 'Studio', 'New composition');
+    await page.getByLabel('Composition name', { exact: true }).fill('New Bento');
+    await page.getByLabel('Starting layout').selectOption('bento');
+    await page.getByRole('button', { name: 'Create composition' }).click();
+    await page.locator('[data-editor-cell-surface]').first().waitFor();
+    const newBento = await page.evaluate(() => fixture.wb().getDraft().composition);
+    assert.ok(newBento.cells.length > 0);
+    assert.equal(await page.evaluate(() => fixture.confirmWorkspaceSaved(fixture.profile)), true);
+    await open(); await restore('Merge');
+    const names = () => page.evaluate(() => fixture.wb().listWorkbenches().map(item => item.name));
+    assert.ok((await names()).includes('After backup'));
+    await open(); await restore('Replace');
+    assert.deepEqual(await names(), works.map(item => item.name));
+    await open(); await page.evaluate(() => fixture.mountStudio());
+    await page.locator('.editor-menu-bar[data-document="workbench:last"]').waitFor();
+    assert.deepEqual(await page.evaluate(() => fixture.wb().getBackupSnapshot().workbenches), works);
+  } finally { await clean.close(); }
 }));

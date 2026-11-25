@@ -26,7 +26,7 @@ for (const [width, density, zoom, below] of [[1440, 1, 1, false], [1440, 1.25, .
       await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       await page.evaluate(() => document.activeElement?.blur());
       for (const index of [0, 1]) {
-        const window = page.locator('.text-window').nth(index), bar = window.locator(':scope > header');
+        const window = page.locator('aside.text-window').nth(index), bar = window.locator(':scope > header');
         await page.mouse.move(width - 4, 1050); await settle(page);
         assert.equal(await bar.evaluate(n => getComputedStyle(n).opacity), '0', 'toolbar hides away from the module');
         const frame = await window.boundingBox(), toolbar = await bar.boundingBox();

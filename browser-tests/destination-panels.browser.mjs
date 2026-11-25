@@ -22,55 +22,37 @@ async function open(browser, width, height, theme, suffix = '') {
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}${suffix}`);
   await page.getByRole('button', { name: 'Inscape menu' }).waitFor();
   await setEditorSidebarOpen(page, false);
-  const activate = async name => {
-    if (name === 'Docs') await openEditorMenu(page, 'Docs');
-    else await editorDestination(page, name);
-  };
-  return { page, activate, errors };
+  return { page, errors };
 }
 
 for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 900], [390, 844], [844, 390], [320, 320]]) {
   test(`Destination windows use shared reachable chrome: ${theme} ${width}×${height}`, { timeout: 60000 }, async () => {
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
-      const { page, activate, errors } = await open(browser, width, height, theme);
+      const { page, errors } = await open(browser, width, height, theme);
       const draft = await page.evaluate(() => window.readToolChromeDraft());
       const camera = () => page.locator('main.system-workflow').evaluate(n => [n.dataset.workbenchCameraX, n.dataset.workbenchCameraY, n.dataset.workbenchCameraScale]);
       const beforeCamera = await camera();
       await mkdir(output, { recursive: true });
-      for (const name of ['Publish', 'Docs', 'Profile']) {
-        await activate(name);
-        const panel = page.locator('.workbench-destination-panel');
-        await panel.waitFor();
-        const box = await panel.boundingBox();
-        assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width + 1 && box.y + box.height <= height + 1, `${name} fits the viewport`);
-        assert.equal(await panel.getAttribute('data-workflow-finish'), 'flat');
-        assert.equal(await panel.evaluate(n => getComputedStyle(n).borderRadius), '9px');
-        assert.equal(await panel.evaluate(n => n.scrollWidth <= n.clientWidth), true, `${name} has no horizontal overflow`);
-        assert.equal(await panel.evaluate(n => getComputedStyle(n).backgroundColor), theme === 'mist' ? 'rgb(235, 236, 231)' : 'rgb(8, 8, 8)');
-        const close = panel.getByRole('button', { name: name === 'Publish' ? 'Close Publication' : `Close ${name}`, exact: true });
-        assert.equal(await close.evaluate(hit), true, `${name} close stays reachable`);
-        if (name === 'Publish') {
-          const action = panel.getByRole('button', { name: 'Prepare publication', exact: true });
-          assert.equal(await action.evaluate(hit), true, 'publication action stays reachable below scrollable copy');
-          assert.equal(await panel.getByRole('region', { name: 'Alpha support' }).count(), 0);
-        }
-        if (name === 'Docs') {
-          const tab = panel.getByRole('tab', { name: 'Workbench', exact: true });
-          await tab.click();
-          assert.equal(await tab.evaluate(n => getComputedStyle(n).outlineStyle), 'none', 'pointer has no focus box');
-          await tab.press('End');
-          assert.notEqual(await panel.getByRole('tab', { name: 'Publish', exact: true }).evaluate(n => getComputedStyle(n).outlineStyle), 'none', 'keyboard focus is visible');
-          assert.equal(await panel.getByRole('tab', { name: 'Publish', exact: true }).getAttribute('aria-selected'), 'true');
-          assert.equal(await panel.getByRole('tab', { name: 'Publish', exact: true }).evaluate(hit), true);
-          await page.keyboard.press('Home');
-          await panel.getByRole('tabpanel').evaluate(n => { n.scrollTop = n.scrollHeight; });
-          assert.equal(await close.evaluate(hit), true, 'Docs scroll never hides its close button');
-        }
-        await page.screenshot({ path: `${output}/${name.toLowerCase()}-${theme}-${width}x${height}.png` });
-        await close.click();
-        await panel.waitFor({ state: 'detached' });
-      }
+      await editorDestination(page, 'Publish');
+      const panel = page.locator('.workbench-destination-panel');
+      await panel.waitFor();
+      const box = await panel.boundingBox();
+      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width + 1 && box.y + box.height <= height + 1, `Publish fits the viewport`);
+      assert.equal(await panel.getAttribute('data-workflow-finish'), 'flat');
+      assert.equal(await panel.evaluate(n => getComputedStyle(n).borderRadius), '9px');
+      assert.equal(await panel.evaluate(n => n.scrollWidth <= n.clientWidth), true, `Publish has no horizontal overflow`);
+      assert.equal(await panel.evaluate(n => getComputedStyle(n).backgroundColor), theme === 'mist' ? 'rgb(235, 236, 231)' : 'rgb(8, 8, 8)');
+      const close = panel.getByRole('button', { name: 'Close Publication', exact: true });
+      assert.equal(await close.evaluate(hit), true, `Publish close stays reachable`);
+      const action = panel.getByRole('button', { name: 'Prepare publication', exact: true });
+      assert.equal(await action.evaluate(hit), true, 'publication action stays reachable below scrollable copy');
+      assert.equal(await panel.getByRole('region', { name: 'Alpha support' }).count(), 0);
+      await panel.locator('.workbench-destination-body').evaluate(node => { node.scrollTop = node.scrollHeight; });
+      assert.equal(await close.evaluate(hit), true, 'scrolling keeps the close button reachable');
+      await page.screenshot({ path: `${output}/publish-${theme}-${width}x${height}.png` });
+      await close.click();
+      await panel.waitFor({ state: 'detached' });
       assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), draft, 'browsing chrome does not edit the composition');
       assert.deepEqual(await camera(), beforeCamera, 'browsing chrome does not change the camera');
       assert.equal(await page.getByRole('button', { name: 'Keeper settings', exact: true }).evaluate(hit), true);

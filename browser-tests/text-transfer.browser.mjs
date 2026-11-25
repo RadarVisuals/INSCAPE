@@ -38,7 +38,7 @@ for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text
   try {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTransfer(page);
-    const text = page.locator('.text-window'), grip = text.getByLabel('Move Text window', { exact: true });
+    const text = page.locator('aside.text-window'), grip = text.getByLabel('Move Text window', { exact: true });
     await text.waitFor(); await page.evaluate(() => document.fonts.ready);
     const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();

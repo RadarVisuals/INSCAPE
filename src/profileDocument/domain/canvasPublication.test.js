@@ -1,10 +1,9 @@
-import { projectReception } from './receptionPresentation.js';
+import { projectCompositionEditorDocument as projectComposition } from '../../composition/compositionEditorDocument.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
 import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, buildGalleryRemoval, canReplaceInvalidPublication, resolvePublicationBaseline } from './canvasPublication.js';
-import { createReceptionEditorDocument } from '../../reception/receptionEditorDocument.js';
 import { createStudioComposition } from '../../systemWorkflow/domain/studioComposition.js';
 import { createTextPresentation } from './workbenchPresentation.js';
 import { createArticle } from '../../text/domain/article.js';
@@ -180,12 +179,11 @@ test('a fresh owner restores all public canvases; an existing local draft is nev
 
 test('Gallery and Profile reference one published work and retain independent selections on republish', () => {
   const record = fixture();
-  record.shared.reception = createReceptionEditorDocument();
-  const ids = ['workbench:main', 'workbench:second', 'reception'];
-  const placements = { 'workbench:main': ['gallery', 'profile'], 'workbench:second': ['profile'], reception: ['gallery'] };
+  const ids = ['workbench:main', 'workbench:second'];
+  const placements = { 'workbench:main': ['gallery', 'profile'], 'workbench:second': ['profile'] };
   const first = buildCanvasPublication({ candidates: project(record), selectedIds: ids, includeShared: true, placements });
   const shown = (document, target) => publishedCompositionEntries(document, target).map(item => item.id);
-  assert.deepEqual(shown(first, 'gallery'), ['workbench:main', 'reception']);
+  assert.deepEqual(shown(first, 'gallery'), ['workbench:main']);
   assert.deepEqual(shown(first, 'profile'), ['workbench:main', 'workbench:second']);
   assert.equal(canvasPublicationChanges(project(record), first).filter(item => ids.includes(item.id)).some(item => item.changed), false);
   assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(first)), first);
@@ -194,13 +192,13 @@ test('Gallery and Profile reference one published work and retain independent se
   assert.equal(canvasPublicationChanges(project(record), first, changes).find(item => item.id === 'workbench:main').changed, true);
   const next = buildCanvasPublication({ candidates: project(record), selectedIds: ['workbench:main'], previousDocument: first, placements: changes });
   assert.deepEqual(next.canvases, first.canvases);
-  assert.deepEqual(shown(next, 'gallery'), ['reception']);
+  assert.deepEqual(shown(next, 'gallery'), []);
   assert.deepEqual(shown(next, 'profile'), ['workbench:main', 'workbench:second']);
   assert.doesNotMatch(canonicalSerializeProfileDocumentV9(next), /Pending local edit/);
   const old = structuredClone(first);
-  delete old.canvas.destinations; delete old.canvases[0].destinations; delete old.receptionDestinations;
+  delete old.canvas.destinations; delete old.canvases[0].destinations;
   assert.deepEqual(shown(old, 'gallery'), ['workbench:main', 'workbench:second']);
-  assert.deepEqual(shown(old, 'profile'), ['reception']);
+  assert.deepEqual(shown(old, 'profile'), []);
   for (const document of [first, next, old]) {
     for (const entry of publishedCompositionEntries(document)) {
       assert.deepEqual(publishedCompositionDestinations(document, entry.id), entry.destinations);
@@ -212,20 +210,7 @@ test('Gallery and Profile reference one published work and retain independent se
     assert.equal(validateProfileDocumentV9(malformed).valid, false);
   }
   assert.throws(() => buildCanvasPublication({ candidates: project(record), selectedIds: ids, includeShared: true,
-    placements: { reception: [] } }), /Choose Gallery/);
-});
-
-test('publishing the existing Bento on its own never publishes the active canvas implicitly', () => {
-  const record = fixture();
-  record.shared.reception = createReceptionEditorDocument();
-  const doc = buildCanvasPublication({ candidates: project(record), selectedIds: ['reception'], includeShared: true });
-  assert.deepEqual(publishedCanvasEntries(doc), []);
-  assert.deepEqual(publishedCompositionEntries(doc, 'profile').map(item => item.id), ['reception']);
-  assert.deepEqual(publishedCompositionEntries(doc, 'gallery'), []);
-  assert.doesNotMatch(canonicalSerializeProfileDocumentV9(doc), /First canvas|Public scene|Private scene/);
-  const next = buildCanvasPublication({ candidates: project(record), selectedIds: ['workbench:second'], previousDocument: doc });
-  assert.deepEqual(publishedCompositionEntries(next, 'profile').map(item => item.id), ['reception']);
-  assert.deepEqual(publishedCompositionEntries(next, 'gallery').map(item => item.id), ['workbench:second']);
+    placements: { 'workbench:main': [] } }), /Choose Gallery/);
 });
 
 test('named Studio composition survives publication and fresh restore with private layers excluded', () => {
@@ -298,16 +283,14 @@ test('named Bento sources resolve against selected and retained named works, inc
 
 test('removing Gallery from a work on both pages retains its full Profile composition', () => {
   const record = fixture();
-  record.shared.reception = createReceptionEditorDocument();
-  const ids = ['workbench:main', 'workbench:second', 'reception'];
+  const ids = ['workbench:main', 'workbench:second'];
   const published = buildCanvasPublication({ candidates: project(record), includeShared: true, selectedIds: ids,
     placements: Object.fromEntries(ids.map(id => [id, ['gallery', 'profile']])) });
   for (const id of ids) {
     const original = structuredClone(published);
     const removed = buildGalleryRemoval(published, id, published.exportedAt);
     const expected = structuredClone(original);
-    if (id === 'reception') expected.receptionDestinations = ['profile'];
-    else (id === expected.canvas.id ? expected.canvas : expected.canvases[0]).destinations = ['profile'];
+    (id === expected.canvas.id ? expected.canvas : expected.canvases[0]).destinations = ['profile'];
     expected.revision++;
     assert.deepEqual(removed, expected);
     assert.deepEqual(published, original);
@@ -316,26 +299,19 @@ test('removing Gallery from a work on both pages retains its full Profile compos
   }
 });
 
-test('physical removal handles primary, secondary and Gallery-only legacy Bento without altering retained works', () => {
+test('physical removal handles primary and secondary works without altering retained works', () => {
   const record = fixture();
-  record.shared.reception = createReceptionEditorDocument();
   record.workbenches[0].content.composition = createStudioComposition('bento');
   const doc = buildCanvasPublication({ candidates: project(record), includeShared: true,
-    selectedIds: ['workbench:main', 'workbench:second', 'reception'], placements: { reception: ['gallery'] } });
+    selectedIds: ['workbench:main', 'workbench:second'], placements: {} });
   const [primary, second] = publishedCanvasEntries(doc);
   const original = structuredClone(doc);
   const removedPrimary = buildGalleryRemoval(doc, primary.id, doc.exportedAt);
   assert.deepEqual(publishedCanvasEntries(removedPrimary), [second]);
   assert.doesNotMatch(canonicalSerializeProfileDocumentV9(removedPrimary), /Removed source|First canvas/);
-  assert.deepEqual(removedPrimary.reception, doc.reception);
   assert.deepEqual(removedPrimary.identityPresentation, doc.identityPresentation);
   const removedSecondary = buildGalleryRemoval(doc, second.id);
   assert.deepEqual(publishedCanvasEntries(removedSecondary), [primary]);
-  assert.deepEqual(removedSecondary.reception, doc.reception);
-  const removedBento = buildGalleryRemoval(doc, 'reception');
-  assert.deepEqual(publishedCanvasEntries(removedBento), [primary, second]);
-  assert.equal(Object.hasOwn(removedBento, 'reception'), false);
-  assert.equal(Object.hasOwn(removedBento, 'receptionDestinations'), false);
   assert.deepEqual(buildGalleryRemoval(doc, primary.id, doc.exportedAt), removedPrimary);
   assert.deepEqual(doc, original);
 });
@@ -344,13 +320,10 @@ test('removing the last work leaves an empty verified profile and supports a lat
   const record = fixture();
   record.workbenches[0].content.composition = createStudioComposition('bento');
   record.shared.identityPresentation.alias = 'Public identity';
-  record.shared.reception = createReceptionEditorDocument();
   const named = publish(record, ['workbench:main']);
   const implicit = structuredClone(named);
   delete implicit.canvas; delete implicit.canvases;
-  const bento = buildCanvasPublication({ candidates: project(record), includeShared: true,
-    selectedIds: ['reception'], placements: { reception: ['gallery'] } });
-  for (const doc of [named, implicit, bento]) {
+  for (const doc of [named, implicit]) {
     const id = publishedCompositionEntries(doc, 'gallery')[0].id;
     const empty = buildGalleryRemoval(doc, id, doc.exportedAt);
     assert.equal(empty.canvas, null);
@@ -377,21 +350,19 @@ test('removing the last work leaves an empty verified profile and supports a lat
 
 test('batch Gallery removal promotes the first surviving work and commits mixed placements in one revision', () => {
   const record = fixture();
-  record.shared.reception = createReceptionEditorDocument();
   const [first, second, third] = record.workbenches.map(item => item.id);
-  const ids = [first, second, third, 'reception'];
+  const ids = [first, second, third];
   const common = { candidates: project(record), includeShared: true, selectedIds: ids };
-  const published = buildCanvasPublication({ ...common, placements: { [second]: ['gallery', 'profile'], reception: ['gallery', 'profile'] } });
+  const published = buildCanvasPublication({ ...common, placements: { [second]: ['gallery', 'profile'] } });
   const original = structuredClone(published);
   const remove = selection => buildGalleryRemoval(published, selection, published.exportedAt);
-  const selection = [first, second, 'reception'];
+  const selection = [first, second];
   const result = remove(selection);
   assert.equal(result.revision, published.revision + 1);
   assert.deepEqual(result, remove([...selection].reverse()));
   assert.deepEqual(publishedCanvasEntries(result), [{ ...published.canvases[0], destinations: ['profile'] }, published.canvases[1]]);
   assert.deepEqual(publishedCompositionEntries(result, 'gallery').map(item => item.id), [third]);
-  assert.deepEqual(publishedCompositionEntries(result, 'profile').map(item => item.id), [second, 'reception']);
-  assert.deepEqual(result.reception, published.reception);
+  assert.deepEqual(publishedCompositionEntries(result, 'profile').map(item => item.id), [second]);
   assert.deepEqual(result.identityPresentation, published.identityPresentation);
   assert.deepEqual(result.profile, published.profile);
   assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(result)), result);
@@ -399,7 +370,7 @@ test('batch Gallery removal promotes the first surviving work and commits mixed 
   assert.throws(() => buildGalleryRemoval(result, [first, third]), /no longer in the published Gallery/);
   assert.deepEqual(published, original);
 
-  const allGallery = buildCanvasPublication({ ...common, placements: { reception: ['gallery'] } });
+  const allGallery = buildCanvasPublication({ ...common, placements: {} });
   const empty = buildGalleryRemoval(allGallery, ids);
   assert.deepEqual(publishedCompositionEntries(empty), []);
   assert.equal(empty.revision, allGallery.revision + 1);
@@ -431,11 +402,10 @@ test('mutually linked Gallery works can be removed together, and only surviving 
 
   record.workbenches[2].name = 'Third canvas';
   record.workbenches[2].content.composition = linkedTo(first);
-  record.shared.reception = linkedTo(second);
-  const shared = publish(record, [third, 'reception'], both);
+  const shared = publish(record, [third], both);
   const before = structuredClone(shared);
   assert.throws(() => buildGalleryRemoval(shared, [first, second]), error =>
-    error.message.includes('Third canvas') && error.message.includes('Bento') && !/First canvas|Second canvas/.test(error.message));
+    error.message.includes('Third canvas') && !/First canvas|Second canvas/.test(error.message));
   assert.deepEqual(shared, before);
 
   const dual = buildCanvasPublication({ candidates: project(record), selectedIds: [first], previousDocument: both,
@@ -445,13 +415,11 @@ test('mutually linked Gallery works can be removed together, and only surviving 
 
 test('current v9 documents validate with optional Gallery destinations and Studio composition content', () => {
   const record = fixture();
-  record.shared.reception = createReceptionEditorDocument();
   const [first, second] = record.workbenches.map(item => item.id);
-  const modern = publish(record, [first, second, 'reception']);
+  const modern = publish(record, [first, second]);
   const legacy = structuredClone(modern);
   delete legacy.canvas.destinations;
   delete legacy.canvases[0].destinations;
-  delete legacy.receptionDestinations;
   const implicit = structuredClone(legacy);
   delete implicit.canvas;
   delete implicit.canvases;
@@ -459,13 +427,12 @@ test('current v9 documents validate with optional Gallery destinations and Studi
     assert.equal(validateProfileDocumentV9(compatible).valid, true);
   }
 
-  const native = projectReception(createStudioComposition('canvas'));
+  const native = projectComposition(createStudioComposition('canvas'));
   for (const change of [
     doc => { doc.canvas.destinations = ['gallery']; },
     doc => { doc.canvases[0].destinations = ['gallery']; },
     doc => { doc.composition = native; },
     doc => { doc.canvases[0].content.composition = native; },
-    doc => { doc.receptionDestinations = ['profile']; },
   ]) {
     const updated = structuredClone(legacy);
     change(updated);
@@ -474,4 +441,33 @@ test('current v9 documents validate with optional Gallery destinations and Studi
   const empty = buildGalleryRemoval(legacy, [first, second]);
   assert.equal(empty.canvas, null);
   assert.equal(validateProfileDocumentV9(empty).valid, true);
+});
+
+test('publishing named compositions keeps Gallery and Profile independent of discarded local profile data', () => {
+  const record = fixture();
+  record.shared.reception = { corrupt: true };
+  record.workbenches[0].name = 'The Last one';
+  record.workbenches[0].content = { ...record.workbenches[0].content, composition: createStudioComposition('bento') };
+  const candidates = project(record);
+  assert.deepEqual(candidates.map(item => item.name), ['The Last one', 'Second canvas', 'Never published']);
+  for (const destinations of [['gallery'], ['profile'], ['gallery', 'profile']]) {
+    const document = buildCanvasPublication({ candidates, selectedIds: ['workbench:main'], includeShared: true,
+      placements: { 'workbench:main': destinations } });
+    assert.deepEqual(document.canvas.destinations, destinations);
+    assert.doesNotMatch(JSON.stringify(document), /"reception(?:Destinations)?"/iu);
+    for (const target of ['gallery', 'profile'])
+      assert.deepEqual(publishedCompositionEntries(document, target).map(entry => entry.name), destinations.includes(target) ? ['The Last one'] : []);
+  }
+});
+test('an existing signed ordinary Bento stays readable and a new revision emits only its artwork fields', () => {
+  const record = fixture();
+  record.workbenches[0].content = { ...record.workbenches[0].content, composition: createStudioComposition('bento') };
+  const document = publish(record, ['workbench:main']);
+  document.composition.branding = { name: '', logo: null };
+  const bytes = JSON.stringify(document);
+  const verified = parseProfileDocumentV9Json(bytes);
+  const next = publish(record, ['workbench:second'], verified);
+  assert.equal(JSON.stringify(verified), bytes);
+  assert.equal(Object.hasOwn(next.composition, 'branding'), false);
+  assert.deepEqual(next.composition.cells, verified.composition.cells);
 });

@@ -66,7 +66,7 @@ async function mount(page, visitor = false) {
     createRoot(document.getElementById('root')).render(React.createElement(Component, props));
   }, visitor);
   await page.locator('[data-workbench-view-id="image:three"]').waitFor();
-  await page.locator('.text-window').waitFor(); await settle(page);
+  await page.locator('aside.text-window').waitFor(); await settle(page);
   await page.evaluate(() => document.fonts.ready); await settle(page);
   await resetCameraTestView(page, visitor);
 }

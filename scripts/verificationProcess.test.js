@@ -26,14 +26,15 @@ test('Windows termination rejects a mismatched identity and accepts a proven pro
   const result = await terminateWindowsProcess(entry);
   assert.equal(result.code, 0, 'the process disappeared before the native handle checkpoint');
 });
-async function treeFixture(t, { exitAfter } = {}) {
+async function treeFixture(t, { exitWhenObserved = false } = {}) {
   const output = await mkdtemp(resolve(tmpdir(), 'inscape-process-'));
   t.after(() => rm(output, { recursive: true, force: true }));
   const target = resolve(output, 'pids.json');
-  const source = `const {spawn}=require('node:child_process'); const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore',windowsHide:true,detached:${Boolean(exitAfter)}}); child.unref();
+  const release = resolve(output, 'exit-root');
+  const source = `const {spawn}=require('node:child_process'); const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore',windowsHide:true,detached:${exitWhenObserved}}); child.unref();
     require('node:fs').writeFileSync(${JSON.stringify(target)},JSON.stringify({root:process.pid,child:child.pid}));
-    ${exitAfter ? `setTimeout(()=>process.exit(0),${exitAfter})` : 'setInterval(()=>{},1000)'};`;
-  return { args: ['-e', source], pids: async () => JSON.parse(await readFile(target, 'utf8')) };
+    ${exitWhenObserved ? `setInterval(()=>{if(require('node:fs').existsSync(${JSON.stringify(release)}))process.exit(0)},25)` : 'setInterval(()=>{},1000)'};`;
+  return { args: ['-e', source], releaseRoot: () => writeFile(release, ''), pids: async () => JSON.parse(await readFile(target, 'utf8')) };
 }
 
 test('normal command success and crash status remain distinct', { timeout: 30_000 }, async () => {
@@ -115,11 +116,21 @@ test('abort waits for the owned child tree to exit and keeps interruption explic
 });
 
 test('an observed child is cleaned even after its short-lived root exits successfully', { timeout: 30_000 }, async t => {
-  const fixture = await treeFixture(t, { exitAfter: 3000 });
+  const fixture = await treeFixture(t, { exitWhenObserved: true });
   const observations = [];
   const result = await run({ args: fixture.args, createTree: options => {
     const tree = createOwnedProcessTree(options);
-    return { ...tree, observe: async () => { const entries = await tree.observe(); observations.push({ entries, owned: tree.ownedPids() }); return entries; } };
+    return { ...tree, observe: async () => {
+      const entries = await tree.observe(), owned = tree.ownedPids();
+      observations.push({ entries, owned });
+      if (owned.length > 1) {
+        const pids = await fixture.pids().catch(error => {
+          if (error.code !== 'ENOENT') throw error;
+        });
+        if (pids && owned.includes(pids.child)) await fixture.releaseRoot();
+      }
+      return entries;
+    } };
   } });
   const observedChild = (await fixture.pids()).child;
   assert.ok(observations.some(observation => observation.owned.includes(observedChild)));

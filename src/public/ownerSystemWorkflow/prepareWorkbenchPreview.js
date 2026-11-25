@@ -27,13 +27,13 @@ export default async function prepareWorkbenchPreview(input) {
   if (projectionError || !workbench) throw new Error(projectionError || 'The layout is not ready.');
   if (textRecoveries(store, profileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
 
-  const [{ projectReception }, { publishedPresentationSnapshot }] = await Promise.all([
-    import('../../profileDocument/domain/receptionPresentation.js'),
+  const [{ projectCompositionEditorDocument }, { publishedPresentationSnapshot }] = await Promise.all([
+    import('../../composition/compositionEditorDocument.js'),
     import('../../presentation/presentationSources.js'),
   ]);
   if (!current()) return null;
   const draft = composition
-    ? { profileAddress, composition: projectReception({ ...composition, workbench }) }
+    ? { profileAddress, composition: projectCompositionEditorDocument({ ...composition, workbench }) }
     : await projectCanvas(input);
   if (!current() || !draft) return null;
   if (textRecoveries(store, profileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);

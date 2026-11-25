@@ -13,24 +13,24 @@
       "rationale": "Profile-scoped migration, committed revisions, reload, backup restore, quota recovery and stale hydration preserve authored work."
     },
     {
-      "name": "reception-text-cell-height",
+      "name": "composition-text-cell-height",
       "category": "release",
       "rationale": "Shared cell edges crop stationary text; numeric height preserves its local inset while growing the Bento, with Undo, reload and matching public preview."
     },
     {
-      "name": "reception-local-editing",
+      "name": "composition-local-editing",
       "category": "release",
       "rationale": "Local cell creation and numeric sizing preserve text placement across keyboard previews, cancellation, failed saves, Undo/Redo and reload at wide and narrow desktop sizes."
     },
     {
-      "name": "reception-single-line",
+      "name": "composition-single-line",
       "category": "release",
-      "rationale": "An explicit single-line cell keeps its height, fades horizontally without a reading action, and persists through Reception Undo/Redo and reload."
+      "rationale": "An explicit single-line cell keeps its height, fades horizontally without a reading action, and persists through Composition Undo/Redo and reload."
     },
     {
       "name": "interface-theme",
       "category": "release",
-      "rationale": "One persistent Dark/Light preference across Settings, portal menus, Reception, canvas overview, and login without editing compositions.",
+      "rationale": "One persistent Dark/Light preference across Settings, portal menus, Composition, canvas overview, and login without editing compositions.",
       "prerequisites": [
         "Host: runner_vite.",
         "INSCAPE_TEST_ORIGIN={origin}"
@@ -56,14 +56,9 @@
       "rationale": "Twelve animated SVG documents survive repeated offscreen camera pans, pause/resume, preserve identity and avoid reload labels in Owner and Visitor at wide/narrow viewports."
     },
     {
-      "name": "reception-styling",
+      "name": "composition-styling",
       "category": "release",
-      "rationale": "Filled Reception typography across reader/editor, header editing, shared Colour and nested touch controls in Reception and Workbench. Also runs against dist with INSCAPE_STYLING_PRODUCTION=1."
-    },
-    {
-      "name": "reception-boundaries",
-      "category": "release",
-      "rationale": "Owner draft/public isolation, cross-tab refresh, backup recovery, focus, authored typography and touch controls."
+      "rationale": "Filled Composition typography across reader/editor, header editing, shared Colour and nested touch controls in Composition and Workbench. Also runs against dist with INSCAPE_STYLING_PRODUCTION=1."
     },
     {
       "name": "mixed-composition",
@@ -239,16 +234,6 @@
       "name": "published-workbench-groups",
       "category": "release",
       "rationale": "Bestaande release-default onverkort behouden. Concrete controle: published groups share browsing, reading and Back without owner tools or private membership."
-    },
-    {
-      "name": "reception-card",
-      "category": "release",
-      "rationale": "Bestaande release-default behouden: ondanks de oude bestandsnaam bevat deze nu de Reception-wireframevervanging en canonieke links. Niet als historisch classificeren op naam."
-    },
-    {
-      "name": "exploration-keeper",
-      "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: room reuses Keeper Library drop, live swim speed, flight, recall and saved settings without duplication."
     },
     {
       "name": "shapes",
@@ -490,7 +475,7 @@
     {
       "name": "destination-panels",
       "category": "release",
-      "rationale": "Release: Publish, Docs, Profile, Groups en Index gebruiken nieuwe gedeelde vensterchrome; close, focus, interne scroll en acties moeten bereikbaar blijven."
+      "rationale": "Release: Publish, Profile, Groups en Index gebruiken nieuwe gedeelde vensterchrome; close, focus, interne scroll en acties moeten bereikbaar blijven."
     },
     {
       "name": "activity-recovery",
@@ -1048,15 +1033,6 @@
       "rationale": "Release: expliciete camera-bestemmingen, onderbroken Back, late doelwijziging en zoomindicatie vullen de nieuwe Navigator- en bestemmingspanelencontroles aan."
     },
     {
-      "name": "workbench-docs",
-      "category": "targeted",
-      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: Docs tabs explain the current modules and remain usable at wide and narrow widths.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
-      ]
-    },
-    {
       "name": "workbench-explore",
       "category": "performance",
       "rationale": "Prestatie met gedragsdekking: meet React-commits tijdens gevuld Workbench-pan/coast en controleert geometry/reduced-motion/scroll; gericht draaien bij camera- of renderingwijzigingen.",
@@ -1322,92 +1298,59 @@
       "rationale": "Workbench-voorkeuren behouden de laatste instellingen bij opslagfalen, tonen onafhankelijke herstelacties en vervangen onleesbare records alleen expliciet."
     },
     {
-      "name": "reception-rich-cell",
-      "category": "targeted",
-      "rationale": "Isolated rich-cell feasibility experiment; not a production content model or authoring route.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_TEST_ROOT={origin}"
-      ]
-    },
-    {
       "name": "scene-boundaries",
       "category": "release",
-      "rationale": "Reception, public artwork and Gallery preserve navigation and scroll."
+      "rationale": "Composition, public artwork and Gallery preserve navigation and scroll."
     },
     {
-      "name": "reception-linked",
-      "category": "release",
-      "rationale": "Linked Reception cells share authored slide order and playback across editor, preview and public view."
-    },
-    {
-      "name": "reception-overview-navigation",
-      "category": "release",
-      "rationale": "Reception review Canvases opens the existing overview; canvas inspection and About return preserve the local draft and restore owner editing at desktop and mobile widths.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_TEST_ROOT={origin}"
-      ]
-    },
-    {
-      "name": "reception-gutter-pixels",
+      "name": "composition-gutter-pixels",
       "category": "release",
       "rationale": "Bento gutter coverage at fractional zoom and pixel phases; positive gaps remain visible without inventing spacing, and zero gutters remain seamless."
     },
     {
-      "name": "reception-bento-placement",
+      "name": "composition-bento-placement",
       "category": "release",
       "rationale": "Bento equal-edge snapping and cancellation, left/upper insertion and full-width strip relocation with Undo and reload at desktop sizes."
     },
     {
-      "name": "reception-frame-opacity",
+      "name": "composition-frame-opacity",
       "category": "release",
       "rationale": "Frame line opacity uses shared controls and survives undo, reload and Preview without changing geometry."
     },
     {
-      "name": "reception-inspect",
+      "name": "composition-inspect",
       "category": "release",
       "rationale": "Introductory text excerpts, fixed ellipsis, compact scrollbar-free reading, keyboard return and unchanged saved content."
     },
     {
-      "name": "reception-text-resize",
+      "name": "composition-text-resize",
       "category": "release",
       "rationale": "Bento text keeps resize axes independent and clips complete lines in native Editor at different zooms, including live preview, Undo and reload."
     },
     {
-      "name": "reception-native-editor",
+      "name": "composition-native-editor",
       "category": "release",
-      "rationale": "Reception in the existing Editor: native rectangles, cell membership, Library and Text, movement, history, isolated persistence and responsive preview."
+      "rationale": "Composition in the existing Editor: native rectangles, cell membership, Library and Text, movement, history, isolated persistence and responsive preview."
     },
     {
-      "name": "reception-atmosphere",
-      "category": "release",
-      "rationale": "Reception page lighting saves atomically, survives history and reload, and reaches public presentation without changing authored cells."
-    },
-    {
-      "name": "reception-image-inspect",
+      "name": "composition-image-inspect",
       "category": "release",
       "rationale": "Passive introductory artwork preserves crops and live media; stacked text reading and document replacement preserve the draft."
     },
     {
-      "name": "reception-svg-breakpoints",
+      "name": "composition-svg-breakpoints",
       "category": "release",
-      "rationale": "Live SVG documents survive repeated narrow/wide Reception reflow and artwork clicks without disappearing, restarting animation or changing the draft."
+      "rationale": "Live SVG documents survive repeated narrow/wide Composition reflow and artwork clicks without disappearing, restarting animation or changing the draft."
     },
     {
-      "name": "reception-reader",
+      "name": "composition-cell-interaction",
       "category": "release",
-      "rationale": "Saved Reception readers preserve mobile ordering, image masks, transparent SVG crop geometry and accessible artwork recovery."
+      "rationale": "Native Composition cell entry from actual double-clicks, image-covered cells, scoped Bento settings, shared split/merge actions and selected-cell styling."
     },
     {
-      "name": "reception-cell-interaction",
+      "name": "composition-layer-order",
       "category": "release",
-      "rationale": "Native Reception cell entry from actual double-clicks, image-covered cells, scoped Bento settings, shared split/merge actions and selected-cell styling."
-    },
-    {
-      "name": "reception-layer-order",
-      "category": "release",
-      "rationale": "Native Reception, preview and public rendering preserve interleaved global artwork order, rounded cell clipping, Text appearance and linked source actions."
+      "rationale": "Native Composition, preview and public rendering preserve interleaved global artwork order, rounded cell clipping, Text appearance and linked source actions."
     },
     {
       "name": "editor-menu-bar",
@@ -1429,7 +1372,7 @@
       "rationale": "Shared owner frame, contextual menus, bidirectional canvas presentation, retained camera and save guards, reduced motion and narrow viewport behavior."
     },
     {
-      "name": "reception-tiling",
+      "name": "composition-tiling",
       "category": "release",
       "rationale": "Native Bento centre swap, local/outer insertion, exact preview, cancellation and atomic save/Undo/reload."
     },

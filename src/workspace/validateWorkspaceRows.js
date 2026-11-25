@@ -1,6 +1,6 @@
+import { workbenchTextRecovery } from '../text/textEditRecovery.js';
 import { normalizeWorkspace } from '../library/storage/libraryWorkspaceStorage.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
-import { parseLegacyWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
 
 export { pendingProfileText } from '../text/textEditRecovery.js';
 
@@ -20,10 +20,11 @@ export function validateWorkspaceRows(rows, profile, verified = false) {
     const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: { getItem: () => rows.workbenches } });
     if (store.getRecordState().status !== 'valid') throw Error('Invalid saved Workbench or article draft.');
   }
-  if (rows.receptionRecovery !== null) parseLegacyWorkbenchBackup(rows.receptionRecovery, profile);
   if (rows.textRecovery !== null) {
-    const contexts = JSON.parse(rows.textRecovery);
-    if (!Array.isArray(contexts) || contexts.some(pair => !Array.isArray(pair) || pair.length !== 2
+    const stored = JSON.parse(rows.textRecovery);
+    if (!Array.isArray(stored)) throw Error('Invalid text recovery record.');
+    const contexts = workbenchTextRecovery(stored, profile) || [];
+    if (contexts.some(pair => !Array.isArray(pair) || pair.length !== 2
       || typeof pair[0] !== 'string' || !pair[0].startsWith(profile + '/') || !Array.isArray(pair[1])
       || pair[1].some(entry => entry?.scope?.profile !== profile || !entry.scope.id
         || !entry.expected || !Object.hasOwn(entry, 'value') || typeof entry.failure?.message !== 'string'))) throw Error('Invalid text recovery record.');

@@ -174,7 +174,7 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
           ['0x' + '2'.repeat(40), 'INVALID_DOCUMENT'],
           [other, 'HASH_MISMATCH'],
         ]) {
-          await open(`?view=${other}&reception=published&owner=${account}&publicationFailure=${failure}`);
+          await open(`?view=${other}&owner=${account}&publicationFailure=${failure}`);
           await page.getByRole('heading', { name: /^invalid published profile$/i }).waitFor();
           assert.equal(await action.count(), 0);
         }

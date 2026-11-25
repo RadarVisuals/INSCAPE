@@ -16,7 +16,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
         return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
       return route.abort();
     });
-    await page.goto(origin + '/browser-tests/reception-editor-fixture.html?sample&image-choices&session=divider-' + theme);
+    await page.goto(origin + '/browser-tests/library-images-fixture.html?long-navigation');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).waitFor();
     if (theme === 'light') await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
@@ -30,7 +30,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
       await page.mouse.move(box.x + box.width / 2 + dx, box.y + box.height / 2, { steps: 5 }); await page.mouse.up(); await settle();
     };
     const resize = async width => dragBy(edge, width - (await panel.boundingBox()).width);
-    const draft = await page.evaluate(() => JSON.stringify(window.receptionFixture.root.getDraft()));
+    const draft = await page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
     await dragBy(divider, -250);
     const compactX = (await divider.boundingBox()).x;
     for (const width of [390, 418, 420, 422, 450, 500, 390]) {
@@ -92,7 +92,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
     assert.equal((await divider.boundingBox()).x, compactX); await checkBadge();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await page.screenshot({ path: '.browser-test-runtime/library-divider/' + theme + '-narrow.png' });
-    assert.equal(await page.evaluate(() => JSON.stringify(window.receptionFixture.root.getDraft())), draft);
+    assert.equal(await page.evaluate(() => JSON.stringify(window.__imageTest.draft())), draft);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

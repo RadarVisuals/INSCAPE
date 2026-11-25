@@ -12,7 +12,7 @@ async function exposeText(page) {
 }
 
 async function exposeReadAction(page) {
-  const win = page.locator('.text-window').first();
+  const win = page.locator('aside.text-window').first();
   await win.hover();
   const read = page.getByRole('button', { name: 'Read', exact: true });
   const action = await read.boundingBox(), menu = await page.locator('.editor-menu-bar').boundingBox();

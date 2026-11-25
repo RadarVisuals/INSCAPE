@@ -22,7 +22,7 @@ for (const width of [1920, 390]) test(`artwork selection, linked content, isolat
     });
     await page.goto(origin + '/browser-tests/scene-boundaries-fixture.html');
     const a = page.getByRole('region', { name: 'Workbench 1', exact: true }), b = page.getByRole('region', { name: 'Second canvas', exact: true });
-    await a.locator('.reception-artwork [data-media-state=ready]').waitFor();
+    await a.locator('.composition-artwork [data-media-state=ready]').waitFor();
     assert.equal(await page.locator('vite-error-overlay').count(), 0, await page.locator('vite-error-overlay').allTextContents());
     const before = await page.evaluate(() => JSON.stringify(localStorage));
     const first = await a.locator('[data-scene]').textContent();
@@ -43,7 +43,7 @@ for (const width of [1920, 390]) test(`artwork selection, linked content, isolat
     await a.getByRole('button', { name: 'Remove source', exact: true }).click();
     assert.ok(await a.getByRole('status').getByText('Source unavailable').isVisible());
     await a.getByRole('button', { name: 'Restore source', exact: true }).click();
-    await a.locator('.reception-artwork [data-media-state=ready]').waitFor();
+    await a.locator('.composition-artwork [data-media-state=ready]').waitFor();
     await page.getByRole('button', { name: 'New presentation session', exact: true }).click();
     assert.equal(await a.locator('[data-scene]').textContent(), first);
     const card = page.getByRole('button', { name: 'Open Workbench 1', exact: true });

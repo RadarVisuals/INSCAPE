@@ -19,7 +19,7 @@ for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
       await mountGridMotionFixture(page, { origin, visitor, textModes: true, count: 3,
         adjoiningModules: { textTransform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
           textAppearance: { opacity: .5, edges: { corners: [0, 16, 24, 8], shadow: false, grain: 0 } } } });
-      const text = page.locator('.text-window'); await text.waitFor();
+      const text = page.locator('aside.text-window'); await text.waitFor();
       if (!visitor) {
         await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
         await sharedToolPanel(page).waitFor({ state: 'detached' });

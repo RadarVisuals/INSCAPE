@@ -1,4 +1,4 @@
-import { MIN_RECEPTION_CELL_SIZE } from '../../reception/editorCellGeometry.js';
+import { MIN_COMPOSITION_CELL_SIZE } from '../../composition/editorCellGeometry.js';
 import { validWorkbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
 import { MAX_TEXT_MODULES, TEXT_ID, exact } from '../../text/domain/article.js';
 import { MAX_IMAGE_MODULES, IMAGE_MODULE_ID } from '../../imageModule/imageModule.js';
@@ -8,7 +8,7 @@ import { MAX_KEEPER_DOCKS, KEEPER_ID } from '../../keeper/keeper.js';
 const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
 const maximumWindowSize = 16384;
 export const TEXT_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 24, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
-export { MIN_RECEPTION_CELL_SIZE };
+export { MIN_COMPOSITION_CELL_SIZE };
 export const CELL_TEXT_WINDOW_LIMITS = Object.freeze({ ...TEXT_WINDOW_LIMITS, minimumWidth: 1, minimumHeight: 1 });
 export const SHAPE_WINDOW_LIMITS = Object.freeze({ minimumWidth: 8, minimumHeight: 8, maximumWidth: 7992, maximumHeight: 7992 });
 const position = value => exact(value, ['left', 'top']) && number(value.left, -16384, 16384) && number(value.top, -16384, 16384);

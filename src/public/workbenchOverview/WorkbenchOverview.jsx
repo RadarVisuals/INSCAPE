@@ -45,7 +45,7 @@ function DetailsForm({ selected, onSave, onCancel, creating }) {
   </form>;
 }
 
-export default function WorkbenchOverview({ toolbarHost, items, selected, model, previews, view, onViewChange, profile, onSelect, onEdit, onCreate, onRequestNew, onManageWorks, onDeleteDraft, onRemoveFromGallery, collectionManager, onSave, onOpenReception, onEditReception,
+export default function WorkbenchOverview({ toolbarHost, items, selected, model, previews, view, onViewChange, profile, onSelect, onEdit, onCreate, onRequestNew, onManageWorks, onDeleteDraft, onRemoveFromGallery, collectionManager, onSave, onOpenProfile,
   cardSize, onCardSize, onRename, onReorder, preferenceError, onRetryPreferences, workspace, visitorHeader, galleryAddress, cameraMemory }) {
   const selection = useGallerySelection(items, Boolean(onRemoveFromGallery));
   const [editing, setEditing] = useState(null), [error, setError] = useState('');
@@ -268,7 +268,7 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
     </section>
     </div> : <CompositionIndex onDeleteDraft={onDeleteDraft} onRename={onRename} onReorder={onReorder} items={items} selected={selected} model={model} profile={profile} listRef={list} settings={settings} disabled={Boolean(editing)}
       memory={memory} visitorHeader={visitorHeader} smoothZoom={published} hiddenRails={hiddenRails} onToggleRail={published ? toggleRail : undefined} movingCanvasId={movingCanvasId}
-      onSelect={preview} selection={selection.active ? selection : null} onEdit={onEdit ? edit : undefined} onOpenReception={onOpenReception} onEditReception={onEditReception}
+      onSelect={preview} selection={selection.active ? selection : null} onEdit={onEdit ? edit : undefined} onOpenProfile={onOpenProfile}
       onGrid={() => onViewChange({ ...view, layout: 'grid' })}
       onDetails={onSave ? event => manage(selected.id, 'details', event.currentTarget) : undefined}
       />}

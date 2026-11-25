@@ -5,12 +5,12 @@ import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { artworkModuleId, artworkRecords } from '../../systemWorkflow/domain/artworkLayers.js';
 import { commitWorkbenchSelectionResize } from '../../systemWorkflow/resizeWorkbenchSelection.js';
 import { MetadataDockContent, useSharedDisplayTools } from './SharedDisplayTools.jsx';
-import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
+import { useEditorCells } from '../../composition/EditorCellsContext.jsx';
 import { useSharedTextTools, SharedTextToolsInspectorContent } from '../../text/SharedTextTools.jsx';
 import InspectorColourPreferences from '../../colour/InspectorColourPreferences.jsx';
 import './workbenchSharedTools.css';
 
-const EditorCellPositionControls = lazy(() => import('../../reception/EditorCellPositionControls.jsx'));
+const EditorCellPositionControls = lazy(() => import('../../composition/EditorCellPositionControls.jsx'));
 
 function TransformControls({ id, blocked, linkable, aspect, onLinkChange }) {
   const view = useWorkbenchView(), { editingBounds } = useWorkbenchArea();

@@ -22,7 +22,7 @@ import '../public/ownerSystemWorkflow/workbenchSharedTools.css';
 import './keeper.css';
 
 function KeeperDock({ record, index, initialPresentation, store, profileAddress, hostRef, registerTarget,
-  dockPositions, suspended, exiting, reducedMotion, flightAreaRef, motionSpace, navigationRef }) {
+  dockPositions, suspended, exiting, reducedMotion, navigationRef }) {
   const view = useWorkbenchView();
   const utility = useWorkbenchUtilityWindow(index ? index + 1 : 0, dockPositions?.current[record.id] || initialPresentation?.position,
     position => { if (dockPositions) dockPositions.current = { ...dockPositions.current, [record.id]: position }; });
@@ -51,7 +51,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   const size = keeperSize(record), swim = keeperSwim(record);
   const { getSelection } = useWorkbenchActions();
   const snake = movement === 'swim' && layered.rig?.kind === 'snake';
-  const { phase, toggle, settle, captureReaction, cancelReaction, nudge } = useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef, motionSpace, enabled: Boolean(src) && status === 'ready' && !suspended,
+  const { phase, toggle, settle, captureReaction, cancelReaction, nudge } = useKeeperMotion({ dock, actor, rigActor, hostRef, enabled: Boolean(src) && status === 'ready' && !suspended,
     reducedMotion, faces: record.faces, size, movement, swim, paused: talking, onPosition: conversationPosition, getSelection });
   useEffect(() => { setTalking(false); }, [src, record.asset?.stableAssetId, movement, suspended, phase]);
   useEffect(() => {
@@ -69,7 +69,8 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   const change = useCallback((changes, expected = latest.current) => {
     if (!editable || !live.current) return false;
     try {
-      if (!saveKeeperDock(store, profileAddress, expected, changes)) throw new Error('The Keeper dock was not saved. Try again.');
+      const saved = store.keeper ? store.keeper.save(expected, changes) : saveKeeperDock(store, profileAddress, expected, changes);
+      if (!saved) throw new Error('The Keeper dock was not saved. Try again.');
       setError(''); return true;
     } catch (failure) {
       setError(failure.message);
@@ -188,7 +189,8 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
             {record.asset && <button className="workflow-tactile-control" type="button" onClick={() => change({ asset: null })}>Empty dock</button>}
             <button className="workflow-tactile-control" type="button" onClick={() => {
               try {
-                if (!removeWorkbenchModule(store, profileAddress, 'keeper', record)) throw new Error('The dock could not be deleted. Try again.');
+                const removed = store.keeper ? store.keeper.remove(record) : removeWorkbenchModule(store, profileAddress, 'keeper', record);
+                if (!removed) throw new Error('The dock could not be deleted. Try again.');
                 hostRef.current?.focus({ preventScroll: true });
               } catch (failure) { setError(failure.message); }
             }}>Delete dock</button>

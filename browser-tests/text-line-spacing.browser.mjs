@@ -26,7 +26,7 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
     });
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), win = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), win = page.locator('aside.text-window');
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
     const setNumber = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const line = node => node.evaluate(n => getComputedStyle(n).lineHeight);

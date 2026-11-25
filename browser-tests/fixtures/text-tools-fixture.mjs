@@ -43,7 +43,7 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
       if (name === key && window.failSave) throw Error('storage full'); localStorage.setItem(name, value);
     } };
     const store = createSystemWorkflowDraftStore({ profileAddress, storage });
-    if (!store.getDraft().texts?.length) {
+    if (textCount > 0 && !store.getDraft().texts?.length) {
       const id = addTextModule(store, profileAddress), draft = store.getDraft();
       draft.texts[0].article.title = 'Titel kan rechtstreeks';
       draft.texts[0].article.content.content[0].content = [{ type: 'text', text: 'Vanaf hier kan je beginnen typen.' }];
@@ -69,6 +69,7 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
         addShape(store, profileAddress, { position: { left: 920, top: 660 } });
       }
     }
+    window.textFixtureStore = store;
     window.readDraft = () => store.getDraft();
     window.savedDraft = () => JSON.parse(storage.getItem(key));
     await import('/src/index.css'); await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
@@ -82,7 +83,7 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
     } else createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
       reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Text tools review' } }));
   }, { visitor, textCount, surfaces });
-  if (waitForText) await page.locator('.text-window').first().waitFor();
+  if (waitForText) await page.locator('aside.text-window').first().waitFor();
   if (!visitor && waitForText && await page.locator('.text-module-body > div:not([hidden])').count() && await page.getByRole('textbox', { name: 'Article text', exact: true }).count())
     await page.getByRole('textbox', { name: 'Article text', exact: true }).first().waitFor();
   await page.evaluate(() => document.fonts.ready);

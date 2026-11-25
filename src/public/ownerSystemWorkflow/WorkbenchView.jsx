@@ -36,7 +36,8 @@ import { WorkbenchCameraProvider, useWorkbenchCameraScale } from './WorkbenchCam
 import './workbenchView.css';
 import {
   artworkLayers,
-  artworkLocked, artworkModuleId,
+  artworkLocked,
+  artworkModuleId,
   artworkWindowIds,
   layerIds,
 } from '../../systemWorkflow/domain/artworkLayers.js';
@@ -58,12 +59,9 @@ import { pointInWorkbenchFrame } from './workbenchObjectPicking.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { marqueeContains } from './workbenchGrid.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
-import { EditorCellsProvider, useEditorCells } from '../../reception/EditorCellsContext.jsx';
-import {
-  editorCellForModule,
-  editorCellPreviewTransforms,
-} from '../../reception/editorCellGeometry.js';
-const ReceptionBentoEditor = lazy(() => import('../../reception/ReceptionBentoEditor.jsx'));
+import { EditorCellsProvider, useEditorCells } from '../../composition/EditorCellsContext.jsx';
+import { editorCellForModule, editorCellPreviewTransforms } from '../../composition/editorCellGeometry.js';
+const CompositionBentoEditor = lazy(() => import('../../composition/CompositionBentoEditor.jsx'));
 
 // Session-only view transforms, never module content or publication geometry.
 export function WorkbenchViewProvider(props) {
@@ -368,7 +366,10 @@ const emptySubscribe = () => () => {};
 export function WorkbenchViewControls({
   hostRef,
   bentoLibrary,
-  canvasColor, gridSnap, gridSpacing, bentoLibraryPreferences,
+  canvasColor,
+  gridSnap,
+  gridSpacing,
+  bentoLibraryPreferences,
   flushBentoLayout,
   renderMenuBar,
   disabled = false,
@@ -396,8 +397,12 @@ export function WorkbenchViewControls({
   const [moveError, setMoveError] = useState('');
   const [groupsOpen, setGroupsOpen] = useState(false);
   const canManageGroups = view.store && !view.store.getCells;
-  const stackContent = view.store?.getCells && view.layers.some(layer => layer.stackPosition)
-    ? view.content : !view.store && view.groupContent?.workbenchGroups?.length ? view.groupContent : null;
+  const stackContent =
+    view.store?.getCells && view.layers.some(layer => layer.stackPosition)
+      ? view.content
+      : !view.store && view.groupContent?.workbenchGroups?.length
+        ? view.groupContent
+        : null;
   const groupsReturnFocus = useRef(null);
   const controlsRef = useRef(null),
     inspectionTarget = useRef(null);
@@ -424,7 +429,8 @@ export function WorkbenchViewControls({
       previewMarquee: setMarquee,
       finishSnap: () => currentSnap.current.finish(),
       cancelDrop: () => {
-        cellDropNode.current?.removeAttribute('data-cell-drop'); cellDropNode.current = null;
+        cellDropNode.current?.removeAttribute('data-cell-drop');
+        cellDropNode.current = null;
         groupDrop.current?.cancel();
       },
     })
@@ -630,7 +636,10 @@ export function WorkbenchViewControls({
       : {}),
     isCurrent: () => latest.current.store === current.store && latest.current.entries === current.entries,
   });
-  const lockedSelection = (current, ids) => ids.some(id => artworkLocked(current.content, artworkModuleId(current.content, id), latestCells.current?.cells));
+  const lockedSelection = (current, ids) =>
+    ids.some(id =>
+      artworkLocked(current.content, artworkModuleId(current.content, id), latestCells.current?.cells)
+    );
   const moveOperation = (current, ids) => {
     if (lockedSelection(current, ids)) return null;
     const cells = latestCells.current;
@@ -657,31 +666,53 @@ export function WorkbenchViewControls({
     });
   };
   const beginDuplicate = event => {
-    const context = latestCells.current, current = latest.current;
+    const context = latestCells.current,
+      current = latest.current;
     if (!event.ctrlKey || !context?.store.duplicateLayers || !context.store.hasWriteAccess()) return false;
-    const target = event.target, stack = target.closest('[data-workbench-stack]');
+    const target = event.target,
+      stack = target.closest('[data-workbench-stack]');
     if (stack && !target.closest('.workbench-group-stack__grip')) return false;
-    if (!stack && target.closest('input,textarea,select,a,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable]):not([data-editor-cell-surface])')) return false;
+    if (
+      !stack &&
+      target.closest(
+        'input,textarea,select,a,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable]):not([data-editor-cell-surface])'
+      )
+    )
+      return false;
     const stackGroup = stack && current.layers.find(layer => layer.id === stack.dataset.workbenchStack);
     const module = target.closest('[data-workbench-view-id]');
-    const raw = target.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface || module?.dataset.workbenchViewId;
+    const raw =
+      target.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface ||
+      module?.dataset.workbenchViewId;
     const owner = editorCellForModule(context.cells, raw);
     const id = owner && owner.id !== context.editingCellId ? owner.id : raw;
-    const group = current.layers.find(layer => layer.children?.includes(id) && layer.id !== current.editingBlockId);
-    const ids = stackGroup?.children || (target.matches('.workbench-selection') || current.selection.includes(id)
-      ? current.selection : group?.children || (id ? [id] : []));
+    const group = current.layers.find(
+      layer => layer.children?.includes(id) && layer.id !== current.editingBlockId
+    );
+    const ids =
+      stackGroup?.children ||
+      (target.matches('.workbench-selection') || current.selection.includes(id)
+        ? current.selection
+        : group?.children || (id ? [id] : []));
     if (!ids.length) return false;
-    event.preventDefault(); event.stopPropagation();
-    const store = context.store, generation = store.getGeneration();
+    event.preventDefault();
+    event.stopPropagation();
+    const store = context.store,
+      generation = store.getGeneration();
     if (lockedSelection(current, ids)) return true;
     const nodes = stack ? [stack] : ids.map(id => current.entries.get(id)).filter(Boolean);
     const bounds = workbenchSelectionBounds(nodes.map(node => node.getBoundingClientRect()));
     if (!bounds) return true;
-    const camera = navigation.getCamera(), start = { x: event.clientX, y: event.clientY };
+    const camera = navigation.getCamera(),
+      start = { x: event.clientX, y: event.clientY };
     let delta;
     gestures.beginResize(event, {
       beforeTransforms: current.transforms,
-      valid: () => latest.current.store === store && store.isCurrent() && store.hasWriteAccess() && store.getGeneration() === generation,
+      valid: () =>
+        latest.current.store === store &&
+        store.isCurrent() &&
+        store.hasWriteAccess() &&
+        store.getGeneration() === generation,
       preview: movement => {
         delta = Math.hypot(movement.x, movement.y) >= 4 ? movement : null;
         setMarquee(delta && { ...bounds, left: bounds.left + delta.x, top: bounds.top + delta.y });
@@ -689,23 +720,45 @@ export function WorkbenchViewControls({
       commit: pointer => {
         if (!delta || Math.hypot(pointer.clientX - start.x, pointer.clientY - start.y) < 4) return true;
         try {
-          const shift = { x: (pointer.clientX - start.x) / camera.scale, y: (pointer.clientY - start.y) / camera.scale };
+          const shift = {
+            x: (pointer.clientX - start.x) / camera.scale,
+            y: (pointer.clientY - start.y) / camera.scale,
+          };
           const host = hostRef.current.getBoundingClientRect();
-          const point = { x: (pointer.clientX - host.left - camera.offset.x) / camera.scale,
-            y: (pointer.clientY - host.top - camera.offset.y) / camera.scale };
+          const point = {
+            x: (pointer.clientX - host.left - camera.offset.x) / camera.scale,
+            y: (pointer.clientY - host.top - camera.offset.y) / camera.scale,
+          };
           const owners = new Set(ids.map(id => editorCellForModule(context.cells, id)?.id));
           // A mixed selection keeps its individual memberships. A selection from
           // one surface follows the drop into a cell or onto free canvas.
-          const transfer = !stack && owners.size === 1 && !ids.some(id => context.cells.some(c => c.id === id));
-          const destination = transfer ? [...context.cells].reverse().find(c => {
-            const frame = current.frames.get(c.id)?.current;
-            return frame && !current.hiddenModuleIds.includes(c.id) && !current.editorHiddenIds.includes(c.id) && pointInWorkbenchFrame(point, frame);
-          })?.id || null : undefined;
-          const copies = store.duplicateLayers(ids, shift, destination, generation, current.getPresentation());
+          const transfer =
+            !stack && owners.size === 1 && !ids.some(id => context.cells.some(c => c.id === id));
+          const destination = transfer
+            ? [...context.cells].reverse().find(c => {
+                const frame = current.frames.get(c.id)?.current;
+                return (
+                  frame &&
+                  !current.hiddenModuleIds.includes(c.id) &&
+                  !current.editorHiddenIds.includes(c.id) &&
+                  pointInWorkbenchFrame(point, frame)
+                );
+              })?.id || null
+            : undefined;
+          const copies = store.duplicateLayers(
+            ids,
+            shift,
+            destination,
+            generation,
+            current.getPresentation()
+          );
           if (transfer) store.setEditingCell(destination);
           current.selectLayers(copies);
           setMoveError('');
-        } catch (error) { setMoveError(error.message); return false; }
+        } catch (error) {
+          setMoveError(error.message);
+          return false;
+        }
         return true;
       },
     });
@@ -725,9 +778,17 @@ export function WorkbenchViewControls({
     const memberIds = operation.ids.map(id => artworkModuleId(latest.current.content, id));
     const targetAt = hit => {
       if (hit[0]?.closest('.workspace-header, [data-workbench-toolbar], .workbench-tool-dock')) return null;
-      return hit.find(node => node.hasAttribute('data-editor-cell-surface') && hostRef.current.contains(node)
-        && context.cells.some(cell => cell.id === node.dataset.editorCellSurface &&
-          memberIds.some(id => !cell.members.includes(id)))) || null;
+      return (
+        hit.find(
+          node =>
+            node.hasAttribute('data-editor-cell-surface') &&
+            hostRef.current.contains(node) &&
+            context.cells.some(
+              cell =>
+                cell.id === node.dataset.editorCellSurface && memberIds.some(id => !cell.members.includes(id))
+            )
+        ) || null
+      );
     };
     let previewTransforms;
     gestures.beginMove(event, {
@@ -739,7 +800,8 @@ export function WorkbenchViewControls({
         const target = targetAt(document.elementsFromPoint(pointer.clientX, pointer.clientY));
         if (target !== cellDropNode.current) {
           cellDropNode.current?.removeAttribute('data-cell-drop');
-          target?.setAttribute('data-cell-drop', ''); cellDropNode.current = target;
+          target?.setAttribute('data-cell-drop', '');
+          cellDropNode.current = target;
         }
       },
       commitDrop: pointer => {
@@ -750,24 +812,40 @@ export function WorkbenchViewControls({
         if (!target) {
           if (!context.cells.some(cell => cell.members.some(id => memberIds.includes(id)))) return false;
           const host = hostRef.current;
-          const surface = hit.find(node => !node.closest('.workbench-selection') &&
-            !operation.ids.includes(node.closest('[data-workbench-view-id]')?.dataset.workbenchViewId));
+          const surface = hit.find(
+            node =>
+              !node.closest('.workbench-selection') &&
+              !operation.ids.includes(node.closest('[data-workbench-view-id]')?.dataset.workbenchViewId)
+          );
           if (!isWorkbenchBackground(surface, host)) return false;
-          const rect = host.getBoundingClientRect(), camera = navigation.getCamera();
-          const point = { x: (pointer.clientX - rect.left - camera.offset.x) / camera.scale,
-            y: (pointer.clientY - rect.top - camera.offset.y) / camera.scale };
+          const rect = host.getBoundingClientRect(),
+            camera = navigation.getCamera();
+          const point = {
+            x: (pointer.clientX - rect.left - camera.offset.x) / camera.scale,
+            y: (pointer.clientY - rect.top - camera.offset.y) / camera.scale,
+          };
           const editingFrame = latest.current.frames.get(context.editingCellId)?.current;
-          if (!pointInWorkbenchFrame(point, area) ||
-            editingFrame && pointInWorkbenchFrame(point, editingFrame)) return false;
+          if (
+            !pointInWorkbenchFrame(point, area) ||
+            (editingFrame && pointInWorkbenchFrame(point, editingFrame))
+          )
+            return false;
         }
         try {
-          const offsets = Object.fromEntries(operation.ids.map((id, index) => {
-            const transform = previewTransforms[id];
-            return [memberIds[index], { x: transform.x / transform.scale, y: transform.y / transform.scale }];
-          }));
+          const offsets = Object.fromEntries(
+            operation.ids.map((id, index) => {
+              const transform = previewTransforms[id];
+              return [
+                memberIds[index],
+                { x: transform.x / transform.scale, y: transform.y / transform.scale },
+              ];
+            })
+          );
           context.moveLayers(memberIds, target, generation, latest.current.getPresentation(), { offsets });
           setMoveError('');
-        } catch (error) { setMoveError(error.message); }
+        } catch (error) {
+          setMoveError(error.message);
+        }
         return true;
       },
     });
@@ -786,23 +864,25 @@ export function WorkbenchViewControls({
     if (!operation.commit()) setTransforms(operation.beforeTransforms);
   };
   const resizeOperation = (current, ids, corner) =>
-    lockedSelection(current, ids) ? null : createWorkbenchResizeOperation({
-      origin: operationOrigin(current),
-      ids,
-      corner,
-      registry: current,
-      geometry: {
-        scale: current.scale,
-        cameraOffset: navigation.getCamera().offset,
-        moduleScale: id => workbenchModuleTransform(current, id).scale,
-        rectangle: snapMovement.rectangle,
-        snapResize: snapMovement.resize,
-        bounds: workspaceBounds,
-        areaBounds: () => currentAreaBounds.current,
-      },
-      transforms: current.transforms,
-      setTransforms,
-    });
+    lockedSelection(current, ids)
+      ? null
+      : createWorkbenchResizeOperation({
+          origin: operationOrigin(current),
+          ids,
+          corner,
+          registry: current,
+          geometry: {
+            scale: current.scale,
+            cameraOffset: navigation.getCamera().offset,
+            moduleScale: id => workbenchModuleTransform(current, id).scale,
+            rectangle: snapMovement.rectangle,
+            snapResize: snapMovement.resize,
+            bounds: workspaceBounds,
+            areaBounds: () => currentAreaBounds.current,
+          },
+          transforms: current.transforms,
+          setTransforms,
+        });
   const beginResize = (event, corner) => {
     if (event.button !== 0 || !bounds || gestures.isActive()) return;
     const operation = resizeOperation(latest.current, [...selected], corner);
@@ -1027,9 +1107,10 @@ export function WorkbenchViewControls({
       if (
         locked ||
         latest.current.interactionTool !== 'select' ||
-        !(event.ctrlKey && event.target.matches?.('[data-editor-cell-surface]')) && event.target.closest?.(
-          '[data-workbench-selection-tools], [data-workbench-toolbar], [data-workbench-layers], [data-context-tools], [data-shared-text-tools], [data-shared-display-tools]'
-        )
+        (!(event.ctrlKey && event.target.matches?.('[data-editor-cell-surface]')) &&
+          event.target.closest?.(
+            '[data-workbench-selection-tools], [data-workbench-toolbar], [data-workbench-layers], [data-context-tools], [data-shared-text-tools], [data-shared-display-tools]'
+          ))
       )
         return;
       if (event.button === 0 && gestures.ownsPointer(event.pointerId)) cancelGesture();
@@ -1055,17 +1136,22 @@ export function WorkbenchViewControls({
       const module = target.closest?.('[data-workbench-view-id]');
       // Host controls keep their current
       // target. Only an artwork or the canvas background changes selection.
-      const background =
-        event.target === host ||
-        event.target.matches?.('.system-workflow__workbench');
+      const background = event.target === host || event.target.matches?.('.system-workflow__workbench');
       if (!module && !background) return;
       if (module && latest.current.presentationTransforms[module.dataset.workbenchViewId]) return;
       const current = latest.current,
         moduleId = module && artworkModuleId(current.content, module.dataset.workbenchViewId);
       const cellContext = latestCells.current;
       const cell = editorCellForModule(cellContext?.cells || [], moduleId);
-      if (moduleId && (!cell || cell.id === moduleId || cellContext.editingCellId === cell.id) && lockedSelection(current, [moduleId])) {
-        event.preventDefault(); event.stopPropagation(); current.selectArtwork(moduleId); return;
+      if (
+        moduleId &&
+        (!cell || cell.id === moduleId || cellContext.editingCellId === cell.id) &&
+        lockedSelection(current, [moduleId])
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        current.selectArtwork(moduleId);
+        return;
       }
       if (cell && !target.closest('[role="separator"],button:not([data-workbench-selectable]),a')) {
         if (cellContext.editingCellId === cell.id && moduleId === cell.id) {
@@ -1105,7 +1191,7 @@ export function WorkbenchViewControls({
         beginMove(event, ids);
         return;
       }
-      // In a Reception document placement is authored content, including a
+      // In a Composition document placement is authored content, including a
       // single free shape or inner layer. Use the same atomic gesture as cells.
       if (
         cellContext &&
@@ -1117,7 +1203,8 @@ export function WorkbenchViewControls({
         !event.shiftKey
       ) {
         const selectedLayer = current.selection.includes(module.dataset.workbenchViewId);
-        const selectedCell = selectedLayer && cellContext.cells.find(item => current.selection.includes(item.id));
+        const selectedCell =
+          selectedLayer && cellContext.cells.find(item => current.selection.includes(item.id));
         if (selectedCell) {
           clusterDrag.current?.(event, selectedCell.id);
           return;
@@ -1148,12 +1235,7 @@ export function WorkbenchViewControls({
         !event.shiftKey
       )
         setSelection([]);
-      if (
-        module &&
-        current.store &&
-        layerIds(current.layers || []).includes(moduleId) &&
-        !event.shiftKey
-      )
+      if (module && current.store && layerIds(current.layers || []).includes(moduleId) && !event.shiftKey)
         current.selectArtwork(module.dataset.workbenchViewId);
       else if (
         module &&
@@ -1184,10 +1266,15 @@ export function WorkbenchViewControls({
         hits: rectangle =>
           [...entries]
             .filter(([id, node]) => {
-              const owner = editorCellForModule(cellContext?.cells || [], artworkModuleId(current.content, id));
+              const owner = editorCellForModule(
+                cellContext?.cells || [],
+                artworkModuleId(current.content, id)
+              );
               if (owner && owner.id !== id) return false;
               if (
-                node.matches('[data-editor-hidden], [data-workbench-group-hidden], [data-workbench-canvas-hidden]') ||
+                node.matches(
+                  '[data-editor-hidden], [data-workbench-group-hidden], [data-workbench-canvas-hidden]'
+                ) ||
                 latest.current.presentationTransforms[node.dataset.workbenchViewId]
               )
                 return false;
@@ -1212,9 +1299,12 @@ export function WorkbenchViewControls({
       )
         return;
       const surface = target.matches('.workbench-selection')
-        ? document.elementsFromPoint(event.clientX, event.clientY).find(node => node.hasAttribute('data-workbench-view-id') && host.contains(node))
+        ? document
+            .elementsFromPoint(event.clientX, event.clientY)
+            .find(node => node.hasAttribute('data-workbench-view-id') && host.contains(node))
         : target;
-      const id = surface?.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface ||
+      const id =
+        surface?.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface ||
         surface?.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
       const member = artworkModuleId(current.content, id);
       const group = current.layers?.find(layer => layer.children?.includes(member));
@@ -1264,12 +1354,22 @@ export function WorkbenchViewControls({
       host.removeEventListener('dblclick', doubleClick, true);
     };
   }, [hostRef, disabled, locked, cancelGesture, gestures, setSelection, entries, focusModules]);
-  const positionArtwork = view.store && !disabled && !locked && !historyBlocked ? (group, position) => {
-    try {
-      editArtworkLayers(view.store, view.profileAddress, { type: 'stack', id: group.id, position, from: group.position });
-      setMoveError('');
-    } catch (error) { setMoveError(error.message); }
-  } : undefined;
+  const positionArtwork =
+    view.store && !disabled && !locked && !historyBlocked
+      ? (group, position) => {
+          try {
+            editArtworkLayers(view.store, view.profileAddress, {
+              type: 'stack',
+              id: group.id,
+              position,
+              from: group.position,
+            });
+            setMoveError('');
+          } catch (error) {
+            setMoveError(error.message);
+          }
+        }
+      : undefined;
   const navigationTools = (
     <>
       {canManageGroups && (
@@ -1333,8 +1433,10 @@ export function WorkbenchViewControls({
       })}
       {cells && (
         <Suspense fallback={null}>
-          <ReceptionBentoEditor
-            gridSnap={gridSnap} gridSpacing={gridSpacing} clusterDrag={clusterDrag}
+          <CompositionBentoEditor
+            gridSnap={gridSnap}
+            gridSpacing={gridSpacing}
+            clusterDrag={clusterDrag}
             hostRef={hostRef}
             disabled={disabled || Boolean(historyBlocked)}
             navigation={navigation}
@@ -1367,9 +1469,15 @@ export function WorkbenchViewControls({
                 role="group"
                 tabIndex={0}
                 aria-label={`${selected.length} selected Workbench modules`}
-                aria-description={cells ? "Drag to move. Ctrl-drag to duplicate the selection. Escape cancels the drag." : "Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."}
+                aria-description={
+                  cells
+                    ? 'Drag to move. Ctrl-drag to duplicate the selection. Escape cancels the drag.'
+                    : 'Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection.'
+                }
                 onDoubleClick={event => {
-                  const group = view.layers.find(layer => layer.children?.every(id => selection.includes(id)));
+                  const group = view.layers.find(layer =>
+                    layer.children?.every(id => selection.includes(id))
+                  );
                   if (!group) return;
                   event.preventDefault();
                   event.stopPropagation();

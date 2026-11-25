@@ -54,8 +54,6 @@
 }
 :root[data-palette]:not([data-palette='charcoal']) .visitor-publication {
   --field-glow: var(--field-high); --field-shade: var(--field-low);
-  --field-fallback-mask: url('/assets/visitor/field-range.png');
-  --field-fallback-face: var(--field-high); --field-fallback-opacity: 1;
   --spread-heading: var(--palette-ink); --spread-active: var(--palette-ink);
   --spread-body: color-mix(in srgb, var(--palette-ink) 93%, var(--palette-canvas));
   --spread-role: var(--spread-body); --spread-secondary: color-mix(in srgb, var(--palette-ink) 85%, var(--palette-canvas));
@@ -69,7 +67,6 @@
   --card-edge: color-mix(in srgb, var(--palette-ink) 19%, transparent); --card-inner-edge: color-mix(in srgb, var(--palette-accent) 15%, transparent);
   --card-chip: color-mix(in srgb, var(--palette-accent) 15%, var(--palette-glass));
   --card-rule: color-mix(in srgb, var(--palette-ink) 16%, transparent); --card-heading: var(--palette-ink);
-  background-color: var(--field-low); background-image: none;
 }
 :root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='dark'] .visitor-publication {
   --gallery-mat: color-mix(in srgb, var(--palette-canvas) 45%, #080808);
@@ -83,9 +80,8 @@
 .visitor-light-field[data-ready] { visibility: visible; }
 .visitor-publication:has(> .visitor-light-field:not([data-ready]))::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: var(--field-fallback-face, url('/assets/visitor/output-dither.png') repeat);
-  opacity: var(--field-fallback-opacity, .024);
-  mask: var(--field-fallback-mask, none) center / cover no-repeat;
+  background: url('/assets/visitor/output-dither.png') repeat;
+  opacity: .024;
 }
 .visitor-header, .visitor-header *, .visitor-profile-card, .visitor-profile-card * { box-sizing: border-box; }
 .visitor-profile-card[tabindex='-1']:focus { outline: none; }

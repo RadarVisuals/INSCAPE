@@ -177,7 +177,7 @@ Respecteer het beschermde bestand `docs/INSCAPE_ALPHA_CONTINUATION_HANDOFF.md`: 
 
 **Waar:** `WorkbenchCamera.jsx`, `useWorkbenchNavigation.js`, `useWorkbenchCameraMotion.js`, Navigator en inspectie.
 
-**Opdracht:** behoud de al bestaande scheiding tussen camera en auteurgegevens. Maak de nog benodigde samenwerking met de gebarencontroller expliciet via beperkte acties. Verwijder dubbele lock-, schaal- of offsetbeslissingen als stap 04 die aantoonde. Zorg dat Navigator, F-inspectie, Home, pan en zoom dezelfde camera gebruiken. De exploratietrial behoudt zijn eigen afgebakende wereldcamera.
+**Opdracht:** behoud de al bestaande scheiding tussen camera en auteurgegevens. Maak de nog benodigde samenwerking met de gebarencontroller expliciet via beperkte acties. Verwijder dubbele lock-, schaal- of offsetbeslissingen als stap 04 die aantoonde. Zorg dat Navigator, F-inspectie, Home, pan en zoom dezelfde camera gebruiken.
 
 **Klaar wanneer:** navigatie wijzigt geen compositie-inhoud en voegt geen authoring-Undo toe. Inspectie heen/terug, snelle omkering, reduced motion, kleine viewport en afgebroken beweging herstellen correct. Pannen triggert niet onnodig alle module-editors. Als deze grenzen al voldoende zijn, behoud ze en rond af met verificatie.
 

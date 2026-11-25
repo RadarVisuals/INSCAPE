@@ -175,6 +175,14 @@ test('Image body distinguishes inspection, movement, cancellation, crop and Work
       await inspectControl.click(); await dialog.waitFor();
       await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
       await page.screenshot({ path: `${output}/image-interaction-minimum-${owner ? 'owner' : 'visitor'}.png` });
+      if (!owner) {
+        const saved = await page.evaluate(() => imageFitFixture.store.getDraft());
+        const closed = await first.elementHandle();
+        await first.getByRole('button', { name: 'Close Image', exact: true }).click();
+        await page.waitForFunction(node => !node.isConnected, closed);
+        await closed.dispose();
+        assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), saved);
+      }
     }
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

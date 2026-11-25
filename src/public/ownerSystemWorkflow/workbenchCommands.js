@@ -1,7 +1,7 @@
 import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
 import { addTextModule } from '../../text/textSession.js';
 import { interfaceTheme } from '../../interfaceTheme.js';
-import { receptionTextDefaults } from '../../reception/receptionTextDefaults.js';
+import { compositionTextDefaults } from '../../composition/compositionTextDefaults.js';
 import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
 import { addImageModule } from '../../imageModule/imageModuleSession.js';
 import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
@@ -27,7 +27,7 @@ export default function workbenchCommands({
   openPreview,
   togglePublication,
   setWorkspaceMenu,
-  reception = false,
+  composition = false,
 }) {
   // One creation menu/dispatcher serves both the context menu and toolbar.
   const addCommands = [
@@ -53,17 +53,17 @@ export default function workbenchCommands({
       id: 'keeper',
       label: 'KEEPER DOCK',
     },
-  ].filter(command => !reception || ['text', 'image', 'shape', 'shape-grid'].includes(command.id));
+  ].filter(command => !composition || ['text', 'image', 'shape', 'shape-grid'].includes(command.id));
   const runCommand = (id, placement) => {
-    if (reception && ['workbench-index', 'keeper', 'identity', 'publish'].includes(id)) return;
+    if (composition && ['workbench-index', 'keeper', 'identity'].includes(id)) return;
     try {
       switch (id) {
         case 'workbench-index':
           openWorkbenchIndex(store, profileAddress);
           break;
         case 'text':
-          activateArtwork(addTextModule(store, profileAddress, placement, reception
-            ? receptionTextDefaults(store.getReception(), store.getEditingCell(), interfaceTheme.getSnapshot().mode) : undefined));
+          activateArtwork(addTextModule(store, profileAddress, placement, composition
+            ? compositionTextDefaults(store.getComposition(), store.getEditingCell(), interfaceTheme.getSnapshot().mode) : undefined));
           setTextToolsOpen(true);
           break;
         case 'keeper':

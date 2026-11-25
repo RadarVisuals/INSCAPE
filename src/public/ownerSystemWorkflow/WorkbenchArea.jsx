@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useInterfaceTheme } from '../../interfaceTheme.js';
-import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
+import { useEditorCells } from '../../composition/EditorCellsContext.jsx';
 import './workbenchArea.css';
 
 const readPalette = (host, canvas) => ({ surface: getComputedStyle(host).backgroundColor,
@@ -11,10 +11,10 @@ const readPalette = (host, canvas) => ({ surface: getComputedStyle(host).backgro
 export default function WorkbenchArea({ hostRef, canvasColor }) {
   const { mode, palette: paletteId } = useInterfaceTheme();
   const { area, showOutside } = useWorkbenchArea();
-  const cells = useEditorCells(), reception = cells?.store.getReception();
-  const appearance = { ...reception, ...cells?.paintedAppearance };
-  const showFrame = reception?.showFrame !== false;
-  const colors = useRef(null); colors.current = reception ? appearance : null;
+  const cells = useEditorCells(), composition = cells?.store.getComposition();
+  const appearance = { ...composition, ...cells?.paintedAppearance };
+  const showFrame = composition?.showFrame !== false;
+  const colors = useRef(null); colors.current = composition ? appearance : null;
   const customFill = useRef(canvasColor); customFill.current = canvasColor;
   const frameVisible = useRef(showFrame); frameVisible.current = showFrame;
   const outside = useRef(showOutside); outside.current = showOutside;
@@ -99,6 +99,6 @@ export default function WorkbenchArea({ hostRef, canvasColor }) {
   useLayoutEffect(() => { repaint.current?.(getCamera()); }, [getCamera, canvasColor, scale, offset, area.left, area.top, area.width, area.height, showOutside, showFrame, appearance.surface, appearance.surfaceOpacity, appearance.frameColor, appearance.backgroundColor, appearance.frameRadius]);
   const style = { position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', color: 'var(--color-border-strong)' };
   return <><canvas ref={node} data-workbench-area={`${area.width}x${area.height}`} data-show-frame={showFrame} data-canvas-left={area.left} data-canvas-top={area.top} aria-hidden="true" style={{ ...style, zIndex: 0 }} />
-    <canvas ref={shade} data-workbench-outside-shade aria-hidden="true" style={{ ...style, zIndex: 70, display: reception || showOutside ? undefined : 'none' }} />
+    <canvas ref={shade} data-workbench-outside-shade aria-hidden="true" style={{ ...style, zIndex: 70, display: composition || showOutside ? undefined : 'none' }} />
     <div ref={outline} className="workbench-area-frame" aria-hidden="true" /></>;
 }

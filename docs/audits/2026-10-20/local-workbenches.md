@@ -2,7 +2,7 @@
 
 20 oktober 2026. Expliciete makeropdracht: voer de lokale stap met twee
 benoemde Workbenches uit; test onafhankelijk opslaan, wisselen en herladen;
-behoud bestaande wijzigingen en de Keeper-proef. Geen commit, push of deploy.
+behoud bestaande wijzigingen. Geen commit, push of deploy.
 
 ## Resultaat en bediening
 
@@ -39,8 +39,7 @@ houdt de huidige compositie open.
   mee met de nieuwe actieve ID. Tijdelijke camera/selectie wordt heropend;
   zij wordt geen compositie-inhoud.
 - De bestaande één-editor-per-profiellease blijft de schrijfautoriteit.
-  De Library krijgt geen kopie per Workbench. De proefkamer gebruikt dezelfde
-  gedeelde Keeper-records via de bestaande store.
+  De Library krijgt geen kopie per Workbench.
 
 De module-API verwacht nog steeds de bestaande platte draftvorm. Dat is een
 expliciete afgeleide grens, geen claim dat alle modules afzonderlijk zijn
@@ -80,7 +79,6 @@ Productiebuild en budgetcontrole geslaagd, 822007 initiële JS-bytes:
 | Controle | Geslaagd | Bewijs |
 | --- | ---: | --- |
 | Twee benoemde Workbenches, eigen inhoud/formaat, wisselen/herladen, Undo, falende opslag, Text-herstel, backupdownload, editorlease | 2 | [log](local-workbenches/local-workbenches.log) |
-| Keeper-proef: bestaande beweging/camera/collision/F, autoriteit, gedeelde instelling in A/B, smal scherm | 3 | [log](local-workbenches/exploration-keeper.log) |
 | Opslag/backup/herstel en twee echte tabbladen | 6 | [log](local-workbenches/workbench-storage.log) |
 | Layout herladen | 2 | [log](local-workbenches/workbench-layout-reload.log) |
 | Herstel na editor sluiten en layout-opslagfout | 1 | [log](local-workbenches/workbench-recovery.log) |
@@ -117,7 +115,7 @@ Checkout `remediation-2026-10-19-shared-checkpoint/work`, branch
 `32d9418843d996afc2e5203afa4552a6cd2d459a`.
 
 Alle reeds aanwezige wijzigingen blijven in dezelfde werkboom, waaronder
-Reception, de Keeper-proef, wereldcamera, F-zoom, metalen botsingsranden,
+Reception,
 ontwerpdocumentatie en oorspronkelijke referenties. Bestaande Keeper-runtime
 en artwork zijn voor deze stap niet gewijzigd; de browserproef is uitgebreid.
 De ontwerpinventaris is opnieuw gegenereerd met behoud van de eerdere

@@ -83,7 +83,7 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
       // A newer target, or focus already outside this dock, belongs to the user.
       if (active !== document.body && active?.isConnected && (active !== focused || !panel?.contains(active))) return;
       if (next) { focusTab(next); return; }
-      const fallback = returnFocusRefs?.[tab]?.current || navigationRef?.current?.querySelector('[data-menu="Tools"]');
+      const fallback = returnFocusRefs?.[tab]?.current || navigationRef?.current?.querySelector('.workspace-brand[aria-haspopup="menu"]');
       (fallback || hostRef.current)?.focus({ preventScroll: true });
     });
   };

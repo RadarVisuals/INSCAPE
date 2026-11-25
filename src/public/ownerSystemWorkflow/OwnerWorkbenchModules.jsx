@@ -27,23 +27,26 @@ export default function OwnerWorkbenchModules({
   const { onPresentation: registerImagePresentation } = modules.images;
   const { onPresentation: registerShapePresentation } = modules.shapes;
   const { register: registerModuleAssetTarget } = modules.targets;
+  const keeperRecords = workbenchController.store.keeper
+    ? workbenchController.store.keeper.records()
+    : workbenchController.draft.keeperDocks;
   const savedLayout = workbenchController.draft.workbench;
   const layoutAtEntry = useRef(savedLayout);
   const modulePresentations = key => {
     const saved = savedLayout?.[key] || [];
     // A restored Bento cell mounts again after Undo. Its current authored frame
     // supersedes the cached frame from when this editor session opened.
-    if (workbenchController.store.getReception && savedLayout !== layoutAtEntry.current) return saved;
+    if (workbenchController.store.getComposition && savedLayout !== layoutAtEntry.current) return saved;
     return [...(initialWorkbench.current?.[key] || []), ...saved];
   };
 
   return (
     <WorkbenchCanvasContent suspended={suspended}>
-      {workbenchController.draft.keeperDocks?.length > 0 && (
+      {keeperRecords?.length > 0 && (
         <Suspense fallback={null}>
           <KeeperWorkbench
             navigationRef={workbenchNavigationRef}
-            records={workbenchController.draft.keeperDocks}
+            records={keeperRecords}
             store={workbenchController.store}
             profileAddress={profileAddress}
             hostRef={workspaceRef}

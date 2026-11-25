@@ -3,7 +3,7 @@
 Local, uncommitted follow-up authorized by the founder on 21 October 2026.
 Checkout: `codex/audit-checkpoint-2026-10-19`, HEAD
 `32d9418843d996afc2e5203afa4552a6cd2d459a`. The working tree already contains
-many unrelated changes, including the UI migration and Keeper trial. Those are
+many unrelated changes, including the UI migration. Those are
 retained; HEAD or earlier CI is not evidence for this working tree.
 
 ## Change and ownership

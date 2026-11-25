@@ -20,8 +20,13 @@ export async function setBentoFormat(page, panel, format) {
 // Draw explicit geometry for scenarios that need an extra column or row.
 // These are fixture choices, not directional commands in the product.
 export async function addBentoCell(page, side = 'right', sourceId) {
-  const value = await page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception);
-  const { area } = value.workbench, { gap, padding } = value.bento;
+  const { value, gap, padding } = await page.evaluate(async () => {
+    const value = window.nativeCompositionFixture.root.getDraft().composition;
+    const { compositionBentoSettings } = await import('/src/composition/compositionBento.js');
+    const { gap, padding } = compositionBentoSettings(value);
+    return { value, gap, padding };
+  });
+  const { area } = value.workbench;
   const source = sourceId ? value.workbench.shapes.find(s => s.id === sourceId).window
     : { left: area.left + padding, top: area.top + padding, width: area.width - padding * 2, height: area.height - padding * 2 };
   const rect = side === 'right' ? { left: source.left + source.width + gap, top: source.top, width: 320, height: source.height }
@@ -34,7 +39,7 @@ export async function addBentoCell(page, side = 'right', sourceId) {
   await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).press('Home');
   const first = value.cells[0].id, world = value.workbench.shapes.find(s => s.id === first).window;
   await page.waitForFunction(id => Math.abs(parseFloat(document.querySelector(`[data-editor-cell-surface="${id}"]`).style.width)
-    / window.nativeReceptionFixture.root.getDraft().reception.workbench.shapes.find(s => s.id === id).window.width - .25) < .001, first);
+    / window.nativeCompositionFixture.root.getDraft().composition.workbench.shapes.find(s => s.id === id).window.width - .25) < .001, first);
   const box = await page.locator(`[data-editor-cell-surface="${first}"]`).boundingBox(), scale = box.width / world.width;
   const start = { x: box.x + (rect.left - world.left) * scale, y: box.y + (rect.top - world.top) * scale };
   await page.getByRole('button', { name: 'Cell tool', exact: true }).click();
@@ -43,7 +48,7 @@ export async function addBentoCell(page, side = 'right', sourceId) {
     await page.mouse.move(start.x, start.y); await page.mouse.down();
     await page.mouse.move(start.x + rect.width * scale, start.y + rect.height * scale, { steps: 8 }); await page.mouse.up();
   } finally { await page.keyboard.up('Alt'); }
-  await page.waitForFunction(count => window.nativeReceptionFixture.root.getDraft().reception.cells.length === count, value.cells.length + 1);
+  await page.waitForFunction(count => window.nativeCompositionFixture.root.getDraft().composition.cells.length === count, value.cells.length + 1);
   await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click();
 }
 
@@ -57,7 +62,7 @@ export async function setCurrentBentoField(panel, label, value) {
 // starting proposal. Seed an empty grid through the normal guarded fixture store.
 export async function seedBentoGrid(page, columns, rows, unequal = false) {
   return page.evaluate(({ columns, rows, unequal }) => {
-    const { root } = window.nativeReceptionFixture, draft = root.getDraft(), value = draft.reception;
+    const { root } = window.nativeCompositionFixture, draft = root.getDraft(), value = draft.composition;
     if (value.cells.length !== columns * rows || value.cells.some(cell => cell.members.length))
       throw Error('Seed an empty Bento with the requested cell count');
     const { width, height } = value.workbench.area, { gap, padding } = value.bento;

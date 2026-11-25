@@ -176,7 +176,7 @@ test('the Studio manager edits the selected composition and preserves the others
     await page.getByRole('button', { name: 'Edit', exact: true }).waitFor();
     const before = await page.evaluate(() => window.savedDraft());
     await mkdir(output, { recursive: true });
-    await page.screenshot({ path: `${output}/works-reception-entry.png`, fullPage: true });
+    await page.screenshot({ path: `${output}/works-composition-entry.png`, fullPage: true });
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await page.locator('.editor-menu-bar[data-document]').waitFor();
     await editorCommand(page, 'Edit', 'Settings');
@@ -189,7 +189,7 @@ test('the Studio manager edits the selected composition and preserves the others
     await page.locator('.composition-index').waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
-    await page.screenshot({ path: `${output}/works-reception-entry-390.png`, fullPage: true });
+    await page.screenshot({ path: `${output}/works-composition-entry-390.png`, fullPage: true });
     await page.locator('.editor-menu-bar[data-document]').waitFor();
     assert.equal(await page.getByRole('alert').count(), 0, 'returning reacquires the selected composition without losing the editor lease');
     await editorOverview(page);

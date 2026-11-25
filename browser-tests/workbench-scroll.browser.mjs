@@ -34,7 +34,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const board = page.locator('aside.shape-window').first();
       const image = page.locator('[data-workbench-view-id="image:motion-0"]');
       const text = mode => page.locator(`[data-text-id="text:${mode}"]`);
-      await text('pages').locator('.text-window').waitFor(); await image.waitFor();
+      await text('pages').locator('aside.text-window').waitFor(); await image.waitFor();
       if (!visitor) {
         for (const mode of ['fit', 'overflow', 'pages']) {
           await text(mode).getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
@@ -59,7 +59,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       for (const mode of ['fit', 'overflow', 'pages']) {
         // Bring each existing window into the same screen position without
         // moving or rewriting that window (also exercises narrow viewports).
-        const box = await text(mode).locator('.text-window').boundingBox();
+        const box = await text(mode).locator('aside.text-window').boundingBox();
         await host.dispatchEvent('wheel', { deltaX: box.x - 20, deltaY: box.y - 440, bubbles: true, cancelable: true });
         await settle(page);
         const region = text(mode).getByRole('region', { name: mode === 'pages' ? 'Article pages' : 'Article content', exact: true });

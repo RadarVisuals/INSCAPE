@@ -4,9 +4,9 @@ import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import './workbenchCanvasContent.css';
 import { artworkModuleId, layerIds } from '../../systemWorkflow/domain/artworkLayers.js';
-import { slideOf, slideIndex } from '../../reception/cellSlides.js';
-import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
-import { editorCellClip, transformedCellWindow } from '../../reception/editorCellGeometry.js';
+import { slideOf, slideIndex } from '../../composition/cellSlides.js';
+import { useEditorCells } from '../../composition/EditorCellsContext.jsx';
+import { editorCellClip, transformedCellWindow } from '../../composition/editorCellGeometry.js';
 
 // One clipping plane for authored content. Its projection follows the camera
 // paint clock, without reading module rectangles or re-rendering their media.

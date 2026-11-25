@@ -1,12 +1,12 @@
 import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
-import ReceptionPresentation from '../../reception/ReceptionPresentation.jsx';
+import CompositionPresentation from '../../composition/CompositionPresentation.jsx';
 import { resolvePresentationDestination } from '../../presentation/presentationSources.js';
 import { workbenchOverviewModel } from './workbenchOverviewModel.js';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 const CanvasPresentation = lazy(() => import('./CanvasPresentation.jsx'));
 
-export default function CompositionSources({ snapshot, profile, children }) {
+export default function CompositionSources({ snapshot, children }) {
   const [link, setLink] = useState(null);
   const trigger = useRef(null);
   const { restoreFocus } = useDeferredFocusReturn();
@@ -15,7 +15,7 @@ export default function CompositionSources({ snapshot, profile, children }) {
   const model = useMemo(() => target && workbenchOverviewModel(target.draft), [target]);
   const openSource = useCallback((ref, button) => { trigger.current = button; setLink(ref); }, []);
   const close = () => { setLink(null); restoreFocus(trigger.current); };
-  return <ReceptionPresentation snapshot={snapshot} profile={profile} onOpenSource={openSource}>
+  return <CompositionPresentation snapshot={snapshot} onOpenSource={openSource}>
     {children}
     {target && <Suspense fallback={null}><CanvasPresentation key={target.id} selected={target} model={model}
       initialDestinationId={link.destinationId} onClose={close} /></Suspense>}
@@ -23,5 +23,5 @@ export default function CompositionSources({ snapshot, profile, children }) {
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); } }}>
       This linked work is unavailable. <button autoFocus type="button" onClick={close}>Close</button>
     </p>}
-  </ReceptionPresentation>;
+  </CompositionPresentation>;
 }

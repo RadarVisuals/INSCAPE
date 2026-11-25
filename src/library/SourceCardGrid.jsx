@@ -4,6 +4,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 export default function SourceCardGrid({ cells, renderCell, ...props }) {
   const grid = useRef(null);
   const count = cells.length;
+  const labels = props['data-labels'];
+  const tileSize = props.style?.['--library-tile-size'];
   const [window, setWindow] = useState({ start: 0, end: 48, top: 0, bottom: 0 });
   useLayoutEffect(() => {
     const node = grid.current,
@@ -37,7 +39,7 @@ export default function SourceCardGrid({ cells, renderCell, ...props }) {
       resize.disconnect();
       root.removeEventListener('scroll', measure);
     };
-  }, [count, props['data-labels'], props.style['--library-tile-size']]);
+  }, [count, labels, tileSize]);
   const valid = window.start < count;
   return (
     <div

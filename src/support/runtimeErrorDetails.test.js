@@ -20,10 +20,10 @@ test('runtime evidence identifies render/update/stack failures without copying a
 
 test('development details retain source names and line numbers but omit URLs, query values and credentials', () => {
   const error = new Error('Maximum update depth exceeded token=private');
-  error.stack = 'Error: Maximum update depth exceeded\n    at Reader (http://localhost:5173/src/reception/ReceptionDocumentCanvas.jsx?t=signature-private:52:9)\n    at remote (https://private.example/data?secret=hidden)';
+  error.stack = 'Error: Maximum update depth exceeded\n    at Reader (http://localhost:5173/src/composition/CompositionDocumentCanvas.jsx?t=signature-private:52:9)\n    at remote (https://private.example/data?secret=hidden)';
   const details = developmentErrorDetails(error);
   assert.match(details, /Maximum update depth exceeded/);
-  assert.match(details, /ReceptionDocumentCanvas.jsx:52:9/);
+  assert.match(details, /CompositionDocumentCanvas.jsx:52:9/);
   assert.doesNotMatch(details, /localhost|signature-private|private.example|token=private|secret=hidden/);
   assert.ok(developmentErrorDetails({ message: 'x'.repeat(5000), stack: '\n'.repeat(1000) }).length < 2000);
 });

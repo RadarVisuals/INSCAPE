@@ -1,2 +1,0 @@
-.reception-cell-grain { position: absolute; inset: 0; pointer-events: none; background-image: url('/assets/noise-samples/grain-mono.png'); background-repeat: repeat; }
-.reception-cell-grain-layer { position: fixed; inset: 0; z-index: 69; pointer-events: none; }

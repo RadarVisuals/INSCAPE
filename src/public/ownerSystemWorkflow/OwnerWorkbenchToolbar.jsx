@@ -10,9 +10,9 @@ import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreat
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import { artworkModuleId, artworkRecords } from '../../systemWorkflow/domain/artworkLayers.js';
 import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
-import { createReceptionCellDrawGesture } from '../../reception/receptionCellDrawing.js';
-import { receptionLayoutCountRange } from '../../reception/receptionLayoutGenerator.js';
-import { useEditorCells, isEditorCellSurface } from '../../reception/EditorCellsContext.jsx';
+import { createCompositionCellDrawGesture } from '../../composition/compositionCellDrawing.js';
+import { compositionLayoutCountRange } from '../../composition/compositionLayoutGenerator.js';
+import { useEditorCells, isEditorCellSurface } from '../../composition/EditorCellsContext.jsx';
 
 const ICONS = { cell: SquarePlus, 'workbench-index': Folder, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
 const LABELS = { cell: 'Cell', 'workbench-index': 'Index', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
@@ -87,7 +87,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
         try {
           const first = current.beginFirstCell(current.view.getPresentation());
           const start = { x: (point.x - offset.x) / scale, y: (point.y - offset.y) / scale };
-          const draw = createReceptionCellDrawGesture(first.composition, 'shape:' + crypto.randomUUID(), start,
+          const draw = createCompositionCellDrawGesture(first.composition, 'shape:' + crypto.randomUUID(), start,
             scale, undefined, current.preferences.gridSpacing);
           active.propose = pointer => draw({ x: pointer.clientX - point.x, y: pointer.clientY - point.y },
             current.preferences.shortcutSnap === pointer.altKey);
@@ -179,7 +179,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       else { chooseTool('select'); onCommand(command.id); }
     } });
   const addCommands = [...(cells || beginFirstCell ? [{ id: 'cell', label: 'Cell', shortcut: 'C',
-    disabled: cells ? cells.cells.length >= receptionLayoutCountRange(cells.store.getReception()).max : Boolean(historyBlocked) }] : []), ...commands].map(adapt);
+    disabled: cells ? cells.cells.length >= compositionLayoutCountRange(cells.store.getComposition()).max : Boolean(historyBlocked) }] : []), ...commands].map(adapt);
   const shapeCommands = addCommands.filter(command => isShapeCommand(command.id))
     .map(command => command.id === 'shape' ? { ...command, shortcut: 'R' } : command);
   const selectedId = view.selection.length === 1 ? artworkModuleId(view.content, view.selection[0]) : null;

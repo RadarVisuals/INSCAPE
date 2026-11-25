@@ -1,16 +1,16 @@
 import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { LUKSO_CHAIN_ID, normalizeProfileAddress } from '../library/config.js';
-import { textRecoveries } from '../text/textEditRecovery.js';
+import { textRecoveries, workbenchTextRecovery } from '../text/textEditRecovery.js';
 import { workbenchLayoutKey } from './workbenchLayoutKey.js';
 import { normalizeWorkspace } from '../library/storage/libraryWorkspaceStorage.js';
 import { imageResourceIdentity } from '../library/data/resolveContentUrl.js';
 import { assertArticle, validTextModules } from '../text/domain/article.js';
-import { receptionLinkProblems } from '../profileDocument/domain/receptionLinks.js';
+import { compositionLinkProblems } from '../profileDocument/domain/compositionLinks.js';
 import { curatedSnapshot } from '../library/curatedSnapshots.js';
 import { validateWorkspaceRows } from '../workspace/validateWorkspaceRows.js';
 import { committedWorkspace, recordExport, restoreWorkspaceRows, workspaceSession } from '../workspace/profileWorkspace.js';
 import { assetIds, equivalent, mergeBackup, visitCanvasReferences } from './workspaceBackupMerge.js';
-import { createWorkbenchCollection, isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
+import { currentLocalDraft, createWorkbenchCollection, isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
 
 export const WORKBENCH_BACKUP_TYPE = 'inscape-private-workbench';
 export const WORKBENCH_BACKUP_LIMIT = WORKBENCH_COLLECTION_LIMIT + 2048;
@@ -49,7 +49,7 @@ export function summarizeWorkbenchBackup(draft) {
     ['Shapes', draft.shapes?.length || 0],
     ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
-    ['Bento cells', draft.reception?.cells?.length ?? draft.reception?.regions?.length ?? 0],
+    ['Bento cells', draft.composition?.cells?.length ?? 0],
   ].map(([name, count]) => `${count} ${name}`).join(' · ');
 }
 
@@ -85,8 +85,8 @@ function finishRestore(storage, profile, layoutIds) {
 }
 
 const workspaceKind = 'inscape-workspace-backup';
-const workspaceBackupVersion = 2;
-const recordKinds = ['library', 'workbenches', 'textRecovery', 'receptionRecovery'];
+const workspaceBackupVersion = 3;
+const recordKinds = ['library', 'workbenches', 'textRecovery'];
 const decoded = rows => Object.fromEntries(recordKinds.map(key => [key, JSON.parse(rows[key])]));
 const encoded = workspace => Object.fromEntries(recordKinds.map(key => [key, workspace[key] === null ? null : JSON.stringify(workspace[key])]));
 function exactRecord(value, keys) {
@@ -95,8 +95,7 @@ function exactRecord(value, keys) {
 function validatePortable(workspace, profile) {
   if (!exactRecord(workspace, recordKinds)) throw Error('Incomplete workspace backup.');
   validateWorkspaceRows(encoded(workspace), profile);
-  const { library, workbenches, receptionRecovery } = workspace;
-  if (receptionRecovery !== null) parseLegacyWorkbenchBackup(JSON.stringify(receptionRecovery), profile);
+  const { library, workbenches } = workspace;
   if (library !== null) {
     const normalized = normalizeWorkspace(library, profile);
     for (const selections of [library.curatedImageSelections, ...library.folders.map(folder => folder.imageSelections)])
@@ -108,13 +107,13 @@ function validatePortable(workspace, profile) {
   const recoveryContexts = new Set();
   if (workbenches !== null) {
     const group = assertValidWorkbenchCollection(workbenches);
+    if (!equivalent(group, workbenches)) throw Error('Invalid or obsolete Workbench fields.');
     if (group.profileAddress !== profile) throw Error('Workbench profile mismatch.');
     const ids = new Set(group.workbenches.map(item => item.id));
     for (const id of ids) recoveryContexts.add(profile + '/' + id);
-    if (group.shared.reception) recoveryContexts.add(profile + '/reception');
     const view = { profileAddress: profile, entries: group.workbenches.map(item => ({ id: item.id, draft: projectWorkbenchDraft(group, item.id) })) };
-    for (const surface of [group.shared.reception, ...group.workbenches.map(item => item.content.composition)]) {
-      const [issue] = receptionLinkProblems(surface, view);
+    for (const surface of group.workbenches.map(item => item.content.composition)) {
+      const [issue] = compositionLinkProblems(surface, view);
       if (issue) throw Error('Unresolved canvas link ' + issue.id + '. ' + issue.reason);
     }
     visitCanvasReferences(group, ref => { if (!ids.has(ref.canvasId)) throw Error('Dangling Workbench reference: ' + ref.canvasId); });
@@ -154,9 +153,10 @@ export function parseWorkbenchBackup(source, profile) {
 
 function serializeWorkspaceRows(profileAddress, rows, workspaceRevision, exportedAt) {
   const workspace = decoded(rows);
-  validateWorkspaceRows(rows, profileAddress);
-  if (workspace.workbenches && !isWorkbenchCollection(workspace.workbenches))
-    workspace.workbenches = createWorkbenchCollection(workspace.workbenches);
+  workspace.textRecovery = workbenchTextRecovery(workspace.textRecovery, profileAddress);
+  validateWorkspaceRows(encoded(workspace), profileAddress);
+  if (workspace.workbenches) workspace.workbenches = isWorkbenchCollection(workspace.workbenches)
+    ? assertValidWorkbenchCollection(workspace.workbenches) : createWorkbenchCollection(currentLocalDraft(workspace.workbenches));
   if (workspace.library) {
     workspace.library = normalizeWorkspace(workspace.library, profileAddress);
     const library = workspace.library;
@@ -214,9 +214,9 @@ export async function previewWorkspaceRestore(source, address, mode = 'replace')
     try { return [key, JSON.parse(base.rows[key])]; }
     catch (error) { if (mode === 'replace' && key === 'workbenches') return [key, null]; throw error; }
   }));
-  const incoming = legacy ? { library: null, workbenches: backup.draft, receptionRecovery: null, textRecovery: null } : backup.workspace;
+  const incoming = legacy ? { library: null, workbenches: backup.draft, textRecovery: null } : backup.workspace;
   let workspace, stats;
-  if (mode === 'merge') ({ workspace, stats } = mergeBackup(local, incoming));
+  if (mode === 'merge') ({ workspace, stats } = mergeBackup({ ...local, textRecovery: workbenchTextRecovery(local.textRecovery, profile) }, incoming));
   else workspace = legacy ? { ...local, workbenches: backup.draft } : incoming;
   const blocked = legacy && mode === 'replace' && local.textRecovery
     ? 'Resolve pending text before replacing Workbenches from a legacy file, or choose Merge.' : null;
@@ -224,7 +224,9 @@ export async function previewWorkspaceRestore(source, address, mode = 'replace')
   for (const key of recordKinds) if (equivalent(workspace[key], local[key]) && base.rows[key] !== null && local[key] !== null) rows[key] = base.rows[key];
   if (local.workbenches && !isWorkbenchCollection(local.workbenches) && isWorkbenchCollection(workspace.workbenches)) {
     try {
-      if (equivalent(createWorkbenchCollection(local.workbenches), workspace.workbenches)) rows.workbenches = base.rows.workbenches;
+      const current = assertValidSystemWorkflowDraft(local.workbenches);
+      if (equivalent(current, local.workbenches) && equivalent(createWorkbenchCollection(current), workspace.workbenches))
+        rows.workbenches = base.rows.workbenches;
     } catch { /* Explicit Replace can repair an invalid local draft. */ }
   }
   if (legacy) {
@@ -250,7 +252,7 @@ export async function applyWorkspaceRestore(plan, isCurrent) {
     if (plan.mode !== 'replace' || plan.rows.workbenches === plan.base.rows.workbenches) return;
     try {
       const restored = JSON.parse(plan.rows.workbenches);
-      for (const id of [undefined, 'workbench:main', 'reception', ...(restored?.workbenches || []).map(item => item.id)])
+      for (const id of [undefined, 'workbench:main', ...(restored?.workbenches || []).map(item => item.id)])
         globalThis.localStorage.removeItem(workbenchLayoutKey(plan.profile, id));
     } catch { warning = 'Workspace restored. Some cached layouts could not be cleared.'; }
   }); }

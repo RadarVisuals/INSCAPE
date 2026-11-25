@@ -21,11 +21,11 @@
 .workbench-overview-card-information { max-width: 36ch; max-height: 40%; overflow: auto; }
 .workbench-overview-card-information p { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .workbench-overview-card:is([data-revealed], :has(:focus-visible)) .workbench-overview-card-reveal { opacity: 1; transform: none; filter: none; }
-.workbench-overview-card:is([data-revealed], :has(:focus-visible)) :is(.workbench-overview-card-actions, .workbench-overview-card-information) { pointer-events: auto; }
+.workbench-overview-card:is([data-revealed], :has(:focus-visible)) :is(.workbench-overview-card-actions button, .workbench-overview-card-information) { pointer-events: auto; }
 .workbench-overview-card:is([data-revealed], :has(:focus-visible)) .workbench-overview-card-open::before { opacity: 1; }
 @media (hover: hover) {
   .workbench-overview-card:hover .workbench-overview-card-reveal { opacity: 1; transform: none; filter: none; }
-  .workbench-overview-card:hover :is(.workbench-overview-card-actions, .workbench-overview-card-information) { pointer-events: auto; }
+  .workbench-overview-card:hover :is(.workbench-overview-card-actions button, .workbench-overview-card-information) { pointer-events: auto; }
   .workbench-overview-card:hover .workbench-overview-card-open::before { opacity: 1; }
 }
 @media (pointer: coarse) {
@@ -61,7 +61,7 @@
 :is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-arrange button { min-height: 44px; min-width: 44px; padding: 8px; }
 .workbench-overview .workbench-overview-drag { touch-action: none; cursor: grab; }
 .workbench-overview-drag:active { cursor: grabbing; }
-.workbench-overview-arrange-help { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 16px; padding-left: 16px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
+.workbench-overview-arrange-help { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 16px; padding-left: 16px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
 .workbench-overview-drag-label { position: fixed; z-index: 5; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; padding: 8px 12px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
 .workbench-overview-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (max-width: 1600px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 4; } }

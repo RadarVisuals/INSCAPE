@@ -53,9 +53,9 @@ Verification results and logs are recorded in `named-workbenches-evidence/`.
 The focused store, backup and new action tests cover atomic rename, live geometry,
 retry, stale commands, validation, all eight slots and transition guards.
 
-The browser run at `.browser-test-runtime/run-1792861838796/` passed 27 tests:
+The browser run at `.browser-test-runtime/run-1792861838796/` covered
 named Workbenches (5), storage/backup/editor exclusion (6), recovery (1), layout
-reload (3), sidebar (9), and shared Keeper/exploration (3). All-eight-slots tests
+reload (3) and sidebar (9). All-eight-slots tests
 include actual creation, switching, reload, long names and unobscured fields at
 1440 and 390 pixels. Existing checks also cover 700 pixels, separate content and
 area, Undo/Redo, publication exclusion, failed Text recovery and backup downloads.

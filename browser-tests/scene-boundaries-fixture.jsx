@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { createArticle } from '../src/text/domain/article.js';
 import ArticleView from '../src/text/ArticleView.jsx';
-import { ReceptionImage } from '../src/reception/ReceptionCanvas.jsx';
+import { CompositionImage } from '../src/composition/CompositionImage.jsx';
 import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createWorkbenchCollection, appendWorkbench } from '../src/systemWorkflow/domain/workbenchCollection.js';
@@ -52,7 +52,7 @@ function Study({ entry }) {
     </div>
     <div className="study-cells">
       {mounted && <div className="study-cell study-image" data-artwork={image.artwork?.id}>{image.status === 'ready'
-        ? <ReceptionImage record={image.record} /> : <p role="status">Source unavailable</p>}</div>}
+        ? <CompositionImage record={image.record} /> : <p role="status">Source unavailable</p>}</div>}
       <div className="study-cell" data-linked-text><ArticleView article={text.article} containerOwned /></div>
       <div className="study-cell" data-static><ArticleView article={entry.draft.texts[2].article} containerOwned /></div>
     </div>

@@ -10,7 +10,7 @@ export default function PublicationConfirmation({ confirmation, onClose }) {
   const { profileAddress, transactionHash, destination, removedTitles = [] } = confirmation;
   const removed = removedTitles.length > 0;
   const viewUrl = applicationRouteUrl(window.location, { kind: 'profile', address: profileAddress,
-    reception: 'published', canvas: destination === 'gallery' });
+    gallery: destination === 'gallery' });
   const transactionUrl = /^0x[0-9a-f]{64}$/i.test(transactionHash || '')
     ? `${lukso.blockExplorers.default.url}/tx/${transactionHash}` : null;
   return createPortal(<WorkbenchDestinationPanel title={removed ? 'Removed from Gallery' : 'Published successfully'} onClose={onClose} closeLabel="Dismiss publication confirmation"

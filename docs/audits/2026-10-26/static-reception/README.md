@@ -16,7 +16,7 @@ Tests use disposable storage. No real browser draft is opened or rewritten.
 | ImageWorkbench / imageLibrarySide | Reused source resolution and crop mathematics; Reception owns its placement and operations. No thumbnail substitution. | Direct selection, cancellation, original source |
 | TextTools / ArticleEditor / ArticleView | Extracted shared `TextToolsContent`, explicit host appearance, and one collection-aware text save/conflict service. Workbench retains window/box controls; Reception owns its outer surface. | Formatting, native content flow, failure/retry, article-tools/filled-Workbench/linked-frames regression |
 | ColourControls / CommittedColourControls | Reused with explicit selected target and temporary preview. | Existing color contracts and shared Text/Reception rendering |
-| ProfileOverview / profileOverview.css | Fixed markup, grid areas and superseded breakpoints removed. One `ReceptionCanvas` and navigation serve editor preview and public view. Exploration and visitor-return consumers retained. | Owner/public parity, route/focus and geometry screenshots |
+| ProfileOverview / profileOverview.css | Fixed markup, grid areas and superseded breakpoints removed. One `ReceptionCanvas` and navigation serve editor preview and public view. Visitor-return consumers retained. | Owner/public parity, route/focus and geometry screenshots |
 | receptionPresentation | Replaced selection-only representation by strict v2 rectangular partition, canonical Image/Text collections, mobile references and branding. No legacy adapter. Dead Image `receptionCrop` field removed. | Invalid topology, content scope, projection and round trip |
 | systemWorkflowDraftStore / collection | Extended the canonical owner with a Reception capability scope and history key; no canvas operations, hidden canvas or new storage key. | Save failure, history, generation/lease isolation, reload/backup revocation |
 | v9 builder/validation/reconciliation, canvasPublication | Integrated eligible placed Reception content and logo under shared publication selection. | Private/unplaced exclusion, partial publication and restoration |
@@ -24,7 +24,7 @@ Tests use disposable storage. No real browser draft is opened or rewritten.
 
 Retained names have live purposes: `reception-card.browser.mjs` is the maintained
 six-case public Reception suite, with current renderer assertions.
-`profileOverview.css` retains exploration/Keeper and visitor-return styles.
+`profileOverview.css` retains visitor-return styles.
 `PublishedDisplayModule` still prevents unrelated Reception navigation from
 resetting Display. Workbench grids, Grid Shape, Display scenes and the Aerra
 gallery are independent features. There is no alternate old/new Reception path.

@@ -32,7 +32,7 @@ const key = profile => JSON.stringify([LUKSO_CHAIN_ID, normalizeProfileAddress(p
 export const workspaceSession = profile => sessions.get(key(profile));
 const prefixes = {
   library: 'inscape.library-workspace.v9:', workbenches: 'inscape.system-workflow-draft.v1:',
-  receptionRecovery: 'inscape.reception-recovery.v1:', textRecovery: 'inscape.text-recovery.v1:',
+  textRecovery: 'inscape.text-recovery.v1:',
 };
 export const recoveryStorageKey = profile => prefixes.textRecovery + profile;
 const protect = event => { event.preventDefault(); event.returnValue = ''; };

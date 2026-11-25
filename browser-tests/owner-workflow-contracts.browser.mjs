@@ -30,9 +30,9 @@ for (const width of [1440, 390]) test(`Library retains its live state while hidd
     assert.equal(await page.evaluate(() => {
       const search = window.retainedLibrarySearch;
       search.focus();
-      return search.isConnected && document.activeElement !== search;
-    }), true, 'the retained field stays mounted but cannot take keyboard focus');
-    assert.equal(await page.locator('[data-tool-tab="Layers"]').evaluate(node => node === document.activeElement), true, 'closing the Library tab returns focus to the remaining Layers tab');
+      return document.activeElement !== search;
+    }), true, 'the closed Library cannot take keyboard focus');
+    assert.equal(await trigger.evaluate(node => node === document.activeElement), true, 'closing the standalone Library returns focus to its opener');
     await trigger.click(); await library.waitFor();
     assert.equal(await search.evaluate(node => node === window.retainedLibrarySearch), true, 'reopening retains the same live input');
     assert.equal(await search.inputValue(), 'ABYSSAL');

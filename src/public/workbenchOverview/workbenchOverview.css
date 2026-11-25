@@ -61,9 +61,10 @@
 .workbench-overview .workbench-overview-menu-trigger:hover:not(:disabled) { background: color-mix(in srgb, var(--overview-glass-ink) 5%, transparent); }
 .workbench-overview .workbench-overview-navigation button:focus-visible { outline-color: var(--overview-glass-ink); }
 .workbench-overview-preview { position: relative; width: 100%; height: 100%; overflow: hidden; }
-.workbench-overview-canvas { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; pointer-events: none; }
+/* Composite adjacent, device-aligned artwork together during fractional camera transforms. */
+.workbench-overview-canvas { will-change: transform; position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; pointer-events: none; }
 .workbench-native-preview { position: relative; transform-origin: 0 0; }
-.workbench-native-preview > .reception-canvas { width: 100%; height: 100%; }
+.workbench-native-preview > .composition-canvas { width: 100%; height: 100%; }
 .workbench-overview-canvas[data-native-interactive] { pointer-events: auto; }
 .workbench-overview-canvas > .navigator-object { transform-origin: 0 0; }
 .workbench-overview-canvas .text-module-body { position: absolute; inset: 0; }
@@ -120,6 +121,10 @@
 .gallery-layout-toolbar .workbench-overview-menu-fold {
   position: absolute; top: 100%; left: 0; color: var(--spread-heading);
   background: var(--spread-panel); border-radius: 6px; box-shadow: var(--overview-glass-shadow);
+}
+@media (max-width: 400px) {
+  .gallery-layout-toolbar .workbench-overview-navigation { position: static; }
+  .gallery-layout-toolbar .workbench-overview-menu-fold { left: var(--gallery-gutter); }
 }
 .workbench-overview[data-visitor-header][data-layout="grid"] .workbench-overview-grid-host {
   position: relative; inset: auto; flex: 1; min-height: 0; margin: 12px;

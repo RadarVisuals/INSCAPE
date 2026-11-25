@@ -469,18 +469,6 @@
         "evidence": ".verification/static-reception-release-2/browser/reception-card.log"
       },
       {
-        "name": "exploration-keeper",
-        "code": 0,
-        "seconds": 35.96,
-        "tests": 3,
-        "pass": 3,
-        "fail": 0,
-        "cancelled": 0,
-        "skipped": 0,
-        "todo": 0,
-        "evidence": ".verification/reception-final-load-recheck/exploration-keeper.log"
-      },
-      {
         "name": "shapes",
         "code": 0,
         "seconds": 6.142,

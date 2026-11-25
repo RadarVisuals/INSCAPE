@@ -33,11 +33,22 @@ export const isWorkbenchCollection = value => value?.type === WORKBENCH_COLLECTI
 // This is the persisted ownership boundary. Modules still receive their existing
 // validated operation input, derived from one composition and shared profile data.
 // No mutable module content is copied into the overview or another composition.
+// Detached local records may still contain an unrelated profile section.
+export function currentLocalDraft(input) {
+  if (!object(input) || !Object.hasOwn(input, 'reception')) return input;
+  const draft = { ...input };
+  delete draft.reception;
+  return draft;
+}
+
+function sharedProfileFields({ identityPresentation, keeperDocks }) {
+  return { identityPresentation, ...(keeperDocks === undefined ? {} : { keeperDocks }) };
+}
+
 function splitDraft(draft) {
-  const { profileAddress, draftVersion, identityPresentation, keeperDocks, reception, appearance, ...content } = draft;
+  const { profileAddress, draftVersion, identityPresentation, keeperDocks, appearance, ...content } = draft;
   return {
-    shared: { identityPresentation,
-      ...(keeperDocks === undefined ? {} : { keeperDocks }), ...(reception === undefined ? {} : { reception }) },
+    shared: sharedProfileFields({ identityPresentation, keeperDocks }),
     content: { ...content, appearance },
   };
 }
@@ -45,8 +56,7 @@ function splitDraft(draft) {
 export function projectWorkbenchDraft(collection, id = collection.activeId) {
   const item = collection.workbenches.find(item => item.id === id);
   if (!item) throw new Error('This Workbench is unavailable.');
-  const shared = { ...collection.shared };
-  delete shared.menuSurfaceId; // Discard the retired field when reading existing collections.
+  const shared = sharedProfileFields(collection.shared);
   return { profileAddress: collection.profileAddress, draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
     ...item.content, ...shared, appearance: { ...item.content.appearance } };
 }
@@ -75,10 +85,9 @@ export function appendWorkbench(collection, id, name, draft, details = {}) {
 export function removeActiveWorkbench(collection, id, { fromManager = false } = {}) {
   if ((!fromManager && id !== collection.activeId) || !collection.workbenches.some(item => item.id === id)) throw new Error('Reopen the canvas you want to delete.');
   if (collection.workbenches.length === 1) throw new Error('Create another canvas before deleting the last one.');
-  const links = [...(collection.shared.reception?.links || []),
-    ...collection.workbenches.filter(item => item.id !== id).flatMap(item => item.content.composition?.links || [])];
+  const links = collection.workbenches.filter(item => item.id !== id).flatMap(item => item.content.composition?.links || []);
   const refersToCanvas = ref => ref?.profileAddress === collection.profileAddress && ref.canvasId === id;
-  if (links.some(link => [link.destination, link.source, link.controller, ...Object.values(link.sources || {})].some(refersToCanvas)))
+  if (links.some(link => [link.destination, link.source].some(refersToCanvas)))
     throw new Error('Remove the links to this canvas in the Bento editor first.');
   const index = collection.workbenches.findIndex(item => item.id === id);
   const workbenches = collection.workbenches.filter(item => item.id !== id);
@@ -88,15 +97,15 @@ export function removeActiveWorkbench(collection, id, { fromManager = false } = 
 export function assertValidWorkbenchCollection(input) {
   if (!exact(input, ['type', 'version', 'profileAddress', 'activeId', 'shared', 'workbenches'])
     || !isWorkbenchCollection(input) || input.version !== 1
-    || !object(input.shared) || !exact(input.shared, ['identityPresentation', ...Object.hasOwn(input.shared, 'menuSurfaceId') ? ['menuSurfaceId'] : [],
-      ...['keeperDocks', 'reception'].filter(key => Object.hasOwn(input.shared, key))])
+    || !object(input.shared)
+    || !Object.keys(input.shared).every(key => ['identityPresentation', 'keeperDocks', 'menuSurfaceId', 'reception'].includes(key))
     || !Array.isArray(input.workbenches) || !input.workbenches.length || input.workbenches.length > MAX_WORKBENCHES)
     throw new Error('Invalid local Workbench collection.');
   const ids = new Set();
   for (const item of input.workbenches) {
     if (!exact(item, ['id', 'name', 'content', ...['introduction', 'thumbnailCrop'].filter(key => Object.hasOwn(item || {}, key))]) || !validId(item.id) || ids.has(item.id)
       || !validWorkbenchName(item.name) || !object(item.content)
-      || ['profileAddress', 'draftVersion', 'identityPresentation', 'keeperDocks', 'reception'].some(key => Object.hasOwn(item.content, key))
+      || ['profileAddress', 'draftVersion', 'identityPresentation', 'keeperDocks'].some(key => Object.hasOwn(item.content, key))
       || Object.hasOwn(item.content.appearance || {}, 'menuSurfaceId'))
       throw new Error('Invalid or duplicate Workbench.');
     if (Object.hasOwn(item, 'introduction')) assertWorkbenchIntroduction(item.introduction);
@@ -105,7 +114,8 @@ export function assertValidWorkbenchCollection(input) {
     assertValidSystemWorkflowDraft(projectWorkbenchDraft(input, item.id));
   }
   if (!ids.has(input.activeId)) throw new Error('The active Workbench is unavailable.');
-  if (new TextEncoder().encode(JSON.stringify(input)).length > WORKBENCH_COLLECTION_LIMIT)
+  const collection = withoutRetiredInterfaceAppearance({ ...input, shared: sharedProfileFields(input.shared) });
+  if (new TextEncoder().encode(JSON.stringify(collection)).length > WORKBENCH_COLLECTION_LIMIT)
     throw new Error('The local Workbenches exceed the storage limit.');
-  return withoutRetiredInterfaceAppearance(input);
+  return collection;
 }

@@ -4,7 +4,7 @@ import IdentityPortrait from './IdentityPortrait.jsx';
 import { ProfileSection, LinksSection } from './IdentityProfileContent.jsx';
 import { IdentityFields, IdentityProfileEditor } from './IdentityCardSettings.jsx';
 // The Identity window owns its expansion and explicit authoring controls.
-// Reception reuses ProfileSection and LinksSection without this window shell.
+// Composition reuses ProfileSection and LinksSection without this window shell.
 export default function IdentityCardBody({ model, card, portraitUrl, portraitRef, interactive = true,
   expanded, onExpandedChange, expansionControls, edit = null, children }) {
   const extensionId = useId();

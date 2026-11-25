@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { LayoutGrid, ArrowUpLeft, ChevronLeft, ChevronRight, Check, Ellipsis, Pencil, X } from 'lucide-react';
+import { LayoutGrid, ChevronLeft, ChevronRight, Check, Ellipsis, X } from 'lucide-react';
 import VisitorMenu from '../../profileDocument/components/VisitorMenu.jsx';
 import CanvasExplorer from './CanvasExplorer.jsx';
 import './compositionIndex.css';
@@ -9,7 +9,7 @@ const worksPerPage = 6;
 
 // This index reads the supplied owner/public collection. It never switches the
 // editor's active Workbench; only the explicit Edit action may do that.
-export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, items, selected, model, profile, listRef, onSelect, onEdit, selection, onDetails, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, visitorHeader, movingCanvasId, hiddenRails, onToggleRail, smoothZoom }) {
+export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, items, selected, model, profile, listRef, onSelect, onEdit, selection, onDetails, onGrid, settings, disabled, memory: workspaceMemory, visitorHeader, movingCanvasId, hiddenRails, onToggleRail, smoothZoom }) {
   const [expandRequested, setExpanded] = useState(workspaceMemory?.expanded || false);
   const expanded = !selection && expandRequested;
   const railId = useId();
@@ -85,10 +85,6 @@ export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, i
     </header>}
     <div className="composition-index-body">
       <aside id={railId + 'index'} data-rail-hidden={hideIndex || undefined} className="composition-index-sidebar" inert={disabled || expanded ? '' : undefined}>
-        {!visitorHeader && (onOpenReception || onEditReception) && <div className="composition-index-reception">
-          {onOpenReception && <button className="composition-index-about" type="button" onClick={onOpenReception}><ArrowUpLeft size={14} />Profile</button>}
-          {onEditReception && <button type="button" className="composition-index-edit-reception" aria-label="Studio" title="Studio" onClick={onEditReception}><Pencil size={14} />{onOpenReception ? 'Edit' : 'Studio'}</button>}
-        </div>}
         <div className="composition-index-label"><h2>{visitorHeader ? 'Index' : 'Canvases'}</h2>
           {!visitorHeader && <span>{items.length}</span>}
         </div>

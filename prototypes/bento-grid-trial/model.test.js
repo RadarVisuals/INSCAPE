@@ -5,7 +5,7 @@ import { projectDocument, moveCell, leaves, dropTarget, sampleDocument, setRatio
 const textHeight = () => 96;
 const frame = (doc, id, width = 1440) => projectDocument(doc, width, textHeight).frames.find(r => r.id === id);
 function fixture() {
-  const records = new Map([['real-reception', 'untouched'], ['inscape:prototype:bento-grid-trial:v1', 'previous trial']]); let fail = false;
+  const records = new Map([['real-composition', 'untouched'], ['inscape:prototype:bento-grid-trial:v1', 'previous trial']]); let fail = false;
   const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => { if (fail) throw Error('Full'); records.set(key, value); }, removeItem: key => records.delete(key) };
   return { store: createTrialStore(storage), storage, records, fail: () => { fail = true; } };
 }
@@ -29,7 +29,7 @@ test('right-column swap preserves left artwork and content, reload, and one-step
   assert.deepEqual(createTrialStore(storage).read().document, after);
   store.undo(); assert.deepEqual(store.read().document, before); assert.equal(store.read().canUndo, false);
   store.redo(); assert.deepEqual(store.read().document, after);
-  assert.equal(records.get('real-reception'), 'untouched');
+  assert.equal(records.get('real-composition'), 'untouched');
   assert.equal(records.get('inscape:prototype:bento-grid-trial:v1'), 'previous trial');
 });
 test('cross-column centre swaps trade differently-sized slots without losing artwork identity', () => {

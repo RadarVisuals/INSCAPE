@@ -30,7 +30,7 @@ const vertex = `
     colour = mix(colour, tint.rgb, tint.a);
     if (fieldLow.a > 0.) {
       // The neutral reference mesh spans 18..52 in sRGB. Preserve its full relief
-      // between the palette endpoints, matching the static field-range mask.
+      // between the palette endpoints.
       float tone = clamp((tones.r * 255. - 18.) / 34., 0., 1.);
       colour = mix(fieldLow.rgb, fieldHigh.rgb, tone);
     }

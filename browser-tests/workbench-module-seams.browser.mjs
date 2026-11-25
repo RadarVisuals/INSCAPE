@@ -65,7 +65,7 @@ for (const visitor of [false, true]) for (const density of [1, 1.25, 1.5, 2]) {
           adjoiningModules: {
             textTransform: mode === 'none' ? null : { quarterTurns: 0, mirrorX: mode === 'mirror', mirrorY: false } },
           artwork: { url: 'https://motion.invalid/seam-solid.png', contentType: 'image/png', body: Buffer.from(red, 'base64'), width: 400, height: 400 } });
-        await page.locator('.text-window').waitFor(); await page.locator('.image-module__window').first().waitFor();
+        await page.locator('aside.text-window').waitFor(); await page.locator('.image-module__window').first().waitFor();
         if (!visitor) {
           const read = page.getByRole('button', { name: 'Read', exact: true });
           if (await read.count()) { await read.focus(); await page.keyboard.press('Enter'); }

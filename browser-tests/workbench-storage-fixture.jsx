@@ -2,7 +2,7 @@ import React from 'react';
 import { fixtureAsset } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { commitWorkspaceRows } from '../src/workspace/database.js';
-import { authoredStorage, workspaceSession } from '../src/workspace/profileWorkspace.js';
+import { authoredStorage, confirmWorkspaceSaved, workspaceSession } from '../src/workspace/profileWorkspace.js';
 import { createRoot } from 'react-dom/client';
 import Boundary from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
@@ -52,13 +52,27 @@ window.failWorkbenchWrites = fail => {
   } : writeDraft;
 };
 window.savedDraft = () => JSON.parse(workspaceSession(profile)?.committed?.workbenches ?? localStorage.getItem(key));
+window.readCommittedDraft = async () => {
+  if (!await confirmWorkspaceSaved(profile)) throw new Error('Could not confirm the fixture workspace save.');
+  return window.savedDraft();
+};
 window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage, requireEditor: true });
+window.activeArtworkDraft = () => {
+  const draft = window.guardedStore().getDraft();
+  return draft.composition ?? draft;
+};
+window.seedWorkbenchDraft = async draft => {
+  const store = window.guardedStore();
+  if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }) || !await store.whenCommitted()) {
+    throw new Error('Could not persist fixture draft: ' + store.getLastCommitFailure());
+  }
+};
 const root = createRoot(document.getElementById('root'));
 window.leaveEditor = () => root.unmount();
 const content = <Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={params.has('source-benchmark') ? undefined : []} reviewCategories={[]} reviewActivity={[]}
   ownerDestinations={params.has('source-benchmark') ? { Curation: () => root.render(<p>Curation opened</p>) } : undefined}
   publishedResolution={{ status: 'UNAVAILABLE', address: profile, document: null }}
-  reviewProfile={{ name: 'Local storage verification' }} onOpenReception={() => root.render(<p>Published view requested</p>)} />;
+  reviewProfile={{ name: 'Local storage verification' }} onOpenProfile={() => root.render(<p>Published view requested</p>)} />;
 // Use the production shell's CSS boundary when checking route-level interaction.
 root.render(params.has('shell') ? <div className="application-root" data-application-mode="public">
   <div className="application-interface" data-visible>{content}</div>

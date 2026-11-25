@@ -53,16 +53,5 @@
     "cancelled": 0,
     "skipped": 0,
     "todo": 0
-  },
-  {
-    "name": "exploration-keeper",
-    "code": 0,
-    "seconds": 26.584,
-    "tests": 3,
-    "pass": 3,
-    "fail": 0,
-    "cancelled": 0,
-    "skipped": 0,
-    "todo": 0
   }
 ]

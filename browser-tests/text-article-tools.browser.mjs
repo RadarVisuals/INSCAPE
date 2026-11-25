@@ -13,10 +13,10 @@ test('a delayed backup read is discarded when Text tools switch articles', { tim
   try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } }); page.setDefaultTimeout(10000);
     await mountTextToolsFixture(page, origin, { textCount: 2 });
-    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), windows = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), windows = page.locator('aside.text-window');
     // Focus activation is the same keyboard path used to target a second Text.
-    await windows.first().getByRole('button', { name: 'Text tools', exact: true }).focus();
-    if (!await tools.count()) await page.keyboard.press('Enter');
+    await windows.first().getByRole('textbox', { name: 'Article text', exact: true }).focus();
+    if (!await tools.count()) await page.getByRole('button', { name: 'Open text inspector', exact: true }).click();
     await openTextToolSection(tools, 'Default text style');
     await tools.locator('.text-backup-controls summary').click();
     const before = await page.evaluate(() => window.savedDraft().texts);
@@ -30,11 +30,11 @@ test('a delayed backup read is discarded when Text tools switch articles', { tim
     });
     await tools.getByLabel('Open article backup', { exact: true }).setInputFiles({ name: 'article.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(before[0].article)) });
     await page.waitForFunction(() => Boolean(window.finishBackupRead));
-    await windows.nth(1).getByRole('button', { name: 'Text tools', exact: true }).focus();
+    await windows.nth(1).getByRole('textbox', { name: 'Article text', exact: true }).focus();
     await page.evaluate(() => window.finishBackupRead()); await settle(page);
     assert.equal(await tools.getByRole('button', { name: 'Replace article with backup', exact: true }).count(), 0);
     assert.deepEqual(await page.evaluate(() => window.savedDraft().texts), before);
-    await windows.first().getByRole('button', { name: 'Text tools', exact: true }).focus(); await settle(page);
+    await windows.first().getByRole('textbox', { name: 'Article text', exact: true }).focus(); await settle(page);
     assert.equal(await tools.getByRole('button', { name: 'Replace article with backup', exact: true }).count(), 0);
   } finally { await browser.close(); }
 });
@@ -61,7 +61,7 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
     });
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), win = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), win = page.locator('aside.text-window');
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
     const number = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const style = (locator, property) => locator.evaluate((node, property) => getComputedStyle(node)[property], property);
@@ -136,9 +136,7 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     assert.equal(await tools.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     await page.screenshot({ path: `.browser-test-runtime/text-article-backup-${width}.png` });
     await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    await win.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-    assert.equal(await style(win.locator('article h2').first(), 'fontSize'), '32px');
-    assert.equal(await style(win.locator('article figcaption'), 'fontSize'), '12px');
+    assert.equal(await win.getByRole('textbox', { name: 'Article text', exact: true }).getAttribute('contenteditable'), 'true');
     await mountTextToolsFixture(page, origin, { visitor: true });
     assert.equal(await style(page.locator('.text-window article h2').first(), 'fontSize'), '32px');
     assert.equal(await style(page.locator('.text-window article figcaption'), 'fontSize'), '12px');

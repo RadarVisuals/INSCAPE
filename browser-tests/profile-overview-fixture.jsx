@@ -21,10 +21,8 @@ import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWork
 const OwnerSystemWorkflowPublicationRack = lazy(() => import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'));
 import '../src/index.css';
 import { createArticle } from '../src/text/domain/article.js';
-import { createReceptionEditorDocument } from '../src/reception/receptionEditorDocument.js';
+import { createStudioComposition } from '../src/systemWorkflow/domain/studioComposition.js';
 import { createTextPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
-import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
-import { splitReception } from '../src/reception/receptionLayout.js';
 const address = `0x${'1'.repeat(40)}`, contract = `0x${'3'.repeat(40)}`;
 const assetId = `42:${contract}:0x01`;
 const draft = createEmptySystemWorkflowDraft(address, { generateId: () => 'first' });
@@ -33,7 +31,7 @@ draft.identityPresentation.bio = { mode: 'inscape', customText: 'Illustration, s
 draft.identityPresentation.card = { version: 1, columns: 2, background: { type: 'plain', color: '#161818', speed: 1 }, fields: [
   { id: 'field:location', label: 'Location', type: 'text', value: 'Underneath' },
 ] };
-const portrait = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><path fill="#d3d0c8" d="M400 120c-120 0-180 110-180 230l-90 660h540l-90-660c0-120-60-230-180-230Z"/><ellipse cx="400" cy="345" rx="108" ry="145" fill="#252828"/><path fill="none" stroke="#8b8b82" stroke-width="10" d="m220 530 180 180 180-180M270 1050l55-410m205 410-55-410"/></svg>');
+const portrait = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><path fill="#bd956b" d="M400 120c-120 0-180 110-180 230l-90 660h540l-90-660c0-120-60-230-180-230Z"/><ellipse cx="400" cy="345" rx="108" ry="145" fill="#252828"/><path fill="none" stroke="#8b8b82" stroke-width="10" d="m220 530 180 180 180-180M270 1050l55-410m205 410-55-410"/></svg>');
 const asset = { id: assetId, chainId: 42, contractAddress: contract, tokenId: '0x01', standard: 'LSP8', name: 'Source artwork',
   imageUrl: portrait, originalImageUrl: portrait, imageWidth: 800, imageHeight: 1200, creators: [], attributes: [] };
 if (new URLSearchParams(location.search).has('owner')) {
@@ -52,12 +50,6 @@ if (new URLSearchParams(location.search).has('collection')) {
   draft.imageModules[0].width = 800; draft.imageModules[0].height = 1200;
   draft.workbench.imageModules[0].position = { left: 0, top: 0 };
 }
-draft.reception = createReception();
-draft.reception = splitReception(draft.reception, draft.reception.regions[0].id, 'x', 'region:portrait');
-draft.reception.regions[0].content = 'profile';
-draft.reception.regions[1].content = 'image:reception';
-draft.reception.regions[1].padding = 0;
-draft.reception.imageModules = [{ ...structuredClone(draft.imageModules[0]), id: 'image:reception' }];
 let published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
 let collection = createWorkbenchCollection(draft);
 collection.workbenches[0].name = 'Vision';
@@ -81,10 +73,15 @@ if (new URLSearchParams(location.search).has('large-gallery')) {
 }
 if (new URLSearchParams(location.search).has('collection')) {
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
-    selectedIds: ['workbench:main', 'workbench:anatomy', ...extraGalleryIds, 'reception'], includeShared: true });
+    selectedIds: ['workbench:main', 'workbench:anatomy', ...extraGalleryIds], includeShared: true });
 }
 if (new URLSearchParams(location.search).has('mixed')) {
-  const composition = createReceptionEditorDocument(draft.reception);
+  const composition = createStudioComposition('bento');
+  const image = structuredClone(draft.imageModules[0]);
+  composition.imageModules.push(image);
+  composition.cells[0].members.push(image.id);
+  composition.workbench.imageModules.push({ ...draft.workbench.imageModules[0] });
+  composition.artworkLayers.push(image.id);
   const free = { id: 'text:free-caption', visibility: 'PUBLIC', article: createArticle('Free caption') };
   composition.texts.push(free);
   composition.workbench.texts.push({ ...createTextPresentation(free.id), open: true,
@@ -99,11 +96,12 @@ if (new URLSearchParams(location.search).has('mixed')) {
     placements: { 'workbench:main': ['profile'], 'workbench:mixed': ['gallery', 'profile'] } });
 }
 if (new URLSearchParams(location.search).has('bulk')) {
+  collection = appendWorkbench(collection, 'workbench:bento', 'Bento', { ...createEmptySystemWorkflowDraft(address), composition: createStudioComposition('bento') });
   collection = appendWorkbench(collection, 'workbench:profile-link', 'Profile link', draft);
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
-    selectedIds: ['workbench:main', 'workbench:anatomy', 'workbench:profile-link', 'reception'], includeShared: true,
+    selectedIds: ['workbench:main', 'workbench:anatomy', 'workbench:profile-link', 'workbench:bento'], includeShared: true,
     placements: { 'workbench:main': ['gallery'], 'workbench:anatomy': ['gallery'],
-      'workbench:profile-link': ['profile'], reception: ['gallery', 'profile'] } });
+      'workbench:profile-link': ['profile'], 'workbench:bento': ['gallery', 'profile'] } });
 }
 if (new URLSearchParams(location.search).has('last-gallery')) {
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
@@ -171,13 +169,13 @@ function Fixture() {
   return <GalleryStudioMotion.Provider value={navigation.motion}><div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
     {content?.kind === 'workbench' ? <Suspense fallback={null}>
       <OwnerWorkspace profileAddress={address} canvasOverviewRequested={content.canvas === true}
-        requestedWorkId={content.worksEditorId} receptionEditorRequested={content.receptionEditorRequested}
+        requestedWorkId={content.worksEditorId}
         publishedResolution={resolution} connectedProfile={account} ownerDestinations={ownerDestinations}
         initialNew={content.newComposition === true} onNewOpened={navigation.consumeNewComposition}
         onManageCompositions={() => navigation.manageCompositions(address)} onOpenGallery={() => navigation.openCanvas(address)}
         returnLabel={navigation.studioReturnLabel} onOpenWriting={() => navigation.openWriting(address)}
-        onOpenReception={mode => navigation.openReception(address, mode === 'published' ? 'published' : true)}
-        onEditorDocumentChange={(kind, id, options) => kind === 'reception' ? navigation.editReception(address, options) : navigation.editWork(address, id, options)}
+        onOpenProfile={() => navigation.openOverview(address)}
+        onEditorDocumentChange={(id, options) => navigation.editWork(address, id, options)}
         getWalletPublicationContext={() => window.publicationBoundaryWallet} onPublicationConfirmed={publicationConfirmed}
         onReturnToWorks={() => navigation.returnToWorks(address)}
         reviewStorage={storage} reviewProfile={{ name: 'Nomad' }} reviewAssets={[asset]} />
@@ -193,10 +191,9 @@ function Fixture() {
       returnProfileAddress={account?.address} ownerDestinations={ownerDestinations} onReturnToWorkbench={owner ? ownerDestinations.Studio : undefined}
       onManageWorks={owner ? () => navigation.manageCompositions(address) : undefined}
             onNewComposition={owner ? () => navigation.openStudio(address, { create: true }) : undefined}
-      onEditComposition={owner ? id => id === 'reception' ? navigation.editReception(address) : navigation.editWork(address, id) : undefined}
+      onEditComposition={owner ? id => navigation.editWork(address, id) : undefined}
       onOpenWriting={() => navigation.openWriting(address)} onDisconnect={() => { window.__fixtureDisconnected = true; }}
-      onEditReception={owner ? () => navigation.editReception(address) : undefined}
-      entry={{ surface: content?.writing ? 'writing' : content?.canvas ? 'canvas' : 'overview', target: content?.target, reception: content?.reception }}
+      entry={{ surface: content?.writing ? 'writing' : content?.canvas ? 'canvas' : 'overview', target: content?.target }}
       onOpenCanvas={() => navigation.openCanvas(address)} onOpenOverview={() => navigation.openOverview(address)} />}
     {confirmation && <Suspense fallback={null}><PublicationConfirmation confirmation={confirmation} onClose={() => setConfirmation(null)} /></Suspense>}
   <GalleryStudioStage /></div></div></GalleryStudioMotion.Provider>;

@@ -32,7 +32,7 @@ for (const width of [1600, 390]) test(`empty writing area is discoverable withou
       if (await write.count()) { await write.focus(); await page.keyboard.press('Enter'); }
       const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
       if (await close.isVisible()) await close.click();
-      const win = page.locator('.text-window'), body = win.getByRole('textbox', { name: 'Article text', exact: true });
+      const win = page.locator('aside.text-window'), body = win.getByRole('textbox', { name: 'Article text', exact: true });
       const hint = win.getByText('Start writing…', { exact: true });
       await page.locator('main.system-workflow').focus(); await settle(page);
       const before = await saved(page);

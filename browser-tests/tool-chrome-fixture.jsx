@@ -3,6 +3,7 @@ if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(loca
   interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
 }
 import React from 'react';
+import { authoredStorage, confirmWorkspaceSaved, hydrateWorkspace } from '../src/workspace/profileWorkspace.js';
 import { createRoot } from 'react-dom/client';
 import Runtime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
 import ProfileEditingBoundary from '../src/systemWorkflow/ProfileEditingBoundary.jsx';
@@ -23,7 +24,8 @@ async function mountFixture() {
   const values = new Map();
   const storage = params.has('persistent') ? localStorage : { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) };
   const profileAddress = '0x9999999999999999999999999999999999999999';
-  const seeded = storage.getItem(systemWorkflowDraftKey(profileAddress)) !== null;
+  if (params.has('persistent')) await hydrateWorkspace(profileAddress);
+  const seeded = authoredStorage(storage).getItem(systemWorkflowDraftKey(profileAddress)) !== null;
   const assets = OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => sample === 'navigator' ? asset : ({ ...asset, imageUrl: asset.src, thumbnailUrl: asset.src, originalImageUrl: asset.src }));
   const store = createSystemWorkflowDraftStore({ profileAddress, storage });
   if (!seeded) {
@@ -53,6 +55,7 @@ async function mountFixture() {
     saveTextModule(store, profileAddress, text, { ...text, article: { ...text.article, title: 'Navigator study', content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A live miniature of this composition.' }] }] } } });
   }
   }
+  if (params.has('persistent')) await confirmWorkspaceSaved(profileAddress);
   // Test-only read access to the disposable draft. All edits use the real UI.
   window.readToolChromeDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
   // Activity exercises the real signal hook and read-marker persistence. Only the

@@ -4,7 +4,7 @@ import CompositionStartLayout from '../../ui/CompositionStartLayout.jsx';
 import { ArrowLeft } from 'lucide-react';
 import EditorHeaderActions from './EditorHeaderActions.jsx';
 import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { EditorCellEditingNotice, useEditorCells } from '../../reception/EditorCellsContext.jsx';
+import { EditorCellEditingNotice, useEditorCells } from '../../composition/EditorCellsContext.jsx';
 import { toolIsVisible } from './workbenchToolDockState.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -15,7 +15,7 @@ const CanvasControls = lazy(() => import('./WorkbenchCanvasControls.jsx'));
 
 // The bar owns its screen boundary and name form. The document session saves
 // composition changes and guards every transition.
-export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, initialNew, onNewOpened, onManageCompositions,
+export default function OwnerEditorMenuBar({ busy, hidden, preserveHeaderSpace, documentNavigation, initialNew, onNewOpened, onManageCompositions,
   navigationRef, hostRef, navigation, focusOnMount, onPreview, onOpenPanel, onLibrary, onPublish, publicationOpen, onReturnToWorks, workspaceDestinations, returnLabel = 'Gallery', saveState, publicationState, dirty, history, onHistory, historyBlocked,
   preferences, onPreferencesChange, editorPreferences, artworkLayersOpen, onToggleLayers, creationBarVisible, onCreationBarChange, onSearchCommands, openPanels }) {
   const cells = useEditorCells();
@@ -23,24 +23,25 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
   const docks = editorPreferences.tools;
   const layout = useSyncExternalStore(docks.subscribe, docks.getSnapshot);
   const bar = useRef(null), trigger = useRef(null), input = useRef(null);
+  const measuredTop = useRef(0);
   const { setNavigationTop, setInteractionTool } = useWorkbenchView();
   useLayoutEffect(() => {
     const host = bar.current.closest('main') || hostRef.current;
     const measure = () => {
-      const top = hidden ? 0 : bar.current.getBoundingClientRect().bottom;
+      if (!hidden) measuredTop.current = bar.current.getBoundingClientRect().bottom;
+      const top = !hidden || preserveHeaderSpace ? measuredTop.current : 0;
       setNavigationTop(top);
       host?.style.setProperty('--workspace-navigation-top', `${top}px`);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(bar.current); measure();
     return () => { observer.disconnect(); setNavigationTop(0); host?.style.removeProperty('--workspace-navigation-top'); };
-  }, [hidden, hostRef, setNavigationTop]);
+  }, [hidden, preserveHeaderSpace, hostRef, setNavigationTop]);
   const [form, setForm] = useState(null), [name, setName] = useState('');
   const [startLayout, setStartLayout] = useState('canvas');
   const [error, setError] = useState(''), [sizeOpen, setSizeOpen] = useState(false);
   const { items, activeId } = documentNavigation;
-  const profileBento = activeId === 'reception';
-  const documentName = profileBento ? 'Profile' : items.find(item => item.id === activeId)?.name || 'Untitled';
+  const documentName = items.find(item => item.id === activeId)?.name || 'Untitled';
   const blocked = Boolean(busy || historyBlocked || camera.locked);
   useLayoutEffect(() => { if (focusOnMount) trigger.current?.focus({ preventScroll: true }); }, [focusOnMount]);
   useLayoutEffect(() => { if (form) { input.current?.focus(); input.current?.select?.(); } }, [form]);
@@ -75,7 +76,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
   const studioCommands = [
     command('new', 'New composition', source => startForm('new', source), { disabled: blocked || items.length >= MAX_WORKBENCHES }),
     ...(onManageCompositions ? [command('manage', 'Manage works', onManageCompositions, { disabled: blocked })] : []),
-    command('rename', 'Rename composition', source => startForm('rename', source), { disabled: profileBento || blocked }),
+    command('rename', 'Rename composition', source => startForm('rename', source), { disabled: blocked }),
   ];
   const commands = {
     Canvas: [
@@ -83,7 +84,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
       { id: 'compositions', label: 'Compositions', children: items.length
         ? items.map(item => check(item.id, item.name, activeId === item.id, () => documentNavigation.select(item.id)))
         : [command('empty', 'Create your first composition with + New.', undefined, { disabled: true })] },
-      command('delete', 'Delete local composition…', () => setForm('delete'), { disabled: profileBento || blocked || items.length < 2,
+      command('delete', 'Delete local composition…', () => setForm('delete'), { disabled: blocked || items.length < 2,
         reason: items.length === 1 ? 'Studio keeps at least one composition.' : undefined }),
       ...(documentNavigation.beginFirstCell || documentNavigation.cellsUnavailableReason ? [command('add-cell', 'Add cell', () => {
         if (!creationBarVisible) onCreationBarChange(true);
@@ -128,25 +129,27 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
       </div>
       <EditorHeaderActions key={activeId} studioCommands={studioCommands} runStudioCommand={(entry, source) => perform(() => entry.run(source))} {...{ saveState, publicationState, dirty, onPreview, onPublish, publicationOpen, blocked }} />
     </header>
-    {form === 'delete' && <section role="alertdialog" aria-label="Delete local composition" aria-describedby="delete-canvas-question" className="editor-menu-form"
-      onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeForm(); } }}>
-      <span id="delete-canvas-question">Delete “{documentName}” from this device? This permanently removes the local composition and its edit history. Published versions stay online.</span>
-      <div><button type="button" ref={input} onClick={closeForm}>Cancel</button>
-        <button type="button" disabled={blocked} onClick={() => {
-          if (perform(documentNavigation.remove)) closeForm();
-        }}>Delete local composition</button></div>
-    </section>}
-    {(form === 'new' || form === 'rename') && <form role="dialog" aria-label={form === 'new' ? 'New composition' : 'Rename composition'} className="editor-menu-form"
-      onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeForm(); } }}
-      onSubmit={event => { event.preventDefault(); if (perform(() => {
-        if (form === 'new') documentNavigation.create(name.trim(), startLayout);
-        else documentNavigation.rename(name.trim());
-      })) closeForm(); }}>
-      {form === 'new' && <CompositionStartLayout value={startLayout} onChange={setStartLayout} />}
-      <label>Composition name<input ref={input} value={name} maxLength={64} required onChange={event => setName(event.target.value)} /></label>
-      <div><button type="submit">{form === 'new' ? 'Create composition' : 'Save name'}</button><button type="button" onClick={closeForm}>Cancel</button></div>
-    </form>}
-    {error && <p className="editor-menu-error" role="alert">{error}<button type="button" onClick={() => setError('')}>Dismiss</button></p>}
+    {(form || error) && <div className="editor-menu-feedback">
+      {form === 'delete' && <section role="alertdialog" aria-label="Delete local composition" aria-describedby="delete-canvas-question" className="editor-menu-form"
+        onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeForm(); } }}>
+        <span id="delete-canvas-question">Delete “{documentName}” from this device? This permanently removes the local composition and its edit history. Published versions stay online.</span>
+        <div><button type="button" ref={input} onClick={closeForm}>Cancel</button>
+          <button type="button" disabled={blocked} onClick={() => {
+            if (perform(documentNavigation.remove)) closeForm();
+          }}>Delete local composition</button></div>
+      </section>}
+      {(form === 'new' || form === 'rename') && <form role="dialog" aria-label={form === 'new' ? 'New composition' : 'Rename composition'} className="editor-menu-form"
+        onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeForm(); } }}
+        onSubmit={event => { event.preventDefault(); if (perform(() => {
+          if (form === 'new') documentNavigation.create(name.trim(), startLayout);
+          else documentNavigation.rename(name.trim());
+        })) closeForm(); }}>
+        {form === 'new' && <CompositionStartLayout value={startLayout} onChange={setStartLayout} />}
+        <label>Composition name<input ref={input} value={name} maxLength={64} required onChange={event => setName(event.target.value)} /></label>
+        <div><button type="submit">{form === 'new' ? 'Create composition' : 'Save name'}</button><button type="button" onClick={closeForm}>Cancel</button></div>
+      </form>}
+      {error && <p className="editor-menu-error" role="alert">{error}<button type="button" onClick={() => setError('')}>Dismiss</button></p>}
+    </div>}
     <Suspense fallback={null}><CanvasControls hostRef={hostRef} navigation={navigation} historyBlocked={historyBlocked}
       open={sizeOpen} onOpenChange={setSizeOpen} returnFocus={trigger.current} /></Suspense>
     <EditorCellEditingNotice />

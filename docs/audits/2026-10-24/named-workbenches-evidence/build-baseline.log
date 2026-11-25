@@ -475,7 +475,6 @@ computing gzip size...
 .browser-test-runtime/named-workbench-baseline-dist/assets/OwnerSystemWorkflowActivity-DDR86yoM.js               6.66 kB │ gzip:   2.57 kB
 .browser-test-runtime/named-workbench-baseline-dist/assets/index-DMsyLXwS.js                                     6.89 kB │ gzip:   2.78 kB
 .browser-test-runtime/named-workbench-baseline-dist/assets/ownerSystemWorkflowPreviewDocument-BLjsIk5Z.js        7.36 kB │ gzip:   2.95 kB
-.browser-test-runtime/named-workbench-baseline-dist/assets/ExplorationKeeper-C-i9O60o.js                         7.41 kB │ gzip:   3.45 kB
 .browser-test-runtime/named-workbench-baseline-dist/assets/ProfileOverview-aKNgul_O.js                           7.57 kB │ gzip:   2.83 kB
 .browser-test-runtime/named-workbench-baseline-dist/assets/ownerDraftReconciliation-BaEx8piC.js                  7.63 kB │ gzip:   2.92 kB
 .browser-test-runtime/named-workbench-baseline-dist/assets/WorkbenchCanvasControls-BD3b7Nky.js                   8.04 kB │ gzip:   3.24 kB

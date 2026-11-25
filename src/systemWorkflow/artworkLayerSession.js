@@ -1,6 +1,6 @@
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { artworkLocked, withArtworkLocks, artworkLayers, artworkRecords, groupArtwork, reorderArtwork } from './domain/artworkLayers.js';
-import { reorderReceptionArtwork } from '../reception/receptionLayerOrder.js';
+import { reorderCompositionArtwork } from '../composition/compositionLayerOrder.js';
 
 export function editArtworkLayers(store, profile, action, expectedGeneration = store.getGeneration(), presentation) {
   if (store.getProfileAddress() !== profile || store.getGeneration() !== expectedGeneration)
@@ -18,7 +18,7 @@ export function editArtworkLayers(store, profile, action, expectedGeneration = s
   } else if (action.type === 'order') {
     const cells = store.getCells?.();
     next.artworkLayers = cells?.length
-      ? reorderReceptionArtwork(layers, cells, action.ids, action.direction, action.targetId, action.edge)
+      ? reorderCompositionArtwork(layers, cells, action.ids, action.direction, action.targetId, action.edge)
       : reorderArtwork(layers, action.ids, action.direction, action.targetId, action.edge);
   }
   else if (action.type === 'group') {

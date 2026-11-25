@@ -1,9 +1,9 @@
+import { compositionArtworkFields } from '../../systemWorkflow/domain/retiredInterfaceAppearance.js';
 import { FIRST_WORKBENCH_ID, isWorkbenchCollection, createWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { createBlankWorkbenchDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { CANVAS_CONTENT_KEYS, canvasContent, canvasDetails, canvasDocument, publishedCanvasEntries, publishedCompositionEntries, validPublicationDestinations } from './publishedCanvases.js';
-import { projectReception, validReception } from './receptionPresentation.js';
+import { projectCompositionEditorDocument, validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 
 import { canReplaceInvalidPublication } from './canReplaceInvalidPublication.js';
@@ -33,36 +33,32 @@ export function canvasPublicationCandidates({ record, assetRecords, profile }) {
     profileIdentity: profile, assetRecords });
   const candidates = collection.workbenches.map(item => {
     try {
-      const { reception, composition, ...draft } = projectWorkbenchDraft(collection, item.id);
+      const { composition, ...draft } = projectWorkbenchDraft(collection, item.id);
       const document = build(draft);
       const content = canvasContent(document);
       if (composition) {
-        if (composition.version !== 3 || !validReception(composition)) throw new Error('Invalid Studio composition.');
-        content.composition = projectReception(composition);
+        if (composition.version !== 3 || !validCompositionEditorDocument(composition)) throw new Error('Invalid Studio composition.');
+        content.composition = projectCompositionEditorDocument(composition);
       }
       return { ...canvasDetails(item), content, document };
     } catch (error) { return { ...canvasDetails(item), error: error.message }; }
   });
-  if (collection.shared.reception) {
-    try {
-      // A first publication from the Profile Bento must never include artwork
-      // from an unselected canvas just to satisfy the v9 document envelope.
-      const { reception, ...shared } = collection.shared;
-      if (!validReception(reception)) throw new Error('Invalid local Bento.');
-      const document = build({ ...createBlankWorkbenchDraft(collection.profileAddress), ...shared });
-      candidates.push({ id: 'reception', name: 'Bento', reception: projectReception(reception), document });
-    } catch (error) { candidates.push({ id: 'reception', name: 'Bento', error: error.message }); }
-  }
   return candidates;
 }
 export function canvasPublicationChanges(candidates, previous, placements = {}) {
   const published = previous ? publishedCompositionEntries(previous) : [];
   return candidates.map(({ document, error, ...entry }) => {
     const before = published.find(item => item.id === entry.id);
-    const destinations = placements[entry.id] ?? before?.destinations ?? (entry.id === 'reception' ? ['profile'] : ['gallery']);
+    const destinations = placements[entry.id] ?? before?.destinations ?? ['gallery'];
     return { id: entry.id, name: entry.name, destinations, error, first: !before,
       changed: Boolean(error) || canonical(before) !== canonical({ ...entry, destinations }) };
   });
+}
+function omitUnusedDecoration(document) {
+  for (const content of [document, ...(document.canvases || []).map(entry => entry.content)]) {
+    if (content.composition) content.composition = compositionArtworkFields(content.composition);
+  }
+  return document;
 }
 export function buildCanvasPublication({ candidates, selectedIds, includeShared, placements = {}, previousDocument, exportedAt = new Date() }) {
   const previous = previousDocument ? assertValidProfileDocumentV9(previousDocument) : null;
@@ -76,26 +72,20 @@ export function buildCanvasPublication({ candidates, selectedIds, includeShared,
   if (!current || previous && current.profile.address !== previous.profile.address) throw new Error('The publication must belong to this profile.');
   if (!previous && !includeShared) throw new Error('The first publication also needs profile details.');
   const entries = previous ? publishedCanvasEntries(previous) : [];
-  let reception = previous?.reception, receptionDestinations = previous?.receptionDestinations;
   for (const { document, ...entry } of selected) {
     const index = entries.findIndex(item => item.id === entry.id);
-    const profileBento = entry.id === 'reception';
-    const destinations = placements[entry.id] ?? (profileBento ? receptionDestinations || ['profile'] : entries[index]?.destinations || ['gallery']);
+    const destinations = placements[entry.id] ?? entries[index]?.destinations ?? ['gallery'];
     if (!validPublicationDestinations(destinations)) throw new Error('Choose Gallery, Profile or both for ' + entry.name + '.');
-    if (profileBento) { reception = entry.reception; receptionDestinations = destinations; }
-    else {
-      const next = { ...entry, destinations };
-      if (index < 0) entries.push(next); else entries[index] = next;
-    }
+    const next = { ...entry, destinations };
+    if (index < 0) entries.push(next); else entries[index] = next;
   }
-  if (!entries.length && !reception && previous?.canvas !== null) throw new Error('Select a composition for the first publication.');
+  if (!entries.length && previous?.canvas !== null) throw new Error('Select a composition for the first publication.');
   const shared = includeShared ? current : previous;
   const root = entries.length ? canvasDocument(shared, entries[0])
-    : canvasDocument(shared, { content: canvasContent(candidates.find(item => item.id === 'reception')?.document || previous) });
+    : canvasDocument(shared, { content: {} });
   const document = { ...root, canvas: entries.length ? canvasDetails(entries[0]) : null, canvases: entries.slice(1),
-    ...(reception ? { reception } : {}), ...(receptionDestinations ? { receptionDestinations } : {}),
     createdAt: previous?.createdAt || new Date(exportedAt).toISOString(), exportedAt: new Date(exportedAt).toISOString(), revision: (previous?.revision || 0) + 1 };
-  return assertValidProfileDocumentV9(document);
+  return assertValidProfileDocumentV9(omitUnusedDecoration(document));
 }
 
 // This edit is based solely on the verified public revision. Pending local edits
@@ -109,13 +99,6 @@ export function buildGalleryRemoval(previousVerifiedDocument, workIds, exportedA
   if (selected.length !== selection.size) throw new Error('A selected work is no longer in the published Gallery.');
 
   const removed = new Set(selected.filter(item => !item.destinations.includes('profile')).map(item => item.id));
-  if (removed.has('reception')) {
-    delete document.reception;
-    delete document.receptionDestinations;
-  } else if (selection.has('reception')) {
-    document.receptionDestinations = ['profile'];
-  }
-
   const survivingCanvases = (document.canvases || []).filter(item => !removed.has(item.id));
   for (const item of survivingCanvases) if (selection.has(item.id)) item.destinations = ['profile'];
   if (document.canvases) document.canvases = survivingCanvases;
@@ -138,9 +121,9 @@ export function buildGalleryRemoval(previousVerifiedDocument, workIds, exportedA
   document.revision++;
   document.exportedAt = new Date(exportedAt).toISOString();
   try {
-    return assertValidProfileDocumentV9(document);
+    return assertValidProfileDocumentV9(omitUnusedDecoration(document));
   } catch (error) {
-    const blockers = error.errors?.filter(issue => issue.code === 'unavailable_reception_link');
+    const blockers = error.errors?.filter(issue => issue.code === 'unavailable_composition_link');
     if (blockers?.length) {
       const names = [...new Set(blockers.map(issue => issue.compositionName))].map(name => '“' + name + '”').join(', ');
       throw new Error('Removing this selection would break published links in ' + names + '. Update those links or keep their target works on Profile.');

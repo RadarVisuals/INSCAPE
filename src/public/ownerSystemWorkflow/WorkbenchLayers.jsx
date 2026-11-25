@@ -10,9 +10,9 @@ import { workbenchGroupModules, WORKBENCH_GROUP_STACK_SIZE } from '../../systemW
 import { cellLayerOutline, workbenchLayerOutline } from './workbenchLayerOutline.js';
 import './workbenchLayers.css';
 import ArtworkOrderControls from '../../ui/ArtworkOrderControls.jsx';
-import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
+import { useEditorCells } from '../../composition/EditorCellsContext.jsx';
 
-import { slideOf } from '../../reception/cellSlides.js';
+import { slideOf } from '../../composition/cellSlides.js';
 import LayerThumbnail from './LayerThumbnail.jsx';
 
 export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, hostRef }) {

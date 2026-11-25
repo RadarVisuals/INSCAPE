@@ -67,10 +67,10 @@ test('System Workflow publication opens the canonical v9 rack without external m
     await rack.waitFor({ state: 'detached' });
     await trigger.click();
     await rack.waitFor();
-    await openEditorMenu(page, 'Docs');
+    await openEditorMenu(page, 'Settings');
     await rack.waitFor({ state: 'detached' });
-    await page.getByRole('dialog', { name: 'Docs' }).waitFor();
-    await page.getByRole('button', { name: 'Close Docs' }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).waitFor();
+    await page.getByRole('button', { name: 'Close Settings' }).click();
     await trigger.click();
     await rack.waitFor();
 

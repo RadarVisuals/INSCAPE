@@ -56,7 +56,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), text = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), text = page.locator('aside.text-window');
     // The fixture's original frame starts underneath current navigation chrome.
     // Pan the camera through a clear canvas point, preserving authored geometry.
     if (width === 1440) await page.locator('.editor-menu-brand[aria-expanded="true"]').click();

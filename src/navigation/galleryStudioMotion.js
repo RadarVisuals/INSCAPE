@@ -27,7 +27,7 @@ export function useGalleryStudioMotion(authority) {
       const origin = entering ? endpoints.current.gallery : leaving ? endpoints.current.editor : null;
       if (origin?.address === from.address) {
         const editor = entering ? to : from;
-        const source = origin.capture(editor.worksEditorId || (editor.receptionEditorRequested ? 'reception' : null));
+        const source = origin.capture(editor.worksEditorId || null);
         if (source && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
           trip = { source, Renderer: origin.Renderer, direction: entering ? 'editor' : 'overview', address: from.address };
         }

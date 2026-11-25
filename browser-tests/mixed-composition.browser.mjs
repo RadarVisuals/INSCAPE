@@ -13,12 +13,12 @@ test('published composition text stays with the work in Profile and Gallery and 
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&mixed=1`);
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&mixed=1`);
     const open = label => page.getByRole('button', { name: label, exact: true });
     await open('Open Mixed study').click();
     const dialog = page.getByRole('dialog', { name: 'View Mixed study' });
     const assertMixed = async host => {
-      const layout = host.locator('.reception-document-canvas');
+      const layout = host.locator('.composition-document-canvas');
       const caption = layout.locator('[data-layer-id="text:free-caption"]');
       await caption.waitFor();
       assert.equal(await caption.count(), 1);
@@ -56,7 +56,7 @@ test('The shared Studio header resumes the active document from Profile and Writ
   try {
     const page = await browser.newPage({ viewport: { width: 1365, height: 820 }, reducedMotion: 'reduce' });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    const profile = origin + '/browser-tests/profile-overview-fixture.html?view=' + address + '&reception=published&mixed=1&owner=1';
+    const profile = origin + '/browser-tests/profile-overview-fixture.html?view=' + address + '&mixed=1&owner=1';
     const button = name => page.getByRole('button', { name, exact: true });
     await page.goto(profile);
     await button('Studio').click();

@@ -4,7 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5197';
-const output = process.env.INSCAPE_BROWSER_OUTPUT || 'docs/audits/2026-10-28/reception-settings-colour-library/colour';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || 'docs/audits/2026-10-28/composition-settings-colour-library/colour';
 
 async function setup(supported = true) {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });

@@ -34,7 +34,7 @@ for (const width of [1440, 390]) test(`focused writing preserves editor identity
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seedLongArticle(page);
     if (width === 1440) await setWorkbenchZoom(page, .75);
-    const win = page.locator('.text-window'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
+    const win = page.locator('aside.text-window'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const before = await saved(page), originalBody = await bodyIn(win).elementHandle();
     const originalText = await originalBody.innerText();
     await bodyIn(win).focus(); await bodyIn(win).press('Control+End');
@@ -95,8 +95,7 @@ for (const width of [1440, 390]) test(`focused writing preserves editor identity
     await bodyIn(dialog).focus(); await page.keyboard.press('Control+f'); await dialog.waitFor({ state: 'detached' });
     assert.equal(await tools.getByRole('textbox', { name: 'Find in article', exact: true }).evaluate(node => node === document.activeElement), true, 'find returns to the usable shared inspector');
     await tools.getByRole('button', { name: 'Close search', exact: true }).click();
-    await win.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter'); await settle(page);
-    assert.equal(await page.getByRole('button', { name: 'Focus writing', exact: true }).isDisabled(), true, 'the shared Inspector cannot enter Focus writing in Read mode');
+    assert.equal(await bodyIn(win).getAttribute('contenteditable'), 'true');
     await mountTextToolsFixture(page, origin, { visitor: true });
     assert.equal(await page.getByRole('button', { name: 'Focus writing', exact: true }).count(), 0);
     assert.deepEqual(errors, []);
@@ -151,7 +150,7 @@ test('failed local saving remains visible in focused writing and recoverable aft
     assert.equal(await dialog.getByRole('alert').isVisible(), true, 'save failure remains visible while inspector is hidden');
     assert.deepEqual(await saved(page), before, 'failed writing never claims a successful stored change');
     await dialog.getByRole('button', { name: 'Return to composition', exact: true }).click(); await dialog.waitFor({ state: 'detached' });
-    assert.equal(await bodyIn(page.locator('.text-window')).innerText(), 'Unsaved focus writing must remain recoverable.');
+    assert.equal(await bodyIn(page.locator('aside.text-window')).innerText(), 'Unsaved focus writing must remain recoverable.');
     await page.evaluate(() => { window.failSave = false; });
     await tools.getByRole('button', { name: 'Retry local save', exact: true }).click(); await settle(page);
     assert.equal((await saved(page)).texts[0].article.content.content[0].content[0].text, 'Unsaved focus writing must remain recoverable.');

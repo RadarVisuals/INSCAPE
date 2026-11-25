@@ -6,7 +6,7 @@ import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemW
 import { curatedSnapshot } from '../library/curatedSnapshots.js';
 
 const profile = '0x' + 'a'.repeat(40);
-const empty = { library:null, workbenches:null, textRecovery:null, receptionRecovery:null };
+const empty = { library:null, workbenches:null, textRecovery:null };
 
 test('migration refuses silently dropped folder membership and a mismatched Workbench profile', () => {
   const ws = createEmptyWorkspace(profile);

@@ -161,7 +161,7 @@ covers that committed HEAD only, not these local changes.
 Of 411 pre-existing changed/untracked paths recorded before this turn, 409
 are byte-identical and two are intentionally extended measurement scripts.
 Previously clean edited sources were copied before editing. Existing artwork,
-Keeper trial, old reports and screenshots remain preserved; the original and
+old reports and screenshots remain preserved; the original and
 incremental Nomad SHA-256 hashes remain respectively
 `5151866ee081a24c36e82f8a34547569fb3e6c0fb13651e2a32e2d088366b083` and
 `e487c06349930b366c38e2da5df98e3be45c7a636275bd76acb48d0d1e2fd4dc`.

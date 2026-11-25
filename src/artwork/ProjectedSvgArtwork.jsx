@@ -99,7 +99,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
     loaded.current = false;
     documentControls.current = null;
     home.appendChild(paintHost);
-    // Reception lifts its complete cell and never uses the editor's individual
+    // Composition lifts its complete cell and never uses the editor's individual
     // SVG lift registry. Keep that registry bound to the SVG coordinate path.
     if (htmlViewport) return () => { active = false; loaded.current = false; documentControls.current = null; paintHost.remove(); };
     const paint = projection => {
@@ -186,7 +186,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
           documentControls.current = controls; loaded.current = true; schedulePixelScale();
           prepareInspection(); liftReady.current?.(); onReady?.();
         }} />;
-  // Responsive Reception uses a normal HTML viewport for the isolated iframe.
+  // Responsive Composition uses a normal HTML viewport for the isolated iframe.
   // Its native document size stays fixed while this outer plane scales/clips;
   // no iframe is embedded inside a changing SVG foreignObject in that path.
   return <span ref={host} className="artwork-svg-host" data-svg-artwork-host>{createPortal(htmlViewport

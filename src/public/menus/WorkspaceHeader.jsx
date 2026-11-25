@@ -59,7 +59,7 @@ export function WorkspaceBrand({ trigger, current, destinations, groups, editorA
       section: index === 0 ? 'Workspace' : undefined, run: destinations[label] })),
     ...Object.keys(groups || {}).map((label, index) => ({ id: label, label, section: index === 0 ? 'Editor' : undefined })),
     ...editorActions,
-    ...Object.entries({ activity: 'Activity', settings: 'Settings', docs: 'Help & Docs', ...(groups && { backup: 'Backup' }) })
+    ...Object.entries({ activity: 'Activity', settings: 'Settings', ...(groups && { backup: 'Backup' }) })
       .map(([id, label], index) => ({ id, label, section: index === 0 ? 'More' : undefined,
         disabled: !onPanel, run: source => onPanel(id, source) })),
   ];

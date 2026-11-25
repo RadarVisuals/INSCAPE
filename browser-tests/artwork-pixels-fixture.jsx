@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ImageArtwork from '../src/imageModule/ImageArtwork.jsx';
 import '../src/imageModule/imageModule.css';
-import { ReceptionImage } from '../src/reception/ReceptionCanvas.jsx';
+import { CompositionImage } from '../src/composition/CompositionImage.jsx';
 import { buildProfileDocumentV9Asset } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
@@ -34,7 +34,7 @@ function PixelStudy() {
       return <OwnerImage key={record.artwork.id} artwork={artwork} />;
     })}</div>
     <div id="visitor" style={row(220)}>{records.map(record => <div key={record.artwork.id} style={{ width: 100, height: 100 }}>
-      <ReceptionImage record={record} />
+      <CompositionImage record={record} />
     </div>)}</div>
     <button style={{ position: 'absolute', top: 350 }} onClick={() => setFailed(true)}>Load unavailable original</button>
   </>;

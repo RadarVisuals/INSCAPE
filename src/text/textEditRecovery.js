@@ -12,6 +12,11 @@ function syncLeaveGuard(s) {
   if (hadPending && !pendingStates.size) window.removeEventListener('beforeunload', guardLeave);
 }
 const emptyState = () => ({ entries: new Map(), listeners: new Set(), revision: 0 });
+export function workbenchTextRecovery(entries, profile) {
+  if (!Array.isArray(entries)) return entries;
+  const current = entries.filter(pair => pair?.[0] !== profile + '/reception');
+  return current.length ? current : null;
+}
 export function pendingProfileText(profile) {
   const contexts = [...workbenchProfiles].filter(([context, buffer]) => context.startsWith(profile + '/') && buffer.entries.size)
     .map(([context, buffer]) => [context, [...buffer.entries.values()]]);
@@ -24,7 +29,7 @@ export function bindWorkbenchTextRecovery(store) {
   if (!workbenchProfiles.has(context)) workbenchProfiles.set(context, emptyState());
   const buffer = workbenchProfiles.get(context);
   if (storage && !buffer.persist) {
-    const read = () => new Map(JSON.parse(storage.getItem(recoveryStorageKey(profile)) || '[]'));
+    const read = () => new Map(workbenchTextRecovery(JSON.parse(storage.getItem(recoveryStorageKey(profile)) || '[]'), profile));
     const saved = read().get(context) || [];
     for (const entry of saved) if (!buffer.entries.has(keyOf(entry.scope))) buffer.entries.set(keyOf(entry.scope), entry);
     buffer.persist = () => {
@@ -40,7 +45,7 @@ export function bindWorkbenchTextRecovery(store) {
 if (typeof window !== 'undefined') window.addEventListener('inscape-workspace-change', ({ detail }) => {
   if (detail.kind !== 'textRecovery') return;
   const storage = recoveryStorage(detail.profile);
-  const contexts = new Map(JSON.parse(storage.getItem(recoveryStorageKey(detail.profile)) || '[]'));
+  const contexts = new Map(workbenchTextRecovery(JSON.parse(storage.getItem(recoveryStorageKey(detail.profile)) || '[]'), detail.profile));
   for (const [context, buffer] of workbenchProfiles) if (buffer.persist && context.startsWith(detail.profile + '/')) {
     buffer.entries = new Map((contexts.get(context) || []).map(entry => [keyOf(entry.scope), entry]));
     syncLeaveGuard(buffer);

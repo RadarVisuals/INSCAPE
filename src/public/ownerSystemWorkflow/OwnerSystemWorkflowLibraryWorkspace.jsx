@@ -166,7 +166,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
             && active.moduleTarget?.has?.(moduleTarget) !== false && moduleTarget.node?.isConnected,
           place: () => moduleTarget.placeAsset(asset, point), rejection: 'This module could not accept the artwork.' };
       }
-      // The native Reception scope can explicitly accept a cell's surface as
+      // The native Composition scope can explicitly accept a cell's surface as
       // its canvas. Other modules still reject drops outside registered targets.
       if (hit?.closest('[data-workbench-module]') && !workbenchTarget) return { preview: () => null, isCurrent: () => true,
         place: () => false, rejection: 'This module cannot accept artwork here.' };

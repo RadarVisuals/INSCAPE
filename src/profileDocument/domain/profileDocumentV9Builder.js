@@ -1,4 +1,5 @@
-import { projectReception, receptionReferenceCount } from './receptionPresentation.js';
+import { compositionReferenceCount } from '../../composition/compositionReferenceCount.js';
+import { projectCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { projectWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { projectArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -108,8 +109,7 @@ export function buildProfileDocumentV9({
     ...(artworkOrder.length ? { artworkLayers: artworkOrder } : {}),
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
     ...(workbenchIndex ? { workbenchIndex } : {}),
-    ...(draft.reception ? { reception: projectReception(draft.reception) } : {}),
-    ...(draft.composition ? { composition: projectReception(draft.composition) } : {}),
+    ...(draft.composition ? { composition: projectCompositionEditorDocument(draft.composition) } : {}),
     ...(shapes?.length ? { shapes } : {}),
     ...(keeperDocks?.length ? { keeperDocks } : {}),
     ...(imageModules?.length ? { imageModules } : {}),
@@ -120,7 +120,7 @@ export function buildProfileDocumentV9({
 
 export function countProfileDocumentV9Assets(document) {
   const value = assertValidProfileDocumentV9(document);
-  const countCanvas = value => imageReferenceCount(value.imageModules) + receptionReferenceCount(value.composition);
-  return receptionReferenceCount(value.reception) + countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
+  const countCanvas = value => imageReferenceCount(value.imageModules) + compositionReferenceCount(value.composition);
+  return countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
     + (value.identityPresentation.avatar.asset ? 1 : 0) + keeperReferenceCount(value.keeperDocks);
 }

@@ -29,7 +29,7 @@ async function fixture(page, scenario) {
     const response = await handler(new Request(request.url(), { method: request.method(), headers: request.headers(), body: request.postDataBuffer() }));
     if (scenario === 'service-updated' && !state.updated && request.url().endsWith('/challenge')) {
       const challenge = await response.json();
-      delete challenge.capabilities;
+      challenge.capabilities = ['v9-studio-publication-3'];
       return route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), json: challenge });
     }
     return route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() });

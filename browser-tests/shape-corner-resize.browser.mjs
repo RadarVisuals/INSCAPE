@@ -15,9 +15,8 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: 1.25 });
     page.setDefaultTimeout(8000);
     const errors = [], evidence = []; page.on('pageerror', error => errors.push(error.message));
-    await mountTextToolsFixture(page, origin);
+    await mountTextToolsFixture(page, origin, { textCount: 0, waitForText: false });
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    await page.locator('.text-window').getByRole('button', { name: /^Close / }).press('Enter');
     const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
     // Create through the real owner UI; the first grip is the Shape's own grip.
@@ -85,17 +84,16 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     assert.notDeepEqual(await saved(), final);
     await page.keyboard.press('Control+Shift+z'); await settle(page); assert.deepEqual(await saved(), final);
     await page.screenshot({ path: `${output}/shape-corners-${width}.png` });
-    await mountTextToolsFixture(page, origin, { waitForText: false }); await shape.waitFor();
+    await mountTextToolsFixture(page, origin, { textCount: 0, waitForText: false }); await shape.waitFor();
     assert.deepEqual(await saved(), final, 'saved geometry survives reload');
     // Grid uses the same host, but keeps complete rows/columns and its cell size.
     const gridId = await page.evaluate(async () => {
-      const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE: profileAddress } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
       const { addShape } = await import('/src/shapes/shapeSession.js');
-      const store = createSystemWorkflowDraftStore({ profileAddress, storage: localStorage });
+      const store = window.textFixtureStore;
       return addShape(store, profileAddress, { kind: 'grid', position: { left: 48, top: 240 }, size: { width: 192, height: 144 } });
     });
-    await mountTextToolsFixture(page, origin, { waitForText: false });
+    await mountTextToolsFixture(page, origin, { textCount: 0, waitForText: false });
     const grid = page.locator(`aside[data-workbench-view-id="${gridId}"]`); await grid.waitFor();
     const g = await grid.boundingBox(); await page.mouse.click(g.x + g.width / 2, g.y + 1); await settle(page);
     await closeToolPanels();

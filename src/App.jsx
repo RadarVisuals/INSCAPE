@@ -196,14 +196,12 @@ function App() {
             ownerDestinations={ownerDestinations}
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             canvasOverviewRequested={destination.canvas === true}
-            receptionEditorRequested={destination.receptionEditorRequested === true}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}
             visitorWalletConnected={visitorWalletConnected}
             viewedProfileAddress={viewedProfileAddress}
-            onOpenReception={mode => navigation.openReception(viewedProfileAddress, mode === 'published' ? 'published' : true)}
-            onEditorDocumentChange={(kind, id, options) => kind === 'reception'
-              ? navigation.editReception(viewedProfileAddress, options) : navigation.editWork(viewedProfileAddress, id, options)}
+            onOpenProfile={() => navigation.openOverview(viewedProfileAddress)}
+            onEditorDocumentChange={(id, options) => navigation.editWork(viewedProfileAddress, id, options)}
             connectedProfile={connectedProfile}
             onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone}
@@ -257,13 +255,11 @@ function App() {
             onPublicationConfirmed={publicationAddress ? onPublicationConfirmed : undefined}
             returnProfileAddress={connectedProfileAddress}
             onReturnToWorkbench={ownViewedProfile ? ownerDestinations.Studio : undefined}
-            onEditReception={ownViewedProfile ? () => navigation.editReception(viewedProfileAddress) : undefined}
-            onEditComposition={ownViewedProfile ? id => id === 'reception' ? navigation.editReception(viewedProfileAddress)
-              : navigation.editWork(viewedProfileAddress, id) : undefined}
+            onEditComposition={ownViewedProfile ? id => navigation.editWork(viewedProfileAddress, id) : undefined}
             onManageWorks={ownViewedProfile ? () => navigation.manageCompositions(viewedProfileAddress) : undefined}
             onNewComposition={ownViewedProfile ? () => navigation.openStudio(viewedProfileAddress, { create: true }) : undefined}
             onVisitProfile={visitProfile}
-            entry={{ surface: destination.writing ? 'writing' : destination.canvas ? 'canvas' : 'overview', target: destination.target, reception: destination.reception }}
+            entry={{ surface: destination.writing ? 'writing' : destination.canvas ? 'canvas' : 'overview', target: destination.target }}
             onOpenWriting={() => navigation.openWriting(viewedProfileAddress)}
             onOpenCanvas={() => navigation.openCanvas(viewedProfileAddress)}
             onOpenOverview={() => navigation.openOverview(viewedProfileAddress)} /></Suspense>}
