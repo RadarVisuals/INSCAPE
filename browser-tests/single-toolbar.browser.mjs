@@ -116,7 +116,7 @@ for (const [width, theme] of [[1440, 'carbon'], [1000, 'mist']]) {
       await zoom.press('Escape');
       assert.equal(await zoom.count(), 0);
       assert.equal(await image.isVisible(), true);
-      assert.equal(await image.locator('button:focus').count(), 1, 'cancel restores a control in the same panel');
+      await button(image, 'Crop').and(image.locator(':focus')).waitFor();
       assert.deepEqual(await draft(page), fitted);
       await button(image, 'Crop').click(); await zoom.fill('2');
       await button(image, 'Done').click();

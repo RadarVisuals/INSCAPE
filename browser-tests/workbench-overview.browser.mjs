@@ -313,6 +313,8 @@ test('card size changes actual bounds for one canvas, and touch arrangement work
     await dragHandle.scrollIntoViewIfNeeded(); await settlePreview(touch);
     const handle = await dragHandle.boundingBox();
     const target = await touch.locator('[data-gallery-cycle="0"] .workbench-overview-card').nth(1).boundingBox();
+    const done = await touch.getByRole('button', { name: 'Done', exact: true }).boundingBox();
+    assert.ok(done.y + done.height <= target.y, 'arrangement controls leave the first row available for dragging');
     const cdp = await touch.context().newCDPSession(touch);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }] });
     await touch.locator('.workbench-overview-drag-label').waitFor();

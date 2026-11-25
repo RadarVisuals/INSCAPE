@@ -99,6 +99,17 @@ jobs:
       - run: node scripts/verifyRelease.mjs --scope=browser --shard=${{ matrix.shard }}
         env:
           INSCAPE_VERIFY_REPORT: .verification/browser-${{ matrix.shard }}
+      - name: Show failing browser cases in the job log
+        if: failure()
+        run: |
+          report=.verification/browser-${{ matrix.shard }}/browser
+          if [[ -f "$report/results.json" ]]; then
+            jq -r '.[] | select(.status == "failed") | .name' "$report/results.json" | while read -r suite; do
+              echo "::group::$suite"
+              grep -E -A 35 '^[[:space:]]*not ok ' "$report/$suite.log" || tail -n 30 "$report/$suite.log"
+              echo "::endgroup::"
+            done
+          fi
       - name: Retain partial evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0

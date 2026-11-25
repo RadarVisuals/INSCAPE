@@ -142,9 +142,17 @@ export default function WorkbenchOverviewGrid({ horizontalWrap, items, wrap, onO
       if (memory) memory.scroll[scrollKey] = host[offset] - size * repeatRadius;
     }
   };
-  return <section className="workbench-overview-gallery" aria-label="Workbench gallery" ref={root} data-horizontal={horizontal || undefined}
+  const handleGridKey = event => {
+    keyboard.current = true;
+    if (event.key === 'Escape' && arranging) {
+      event.preventDefault();
+      if (dragging.current) endDrag(false);
+      else onFinishArrange();
+    }
+  };
+  const gallery = <section className="workbench-overview-gallery" aria-label="Workbench gallery" ref={root} data-horizontal={horizontal || undefined}
     style={{ '--gallery-count': items.length }} data-card-size={cardSize} data-arranging={arranging || undefined} onScroll={normalize}
-    onKeyDown={event => { keyboard.current = true; if (event.key === 'Escape' && arranging) { event.preventDefault(); if (dragging.current) endDrag(false); else onFinishArrange(); } }}
+    onKeyDown={handleGridKey}
     onPointerMove={event => {
       if (!dragging.current || dragging.current.pointer !== event.pointerId) return;
       const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-card-id]');
@@ -169,8 +177,12 @@ export default function WorkbenchOverviewGrid({ horizontalWrap, items, wrap, onO
         }}
         onOpen={onOpen} onEdit={onEdit} selection={selection} onManage={onManage} revealed={revealed === `${copy}:${item.id}`} onReveal={() => setRevealed(`${copy}:${item.id}`)} />)}
     </div>)}
-    {arranging && <div className="workbench-overview-arrange-help"><span>Drag to arrange</span><button type="button" onClick={onFinishArrange}><Check size={16} />Done</button></div>}
     {drag && <div className="workbench-overview-drag-label" style={{ left: drag.x + 16, top: drag.y + 12 }}>{drag.name}</div>}
     <p className="workbench-overview-announcement" role="status">{announcement}</p>
   </section>;
+  return <>
+    {arranging && <div className="workbench-overview-arrange-help"><span>Drag to arrange</span>
+      <button type="button" onKeyDown={handleGridKey} onClick={onFinishArrange}><Check size={16} />Done</button></div>}
+    {gallery}
+  </>;
 }

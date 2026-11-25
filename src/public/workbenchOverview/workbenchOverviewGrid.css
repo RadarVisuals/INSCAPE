@@ -2,7 +2,7 @@
 .workbench-overview[data-layout="grid"] .workbench-overview-main,
 .workbench-overview[data-layout="grid"] .workbench-overview-content { display: contents; }
 .workbench-overview[data-layout="grid"] .workbench-overview-heading { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); }
-.workbench-overview-grid-host { position: absolute; inset: 12px; }
+.workbench-overview-grid-host { position: absolute; inset: 12px; display: flex; flex-direction: column; }
 .workbench-overview-gallery { height: 100%; overflow: auto; overscroll-behavior: contain; scroll-behavior: auto; overflow-anchor: none; scrollbar-width: none; border-radius: var(--overview-radius); }
 .workbench-overview-browse[inert] .workbench-overview-gallery { overflow: hidden; }
 .workbench-overview-gallery::-webkit-scrollbar { display: none; }
@@ -61,7 +61,7 @@
 :is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-arrange button { min-height: 44px; min-width: 44px; padding: 8px; }
 .workbench-overview .workbench-overview-drag { touch-action: none; cursor: grab; }
 .workbench-overview-drag:active { cursor: grabbing; }
-.workbench-overview-arrange-help { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 16px; padding-left: 16px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
+.workbench-overview-arrange-help { flex: none; align-self: center; display: flex; align-items: center; gap: 16px; margin-bottom: var(--space-2); padding-left: 16px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
 .workbench-overview-drag-label { position: fixed; z-index: 5; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; padding: 8px 12px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
 .workbench-overview-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (max-width: 1600px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 4; } }
