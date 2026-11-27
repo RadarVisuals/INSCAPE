@@ -4,7 +4,7 @@ export const METADATA_MAX_BYTES = 2 * 1024 * 1024;
 
 // A response-header deadline alone does not bound a stalled response body.
 export async function fetchMetadataJson(url, { fetchImpl = fetch, signal, timeoutMs = 10_000,
-  maxBytes = METADATA_MAX_BYTES, imageUrl = null, verification = null } = {}) {
+  maxBytes = METADATA_MAX_BYTES, imageUrl = null, verification = null, cache } = {}) {
   const controller = new AbortController(); let timer; let reader;
   const abortError = () => new DOMException('Metadata request aborted', 'AbortError');
   if (signal?.aborted) throw abortError();
@@ -17,7 +17,7 @@ export async function fetchMetadataJson(url, { fetchImpl = fetch, signal, timeou
   signal?.addEventListener('abort', abort, { once: true });
   timer = setTimeout(() => stop(Object.assign(new Error('Metadata response timed out'), { code: 'METADATA_TIMEOUT' })), timeoutMs);
   const read = async () => {
-    const response = await fetchImpl(url, { signal: controller.signal, headers: { accept: 'application/json' } });
+    const response = await fetchImpl(url, { cache, signal: controller.signal, headers: { accept: 'application/json' } });
     if (controller.signal.aborted) { response.body?.cancel().catch(() => {}); throw abortError(); }
     if (!response.ok) { response.body?.cancel().catch(() => {}); throw new Error(`ASSET METADATA RESPONDED ${response.status}`); }
     const contentType = response.headers?.get('content-type') || '';

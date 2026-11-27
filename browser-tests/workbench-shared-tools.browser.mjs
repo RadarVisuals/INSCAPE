@@ -6,9 +6,10 @@ import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { separateLayers, openSharedTool, sharedToolPanel, sharedToolTab, chooseSharedColorTarget, openSharedColorPicker } from './fixtures/shared-tools.mjs';
 import { settlePlaywrightAnimationFrames } from './playwright-browser-adapter.mjs';
+import { routeLocalWorkflowArtwork } from './fixtures/legacy-workflow-artwork.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-shared-tools';
-const saved = page => page.evaluate(() => window.savedDraft());
+const saved = page => page.evaluate(() => window.readCommittedDraft());
 const rows = page => page.locator('.workbench-layer-row').evaluateAll(nodes => nodes.map(node => node.dataset.layerId));
 const undo = async page => { await page.locator('.system-workflow').focus(); await page.keyboard.press('Control+z'); };
 async function beginColourDrag(page) {
@@ -20,16 +21,11 @@ async function beginColourDrag(page) {
 }
 async function fixture(page, options = {}) {
   page.setDefaultTimeout(12000);
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
-    const file = new URL(route.request().url()).pathname.split('/public/')[1];
-    await route.fulfill({ response: await route.fetch({ url: `${origin}/${file}` }) });
-  });
+  await routeLocalWorkflowArtwork(page, origin);
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
   await editorMenu(page, 'Canvas').waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
-    const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     const draft = layersDraft();
     if (options.closed) draft.workbench.imageModules[0].open = false;
     if (options.outside) draft.workbench.imageModules[0].position.left = 2400;
@@ -41,7 +37,8 @@ async function fixture(page, options = {}) {
       draft.workbench.shapes.push({ ...draft.workbench.shapes[0], id, open: false }); draft.artworkLayers.push(id);
     }
     if (options.grouped) draft.artworkLayers = ['shape:landscape', 'text:mist', { id: 'composition:person', name: 'Person', children: ['image:body', 'image:eyes'] }];
-    window.leaveEditor(); localStorage.setItem(systemWorkflowDraftKey(window.fixtureProfile), JSON.stringify(draft));
+    await window.seedWorkbenchDraft(draft);
+    window.leaveEditor();
   }, options);
   await page.reload();
   await page.getByRole('button', { name: options.grouped ? 'Select Person' : 'Select Eyes', exact: true }).waitFor();
@@ -253,14 +250,12 @@ test('tool recovery, retarget cancellation, storage failure and geometry at came
     await panel.getByRole('group', { name: 'Image fit', exact: true }).waitFor();
     assert.equal(await panel.getByRole('textbox', { name: 'Color colour', exact: true }).count(), 0, 'Image selection removes the previous Color controls');
     await openSharedTool(page, 'Transform');
-    await page.evaluate(() => { window.normalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.normalSetItem.call(this, key, value);
-    }; });
+    await page.evaluate(() => window.failWorkbenchWrites(true));
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('310');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter');
     assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').width, 260);
     await panel.getByRole('alert').first().waitFor();
-    await page.evaluate(() => { Storage.prototype.setItem = window.normalSetItem; });
+    await page.evaluate(() => window.failWorkbenchWrites(false));
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('310');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter');
     assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').width, 310);

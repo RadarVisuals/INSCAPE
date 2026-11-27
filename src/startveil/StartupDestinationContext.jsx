@@ -1,16 +1,14 @@
-import { Component, createContext, useContext, useEffect } from 'react';
+import { Component, createContext, useContext, useLayoutEffect } from 'react';
 
 export const StartupDestinationContext = createContext(null);
 
 // Report the first mounted, laid-out destination, not its optional media loads.
 // Outside application startup (for example Preview) this is intentionally inert.
-export function useStartupDestinationReady() {
+export function useStartupDestinationReady(ready = true) {
   const onReady = useContext(StartupDestinationContext);
-  useEffect(() => {
-    if (!onReady) return undefined;
-    const frame = requestAnimationFrame(onReady);
-    return () => cancelAnimationFrame(frame);
-  }, [onReady]);
+  useLayoutEffect(() => {
+    if (ready) onReady?.();
+  }, [ready, onReady]);
 }
 
 export function StartupDestinationReady() {

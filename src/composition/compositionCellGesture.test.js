@@ -14,10 +14,10 @@ const profile = '0x' + '8'.repeat(40);
 function fixture() {
   const data = new Map(); let fail = false;
   const storage = { getItem: k => data.get(k) ?? null, setItem: (k,v) => { if (fail) throw Error('Full'); data.set(k,v); }, removeItem: k => data.delete(k) };
-  const root = createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
+  const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
   scope.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, width: 1440, height: 900, columns: 3, rows: 1 }, 42, scope.getGeneration());
-  const value = root.getDraft(), ids = value.composition.cells.map(c => c.id);
-  ids.forEach((id,i) => { value.composition.workbench.shapes.find(s => s.id === id).window = { left: 24+i*344, top: 24, width: 320, height: 280 }; });
+  const value = root.getDraft(), ids = value.cells.map(c => c.id);
+  ids.forEach((id,i) => { value.workbench.shapes.find(s => s.id === id).window = { left: 24+i*344, top: 24, width: 320, height: 280 }; });
   assert.ok(root.commitCompletedOperation(value, { expectedGeneration: root.getGeneration() }));
   return { root, scope, storage, ids, fail: v => { fail=v; } };
 }
@@ -160,7 +160,7 @@ test('many previews commit once, carry native text unchanged, Undo/Redo and relo
   assert.deepEqual(frame(after,text),{...frame(origin,text),left:frame(origin,text).left+movement});
   assert.ok(f.scope.undo()); assert.deepEqual(f.scope.getComposition(),origin);
   assert.ok(f.scope.redo()); assert.deepEqual(f.scope.getComposition(),after);
-  const reopened=createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true,profileAddress:profile,storage:f.storage}));
+  const reopened=createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress:profile,storage:f.storage}));
   assert.deepEqual(reopened.getComposition(),after); reopened.release(); f.scope.release();
 });
 
@@ -229,7 +229,7 @@ test('drawing previews, native text movement, one Undo/Redo and reload share the
   assert.deepEqual(frame(after,text),{...frame(origin,text),left:frame(origin,text).left+frame(after,a).left-frame(origin,a).left});
   assert.ok(f.scope.undo()); assert.deepEqual(f.scope.getComposition(),origin);
   assert.ok(f.scope.redo()); assert.deepEqual(f.scope.getComposition(),after);
-  const reopened=createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true,profileAddress:profile,storage:f.storage}));
+  const reopened=createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress:profile,storage:f.storage}));
   assert.deepEqual(reopened.getComposition(),after); reopened.release(); f.scope.release();
 });
 
@@ -252,15 +252,17 @@ test('invalid, stale, failed or abandoned drawing cannot save a partial cell or 
   f.scope.release(); assert.throws(()=>f.scope.editBento('drawCell',args,generation),/active/);
 });
 
-test('the first drawn cell gets normal spacing and leaves the other canvas untouched', () => {
+test('the first drawn cell gets normal spacing and writes to the same document and retains profile data', () => {
   const data=new Map(), storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
-  const root=createSystemWorkflowDraftStore({ initialStudio: true,profileAddress:profile,storage}), scope=createCompositionEditorScope(root);
+  const root=createSystemWorkflowDraftStore({ profileAddress:profile,storage}), scope=createCompositionEditorScope(root);
   const original=structuredClone(root.getDraft()), value=scope.getComposition();
   assert.equal(value.cells.length,0);
   const p=createCompositionCellDrawGesture(value,'shape:first',{x:24,y:24},1)({x:320,y:240},true);
   scope.editBento(p.action,p.args,scope.getGeneration());
   assert.deepEqual(scope.getComposition().bento,{gap:24,padding:24});
-  const after=root.getDraft(); assert.deepEqual({...after,composition:null},{...original,composition:null});
+  const after=root.getSnapshot(); assert.equal(after, scope.getSnapshot());
+  assert.deepEqual(after.identityPresentation, original.identityPresentation);
+  assert.equal(after.profileAddress, original.profileAddress);
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(),value); scope.release();
 });
 

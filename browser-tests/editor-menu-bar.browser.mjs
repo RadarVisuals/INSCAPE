@@ -32,7 +32,7 @@ test('one wordmark menu keeps keyboard access, tools and destinations at wide an
         const menu = page.getByRole('menu', { name: 'Inscape menu', exact: true });
         assert.deepEqual(await menu.locator(':scope > button > span').allTextContents(), [
           'Search commands...', 'Profile', 'Gallery', 'Writing', 'Studio',
-          'Canvas', 'Edit', 'View', 'Tools', 'Manage compositions', 'Activity', 'Settings', 'Help & Docs', 'Backup',
+          'Canvas', 'Edit', 'View', 'Tools', 'Manage compositions', 'Activity', 'Settings', 'Backup',
         ]);
         assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Studio', checked: true }).count(), 1);
         const anchor = await page.locator('.editor-menu-bar .workspace-wordmark').boundingBox();
@@ -54,8 +54,6 @@ test('one wordmark menu keeps keyboard access, tools and destinations at wide an
         await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
         await openEditorMenu(page, 'Backup');
         await page.getByRole('button', { name: 'Close Backup', exact: true }).click();
-        await openEditorMenu(page, 'Docs');
-        await page.getByRole('button', { name: 'Close Docs', exact: true }).click();
         await openEditorMenu(page, 'Tools');
         await page.screenshot({ path: `${output}/tools-${width}.png` });
         await page.keyboard.press('Escape');

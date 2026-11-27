@@ -6,7 +6,7 @@ import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflow
 import { createCompositionEditorScope } from './compositionEditorScope.js';
 import { COMPOSITION_LAYOUT_DEFAULTS } from './compositionLayoutGenerator.js';
 import { compositionBentoSettings, compositionBentoDividers, resizeCompositionBento, setCompositionBentoSettings } from './compositionBento.js';
-import { compositionModuleWindow, withCompositionModuleWindow, validCompositionEditorDocument, projectCompositionEditorDocument, compositionResponsiveLayout } from './compositionEditorDocument.js';
+import { compositionModuleWindow, withCompositionModuleWindow, validCompositionArtwork, projectCompositionEditorDocument, compositionResponsiveLayout } from './compositionEditorDocument.js';
 import { addImageModule, saveImageModule } from '../imageModule/imageModuleSession.js';
 import { createCompositionExample } from '../../design-system/lab/compositionExample.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
@@ -21,14 +21,14 @@ const profile = '0x' + '7'.repeat(40);
 function fixture(count = 6, seed = 42) {
   const data = new Map(); let failure = false;
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => { if (failure) throw Error('Full'); data.set(key, value); }, removeItem: key => data.delete(key) };
-  const root = createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
+  const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
   let columns = Math.min(4, Math.ceil(Math.sqrt(count)));
   while (count % columns) columns--;
   scope.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, columns, rows: count / columns }, seed, scope.getGeneration());
   return { root, scope, storage, fail: value => { failure = value; }, edit: (action, ...args) => scope.editBento(action, args, scope.getGeneration()) };
 }
 function bounded(value) {
-  assert.ok(validCompositionEditorDocument(value));
+  assert.ok(validCompositionArtwork(value));
   const { width, height, gap, padding } = compositionBentoSettings(value), area = value.workbench.area;
   const rectangles = value.cells.map(cell => compositionModuleWindow(value, cell.id));
   for (const [i, a] of rectangles.entries()) {
@@ -49,7 +49,7 @@ function closed(value) {
 
 // Explicit empty geometry keeps merge/insertion fixtures independent of UI commands.
 function seedCellFrames(state, entries) {
-  const draft = state.root.getDraft(), value = draft.composition, shape = value.shapes[0], cell = value.cells[0];
+  const draft = state.root.getDraft(), value = draft, shape = value.shapes[0], cell = value.cells[0];
   value.shapes = entries.map(([id], index) => ({ ...shape, id, name: 'Cell ' + (index + 1) }));
   value.cells = entries.map(([id]) => ({ ...structuredClone(cell), id, members: [] }));
   value.workbench.shapes = entries.map(([id, window]) => ({ ...value.workbench.shapes[0], id, window }));
@@ -85,7 +85,7 @@ test('one Bento cell retains overlapping independent Images when one artwork is 
   assert.deepEqual(compositionModuleWindow(after, first), compositionModuleWindow(after, second));
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), after);
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release(); scope.release();
 });
 
@@ -128,7 +128,7 @@ test('deleting a spanning cell preserves its gap and live neighbouring artwork a
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getComposition().cells, before.cells);
   assert.equal(compositionModuleWindow(scope.getComposition(), image).left, frame.left + 10);
   assert.equal(scope.redo(), true); assert.deepEqual(scope.getComposition(), after);
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
   const remaining = scope.getCells().map(cell => cell.id);
   editArtworkLayers(scope, profile, { type: 'delete', ids: remaining });
@@ -178,7 +178,7 @@ test('directional merges create spanning cells without moving other cells', () =
 });
 
 function staggeredCells(gap = 24, transpose = false) {
-  const state = fixture(6), draft = state.root.getDraft(), value = draft.composition;
+  const state = fixture(6), draft = state.root.getDraft(), value = draft;
   const frames = [
     { left: 24, top: 24, width: 1000, height: 260 },
     { left: 1024 + gap, top: 24, width: 392 - gap, height: 260 },
@@ -228,8 +228,8 @@ test('unequal-width merge fits native contents, preserves privacy and saves alig
     addShape(target, profile, { position: { left: frame.left + 30, top: frame.top + 30 }, size: { width: 100, height: 100 } });
   }
   const draft = root.getDraft();
-  draft.composition.shapes.find(item => item.id === beside).visibility = 'PRIVATE';
-  draft.composition.cells.find(cell => cell.id === below).lockedMembers = [...draft.composition.cells.find(cell => cell.id === below).members];
+  draft.shapes.find(item => item.id === beside).visibility = 'PRIVATE';
+  draft.cells.find(cell => cell.id === below).lockedMembers = [...draft.cells.find(cell => cell.id === below).members];
   assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
   const before = structuredClone(scope.getComposition()), canvases = structuredClone(root.getDraft().workbenches);
   fail(true); assert.throws(() => edit('merge', first, 'below'), /could not be saved/u); fail(false);
@@ -252,13 +252,13 @@ test('unequal-width merge fits native contents, preserves privacy and saves alig
   assert.deepEqual(after.texts, before.texts);
   assert.deepEqual(after.artworkLayers, before.artworkLayers.filter(id => id !== below));
   const published = projectCompositionEditorDocument(after);
-  assert.ok(validCompositionEditorDocument(published, true));
+  assert.ok(validCompositionArtwork(published, true));
   for (const id of [beside, ...before.cells.find(cell => cell.id === beside).members])
     assert.equal([...published.shapes, ...published.imageModules, ...published.texts].some(item => item.id === id), false);
   assert.deepEqual(root.getDraft().workbenches, canvases);
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), after); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
 });
 
@@ -269,26 +269,26 @@ test('alignment rejects content size limits and incompatible visibility before c
   // New cell Text fits its contents. This boundary case needs a manually sized
   // frame at the native minimum, whose proportional contraction is invalid.
   edit('fitText', below, text, false);
-  const minimum = root.getDraft();
-  minimum.composition = withCompositionModuleWindow(minimum.composition, text, { ...compositionModuleWindow(minimum.composition, text), width: 1 });
+  let minimum = root.getDraft();
+  minimum = withCompositionModuleWindow(minimum, text, { ...compositionModuleWindow(minimum, text), width: 1 });
   assert.ok(root.commitCompletedOperation(minimum, { expectedGeneration: root.getGeneration() }));
   const before = structuredClone(scope.getComposition());
   assert.match(compositionCellMerge(before, ids[0], 'below').reason, /size limits/u);
   assert.throws(() => edit('merge', ids[0], 'below'), /size limits/u); assert.deepEqual(scope.getComposition(), before);
-  const draft = root.getDraft(); draft.composition.shapes.find(item => item.id === below).visibility = 'PRIVATE';
+  const draft = root.getDraft(); draft.shapes.find(item => item.id === below).visibility = 'PRIVATE';
   assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
   assert.match(compositionCellMerge(scope.getComposition(), ids[0], 'below').reason, /publication visibility/u);
   scope.release();
 });
 
 test('a staggered middle cell aligns both edges, making room before contraction', () => {
-  const { root, scope, edit } = fixture(6), draft = root.getDraft(), ids = draft.composition.cells.map(cell => cell.id);
+  const { root, scope, edit } = fixture(6), draft = root.getDraft(), ids = draft.cells.map(cell => cell.id);
   const widths = [[400, 500, 444], [300, 500, 544]];
   for (let row = 0; row < 2; row++) {
     let left = 24;
     for (let column = 0; column < 3; column++) {
       const width = widths[row][column];
-      draft.composition.workbench.shapes.find(item => item.id === ids[row * 3 + column]).window = { left, top: 24 + row * 438, width, height: 414 };
+      draft.workbench.shapes.find(item => item.id === ids[row * 3 + column]).window = { left, top: 24 + row * 438, width, height: 414 };
       left += width + 24;
     }
   }
@@ -332,7 +332,7 @@ test('merge preserves native content, locked members, ordering, publication and 
     addTextModule(target, profile, { position: { left: frame.left + 30, top: frame.top + 30 } }, { visibility: 'PUBLIC' });
   }
   const draft = root.getDraft();
-  draft.composition.cells = draft.composition.cells.map(cell => [first, neighbour].includes(cell.id) ? { ...cell, lockedMembers: [...cell.members],
+  draft.cells = draft.cells.map(cell => [first, neighbour].includes(cell.id) ? { ...cell, lockedMembers: [...cell.members],
     mobile: { ...cell.mobile, referenceWidth: 390, placements: [{ id: cell.members[0], window: { left: 20, top: 30, width: 180, height: 140 } }] } } : cell);
   assert.equal(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }), true);
   const before = structuredClone(scope.getComposition()), canvases = structuredClone(root.getDraft().workbenches);
@@ -344,11 +344,11 @@ test('merge preserves native content, locked members, ordering, publication and 
   assert.deepEqual(merged.imageModules, before.imageModules); assert.deepEqual(merged.texts, before.texts);
   for (const id of members) assert.deepEqual(compositionModuleWindow(merged, id), compositionModuleWindow(before, id));
   assert.deepEqual(merged.artworkLayers, before.artworkLayers.filter(id => id !== neighbour));
-  assert.ok(validCompositionEditorDocument(projectCompositionEditorDocument(merged), true));
+  assert.ok(validCompositionArtwork(projectCompositionEditorDocument(merged), true));
   assert.deepEqual(root.getDraft().workbenches, canvases);
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before); assert.ok(scope.redo());
   scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), merged); reopened.release();
 });
 
@@ -360,7 +360,7 @@ test('merge rejects conflicting content, hidden/private neighbours and stale sav
     assert.throws(() => scope.editBento(action, args, scope.getGeneration() - 1), /changed/u);
   }
   assert.throws(() => edit('merge', first, 'above'), /no neighbouring/u);
-  const patch = make => { const draft = root.getDraft(); make(draft.composition); assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })); };
+  const patch = make => { const draft = root.getDraft(); make(draft); assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })); };
   const link = id => ({ id, kind: 'source', source: { profileAddress: profile, canvasId: root.getWorkbenchId(), moduleId: 'text:story' }, destination: null });
   patch(value => {
     value.links = [link('link:left'), link('link:right')];
@@ -395,12 +395,12 @@ test('merging into a later cell keeps its background behind transferred artwork 
   const { root, scope, edit, first } = fourCells(), lower = 'shape:bottom-left';
   const target = { ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(first, candidate, opts) };
   const child = addShape(target, profile, { position: { left: 50, top: 50 }, size: { width: 100, height: 100 } });
-  const draft = root.getDraft(), rest = draft.composition.artworkLayers.filter(id => ![first, lower, child].includes(id));
-  draft.composition.artworkLayers = [{ id: 'composition:test', name: 'Artwork block', children: [first, child] }, lower, ...rest];
+  const draft = root.getDraft(), rest = draft.artworkLayers.filter(id => ![first, lower, child].includes(id));
+  draft.artworkLayers = [{ id: 'composition:test', name: 'Artwork block', children: [first, child] }, lower, ...rest];
   assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
   edit('merge', lower, 'above');
   assert.deepEqual(scope.getComposition().artworkLayers, [{ id: 'composition:test', name: 'Artwork block', children: [lower, child] }, ...rest]);
-  assert.ok(validCompositionEditorDocument(scope.getComposition())); scope.release();
+  assert.ok(validCompositionArtwork(scope.getComposition())); scope.release();
 });
 test('Frameless Composition and cell outlines persist together without altering native geometry or another canvas', () => {
   const { root, scope, storage, edit, fail } = fixture();
@@ -413,16 +413,16 @@ test('Frameless Composition and cell outlines persist together without altering 
   assert.deepEqual(root.getDraft().workbenches, workbenches);
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before); assert.ok(scope.redo());
   const published = projectCompositionEditorDocument(value);
-  assert.ok(validCompositionEditorDocument(published, true)); assert.equal(published.showFrame, false);
+  assert.ok(validCompositionArtwork(published, true)); assert.equal(published.showFrame, false);
   assert.deepEqual(published.shapes[0].outline, outline);
   assert.deepEqual(restoreCompositionEditorDocument(published).shapes[0].outline, outline);
   fail(true); assert.throws(() => edit('settings', { showFrame: true })); assert.deepEqual(scope.getComposition(), value); fail(false);
   for (const showFrame of [null, 'false', 0]) {
     assert.throws(() => edit('settings', { showFrame }));
-    assert.equal(validCompositionEditorDocument({ ...value, showFrame }), false);
+    assert.equal(validCompositionArtwork({ ...value, showFrame }), false);
   }
   scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), value);
   reopened.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, ...compositionBentoSettings(value), showFrame: false }, 15, reopened.getGeneration());
   assert.equal(reopened.getComposition().showFrame, false); reopened.release();
@@ -477,10 +477,10 @@ test('size, gutter, margin and radius preserve cell dimensions and survive publi
     assert.equal(compositionModuleWindow(value, cell.id).height, compositionModuleWindow(before, cell.id).height);
   }
   assert.deepEqual(value.bento, { gap: 32, padding: 40 }); assert.ok(value.cells.every(cell => cell.radius === 24));
-  assert.ok(validCompositionEditorDocument(projectCompositionEditorDocument(value), true));
+  assert.ok(validCompositionArtwork(projectCompositionEditorDocument(value), true));
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getComposition(), before);
   assert.equal(scope.redo(), true); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), value); reopened.release();
 });
 test('existing generator geometry supplies initial spacing without changing saved work', () => {
@@ -524,10 +524,10 @@ test('adding a full-height column grows the canvas, preserves sizes and carries 
   const added = after.cells.find(cell => !before.cells.some(old => old.id === cell.id));
   assert.deepEqual(added.members, []);
   assert.equal(compositionModuleWindow(after, added.id).left, before.workbench.area.width - before.bento.padding + before.bento.gap);
-  assert.ok(validCompositionEditorDocument(projectCompositionEditorDocument(after), true));
+  assert.ok(validCompositionArtwork(projectCompositionEditorDocument(after), true));
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getComposition(), before);
   assert.equal(scope.redo(), true); assert.deepEqual(scope.getComposition(), after); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
 });
 
@@ -553,17 +553,17 @@ test('a new bottom row extends the canvas without resizing existing rows or cont
   assert.ok(compositionBentoDividers(after).some(d => d.axis === 'y' && d.after.includes(after.cells.at(-1).id)));
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getComposition(), before);
   assert.equal(scope.redo(), true); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
 });
 
 test('adding beside a cell in a T junction preserves the closed band and valid shared edges', () => {
   const { root, scope, edit } = fixture(3), draft = root.getDraft();
-  let value = draft.composition;
+  let value = draft;
   const frames = [{ left: 24, top: 24, width: 600, height: 852 },
     { left: 648, top: 24, width: 768, height: 414 }, { left: 648, top: 462, width: 768, height: 414 }];
   value.cells.forEach((cell, index) => { value = withCompositionModuleWindow(value, cell.id, frames[index]); });
-  assert.equal(root.commitCompletedOperation({ ...draft, composition: value }, { expectedGeneration: root.getGeneration() }), true);
+  assert.equal(root.commitCompletedOperation(value, { expectedGeneration: root.getGeneration() }), true);
   drawOuterCell(scope, 'right');
   const after = scope.getComposition(); closed(after);
   assert.deepEqual(after.workbench.area, { ...value.workbench.area, width: value.workbench.area.width + 320 + value.bento.gap });
@@ -575,7 +575,7 @@ test('adding beside a cell in a T junction preserves the closed band and valid s
 
 test('row/cell growth rejects size limits, failed storage and stale authority atomically', () => {
   const { scope, root, edit, fail } = fixture(1);
-  const large = root.getDraft(); large.composition.workbench.area = { ...large.composition.workbench.area, width: 16384, height: 16384 };
+  const large = root.getDraft(); large.workbench.area = { ...large.workbench.area, width: 16384, height: 16384 };
   assert.ok(root.commitCompletedOperation(large, { expectedGeneration: root.getGeneration() }));
   const before = structuredClone(scope.getComposition()), generation = scope.getGeneration(), history = scope.getHistory();
   assert.throws(() => edit('drawCell', 'shape:overflow-x', {left:16384,top:24,width:320,height:240}, 'right'), /maximum Bento size/);
@@ -639,7 +639,7 @@ test('a manually sized text box stays proportional when its cell reaches the min
   edit('resizeCell', cell, 'e', -20000, 0);
   assert.equal(compositionModuleWindow(scope.getComposition(), cell).width, 80);
   assert.equal(compositionModuleWindow(scope.getComposition(), text).width, 40);
-  assert.ok(validCompositionEditorDocument(scope.getComposition()));
+  assert.ok(validCompositionArtwork(scope.getComposition()));
   edit('cellSize', cell, { width: frame.width });
   assert.equal(compositionModuleWindow(scope.getComposition(), text).width, frame.width / 2);
   scope.release();
@@ -663,7 +663,7 @@ test('cell height changes crop stationary text through preview, save, Undo and r
       assert.ok(Math.abs((r.top + r.height - t.top - t.height) / r.height - gap / cell.height) < .001,
         'the public projection preserves the overflow instead of pulling text back inside');
     }
-    const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+    const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
     assert.deepEqual(reopened.getComposition(), saved); reopened.release();
     assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
     assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), saved);
@@ -743,7 +743,7 @@ test('moving past the right edge keeps both text slots stacked in place, with re
   assert.deepEqual(after.texts, origin.texts); assert.equal(after.cells.find(c => c.id === top).members.includes(text), true);
   assert.ok(after.workbench.area.width > origin.workbench.area.width);
   assert.deepEqual(b, compositionModuleWindow(origin, top)); assert.deepEqual(c, compositionModuleWindow(origin, bottom)); assert.deepEqual(root.getDraft().workbenches, other);
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), origin); assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), after); scope.release();
 });
@@ -826,17 +826,17 @@ test('Composition frame colors save atomically with undo, publication, recovery 
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), saved);
   const published = projectCompositionEditorDocument(saved);
-  assert.ok(validCompositionEditorDocument(published, true));
+  assert.ok(validCompositionArtwork(published, true));
   const restored = restoreCompositionEditorDocument(published);
   for (const key of Object.keys(colors)) assert.equal(restored[key], colors[key]);
   fail(true); assert.throws(() => edit('settings', { surface: '#abcdef' })); fail(false);
   assert.deepEqual(scope.getComposition(), saved);
   for (const key of Object.keys(colors)) for (const invalid of ['red', '#abc', '#12345678', 123, ['#abcdef']]) {
     assert.throws(() => edit('settings', { [key]: invalid }));
-    assert.equal(validCompositionEditorDocument({ ...saved, [key]: invalid }), false);
+    assert.equal(validCompositionArtwork({ ...saved, [key]: invalid }), false);
   }
   scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), saved);
   reopened.generateCellLayout(COMPOSITION_LAYOUT_DEFAULTS, 15, reopened.getGeneration());
   for (const key of Object.keys(colors)) assert.equal(reopened.getComposition()[key], colors[key]);
@@ -857,20 +857,20 @@ test('outer frame radius is independent of cell radii and survives history, stor
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), saved);
   const published = projectCompositionEditorDocument(saved);
-  assert.ok(validCompositionEditorDocument(published, true));
+  assert.ok(validCompositionArtwork(published, true));
   assert.equal(restoreCompositionEditorDocument(published).frameRadius, 32);
   fail(true); assert.throws(() => edit('settings', { frameRadius: 64 })); fail(false);
   assert.deepEqual(scope.getComposition(), saved);
   for (const frameRadius of [-1, 161, null, '32', Infinity, NaN]) {
     assert.throws(() => edit('settings', { frameRadius }));
-    assert.equal(validCompositionEditorDocument({ ...saved, frameRadius }), false);
+    assert.equal(validCompositionArtwork({ ...saved, frameRadius }), false);
   }
   edit('settings', { showFrame: false }); assert.equal(scope.getComposition().frameRadius, 32);
   edit('settings', { radius: 12 }); assert.equal(scope.getComposition().frameRadius, 32);
   edit('settings', { frameRadius: 0 }); assert.ok(scope.getComposition().cells.every(cell => cell.radius === 12));
   assert.ok(scope.undo());
   const last = structuredClone(scope.getComposition()); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), last);
   reopened.generateCellLayout(COMPOSITION_LAYOUT_DEFAULTS, 15, reopened.getGeneration());
   assert.equal(reopened.getComposition().frameRadius, 32); reopened.release();
@@ -888,7 +888,7 @@ for (const opacityKey of ['surfaceOpacity', 'frameOpacity']) test(`${opacityKey}
     assert.deepEqual(root.getDraft().workbenches, canvases);
     assert.ok(scope.undo()); assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), saved);
     const published = projectCompositionEditorDocument(saved);
-    assert.ok(validCompositionEditorDocument(published, true));
+    assert.ok(validCompositionArtwork(published, true));
     assert.equal(restoreCompositionEditorDocument(published)[opacityKey], surfaceOpacity);
   }
   edit('settings', { [opacityKey]: 0 });
@@ -897,10 +897,10 @@ for (const opacityKey of ['surfaceOpacity', 'frameOpacity']) test(`${opacityKey}
   assert.deepEqual(scope.getComposition(), transparent);
   for (const surfaceOpacity of [-1, 1.01, null, '0', Infinity, NaN]) {
     assert.throws(() => edit('settings', { [opacityKey]: surfaceOpacity }));
-    assert.equal(validCompositionEditorDocument({ ...transparent, [opacityKey]: surfaceOpacity }), false);
+    assert.equal(validCompositionArtwork({ ...transparent, [opacityKey]: surfaceOpacity }), false);
   }
   scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), transparent); reopened.release();
 });
 
@@ -919,15 +919,15 @@ test('cell grain coverage is independent of fill opacity and survives history, p
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), saved);
   for (const grainOverContent of [null, 'false', 0]) {
     assert.throws(() => edit('cellGrain', id, grainOverContent));
-    assert.equal(validCompositionEditorDocument({ ...saved, cells: saved.cells.map(cell => cell.id === id ? { ...cell, grainOverContent } : cell) }), false);
+    assert.equal(validCompositionArtwork({ ...saved, cells: saved.cells.map(cell => cell.id === id ? { ...cell, grainOverContent } : cell) }), false);
   }
   fail(true); assert.throws(() => edit('cellGrain', id, true)); fail(false);
   assert.deepEqual(scope.getComposition(), saved);
   const published = projectCompositionEditorDocument(saved);
-  assert.ok(validCompositionEditorDocument(published, true));
+  assert.ok(validCompositionArtwork(published, true));
   assert.equal(restoreCompositionEditorDocument(published).cells.find(cell => cell.id === id).grainOverContent, false);
   scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), saved); reopened.release();
 });
 
@@ -956,8 +956,8 @@ for (const side of ['top', 'bottom']) test('Drawing ' + side + ' accepts odd-hei
   root.undo(); assert.deepEqual(scope.getComposition(), before);
   root.redo(); assert.deepEqual(scope.getComposition(), after);
   scope.release();
-  const reopened = createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage });
-  assert.deepEqual(reopened.getDraft().composition, after);
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.deepEqual(reopened.getDraft(), after);
 });
 
 for (const side of ['left', 'right', 'top', 'bottom']) test('Drawing ' + side + ' preserves locked artwork without scaling, with history and reload', () => {
@@ -967,7 +967,7 @@ for (const side of ['left', 'right', 'top', 'bottom']) test('Drawing ' + side + 
   const image = addImageModule(target, profile, { artwork: createCompositionExample().imageModules[0].artwork,
     position: { left: frame.left + 10, top: frame.top + 10 }, size: { width: 200, height: 160 } });
   const text = addTextModule(target, profile, { window: { left: frame.left + 20, top: frame.top + 20, width: 240, height: 120 } });
-  const draft = root.getDraft(); draft.composition.cells.find(cell => cell.id === first).lockedMembers = [image, text];
+  const draft = root.getDraft(); draft.cells.find(cell => cell.id === first).lockedMembers = [image, text];
   assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
   const before = structuredClone(scope.getComposition()), canvases = root.getDraft().workbenches;
   drawOuterCell(scope, side);
@@ -985,7 +985,7 @@ for (const side of ['left', 'right', 'top', 'bottom']) test('Drawing ' + side + 
   assert.deepEqual(root.getDraft().workbenches, canvases);
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), after); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
 });
 
@@ -1005,7 +1005,7 @@ for (const edge of ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']) test('outer fra
   assert.equal(next.height, old.height + (/[ns]/.test(edge) ? 30 : 0));
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before);
   assert.ok(scope.redo()); assert.deepEqual(scope.getComposition(), after); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
 });
 

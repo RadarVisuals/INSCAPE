@@ -5,11 +5,12 @@
 .owner-works { z-index: 80; transition: opacity 200ms ease; }
 .workbench-overview[data-visitor-header] { top: var(--spread-height); background: transparent; }
 .owner-works[data-workspace-exiting] { z-index: 77; opacity: 0; pointer-events: none; }
-.owner-works[data-workspace-entering] { z-index: 77; animation: workspace-overview-arrive 260ms ease-out both; }
+.owner-works[data-workspace-entering] { z-index: 77; opacity: 0; pointer-events: none; }
 .owner-overview-loading { position: fixed; inset: var(--workspace-navigation-top, var(--workspace-header-height, 48px)) 0 0; z-index: 80; margin: 0; padding: 24px; background: var(--interface-environment); }
 .owner-canvas-journey { position: fixed; z-index: 78; overflow: hidden; pointer-events: none; background: var(--interface-environment); }
 [data-studio-return-tile],
 [data-canvas-journey-target]:not(.composition-explorer-viewport),
+.workbench-overview[data-published-gallery] .composition-explorer-viewport[data-canvas-journey-target],
 .composition-explorer-viewport[data-canvas-journey-target] > .workbench-overview-preview { opacity: 0; }
 /* Tools arrive with the editor at the start, above the moving canvas. The
    artwork boundary and selection wait until they align with the actual artwork. */
@@ -21,11 +22,14 @@
 :root:active-view-transition-type(gallery-studio) { view-transition-name: root; }
 :root:active-view-transition-type(gallery-studio) :is(.visitor-header, .editor-menu-bar) { view-transition-name: workspace-header; }
 :root:active-view-transition-type(gallery-studio) :is(.composition-index-sidebar, .visitor-work-details,
-  .composition-explorer-controls, .gallery-selection-tools, .workbench-overview-menu-trigger,
+  .composition-explorer-controls, .gallery-rail-toggle, .gallery-selection-tools, .workbench-overview-menu-trigger,
   [data-workbench-toolbar], .workbench-side-dock, .workbench-tool-panel, .workbench-view-controls) { view-transition-name: match-element; }
-:root:active-view-transition-type(gallery-studio)::view-transition-group(*) { animation-duration: 220ms; }
-:root:active-view-transition-type(gallery-studio)::view-transition-old(*) { animation-duration: 200ms; }
-:root:active-view-transition-type(gallery-studio)::view-transition-new(*) { animation-duration: 160ms; }
+/* The Studio controls crossfade while the artwork travels. Its draft pixels
+   still dissolve during the stationary opening part of that flight. */
+:root:active-view-transition-type(studio-to-gallery) { --studio-chrome-exchange: 460ms; }
+:root:active-view-transition-type(gallery-studio)::view-transition-group(*) { animation-duration: var(--studio-chrome-exchange, 220ms); }
+:root:active-view-transition-type(gallery-studio)::view-transition-old(*) { animation-duration: var(--studio-chrome-exchange, 200ms); }
+:root:active-view-transition-type(gallery-studio)::view-transition-new(*) { animation-duration: var(--studio-chrome-exchange, 160ms); }
 /* Dissolve the previous backdrop over the fully painted destination in either direction. */
 :root:active-view-transition-type(gallery-studio)::view-transition-old(root) {
   z-index: 1; mix-blend-mode: normal; animation: studio-draft-dissolve 145ms linear both;
@@ -34,7 +38,6 @@
 @keyframes studio-draft-dissolve { from { opacity: 1; } to { opacity: 0; } }
 @keyframes workspace-tools-arrive { from { opacity: 0; } to { opacity: 1; } }
 @keyframes workspace-tools-leave { from { opacity: 1; } to { opacity: 0; } }
-@keyframes workspace-overview-arrive { from { opacity: 0; } to { opacity: 1; } }
 :is(.workbench-overview, .canvas-gallery-section) *, :is(.workbench-overview, .canvas-gallery-section) *::before, :is(.workbench-overview, .canvas-gallery-section) *::after { box-sizing: border-box; }
 :is(.workbench-overview, .canvas-gallery-section) :is(button, input, textarea, select) { font: inherit; color: inherit; }
 :is(.workbench-overview, .canvas-gallery-section) button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--overview-button-min-height, var(--control-target-touch)); padding: var(--overview-button-padding, 10px 16px); border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -153,21 +156,24 @@
   .gallery-index-selection { flex: none; }
 }
 
-[data-layout-flight-target] > .workbench-overview-preview { opacity: 0; }
+[data-layout-flight-target] { opacity: 0; }
 
 /* Keep the landing frame measurable while the moving surface owns its paint. */
 .workbench-overview[data-layout-journey="list"] .composition-explorer-viewport { opacity: 0; }
 
-@keyframes gallery-surroundings-arrive { from { opacity: 0; } to { opacity: 1; } }
+/* The old controls can dissolve independently of the live canvas and its frame. */
+:root:active-view-transition-type(gallery-layout)::view-transition-old(root),
+:root:active-view-transition-type(gallery-layout)::view-transition-old(gallery-source-art) { display: none; }
+:root:active-view-transition-type(gallery-layout)::view-transition-new(root) { animation: none; }
+:root:active-view-transition-type(leave-grid) [data-layout="grid"] .workbench-overview-grid-host { view-transition-name: gallery-tiles; }
+:root:active-view-transition-type(leave-grid) [data-layout-flight-source] { view-transition-name: gallery-source-art; }
+:root:active-view-transition-type(leave-list) [data-layout="list"] :is(.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls, .gallery-rail-toggle) {
+  view-transition-name: match-element;
+}
+:root:active-view-transition-type(gallery-layout)::view-transition-old(*) { animation: workspace-tools-leave 260ms ease-in-out both; }
 @media (prefers-reduced-motion: no-preference) {
-  .workbench-overview[data-layout-leaving] :is(.workbench-overview-card:not([data-layout-flight-source]), .composition-index-sidebar, .visitor-work-details, .composition-explorer-controls) {
-    animation: gallery-surroundings-arrive 100ms ease-in reverse both;
-  }
-  /* CanvasJourney reveals the tiles on the same timeline as the measured artwork. */
-  .workbench-overview[data-layout-journey="grid"] .workbench-overview-grid-host { opacity: 0; }
-  .workbench-overview[data-layout-journey="list"] :is(.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls) {
-    animation: gallery-surroundings-arrive 200ms ease-out both;
-  }
+  .workbench-overview[data-layout-journey="grid"] .workbench-overview-grid-host,
+  .workbench-overview[data-layout-journey="list"] :is(.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls, .gallery-rail-toggle) { opacity: 0; }
 }
 
 /* Composite the moving frame with the live WebGL field. Otherwise Chromium

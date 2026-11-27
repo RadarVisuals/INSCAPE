@@ -35,7 +35,6 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
     const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
     const { createSystemWorkflowDraftStore, systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     const { addTextModule } = await import('/src/text/textSession.js');
-    const { createDefaultWorkbenchPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
     const { saveWorkbenchPreferences } = await import('/src/public/ownerSystemWorkflow/workbenchPreferences.js');
     const profileAddress = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE, key = systemWorkflowDraftKey(profileAddress);
     const seed = fixture.createOwnerSystemWorkflowReviewStorage();
@@ -47,7 +46,7 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
       const id = addTextModule(store, profileAddress), draft = store.getDraft();
       draft.texts[0].article.title = 'Titel kan rechtstreeks';
       draft.texts[0].article.content.content[0].content = [{ type: 'text', text: 'Vanaf hier kan je beginnen typen.' }];
-      const workbench = createDefaultWorkbenchPresentation();
+      const workbench = { ...draft.workbench };
       workbench.texts = [{ id, open: true, window: { left: 64, top: 120, width: 360, height: 540 } }];
       if (!store.commitCompletedOperation({ ...draft, workbench }, { expectedGeneration: store.getGeneration(), historyLabel: 'Seed Text review' })) throw Error('Text fixture did not save');
       saveWorkbenchPreferences(profileAddress, { surfaceId: 'graphite', gridMode: 'DOTS' }, storage);
@@ -56,7 +55,8 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
         const text = next.texts.find(item => item.id === extraId);
         text.article.title = `Article ${index + 1}`;
         text.article.content.content[0].content = [{ type: 'text', text: `Body ${index + 1}` }];
-        next.workbench.texts.push({ id: extraId, open: true, window: { left: 460, top: 120 + (index - 1) * 80, width: 360, height: 540 } });
+        next.workbench.texts = next.workbench.texts.map(item => item.id === extraId
+          ? { ...item, window: { left: 460, top: 120 + (index - 1) * 80, width: 360, height: 540 } } : item);
         if (!store.commitCompletedOperation(next, { expectedGeneration: store.getGeneration(), historyLabel: 'Seed another Text' })) throw Error('Extra Text fixture did not save');
       }
       if (surfaces) {

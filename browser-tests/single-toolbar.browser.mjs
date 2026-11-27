@@ -1,3 +1,4 @@
+import { routeLocalWorkflowArtwork } from './fixtures/legacy-workflow-artwork.mjs';
 import test from 'node:test';
 import { artworkCommand, artworkMenu } from './fixtures/artwork-menu.mjs';
 import assert from 'node:assert/strict';
@@ -77,11 +78,7 @@ async function mount(width = 1440, theme = 'carbon') {
   const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
   page.setDefaultTimeout(8000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
-    const path = new URL(route.request().url()).pathname.split('/public/')[1];
-    await route.fulfill({ response: await route.fetch({ url: `${origin}/${path}` }) });
-  });
+  await routeLocalWorkflowArtwork(page, origin);
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=actions&theme=${theme}`);
   await page.locator('.image-module__canvas').first().focus();
   await setEditorSidebarOpen(page, false);
@@ -116,7 +113,7 @@ for (const [width, theme] of [[1440, 'carbon'], [1000, 'mist']]) {
       await zoom.press('Escape');
       assert.equal(await zoom.count(), 0);
       assert.equal(await image.isVisible(), true);
-      assert.equal(await image.locator('button:focus').count(), 1, 'cancel restores a control in the same panel');
+      await button(image, 'Crop').and(image.locator(':focus')).waitFor();
       assert.deepEqual(await draft(page), fitted);
       await button(image, 'Crop').click(); await zoom.fill('2');
       await button(image, 'Done').click();

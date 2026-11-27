@@ -71,11 +71,10 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
     };
     const entered = async () => {
       await page.locator('.startveil').waitFor({ state: 'detached' });
-      assert.equal(await page.locator('.application-interface').getAttribute('data-visible'), 'true');
+      await page.locator('.application-interface[data-visible]:not([inert])').waitFor();
       assert.equal(await page.getByRole('button', { name: 'ENTER INSCAPE', exact: true }).count(), 0);
       assert.equal(await page.evaluate(() => window.__startup.signIns), 0);
-      assert.equal(await page.evaluate(() => document.querySelector('.application-interface')
-        .contains(document.activeElement)), true, 'Entry gives keyboard focus to the destination');
+      await page.waitForFunction(() => document.querySelector('.application-interface')?.contains(document.activeElement));
     };
     const capture = async (name) => {
       if (!screenshotDir) return;
@@ -89,7 +88,8 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
       await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
     };
     const startupState = () => page.evaluate(() => ({
-      veil: document.querySelector('.startveil')?.getAttribute('data-state') ?? null,
+      opening: document.querySelector('.destination-opening [role=status]')?.textContent ?? null,
+      veil: Boolean(document.querySelector('.startveil')),
       inert: document.querySelector('.application-interface')?.getAttribute('inert'),
       editorAccess: document.querySelector('[aria-label="Profile editing access"]')?.textContent ?? null,
       ownerMounted: Boolean(document.querySelector('main.system-workflow')),
@@ -102,7 +102,8 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
       await page.waitForFunction((address) => window.__startup.requests.includes(address), other);
       await page.keyboard.press('Enter');
       await page.keyboard.press('Space');
-      assert.equal(await page.locator('.startveil').getAttribute('data-state'), 'loading');
+      await page.locator('.destination-opening').getByText('Opening Profile…').waitFor();
+      assert.equal(await page.locator('.startveil').count(), 0);
       assert.equal(await page.locator('.application-interface').getAttribute('inert'), '');
       await capture('direct-loading-wide');
       await page.evaluate((address) => window.__startup.resolve(address), other);
@@ -153,11 +154,21 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
     });
 
     await t.test('a connected owner lands on their profile and can enter Studio', async () => {
-      await open(`?owner=${other}`);
+      await open(`?owner=${other}&delayLease=1`);
       await entered();
       await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
       assert.equal(await page.locator('main.system-workflow').count(), 0);
       await page.getByRole('button', { name: 'Studio', exact: true }).click();
+      try {
+        // rAF may be suspended while the browser retains the outgoing Profile.
+        await page.waitForFunction(() => window.__startup.leaseRequests.length > 0, undefined, { polling: 20 });
+        const pending = await startupState();
+        assert.match(pending.editorAccess, /Checking editing access/);
+        assert.equal(pending.opening, 'Opening Studio…');
+        assert.equal(pending.inert, '');
+        assert.equal(pending.ownerMounted, false);
+        assert.equal(await page.getByRole('region', { name: 'Profile editing access' }).count(), 0);
+      } finally { await page.evaluate(() => window.__startup.releaseEditorLease()); }
       await page.locator('main.system-workflow').waitFor();
     });
 
@@ -197,7 +208,7 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
     });
 
     for (const mode of ['visitor', 'owner']) {
-      await t.test(`${mode} keeps Startveil until delayed destination code mounts`, async () => {
+      await t.test(`${mode} keeps the requested destination's loading surface until its code mounts`, async () => {
         const pattern = mode === 'visitor' ? '**/src/profileDocument/components/ProfileOverview.jsx'
           : '**/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
         let release;
@@ -230,11 +241,12 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
             if (screenshotDir) await writeFile(resolve(screenshotDir, 'owner-startup-gates.json'), JSON.stringify(evidence, null, 2));
             assert.match(waitingForLease.editorAccess, /Checking editing access/);
             assert.equal(waitingForLease.ownerMounted, false);
-            assert.deepEqual([waitingForLease.veil, waitingForCode.veil], ['loading', 'loading'],
+            assert.deepEqual([waitingForLease.opening, waitingForCode.opening], ['Opening Studio…', 'Opening Studio…'],
               'Transient editor acquisition must not authorize reveal before the owner runtime mounts');
             assert.equal(waitingForLease.inert, '');
           }
-          assert.equal(waitingForCode.veil, 'loading');
+          assert.equal(waitingForCode.veil, false);
+          assert.equal(waitingForCode.opening, mode === 'owner' ? 'Opening Studio…' : 'Opening Profile…');
           assert.equal(waitingForCode.inert, '');
           assert.equal(waitingForCode.ownerMounted, false);
           release();
@@ -262,8 +274,18 @@ test('automatic startup and isolated sign-in through the real App', { timeout: 1
         assert.match(await recovery.innerText(), new RegExp(expected[access]));
         assert.equal(await page.locator('main.system-workflow').count(), 0);
         await capture(`owner-access-${access}`);
-        await page.evaluate(() => window.__startup.allowEditing());
+        await page.evaluate(() => {
+          window.__startup.allowEditing();
+          const request = navigator.locks.request.bind(navigator.locks);
+          const gate = new Promise(resolve => { window.releaseRetry = resolve; });
+          navigator.locks.request = async (...args) => { await gate; return request(...args); };
+        });
         await recovery.getByRole('button', { name: 'Try editing here', exact: true }).click();
+        try {
+          await page.locator('.destination-opening').getByText('Opening Studio…').waitFor();
+          assert.equal(await page.locator('.application-interface').getAttribute('inert'), '');
+          assert.equal(await page.locator('main.system-workflow').count(), 0);
+        } finally { await page.evaluate(() => window.releaseRetry()); }
         await page.locator('main.system-workflow').waitFor();
         await entered();
       });

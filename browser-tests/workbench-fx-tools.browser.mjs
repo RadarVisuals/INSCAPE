@@ -6,7 +6,7 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
 import { openSharedTool, detachTool, sharedToolTab, selectWorkbenchLayer } from './fixtures/shared-tools.mjs';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/fx-tools';
-const saved = page => page.evaluate(() => window.savedDraft());
+const saved = page => page.evaluate(() => window.readCommittedDraft());
 const undo = async page => { await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z'); };
 const paint = page => page.locator('[data-workbench-view-id="shape:landscape"] .shape-paint');
 async function zoom(page, scale) {
@@ -127,16 +127,13 @@ test('FX keeps failed edits recoverable, clears stale targets and fits a compact
     await zoom(page, 1);
     await selectWorkbenchLayer(page, 'Landscape');
     const fx = await openSharedTool(page, 'FX'), original = await saved(page);
-    await page.evaluate(() => {
-      window.originalSetItem = Storage.prototype.setItem;
-      Storage.prototype.setItem = function(key, value) { if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.originalSetItem.call(this, key, value); };
-    });
+    await page.evaluate(() => window.failWorkbenchWrites(true));
     const blur = fx.getByRole('slider', { name: 'FX Blur', exact: true });
     await blur.focus(); await blur.press('End'); await fx.getByRole('alert').waitFor();
     assert.deepEqual(await saved(page), original);
     assert.equal(await blur.inputValue(), '0');
     assert.equal(await paint(page).evaluate(node => getComputedStyle(node).filter), 'none');
-    await page.evaluate(() => { Storage.prototype.setItem = window.originalSetItem; });
+    await page.evaluate(() => window.failWorkbenchWrites(false));
     await blur.press('End'); assert.equal((await saved(page)).shapes[0].blur, 12);
     assert.equal(await paint(page).evaluate(node => getComputedStyle(node).filter), 'blur(24px)', 'paint accounts for the high-density window transform');
     await fx.getByRole('alert').waitFor({ state: 'detached' });

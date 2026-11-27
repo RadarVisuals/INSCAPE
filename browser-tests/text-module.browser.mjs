@@ -116,10 +116,6 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Default text style');
     assert.equal(await tools.getByRole('combobox', { name: 'Default font', exact: true }).inputValue(), 'literata');
     await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    // Close the other windows through their normal controls before testing a drop.
-    const displayHeader = page.locator('[data-display-instance="display:primary"] .system-workflow__identity-strip');
-    await displayHeader.focus(); await displayHeader.press('Shift+F10');
-    await page.getByRole('menuitem', { name: 'CLOSE MODULE', exact: true }).click();
     const closeLayers = page.getByRole('button', { name: 'Close Workbench Layers', exact: true });
     if (await closeLayers.count()) await closeLayers.click();
     // Leave the writing surface beside the Library's current workspace panel.
@@ -133,14 +129,14 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
       }
       throw new Error('No unobstructed Text move surface');
     });
-    const textBox = await text.locator('.text-window').boundingBox();
+    const textBox = await text.locator('aside.text-window').boundingBox();
     await page.mouse.move(start.x, start.y); await page.mouse.down();
     await page.mouse.move(start.x + 680 - textBox.x, start.y + 180 - textBox.y, { steps: 12 }); await page.mouse.up();
     await content.focus(); await page.keyboard.press('Control+End'); await page.keyboard.press('ArrowRight');
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     const card = page.getByRole('region', { name: 'Library workspace' }).getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
     await card.scrollIntoViewIfNeeded();
-    const from = await card.boundingBox(), target = await text.locator('.text-window').boundingBox();
+    const from = await card.boundingBox(), target = await text.locator('aside.text-window').boundingBox();
     assert.equal(await text.evaluate((node, point) => node.contains(document.elementFromPoint(point.x, point.y)), { x: target.x + target.width / 2, y: target.y + target.height / 2 }), true, 'the drop point reaches the actual Text surface');
     await page.mouse.move(from.x + from.width / 2, from.y + 35); await page.mouse.down();
     await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 }); await page.mouse.up();
@@ -159,11 +155,11 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
       await page.waitForFunction(() => document.querySelector('.text-module-scroll').scrollTop > 0);
       await scroller.evaluate(node => { node.scrollTop = 0; });
     }
-    const authoredBox = await text.locator('.text-window').boundingBox();
+    const authoredBox = await text.locator('aside.text-window').boundingBox();
     for (const [name, viewport] of [['wide', { width: 1440, height: 1000 }], ['narrow', { width: 390, height: 844 }]]) {
       await page.setViewportSize(viewport); await page.waitForTimeout(150);
       await page.screenshot({ path: `.browser-test-runtime/text-${name}.png` });
-      const box = await text.locator('.text-window').boundingBox();
+      const box = await text.locator('aside.text-window').boundingBox();
       assert.deepEqual(box, authoredBox, `viewport changes preserve authored Text geometry at ${name}`);
       assert.equal(await text.locator('.text-module-scroll').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
       assert.equal(await text.locator('.text-editor-page .text-document-title').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, 'title wraps without clipping');

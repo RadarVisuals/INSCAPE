@@ -1,6 +1,6 @@
 import WorkspaceBoundary from '../workspace/WorkspaceBoundary.jsx';
-import { useEffect, useState } from 'react';
-import { StartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
+import { useContext, useEffect, useState } from 'react';
+import { StartupDestinationContext, StartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import { acquireProfileEditor } from './profileEditorLease.js';
 import '../profileDocument/components/publishedProfileStatus.css';
 
@@ -9,6 +9,7 @@ export default function ProfileEditingBoundary(props) {
 }
 
 function EditingSession({ profileAddress, children, onView, viewLabel = 'View published workspace' }) {
+  const reportReady = useContext(StartupDestinationContext);
   const [attempt, setAttempt] = useState(0), [status, setStatus] = useState('loading');
   useEffect(() => {
     let active = true;
@@ -40,6 +41,9 @@ function EditingSession({ profileAddress, children, onView, viewLabel = 'View pu
             // the stable destination while its Workbench finishes loading.
             if (document.activeElement === button)
               button.closest('.application-interface')?.focus({ preventScroll: true });
+            // The previous ready signal belongs to the recovery screen.
+            reportReady?.(false);
+            setStatus('loading');
             setAttempt(value => value + 1);
           }}>Try editing here</button>}
           {onView && <button type="button" className="published-profile-retry" onClick={onView}>{viewLabel}</button>}

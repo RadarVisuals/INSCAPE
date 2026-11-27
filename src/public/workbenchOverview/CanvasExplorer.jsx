@@ -8,6 +8,7 @@ import { OwnerSystemWorkflowMetadataContent } from '../ownerSystemWorkflow/Owner
 export default function CanvasExplorer({ selected, model, memory, disabled, expanded, onExpand, onEdit, onDetails, moving, visitorHeader, railButtons, infoId, hideInfo, smoothZoom }) {
   const host = useRef(null), helpId = useId();
   const [sourceId, setSourceId] = useState('');
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const destinations = useMemo(() => canvasDestinations(selected.draft).filter(item => item.view), [selected.draft]);
   const sources = useMemo(() => canvasArtworkSources(model), [model]);
   const source = sources.find(item => item.id === sourceId);
@@ -24,11 +25,11 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
     </p>}
     <div className="composition-explorer-secondary"><span>{visitorHeader && <small className="gallery-detail-label">Dimensions</small>}{model.area.width} × {model.area.height}{visitorHeader && ' px'}</span>{onDetails && <button type="button" onClick={onDetails}>Edit details</button>}</div>
   </div>;
-  const artworkSources = sources.length > 0 && <details className="composition-explorer-sources"><summary>Artwork sources <span>{sources.length}</span></summary>
+  const artworkSources = sources.length > 0 && <details className="composition-explorer-sources" onToggle={event => setSourcesOpen(event.currentTarget.open)}><summary>Artwork sources <span>{sources.length}</span></summary>
     <label>Artwork<select aria-label="Artwork source" value={sourceId} onChange={event => setSourceId(event.target.value)}>
       <option value="">Choose a piece</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
     </select></label>
-    {source && <div className="composition-explorer-dossier">{source.dossier ? <OwnerSystemWorkflowMetadataContent dossier={source.dossier} /> : <p>Source information is unavailable.</p>}</div>}
+    {sourcesOpen && !hideInfo && source && <div className="composition-explorer-dossier">{source.dossier ? <OwnerSystemWorkflowMetadataContent dossier={source.dossier} /> : <p>Source information is unavailable.</p>}</div>}
   </details>;
   return <section className="composition-explorer" aria-label={`View ${selected.name}`}>
     {!visitorHeader && <header className="composition-explorer-heading"><h1>{selected.name}</h1><div>

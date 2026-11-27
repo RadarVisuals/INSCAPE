@@ -1,3 +1,4 @@
+import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
@@ -11,6 +12,7 @@ test('validation detaches the accepted draft from the submitted data', () => {
   const store = createSystemWorkflowDraftStore({ profileAddress:profile, storage });
   const candidate = store.getDraft();
   candidate.texts = [{id:'text:first',visibility:'PRIVATE',article:createArticle('Accepted')}];
+  candidate.workbench.texts = candidate.texts.map((text, i) => createTextPresentation(text.id, i));
   const submitted = structuredClone(candidate);
   assert.ok(store.commitCompletedOperation(candidate,{expectedGeneration:store.getGeneration()}));
   assert.deepEqual(candidate,submitted,'normalization cannot mutate the submitted value');
@@ -27,6 +29,7 @@ test('successive shared-snapshot Text edits preserve siblings, validate changes,
   const store=createSystemWorkflowDraftStore({profileAddress:profile,storage});
   const initial=store.getDraft();
   initial.texts=Array.from({length:12},(_,i)=>({id:`text:article-${i}`,visibility:'PRIVATE',article:createArticle(`Article ${i}`)}));
+  initial.workbench.texts = initial.texts.map((text, i) => createTextPresentation(text.id, i));
   assert.ok(store.commitCompletedOperation(initial,{expectedGeneration:store.getGeneration()})); store.reload();
   const original=structuredClone(store.getSnapshot());
   for(let i=0;i<8;i++) {

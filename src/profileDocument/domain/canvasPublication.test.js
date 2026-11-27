@@ -22,6 +22,10 @@ function fixture() {
   record = appendWorkbench(record, 'workbench:private', 'Never published', draft);
   return record;
 }
+function setComposition(entry, composition) {
+  const { version, ...content } = composition;
+  Object.assign(entry.content, content);
+}
 const project = record => canvasPublicationCandidates({ record, profile: { name: 'Artist' }, assetRecords: [] });
 const publish = (record, selectedIds, previousDocument = null, includeShared = !previousDocument) => buildCanvasPublication({ candidates: project(record), selectedIds, previousDocument, includeShared, exportedAt: new Date('2026-10-26T12:00:00Z') });
 
@@ -52,7 +56,7 @@ test('Studio opens a published-only work and its linked source in one local save
     composition.links = [{ id: 'link:caption', kind: 'source', destination: null,
       source: { profileAddress: address, canvasId: target.id, moduleId: text } }];
     composition.cells[0].content = 'link:caption';
-    entry.content.composition = composition;
+    setComposition(entry, composition);
   }
   record.workbenches.push({ ...work, id: 'workbench:other', name: 'Another published work' });
   const resolution = { status: 'RESOLVED', document: publish(record, record.workbenches.map(item => item.id)) };
@@ -78,7 +82,7 @@ test('Studio opens a published-only work and its linked source in one local save
   assert.deepEqual(saved.shared, before.shared);
   assert.deepEqual(saved.workbenches.slice(0, 2), before.workbenches);
   assert.deepEqual(saved.workbenches.slice(2).map(item => item.id), [work.id, source.id]);
-  assert.deepEqual(loaded.readWorkbench(work.id).draft.composition.links, work.content.composition.links);
+  assert.deepEqual(loaded.readWorkbench(work.id).draft.links, work.content.links);
   assert.deepEqual(loaded.readWorkbench(work.id).thumbnailCrop, work.thumbnailCrop);
   assert.equal(loaded.readWorkbench(work.id).introduction, work.introduction);
   assert.ok(loaded.renameWorkbench('Edited locally'));
@@ -225,7 +229,7 @@ test('named Studio composition survives publication and fresh restore with priva
     composition.workbench.texts.push(createTextPresentation(text.id));
   }
   composition.cells[0].members = [member.id];
-  record.workbenches[1].content.composition = composition;
+  setComposition(record.workbenches[1], composition);
   const bytes = canonicalSerializeProfileDocumentV9(publish(record, ['workbench:main', 'workbench:second']));
   const doc = parseProfileDocumentV9Json(bytes);
   for (const content of [doc, doc.canvases[0].content]) {
@@ -235,8 +239,9 @@ test('named Studio composition survives publication and fresh restore with priva
   const partial = structuredClone(doc);
   partial.canvases[0].content.grids = [];
   assert.equal(validateProfileDocumentV9(partial).valid, false);
-  const published = doc.canvases[0].content.composition;
-  assert.equal(published.version, 3);
+  const published = doc.canvases[0].content;
+  assert.equal(Object.hasOwn(published, 'composition'), false);
+  assert.equal(doc.version, 9);
   assert.deepEqual(published.texts.map(t => t.id), [free.id, member.id]);
   assert.deepEqual(published.cells[0].members, [member.id]);
   assert.equal(published.cells.length, composition.cells.length);
@@ -245,7 +250,7 @@ test('named Studio composition survives publication and fresh restore with priva
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   const store = createSystemWorkflowDraftStore({ profileAddress: address, storage });
   assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: doc, profileAddress: address, store }).status, 'HYDRATED_FROM_PUBLISHED');
-  const restored = store.readWorkbench('workbench:second').draft.composition;
+  const restored = store.readWorkbench('workbench:second').draft;
   assert.deepEqual(restored.texts.map(t => t.id), [free.id, member.id]);
   assert.deepEqual(restored.cells, published.cells);
 });
@@ -255,22 +260,22 @@ test('named Bento sources resolve against selected and retained named works, inc
   const link = { id: 'link:title', kind: 'source', source: { profileAddress: address, canvasId: 'workbench:second', moduleId: 'text:title' }, destination: null };
   const linked = createStudioComposition('bento');
   linked.links = [link]; linked.cells[0].content = link.id;
-  record.workbenches[0].content.composition = linked;
+  setComposition(record.workbenches[0], linked);
   const source = createStudioComposition('canvas');
   source.texts.push({ id: 'text:title', visibility: 'PUBLIC', article: createArticle('Title') });
   source.workbench.texts.push(createTextPresentation('text:title'));
   source.artworkLayers.push('text:title');
-  record.workbenches[1].content.composition = source;
+  setComposition(record.workbenches[1], source);
   assert.throws(() => publish(record, ['workbench:main']), /Linked content/);
   const first = publish(record, ['workbench:second']);
   const document = publish(record, ['workbench:main'], first);
-  assert.deepEqual(document.canvases[0].content.composition.links, [link]);
+  assert.deepEqual(document.canvases[0].content.links, [link]);
   assert.throws(() => buildGalleryRemoval(document, 'workbench:second'), /break published links in .*First canvas/);
   const both = buildCanvasPublication({ candidates: project(record), selectedIds: ['workbench:second'], previousDocument: document,
     placements: { 'workbench:second': ['profile', 'gallery'] } });
   const hidden = buildGalleryRemoval(both, 'workbench:second');
   assert.deepEqual(hidden.canvases, both.canvases);
-  assert.deepEqual(hidden.composition, both.composition);
+  assert.deepEqual(publishedCanvasEntries(hidden).map(item => item.content), publishedCanvasEntries(both).map(item => item.content));
   assert.deepEqual(hidden.canvas.destinations, ['profile']);
   source.texts[0].visibility = 'PRIVATE';
   assert.throws(() => publish(record, ['workbench:second'], document), /Linked content/);
@@ -278,7 +283,7 @@ test('named Bento sources resolve against selected and retained named works, inc
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   const store = createSystemWorkflowDraftStore({ profileAddress: address, storage });
   assert.equal(reconcileOwnerDraftWithPublishedProfile({ document, profileAddress: address, store }).status, 'HYDRATED_FROM_PUBLISHED');
-  assert.deepEqual(store.readWorkbench('workbench:main').draft.composition.links, [link]);
+  assert.deepEqual(store.readWorkbench('workbench:main').draft.links, [link]);
 });
 
 test('removing Gallery from a work on both pages retains its full Profile composition', () => {
@@ -301,7 +306,7 @@ test('removing Gallery from a work on both pages retains its full Profile compos
 
 test('physical removal handles primary and secondary works without altering retained works', () => {
   const record = fixture();
-  record.workbenches[0].content.composition = createStudioComposition('bento');
+  setComposition(record.workbenches[0], createStudioComposition('bento'));
   const doc = buildCanvasPublication({ candidates: project(record), includeShared: true,
     selectedIds: ['workbench:main', 'workbench:second'], placements: {} });
   const [primary, second] = publishedCanvasEntries(doc);
@@ -318,7 +323,7 @@ test('physical removal handles primary and secondary works without altering reta
 
 test('removing the last work leaves an empty verified profile and supports a later publication', () => {
   const record = fixture();
-  record.workbenches[0].content.composition = createStudioComposition('bento');
+  setComposition(record.workbenches[0], createStudioComposition('bento'));
   record.shared.identityPresentation.alias = 'Public identity';
   const named = publish(record, ['workbench:main']);
   const implicit = structuredClone(named);
@@ -337,7 +342,7 @@ test('removing the last work leaves an empty verified profile and supports a lat
     assert.equal(empty.revision, doc.revision + 1);
     assert.throws(() => buildGalleryRemoval(empty, id), /no longer in the published Gallery/);
     assert.throws(() => buildGalleryRemoval({ ...empty, revision: -1 }, id), /Revision/);
-    for (const extra of [{ composition: record.workbenches[0].content.composition }, { grids: [] }, { canvases: [{ id }] }]) {
+    for (const extra of [{ cells: record.workbenches[0].content.cells }, { grids: [] }, { canvases: [{ id }] }]) {
       assert.equal(validateProfileDocumentV9({ ...empty, ...extra }).valid, false);
     }
     const shared = buildCanvasPublication({ candidates: project(record), selectedIds: [], includeShared: true, previousDocument: empty });
@@ -391,8 +396,8 @@ test('mutually linked Gallery works can be removed together, and only surviving 
     composition.artworkLayers.push('text:title');
     return composition;
   }
-  record.workbenches[0].content.composition = linkedTo(second);
-  record.workbenches[1].content.composition = linkedTo(first);
+  setComposition(record.workbenches[0], linkedTo(second));
+  setComposition(record.workbenches[1], linkedTo(first));
   const both = publish(record, [first, second]);
   assert.throws(() => buildGalleryRemoval(both, first), /break published links in .*Second canvas/);
   assert.throws(() => buildGalleryRemoval(both, second), /break published links in .*First canvas/);
@@ -401,7 +406,7 @@ test('mutually linked Gallery works can be removed together, and only surviving 
   assert.equal(empty.revision, both.revision + 1);
 
   record.workbenches[2].name = 'Third canvas';
-  record.workbenches[2].content.composition = linkedTo(first);
+  setComposition(record.workbenches[2], linkedTo(first));
   const shared = publish(record, [third], both);
   const before = structuredClone(shared);
   assert.throws(() => buildGalleryRemoval(shared, [first, second]), error =>
@@ -431,8 +436,8 @@ test('current v9 documents validate with optional Gallery destinations and Studi
   for (const change of [
     doc => { doc.canvas.destinations = ['gallery']; },
     doc => { doc.canvases[0].destinations = ['gallery']; },
-    doc => { doc.composition = native; },
-    doc => { doc.canvases[0].content.composition = native; },
+    doc => { for (const key of CANVAS_CONTENT_KEYS) delete doc[key]; doc.composition = native; },
+    doc => { doc.canvases[0].content = { composition: native }; },
   ]) {
     const updated = structuredClone(legacy);
     change(updated);
@@ -447,7 +452,7 @@ test('publishing named compositions keeps Gallery and Profile independent of dis
   const record = fixture();
   record.shared.reception = { corrupt: true };
   record.workbenches[0].name = 'The Last one';
-  record.workbenches[0].content = { ...record.workbenches[0].content, composition: createStudioComposition('bento') };
+  setComposition(record.workbenches[0], createStudioComposition('bento'));
   const candidates = project(record);
   assert.deepEqual(candidates.map(item => item.name), ['The Last one', 'Second canvas', 'Never published']);
   for (const destinations of [['gallery'], ['profile'], ['gallery', 'profile']]) {
@@ -461,8 +466,11 @@ test('publishing named compositions keeps Gallery and Profile independent of dis
 });
 test('an existing signed ordinary Bento stays readable and a new revision emits only its artwork fields', () => {
   const record = fixture();
-  record.workbenches[0].content = { ...record.workbenches[0].content, composition: createStudioComposition('bento') };
+  setComposition(record.workbenches[0], createStudioComposition('bento'));
   const document = publish(record, ['workbench:main']);
+  const composition = projectComposition(createStudioComposition('bento'));
+  for (const key of CANVAS_CONTENT_KEYS) delete document[key];
+  document.composition = composition;
   document.composition.branding = { name: '', logo: null };
   const bytes = JSON.stringify(document);
   const verified = parseProfileDocumentV9Json(bytes);

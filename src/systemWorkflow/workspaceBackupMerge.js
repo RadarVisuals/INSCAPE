@@ -16,7 +16,7 @@ export const assetIds = library => union(library?.curatedAssetIds, library?.fold
 const collection = draft => isWorkbenchCollection(draft) ? assertValidWorkbenchCollection(draft) : createWorkbenchCollection(currentLocalDraft(draft));
 
 export function visitCanvasReferences(workbenches, visit) {
-  const surfaces = workbenches.workbenches.map(item => item.content.composition);
+  const surfaces = workbenches.workbenches.map(item => item.content);
   for (const surface of surfaces) for (const link of surface?.links || []) {
     for (const ref of [link.destination, link.source])
       if (ref?.profileAddress === workbenches.profileAddress && ref.canvasId) visit(ref);

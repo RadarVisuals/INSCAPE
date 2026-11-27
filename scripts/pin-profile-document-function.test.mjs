@@ -33,7 +33,8 @@ function requestFor(body, overrides = {}) {
 function studioReplacement() {
   const record = createWorkbenchCollection(createEmptySystemWorkflowDraft(PROFILE));
   const [work] = record.workbenches;
-  work.content.composition = createStudioComposition('canvas');
+  const { version, ...content } = createStudioComposition('canvas');
+  Object.assign(work.content, content);
   const previousDocument = resolvePublicationBaseline({ status: 'INVALID', errorCode: 'INVALID_DOCUMENT', address: PROFILE },
     PROFILE, { replaceInvalid: true });
   return buildCanvasPublication({

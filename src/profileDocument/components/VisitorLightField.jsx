@@ -139,7 +139,7 @@ function readFieldSettings(canvas, sample) {
 
 // Only the background needs this context. Its static FigCraft image stays
 // available during loading, on context loss, and on devices without WebGL.
-export default function VisitorLightField({ paused = false }) {
+export default function VisitorLightField({ paused = false, onSettled }) {
   const ref = useRef(null), refresh = useRef(null), pausedRef = useRef(paused);
   useEffect(() => { pausedRef.current = paused; refresh.current?.(); }, [paused]);
   useEffect(() => {
@@ -147,12 +147,21 @@ export default function VisitorLightField({ paused = false }) {
     const swatch = document.createElement('canvas');
     swatch.width = swatch.height = 1;
     const sample = swatch.getContext('2d', { willReadFrequently: true });
-    if (!sample) return;
+    if (!sample) { onSettled?.(true); return; }
     sample.globalCompositeOperation = 'copy';
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     const tile = new Image();
     tile.src = assets + 'output-dither.png';
     let tones, field, context, timer, last, seconds = 0;
+    let settled = false;
+    function settle() {
+      if (settled || abort.signal.aborted) return;
+      settled = true;
+      clearTimeout(deadline);
+      onSettled?.(true);
+    }
+    // A stalled decorative asset must still allow the static background to open.
+    const deadline = setTimeout(settle, 5000);
     let settings = readFieldSettings(canvas, sample);
     function paint() {
       clearTimeout(timer);
@@ -167,14 +176,15 @@ export default function VisitorLightField({ paused = false }) {
       last = now;
       field.draw(width, height, seconds);
       canvas.dataset.ready = 'true';
+      settle();
       if (animating) timer = setTimeout(paint, 1000/24);
     }
     function start() {
       if (!tones || abort.signal.aborted) return;
       context = canvas.getContext('webgl', { alpha:false, antialias:false, depth:false, stencil:false, powerPreference:'low-power' });
-      if (!context || context.isContextLost()) return;
+      if (!context || context.isContextLost()) { settle(); return; }
       try { field = prepareField(context, tones, tile); field.configure(settings); paint(); }
-      catch { delete canvas.dataset.ready; }
+      catch { delete canvas.dataset.ready; settle(); }
     }
     const events = { signal:abort.signal };
     canvas.addEventListener('webglcontextlost', event => {
@@ -202,14 +212,14 @@ export default function VisitorLightField({ paused = false }) {
       return response.arrayBuffer();
     }), tile.decode()]).then(([buffer]) => {
       tones = new Uint16Array(buffer);
-      if (tones.length === columns*rows*4) start();
-    }).catch(() => {});
+      if (tones.length === columns*rows*4) start(); else settle();
+    }).catch(settle);
     return () => {
       refresh.current = null;
-      abort.abort(); observer.disconnect(); palette.disconnect(); clearTimeout(timer);
+      abort.abort(); clearTimeout(deadline); observer.disconnect(); palette.disconnect(); clearTimeout(timer);
       field?.release();
       context?.getExtension('WEBGL_lose_context')?.loseContext();
     };
-  }, []);
+  }, [onSettled]);
   return <canvas ref={ref} className="visitor-light-field" aria-hidden="true" />;
 }

@@ -4,9 +4,24 @@ import { validateWorkspaceRows } from './validateWorkspaceRows.js';
 import { createEmptyWorkspace } from '../library/domain/libraryWorkspace.js';
 import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { curatedSnapshot } from '../library/curatedSnapshots.js';
+import { createStudioComposition, createStudioDraft } from '../systemWorkflow/domain/studioComposition.js';
+import { createArticle } from '../text/domain/article.js';
+import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 
 const profile = '0x' + 'a'.repeat(40);
 const empty = { library:null, workbenches:null, textRecovery:null };
+
+test('workspace verification accepts both currently saved document paths and the unified document without treating draft bytes as a layout cache', () => {
+  const free = createEmptySystemWorkflowDraft(profile);
+  free.texts = [{ id: 'text:private', article: createArticle('Saved work'), visibility: 'PRIVATE' }];
+  free.workbench = { version: 1, identity: { open: false, window: { left: 28, top: 72, width: 840 } }, texts: [createTextPresentation('text:private')] };
+  const nested = { ...createEmptySystemWorkflowDraft(profile), composition: createStudioComposition('bento') };
+  for (const document of [free, nested, createStudioDraft(profile)]) {
+    const rows = { ...empty, workbenches: JSON.stringify(document) }, before = structuredClone(rows);
+    assert.doesNotThrow(() => validateWorkspaceRows(rows, profile));
+    assert.deepEqual(rows, before);
+  }
+});
 
 test('migration refuses silently dropped folder membership and a mismatched Workbench profile', () => {
   const ws = createEmptyWorkspace(profile);

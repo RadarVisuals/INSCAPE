@@ -33,7 +33,7 @@ export default function CompositionEditorArtboard() {
 }
 
 function CompositionEditorExample() {
-  const [store] = useState(() => createSystemWorkflowDraftStore({ profileAddress, storage, initialStudio: true }));
+  const [store] = useState(() => createSystemWorkflowDraftStore({ profileAddress, storage }));
   return <div className="lab-composition-stage">
     <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={store} reviewStorage={storage}
       reviewAssets={reviewAssets} reviewCategories={[]} reviewProfile={{ status: 'RESOLVED', normalizedAddress: profileAddress, name: 'nomad', description: '', tags: [], links: [] }} />

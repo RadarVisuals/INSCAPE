@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { captureOverviewCanvas, overviewCanvasNode } from './overviewCanvasFrame.js';
 
@@ -8,7 +9,7 @@ export default function useGalleryLayoutJourney({ root, selected, model, layout,
   const destination = useRef(null);
   const previousLanding = useRef(null);
   const cancelDeparture = useRef(null);
-  useLayoutEffect(() => () => cancelDeparture.current?.(), [layout]);
+  useLayoutEffect(() => () => cancelDeparture.current?.(), []);
   const tileOrigin = useRef(null);
   const journey = flight?.source.id === selected.id && flight.direction === layout ? flight : null;
 
@@ -54,31 +55,28 @@ export default function useGalleryLayoutJourney({ root, selected, model, layout,
       setFlight(motion ? { direction: next.layout, source, clipTop: host.getBoundingClientRect().top } : null);
       onViewChange(next);
     };
-    if (!motion || journey) { depart(); return; }
+    if (!motion || journey || !document.startViewTransition || !globalThis.ViewTransition?.prototype
+      || !('types' in ViewTransition.prototype) || document.activeViewTransition) { depart(); return; }
 
-    // Give surrounding tiles and controls a short exit while the actual artwork
-    // remains at the captured origin. A new gesture can supersede this handoff.
+    // Snapshot only the departing controls. The measured canvas stays live.
     setRequestedLayout(next.layout);
-    host.setAttribute('data-layout-leaving', '');
     node.setAttribute('data-layout-flight-source', '');
-    const listeners = new AbortController();
-    const cleanup = () => {
-      clearTimeout(timer);
-      listeners.abort();
-      host.removeAttribute('data-layout-leaving');
-      node.removeAttribute('data-layout-flight-source');
+    const transition = document.startViewTransition({ types: ['gallery-layout', 'leave-' + layout], update: () => {
+      if (cancelDeparture.current !== cancel) return;
+      flushSync(() => { depart(); setRequestedLayout(null); });
+    } });
+    const cancel = () => {
       cancelDeparture.current = null;
+      node.removeAttribute('data-layout-flight-source');
       setRequestedLayout(null);
+      transition.skipTransition();
     };
-    const interrupt = event => {
-      if (!event.target.closest?.('.gallery-layout-switch')) cleanup();
-    };
-    const timer = setTimeout(() => { cleanup(); depart(); }, 100);
-    cancelDeparture.current = cleanup;
-    window.addEventListener('pointerdown', interrupt, { capture: true, signal: listeners.signal });
-    window.addEventListener('keydown', interrupt, { capture: true, signal: listeners.signal });
-    window.addEventListener('wheel', cleanup, { capture: true, passive: true, signal: listeners.signal });
-    window.addEventListener('resize', cleanup, { signal: listeners.signal });
+    cancelDeparture.current = cancel;
+    transition.ready.catch(() => {});
+    transition.finished.finally(() => {
+      node.removeAttribute('data-layout-flight-source');
+      if (cancelDeparture.current === cancel) cancelDeparture.current = null;
+    }).catch(() => {});
   }
 
   function resolveTarget() {

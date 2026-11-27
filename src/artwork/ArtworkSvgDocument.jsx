@@ -99,7 +99,7 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
       onClick={() => { setHostLoad(0); setAttempt(value => value + 1); }}>Artwork unavailable — retry</button>}
   </span>;
   return <>
-    <iframe key={attempt} ref={frame} className={`artwork-svg-document ${className}`} tabIndex={paintOnly ? -1 : undefined}
+    <iframe key={attempt} ref={frame} data-svg-paint={status} className={`artwork-svg-document ${className}`} tabIndex={paintOnly ? -1 : undefined}
       style={paintOnly ? { pointerEvents: 'none' } : undefined}
       src="/.netlify/functions/artwork-document" title={title} onLoad={() => {
         // Moving a responsive cell can reload its iframe without remounting

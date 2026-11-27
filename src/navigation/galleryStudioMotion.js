@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, startTransition, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { resolveApplicationDestination } from './applicationNavigation.js';
 
 export const GalleryStudioMotion = createContext(null);
@@ -14,7 +14,13 @@ export function useGalleryStudioMotion(authority) {
   const [journey, setJourney] = useState(null);
   const finish = useCallback(trip => setJourney(current => current === trip ? null : current), []);
   const changeRoute = useCallback((previous, next, setRoute) => {
-    chrome.current?.cancel();
+    const pending = chrome.current;
+    // Studio replaces its generic URL with the active document during mount.
+    if (pending?.route === previous && previous.editor && !previous.workId && next.workId
+      && next.editor && next.address === previous.address) {
+      pending.route = next; setRoute(next); return;
+    }
+    pending?.cancel();
     chrome.current = null;
     const from = resolveApplicationDestination(previous, account.current);
     const to = resolveApplicationDestination(next, account.current);
@@ -22,7 +28,7 @@ export function useGalleryStudioMotion(authority) {
     const studio = page => page.kind === 'workbench' && !page.canvas && !page.newComposition;
     let trip = null;
     if (from.address && from.address === to.address) {
-      const entering = gallery(from) && studio(to);
+      const entering = gallery(from) && studio(to) && to.worksEditorId;
       const leaving = studio(from) && gallery(to);
       const origin = entering ? endpoints.current.gallery : leaving ? endpoints.current.editor : null;
       if (origin?.address === from.address) {
@@ -35,15 +41,30 @@ export function useGalleryStudioMotion(authority) {
     }
     if (from.address !== to.address || to.kind === 'entry') galleryMemory.current = null;
     const commit = () => { setJourney(trip); setRoute(next); };
-    if (!trip) { commit(); return; }
-    if (!document.startViewTransition || !globalThis.ViewTransition?.prototype || !('types' in ViewTransition.prototype)) {
+    const snapshots = document.startViewTransition && globalThis.ViewTransition?.prototype
+      && 'types' in ViewTransition.prototype;
+    const publicTabChange = from.kind === 'public' && to.kind === 'public'
+      && (Boolean(from.canvas) !== Boolean(to.canvas) || Boolean(from.writing) !== Boolean(to.writing)
+        || from.target?.moduleId !== to.target?.moduleId);
+    const managerChange = from.kind === 'workbench' && to.kind === 'workbench'
+      && Boolean(from.canvas) !== Boolean(to.canvas);
+    const handoff = !trip && snapshots && from.address && from.address === to.address && (from.kind !== to.kind || publicTabChange || managerChange)
+      && ![from.kind, to.kind].includes('pending');
+    if (!trip && !handoff) {
+      // Keep the mounted public page and its background while the next tab loads.
+      if (from.kind === 'public' && to.kind === 'public' && from.address === to.address) startTransition(commit);
+      else commit();
+      return;
+    }
+    if (!snapshots) {
       const host = trip.direction === 'overview' && endpoints.current.editor?.hostRef?.current;
       const artwork = host && (surface.current || host.querySelector('.workbench-canvas-content:not([data-suspended])'));
       if (!artwork) { commit(); return; }
       // Without browser snapshots, finish fading the live Studio before releasing it.
       // No draft model or DOM is retained by Gallery.
       trip.source = { ...trip.source, fadeIn: true };
-      const fade = artwork.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, fill: 'forwards' });
+      const studioScreen = host.closest('.system-workflow') || host;
+      const fade = studioScreen.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'ease-in-out', fill: 'forwards' });
       const preference = matchMedia('(prefers-reduced-motion: reduce)');
       const finishFade = () => fade.finish();
       preference.addEventListener('change', finishFade);
@@ -64,21 +85,40 @@ export function useGalleryStudioMotion(authority) {
     // On return the browser can dissolve Studio's outgoing pixels over the verified Gallery.
     let ready;
     const mounted = new Promise(resolve => { ready = resolve; });
-    const ticket = { ready, trip };
-    const types = trip.direction === 'overview' ? ['gallery-studio', 'studio-to-gallery'] : ['gallery-studio'];
+    const ticket = handoff ? { ready, route: next, authority: account.current } : { ready, trip };
+    let releaseMissingEndpoint = ready;
+    if (trip?.direction === 'editor') {
+      let editorMounted = false, sourcePainted = false;
+      ticket.ready = () => { editorMounted = true; if (sourcePainted) ready(); };
+      ticket.sourceReady = () => { sourcePainted = true; if (editorMounted) ready(); };
+      releaseMissingEndpoint = () => { if (!editorMounted) ready(); };
+    }
+    const resumeStudio = from.kind === 'public' && !from.target && studio(to) && !to.worksEditorId && !next.reviewPublication;
+    const returnToProfile = studio(from) && to.kind === 'public' && !to.canvas && !to.writing && !to.target;
+    const types = handoff ? [resumeStudio || returnToProfile ? 'studio-page' : 'destination-handoff'] : trip.direction === 'overview' ? ['gallery-studio', 'studio-to-gallery'] : ['gallery-studio'];
+    if (handoff && publicTabChange && !from.target && !to.target) types.push('public-tabs');
     const transition = document.startViewTransition({ types, update: () => {
       if (chrome.current !== ticket) return;
       commit();
       return mounted;
     } });
+    // A superseding navigation legitimately skips the snapshot before it is ready.
+    transition.ready.catch(() => {});
     ticket.cancel = () => { ready(); transition.skipTransition(); };
     chrome.current = ticket;
-    const timeout = setTimeout(ready, 1000);
+    // An ordinary route swaps as soon as its destination (or recovery UI) is laid out.
+    const timeout = trip ? setTimeout(releaseMissingEndpoint, 1000) : undefined;
     transition.finished.finally(() => {
       clearTimeout(timeout);
       if (chrome.current === ticket) chrome.current = null;
     }).catch(() => {});
   }, []);
+  useLayoutEffect(() => {
+    const ticket = chrome.current;
+    if (ticket?.authority && (ticket.authority.status !== authority.status
+      || ticket.authority.profileAddress !== authority.profileAddress
+      || ticket.authority.ownershipVerified !== authority.ownershipVerified)) ticket.cancel();
+  }, [authority.status, authority.profileAddress, authority.ownershipVerified]);
   useEffect(() => () => {
     const ticket = chrome.current;
     chrome.current = null;

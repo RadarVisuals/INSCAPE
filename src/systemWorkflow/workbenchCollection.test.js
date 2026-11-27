@@ -1,3 +1,4 @@
+import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
@@ -156,6 +157,8 @@ test('shared changes still validate the byte limit of an inactive full Workbench
   for (const text of full.texts) text.article.content.content = [{
     type: 'paragraph', content: [{ type: 'text', text: 'a'.repeat(170000) }],
   }];
+  full.workbench.texts = full.texts.map((text, i) => createTextPresentation(text.id, i));
+  full.artworkLayers = full.texts.map(text => text.id);
   const remaining = SYSTEM_WORKFLOW_LIMITS.maxJsonBytes - 32 - new TextEncoder().encode(JSON.stringify(full)).length;
   assert.ok(remaining > 0 && remaining < 20000);
   full.texts[0].article.content.content[0].content[0].text += 'a'.repeat(remaining);
@@ -205,9 +208,9 @@ test('two named Workbenches retain separate modules, dimensions, layout and edit
   const a = store.getDraft();
   const bId = store.createWorkbench('Studies');
   assert.ok(bId); assert.notEqual(bId, FIRST_WORKBENCH_ID);
-  assert.equal(store.getDraft().texts, undefined);
-  assert.equal(store.getDraft().imageModules, undefined);
-  assert.equal(store.getDraft().shapes, undefined);
+  assert.deepEqual(store.getDraft().texts, []);
+  assert.deepEqual(store.getDraft().imageModules, []);
+  assert.deepEqual(store.getDraft().shapes, []);
   assert.equal(Object.hasOwn(store.getDraft(), 'grids'), false);
   assert.deepEqual(store.getDraft().keeperDocks, a.keeperDocks, 'one shared Keeper configuration');
   addTextModule(store, profile); addImageModule(store, profile); addShape(store, profile);
@@ -241,7 +244,7 @@ test('Undo and redo belong to the originating Workbench; switching is not a hist
   assert.ok(store.redo()); assert.equal(store.getDraft().texts[0].article.title, 'A changed');
   assert.ok(store.switchWorkbench(b));
   assert.equal(store.getDraft().shapes.length, 1);
-  assert.ok(store.undo()); assert.equal(store.getDraft().shapes, undefined);
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft().shapes, []);
   assert.ok(store.switchWorkbench(FIRST_WORKBENCH_ID));
   assert.equal(store.getDraft().texts[0].article.title, 'A changed');
 });
@@ -444,7 +447,7 @@ test('a Workbench scope exposes only its explicit editing contract, never root l
   const { store } = fixture();
   const scope = store.getWorkbenchScope();
   assert.deepEqual(Object.keys(scope).sort(), [
-    'hasWriteAccess', 'isCurrent', 'getProfileAddress', 'getWorkbenchId', 'getSnapshot', 'getDraft',
+    'hasWriteAccess', 'isCurrent', 'release', 'getProfileAddress', 'getWorkbenchId', 'getSnapshot', 'getDraft',
     'getGeneration', 'getHistory', 'getRecordState', 'getLastCommitFailure', 'isCollection',
     'listWorkbenches', 'getBackupSnapshot', 'whenCommitted', 'subscribe', 'guardWorkbenchTransition',
     'beginHistoryGroup', 'endHistoryGroup', 'undo', 'redo', 'commitCompletedOperation',

@@ -1,6 +1,7 @@
 import { workbenchTextRecovery } from '../text/textEditRecovery.js';
 import { normalizeWorkspace } from '../library/storage/libraryWorkspaceStorage.js';
-import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
+import { readWorkbenchRecord } from '../systemWorkflow/readWorkbenchRecord.js';
+import { normalizeProfileAddress } from '../library/config.js';
 
 export { pendingProfileText } from '../text/textEditRecovery.js';
 
@@ -17,8 +18,8 @@ export function validateWorkspaceRows(rows, profile, verified = false) {
   }
   // Once migrated, the Workbench owns its corrupt-record and backup restore UI.
   if (!verified && rows.workbenches !== null) {
-    const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: { getItem: () => rows.workbenches } });
-    if (store.getRecordState().status !== 'valid') throw Error('Invalid saved Workbench or article draft.');
+    const address = normalizeProfileAddress(profile);
+    if (!address || readWorkbenchRecord(rows.workbenches, address).state.status !== 'valid') throw Error('Invalid saved Workbench or article draft.');
   }
   if (rows.textRecovery !== null) {
     const stored = JSON.parse(rows.textRecovery);

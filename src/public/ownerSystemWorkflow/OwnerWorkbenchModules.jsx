@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense } from 'react';
 import WorkbenchCanvasContent from './WorkbenchCanvasContent.jsx';
 
 const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
@@ -11,7 +11,6 @@ export default function OwnerWorkbenchModules({
   workbenchController,
   profileAddress,
   modules,
-  initialWorkbench,
   restoredWorkspace,
   preferences: workbenchPreferences,
   selectionState,
@@ -31,19 +30,12 @@ export default function OwnerWorkbenchModules({
     ? workbenchController.store.keeper.records()
     : workbenchController.draft.keeperDocks;
   const savedLayout = workbenchController.draft.workbench;
-  const layoutAtEntry = useRef(savedLayout);
-  const modulePresentations = key => {
-    const saved = savedLayout?.[key] || [];
-    // A restored Bento cell mounts again after Undo. Its current authored frame
-    // supersedes the cached frame from when this editor session opened.
-    if (workbenchController.store.getComposition && savedLayout !== layoutAtEntry.current) return saved;
-    return [...(initialWorkbench.current?.[key] || []), ...saved];
-  };
+  const modulePresentations = key => savedLayout?.[key] || [];
 
   return (
     <WorkbenchCanvasContent suspended={suspended}>
       {keeperRecords?.length > 0 && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<span hidden data-artwork-module-pending />}>
           <KeeperWorkbench
             navigationRef={workbenchNavigationRef}
             records={keeperRecords}
@@ -59,7 +51,7 @@ export default function OwnerWorkbenchModules({
         </Suspense>
       )}
       {workbenchController.draft.shapes?.length > 0 && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<span hidden data-artwork-module-pending />}>
           <ShapeWorkbench
             records={workbenchController.draft.shapes}
             store={workbenchController.store}
@@ -73,7 +65,7 @@ export default function OwnerWorkbenchModules({
         </Suspense>
       )}
       {workbenchController.draft.imageModules?.length > 0 && (
-        <Suspense fallback={<p role="status">Opening Image…</p>}>
+        <Suspense fallback={<p role="status" data-artwork-module-pending>Opening Image…</p>}>
           <ImageWorkbench
             records={workbenchController.draft.imageModules}
             library={library}
@@ -88,7 +80,7 @@ export default function OwnerWorkbenchModules({
         </Suspense>
       )}
       {workbenchController.draft.texts?.length > 0 && (
-        <Suspense fallback={<p role="status">Opening Text…</p>}>
+        <Suspense fallback={<p role="status" data-artwork-module-pending>Opening Text…</p>}>
           <TextWorkbench
             views={restoredWorkspace.views}
             onViewChange={registerTextView}

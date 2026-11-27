@@ -5,6 +5,58 @@ import { resolve } from 'node:path';
 import { preview as vitePreview } from 'vite';
 import { chromium } from 'playwright-core';
 import { analyzeProductionBuild } from '../scripts/productionBuild.js';
+function installTestExtension(restored) {
+  if (window !== window.top) return;
+  if (restored) {
+    localStorage.setItem('inscape-up.recentConnectorId', JSON.stringify('cloud.universalprofile'));
+    if (!localStorage.getItem('inscape-up.store')) localStorage.setItem('inscape-up.store', JSON.stringify({ state: { chainId: 42 }, version: 1 }));
+  }
+  const listeners = new Map();
+  const probe = window.__walletProbe = {
+    accounts: restored ? ['0x1111111111111111111111111111111111111111'] : [], chainId: '0x2a', connected: null, initializations: [], requests: [], errors: [], transitions: 0,
+  };
+  const provider = {
+    on(event, callback) {
+      const callbacks = listeners.get(event) || new Set();
+      callbacks.add(callback);
+      listeners.set(event, callbacks);
+      return provider;
+    },
+    removeListener(event, callback) { listeners.get(event)?.delete(callback); return provider; },
+    async request({ method, params }) {
+      probe.requests.push(method);
+      if (method === 'eth_requestAccounts') {
+        probe.accounts = ['0x1111111111111111111111111111111111111111'];
+        return [...probe.accounts];
+      }
+      if (method === 'eth_accounts') return [...probe.accounts];
+      if (method === 'eth_chainId') return probe.chainId;
+      if (method === 'wallet_switchEthereumChain') {
+        probe.emit('chainChanged', params[0].chainId);
+        return null;
+      }
+      if (method === 'wallet_requestPermissions' || method === 'wallet_getPermissions') {
+        return [{ parentCapability: 'eth_accounts' }];
+      }
+      if (method === 'wallet_revokePermissions') return null;
+      throw new Error(`Unexpected test-provider request: ${method}`);
+    },
+  };
+  probe.emit = (event, value) => {
+    if (event === 'accountsChanged') probe.accounts = value;
+    if (event === 'chainChanged') probe.chainId = value;
+    for (const listener of [...(listeners.get(event) || [])]) listener(value);
+  };
+  window.ethereum = provider;
+  window.lukso = provider;
+  const announce = () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {
+    detail: { info: { uuid: 'f18120bb-d7e0-4209-9f79-660d63221cc4', name: 'Universal Profile Test',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>', rdns: 'cloud.universalprofile' }, provider },
+  }));
+  window.addEventListener('eip6963:requestProvider', announce);
+  announce();
+}
+
 const root=resolve(import.meta.dirname,'..');
 const productionDirectory=resolve(root,process.env.INSCAPE_PRODUCTION_DIR || 'dist');
 const output=resolve(process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/production-startup');
@@ -252,52 +304,7 @@ test('built wallet connects, restores, follows account and chain changes, and di
       }
       return route.abort();
     });
-    await page.addInitScript(() => {
-      const listeners = new Map();
-      const probe = window.__walletProbe = {
-        accounts: [], chainId: '0x2a', connected: null, initializations: [], requests: [], errors: [], transitions: 0,
-      };
-      const provider = {
-        on(event, callback) {
-          const callbacks = listeners.get(event) || new Set();
-          callbacks.add(callback);
-          listeners.set(event, callbacks);
-          return provider;
-        },
-        removeListener(event, callback) { listeners.get(event)?.delete(callback); return provider; },
-        async request({ method, params }) {
-          probe.requests.push(method);
-          if (method === 'eth_requestAccounts') {
-            probe.accounts = ['0x1111111111111111111111111111111111111111'];
-            return [...probe.accounts];
-          }
-          if (method === 'eth_accounts') return [...probe.accounts];
-          if (method === 'eth_chainId') return probe.chainId;
-          if (method === 'wallet_switchEthereumChain') {
-            probe.emit('chainChanged', params[0].chainId);
-            return null;
-          }
-          if (method === 'wallet_requestPermissions' || method === 'wallet_getPermissions') {
-            return [{ parentCapability: 'eth_accounts' }];
-          }
-          if (method === 'wallet_revokePermissions') return null;
-          throw new Error(`Unexpected test-provider request: ${method}`);
-        },
-      };
-      probe.emit = (event, value) => {
-        if (event === 'accountsChanged') probe.accounts = value;
-        if (event === 'chainChanged') probe.chainId = value;
-        for (const listener of [...(listeners.get(event) || [])]) listener(value);
-      };
-      window.ethereum = provider;
-      window.lukso = provider;
-      const announce = () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {
-        detail: { info: { uuid: 'f18120bb-d7e0-4209-9f79-660d63221cc4', name: 'Universal Profile Test',
-          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>', rdns: 'cloud.universalprofile' }, provider },
-      }));
-      window.addEventListener('eip6963:requestProvider', announce);
-      announce();
-    });
+    await page.addInitScript(installTestExtension, false);
     await page.goto(origin, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Connect profile', exact: true }).waitFor();
     assert.ok(report.standaloneWalletEntry?.file, 'Build must identify the actual wallet entry');
@@ -377,5 +384,84 @@ test('built wallet connects, restores, follows account and chain changes, and di
   } finally {
     await browser?.close();
     await new Promise(resolveClose => server.httpServer.close(resolveClose));
+  }
+});
+
+test('restored production routes wait for the authorized destination and paint its first layout', { timeout: 90000 }, async () => {
+  const server = await preview({ root, build: { outDir: productionDirectory }, preview: { host: '127.0.0.1', port: 0 } });
+  const origin = 'http://127.0.0.1:' + server.httpServer.address().port;
+  const address = '0x' + '1'.repeat(40);
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.addInitScript(installTestExtension, true);
+    await page.addInitScript(() => {
+      window.unexpectedPaint = [];
+      function sample() {
+        const url = new URL(location.href);
+        if (document.querySelector('.startveil__intro-wordmark, .profile-sign-in, .visitor-profile-card'))
+          window.unexpectedPaint.push(url.search);
+        requestAnimationFrame(sample);
+      }
+      requestAnimationFrame(sample);
+    });
+    await page.routeWebSocket('**/*', socket => socket.close());
+    let reached, resume, blocked;
+    const empty = '0x' + '0'.repeat(62) + '20' + '0'.repeat(64);
+    await page.route('**/*', async route => {
+      const request = route.request(), url = new URL(request.url());
+      if (url.origin === origin) return route.continue();
+      if (url.hostname !== 'rpc.mainnet.lukso.network' || request.method() !== 'POST') return route.abort();
+      const rpc = request.postDataJSON(), calls = Array.isArray(rpc) ? rpc : [rpc];
+      if (calls.some(call => call.params?.[0]?.data?.startsWith('0x01ffc9a724871b3d'))) {
+        reached(); await blocked;
+      }
+      const responses = calls.map(({ id, method, params }) => ({ id, jsonrpc: '2.0',
+        result: method === 'eth_getCode' ? '0x6000' : method === 'eth_chainId' ? '0x2a'
+          : params?.[0]?.data?.startsWith('0x01ffc9a7') ? '0x' + '0'.repeat(63) + '1' : empty }));
+      return route.fulfill({ json: Array.isArray(rpc) ? responses : responses[0] });
+    });
+    for (const [query, label, selector] of [
+      ['editor=studio', 'Studio', 'main.system-workflow[data-editor-menu]:not([data-overview])'],
+      ['tab=writing', 'Writing', '.published-writing'],
+      ['tab=gallery', 'Gallery', '.published-work-list'],
+      ['tab=curation', 'Curation', '.curation-panels'],
+      ['canvas=1', 'Manage works', '.owner-works'],
+    ]) {
+      const verifying = new Promise(resolve => { reached = resolve; });
+      blocked = new Promise(resolve => { resume = resolve; });
+      try {
+        await page.goto(origin + '/?view=' + address + '&' + query, { waitUntil: 'domcontentloaded' });
+        await verifying;
+        await page.locator('.destination-opening').getByText('Opening ' + label + '…').waitFor();
+        assert.equal(await page.locator('main.system-workflow, .curation-page, .owner-works, .visitor-profile-card, .startveil').count(), 0);
+      } finally { resume(); }
+      await page.locator(selector).first().waitFor();
+      await page.locator('.destination-opening').waitFor({ state: 'detached' });
+      assert.deepEqual(await page.evaluate(() => window.unexpectedPaint), []);
+      if (label === 'Studio') {
+        // Model a compositor that still owns the outgoing frame when the command runs.
+        await page.evaluate(() => {
+          const start = document.startViewTransition.bind(document);
+          document.startViewTransition = options => start({ ...options, update: async () => {
+            await new Promise(resolve => { window.releaseManagerSnapshot = resolve; });
+            return options.update();
+          } });
+        });
+        await page.getByRole('button', { name: 'Inscape menu' }).click();
+        await page.getByRole('menuitem', { name: 'Manage compositions', exact: true }).click();
+        await page.waitForFunction(() => typeof window.releaseManagerSnapshot === 'function');
+        try {
+          assert.equal(await page.locator(selector).count(), 1);
+          assert.equal(await page.locator('.workbench-canvas-content:not([data-suspended])').count(), 1);
+          assert.equal(await page.locator('.owner-works').count(), 0);
+        } finally { await page.evaluate(() => window.releaseManagerSnapshot()); }
+        await page.locator('.owner-works').waitFor();
+      }
+    }
+  } finally {
+    await browser?.close();
+    await new Promise(resolve => server.httpServer.close(resolve));
   }
 });

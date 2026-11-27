@@ -37,12 +37,12 @@ function createClient(primary, fallbacks) {
   const transports = urls.map((url) => http(url, { timeout: 20_000, retryCount: 2, retryDelay: 750 }));
   return createPublicClient({ chain: lukso, transport: transports.length > 1 ? fallback(transports) : transports[0] });
 }
-async function fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs, strict }) {
+async function fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs, strict, refreshContract }) {
   const uri = pointer?.url;
   if (/^data:/iu.test(uri || '')) return decodeVerifiedOnchainJsonDataUri(uri, pointer.verification);
   const url = resolveContentUrl(uri, { ipfsGateway }); if (!url) return null;
   return fetchMetadataJson(url, { fetchImpl, signal, timeoutMs: metadataResponseMs,
-    verification: strict ? pointer.verification : null });
+    cache: refreshContract ? 'no-cache' : undefined, verification: strict ? pointer.verification : null });
 }
 async function mapConcurrent(items, mapper, signal) {
   const results = new Array(items.length); let cursor = 0;
@@ -64,13 +64,13 @@ export function createLsp8CollectionMetadataResolver({
 } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch is required');
   const publicClient = client || createClient(rpcUrl, rpcFallbackUrls); const contexts = new Map();
-  async function resolve(contractAddress, tokens, { signal, strict = false, includeAssets = false } = {}) {
+  async function resolve(contractAddress, tokens, { signal, strict = false, includeAssets = false, refreshContract = false } = {}) {
     throwIfAborted(signal);
     const contract = normalizeProfileAddress(contractAddress);
     const candidates = (Array.isArray(tokens) ? tokens : []).filter((token) => /^0x[0-9a-f]{64}$/iu.test(token?.tokenId));
     if (!contract || !candidates.length) return new Map();
     let context = contexts.get(contract);
-    if (context && context.expiresAt <= now()) { contexts.delete(contract); context = null; }
+    if (context && (context.expiresAt <= now() || refreshContract && context.expiresAt !== Infinity)) { contexts.delete(contract); context = null; }
     if (!context) {
       const address = getAddress(contract);
       context = { expiresAt: Infinity };
@@ -113,7 +113,7 @@ export function createLsp8CollectionMetadataResolver({
       if (strict && !pointer && (directError || failed || direct && direct !== '0x'))
         throw new Error('Token metadata could not be read.');
       throwIfAborted(signal);
-      const document = pointer ? await fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs, strict }) : null;
+      const document = pointer ? await fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs, strict, refreshContract }) : null;
       if (strict && pointer && !document) throw new Error('Token metadata is unavailable or invalid.');
       if (!document) return null;
       const metadata = metadataRoot(document);

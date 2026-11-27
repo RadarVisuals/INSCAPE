@@ -1,6 +1,7 @@
+import { currentStudioDraft } from './studioComposition.js';
 import { isRecord as object, hasExactKeys as exact } from '../../recordValidation.js';
 import { withoutRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
-import { assertValidSystemWorkflowDraft, SYSTEM_WORKFLOW_DRAFT_VERSION, SYSTEM_WORKFLOW_LIMITS } from './systemWorkflowDraft.js';
+import { SYSTEM_WORKFLOW_DRAFT_VERSION, SYSTEM_WORKFLOW_LIMITS } from './systemWorkflowDraft.js';
 
 export const WORKBENCH_COLLECTION_TYPE = 'inscape-local-workbenches';
 export const FIRST_WORKBENCH_ID = 'workbench:main';
@@ -62,7 +63,7 @@ export function projectWorkbenchDraft(collection, id = collection.activeId) {
 }
 
 export function createWorkbenchCollection(draft) {
-  const value = assertValidSystemWorkflowDraft(draft), { shared, content } = splitDraft(value);
+  const value = currentStudioDraft(draft), { shared, content } = splitDraft(value);
   return { type: WORKBENCH_COLLECTION_TYPE, version: 1, profileAddress: value.profileAddress,
     activeId: FIRST_WORKBENCH_ID, shared, workbenches: [{ id: FIRST_WORKBENCH_ID, name: 'Workbench 1', content }] };
 }
@@ -85,7 +86,7 @@ export function appendWorkbench(collection, id, name, draft, details = {}) {
 export function removeActiveWorkbench(collection, id, { fromManager = false } = {}) {
   if ((!fromManager && id !== collection.activeId) || !collection.workbenches.some(item => item.id === id)) throw new Error('Reopen the canvas you want to delete.');
   if (collection.workbenches.length === 1) throw new Error('Create another canvas before deleting the last one.');
-  const links = collection.workbenches.filter(item => item.id !== id).flatMap(item => item.content.composition?.links || []);
+  const links = collection.workbenches.filter(item => item.id !== id).flatMap(item => item.content.links || []);
   const refersToCanvas = ref => ref?.profileAddress === collection.profileAddress && ref.canvasId === id;
   if (links.some(link => [link.destination, link.source].some(refersToCanvas)))
     throw new Error('Remove the links to this canvas in the Bento editor first.');
@@ -101,7 +102,7 @@ export function assertValidWorkbenchCollection(input) {
     || !Object.keys(input.shared).every(key => ['identityPresentation', 'keeperDocks', 'menuSurfaceId', 'reception'].includes(key))
     || !Array.isArray(input.workbenches) || !input.workbenches.length || input.workbenches.length > MAX_WORKBENCHES)
     throw new Error('Invalid local Workbench collection.');
-  const ids = new Set();
+  const ids = new Set(), workbenches = [];
   for (const item of input.workbenches) {
     if (!exact(item, ['id', 'name', 'content', ...['introduction', 'thumbnailCrop'].filter(key => Object.hasOwn(item || {}, key))]) || !validId(item.id) || ids.has(item.id)
       || !validWorkbenchName(item.name) || !object(item.content)
@@ -111,10 +112,11 @@ export function assertValidWorkbenchCollection(input) {
     if (Object.hasOwn(item, 'introduction')) assertWorkbenchIntroduction(item.introduction);
     if (Object.hasOwn(item, 'thumbnailCrop')) assertThumbnailCrop(item.thumbnailCrop);
     ids.add(item.id);
-    assertValidSystemWorkflowDraft(projectWorkbenchDraft(input, item.id));
+    const { content } = splitDraft(currentStudioDraft(projectWorkbenchDraft(input, item.id)));
+    workbenches.push({ ...item, content });
   }
   if (!ids.has(input.activeId)) throw new Error('The active Workbench is unavailable.');
-  const collection = withoutRetiredInterfaceAppearance({ ...input, shared: sharedProfileFields(input.shared) });
+  const collection = withoutRetiredInterfaceAppearance({ ...input, shared: sharedProfileFields(input.shared), workbenches });
   if (new TextEncoder().encode(JSON.stringify(collection)).length > WORKBENCH_COLLECTION_LIMIT)
     throw new Error('The local Workbenches exceed the storage limit.');
   return collection;

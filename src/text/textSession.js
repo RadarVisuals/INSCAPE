@@ -31,8 +31,8 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility };
   if (appearance) item.article.appearance = { ...item.article.appearance, ...appearance };
   const next = { ...draft, texts: [...(draft.texts || []), item] };
+  const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
   if (placed) {
-    const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
     if (placed.window) {
       const { width, height } = placed.window;
       const cellId = placed.cellId ?? store.getEditingCell?.();
@@ -45,9 +45,9 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
         throw new Error(`Text needs at least ${minimumWidth} × ${minimumHeight} px. Enlarge the cell before adding Text.`);
       presentation.window = { ...placed.window };
     } else presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
-    const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
-    next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
   }
+  const workbench = placed?.workbench || draft.workbench || createDefaultWorkbenchPresentation();
+  next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
   const cellId = placed?.cellId ?? store.getEditingCell?.();
   if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Text',
     ...(cellId ? { newText: item.id } : {}) })) throw new Error('Text module could not be saved.');
@@ -82,7 +82,6 @@ export function duplicateTextModule(store, profile, expected, workbench) {
 
 const messages = {
   locked: 'Unlock this layer before editing it. Your unsaved text is still here.',
-  composition_command: 'This command is unavailable in this Bento composition. Your unsaved text is still here.',
   editor_unavailable: 'This tab no longer has editing access. Your unsaved text is still here.',
   profile: 'This profile is no longer active. Your unsaved text is still here.',
   conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',

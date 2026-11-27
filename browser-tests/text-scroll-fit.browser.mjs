@@ -125,19 +125,19 @@ test('Text scrolls only when content exceeds its viewport in Write and Read', as
       await scroll.hover(); await page.mouse.wheel(0, 200); await page.waitForTimeout(60);
       assert.equal(await scroll.evaluate(el => el.scrollTop), 0);
       await page.screenshot({ path: join(screenshots, `arrival-${width}-${write ? 'write' : 'read'}.png`) });
-      await page.locator('.text-window').evaluate(el => { el.style.height = '700px'; });
+      await page.locator('aside.text-window').evaluate(el => { el.style.height = '700px'; });
       await page.waitForTimeout(60);
       assert.ok(await scroll.evaluate(el => el.scrollHeight > el.clientHeight), 'shrinking the same window restores scrolling');
       await scroll.evaluate(el => { el.scrollTop = el.scrollHeight; });
       const last = await page.locator('.text-document p').last().boundingBox(), bounds = await scroll.boundingBox();
       assert.ok(last.y + last.height <= bounds.y + bounds.height + 1, 'the final line stays reachable after resize');
-      await page.locator('.text-window').evaluate(el => { el.style.height = '840px'; });
+      await page.locator('aside.text-window').evaluate(el => { el.style.height = '840px'; });
       await page.waitForTimeout(60);
       assert.equal(await scroll.evaluate(el => el.scrollHeight - el.clientHeight), 0, 'enlarging restores the fitted state');
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.evaluate(() => window.showActualText());
-    const actual = page.locator('.text-window');
+    const actual = page.locator('aside.text-window');
     await actual.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
     await page.waitForTimeout(60);
     const before = await actual.locator('.text-document p').first().boundingBox();

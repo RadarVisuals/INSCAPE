@@ -6,7 +6,7 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
 import { openSharedTool, sharedToolPanel, sharedToolTab } from './fixtures/shared-tools.mjs';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/image-tools';
-const saved = page => page.evaluate(() => window.savedDraft());
+const saved = page => page.evaluate(() => window.readCommittedDraft());
 const undo = async page => { await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z'); };
 const fitControl = panel => panel.getByRole('button', { name: 'Fit inside', exact: true });
 async function drag(page, handle, dx, dy) {
@@ -22,7 +22,7 @@ test('Image settings use the shared dock while publication choice, toolbar and r
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountToolDockFixture(page);
-    assert.deepEqual(await page.getByRole('tablist', { name: 'Artwork tools' }).getByRole('tab').evaluateAll(nodes => nodes.map(node => node.dataset.toolTab || node.textContent)), ['Layers', 'Library', 'Inspector']);
+    assert.deepEqual(await page.getByRole('tablist', { name: 'Artwork tools' }).getByRole('tab').evaluateAll(nodes => nodes.map(node => node.dataset.toolTab || node.textContent)), ['Layers', 'Inspector']);
     await page.getByRole('button', { name: 'Select Eyes', exact: true }).click();
     await openSharedTool(page, 'Image');
     const original = await saved(page), image = sharedToolPanel(page);
@@ -40,13 +40,11 @@ test('Image settings use the shared dock while publication choice, toolbar and r
     assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').visibility, 'PRIVATE');
     assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:body').visibility, 'PUBLIC');
     await undo(page); await include.waitFor(); assert.equal(await include.isChecked(), true);
-    await page.evaluate(() => { window.savedSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.savedSetItem.call(this, key, value);
-    }; });
+    await page.evaluate(() => window.failWorkbenchWrites(true));
     await include.click(); await image.getByRole('alert').waitFor();
     assert.equal(await include.isChecked(), true, 'failed persistence keeps the authored publication choice');
     assert.deepEqual((await saved(page)).imageModules, original.imageModules);
-    await page.evaluate(() => { Storage.prototype.setItem = window.savedSetItem; });
+    await page.evaluate(() => window.failWorkbenchWrites(false));
     await include.uncheck(); assert.equal((await saved(page)).imageModules[1].visibility, 'PRIVATE'); await undo(page);
     const actions = image.getByRole('group', { name: 'Image transforms', exact: true });
     for (const name of ['Rotate', 'Mirror horizontal', 'Mirror vertical']) {

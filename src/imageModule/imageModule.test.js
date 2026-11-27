@@ -106,7 +106,8 @@ test('Image duplication rejects stale, wrong-profile and failed saves without a 
   const id = duplicateImageModule(f.store, profile, record, { position: { left: 7990, top: 7990 } });
   const after = f.store.getDraft(), copy = after.imageModules.find(item => item.id === id);
   assert.equal(copy.visibility, 'PRIVATE'); assert.equal(copy.artwork, null);
-  assert.deepEqual(after.workbench.imageModules[0].position, { left: 1992 - copy.width, top: 3992 - copy.height });
+  assert.deepEqual(after.workbench.imageModules.find(item => item.id === id).position, { left: 1992 - copy.width, top: 3992 - copy.height });
+  assert.deepEqual(after.workbench.imageModules.find(item => item.id === record.id), before.workbench.imageModules[0], 'duplicating preserves the saved source placement');
 });
 
 test('Image duplication respects the existing sixteen-module limit', () => {
@@ -141,7 +142,7 @@ test('Library drop creates artwork and its exact window in one undoable operatio
 test('Image uses existing draft storage, rejects stale/profile/failed edits, and undo restores authored size and artwork', () => {
   const f = fixture(), before = f.store.getDraft();
   assert.deepEqual(assertValidSystemWorkflowDraft(before), before);
-  assert.equal('imageModules' in documentFor(before), false);
+  assert.deepEqual(documentFor(before).imageModules, []);
   addImageModule(f.store, profile); const record = f.store.getDraft().imageModules[0];
   assert.equal(record.visibility, 'PRIVATE');
   const next = { ...record, width: 640, height: 64, artwork: artwork('one') };

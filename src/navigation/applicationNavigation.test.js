@@ -27,6 +27,16 @@ test('pending authority cannot mount the owner or request an implicit publicatio
   assert.deepEqual(resolveApplicationDestination(route('?profile=' + B), pending), { kind: 'pending', address: null });
   assert.deepEqual(resolveApplicationDestination(route('?view=' + B), pending), { kind: 'public', address: B });
 });
+test('refresh holds each ambiguous destination until authority settles, even before an account is known', () => {
+  for (const profileAddress of [null, A, B]) {
+    const pending = { status: 'pending', profileAddress, ownershipVerified: false };
+    assert.deepEqual(resolveApplicationDestination(route(''), pending), { kind: 'pending', address: null });
+    for (const query of ['editor=studio', 'editor=studio&work=workbench:main', 'tab=curation', 'canvas=1', 'tab=gallery']) {
+      assert.deepEqual(resolveApplicationDestination(route('?view=' + A + '&' + query), pending), { kind: 'pending', address: A });
+    }
+  }
+});
+
 test('current account and current URL replace stale fallbacks without a remembered render target', () => {
   assert.equal(resolveApplicationDestination(route('?profile=' + B), owner).address, A);
   assert.equal(resolveApplicationDestination(route('?profile=' + B), signedOut).kind, 'entry');
@@ -63,7 +73,7 @@ test('the public Gallery always reads published work and the private manager req
     assert.deepEqual(resolveApplicationDestination(published, authority), { kind: 'public', address: A, canvas: true });
   for (const intent of [canvases]) {
     assert.deepEqual(resolveApplicationDestination(intent, owner), { kind: 'workbench', address: A, canvas: true });
-    for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
+    for (const authority of [signedOut, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
       assert.deepEqual(resolveApplicationDestination(intent, authority), { ...intent, kind: 'public' });
     }
     const deepLink = { ...intent, target: { moduleId: 'text:one' } };
@@ -79,7 +89,7 @@ test('a selected published canvas opens only for its verified owner and round-tr
   assert.deepEqual(resolveApplicationDestination(edit, owner), { kind: 'workbench', address: A, worksEditorId: 'workbench:anatomy' });
   const href = applicationRouteUrl({ href: 'https://example.test/?canvas=1' }, edit);
   assert.deepEqual(readApplicationRoute(new URL(href, 'https://example.test')), edit);
-  for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
+  for (const authority of [signedOut, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
     assert.deepEqual(resolveApplicationDestination(edit, authority), publicWorks);
   }
   for (const value of ['', 'invalid', 'workbench:']) {

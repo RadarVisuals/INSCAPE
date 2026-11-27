@@ -24,7 +24,7 @@ export function createProfileDocumentV9AssetDossier(published) {
     published.contractAddress ? { label: 'EXPLORER / DERIVED', value: `https://explorer.lukso.network/address/${published.contractAddress}`,
       href: `https://explorer.lukso.network/address/${published.contractAddress}` } : null,
   ].filter(Boolean);
-  return { title: clean(published.name), description: clean(published.description),
+  return { stableAssetId: published.stableAssetId, standard: published.tokenStandard, title: clean(published.name), description: clean(published.description),
       collection: clean(published.collectionName), creators: published.creators.map(creator => ({ ...creator })),
       assetDetailHref: published.contractAddress ? `https://explorer.lukso.network/address/${published.contractAddress}` : null,
       traits: published.attributes.map((attribute) => ({ label: clean(attribute.key), value: String(attribute.value ?? '') }))

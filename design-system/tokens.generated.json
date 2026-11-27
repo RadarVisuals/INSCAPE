@@ -5,8 +5,8 @@
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
     "files": 99,
-    "definitions": 847,
-    "names": 449
+    "definitions": 844,
+    "names": 447
   },
   "sources": [
     {
@@ -1043,14 +1043,16 @@
     {
       "path": "src/composition/editorCells.css",
       "role": "Local",
-      "sha256": "03aac30b77b7eb709696b5e3395c97ed757ea1ba33a4e065f2e52926165557e2",
+      "sha256": "ad5e1f31bfcd03d520a4449fabbfaf69a8dbeed8e2e1d68fd62a073c4c16604c",
       "definitions": [],
       "references": [
         "--tactile-edge",
+        "--tactile-face",
         "--tactile-ink",
         "--workbench-content-scale",
         "--workflow-ink",
-        "--workflow-type-control"
+        "--workflow-type-control",
+        "--workspace-navigation-top"
       ]
     },
     {
@@ -1079,11 +1081,14 @@
     {
       "path": "src/index.css",
       "role": "Local",
-      "sha256": "f9427708a929ae28ed9b6319ec3663f38ece5fe2ef9a3e194e0bdb484a57d017",
+      "sha256": "0cb8777fe595ab49bba30aaf2b5141c5856a6a24262ffe91473bc78c3b766796",
       "definitions": [],
       "references": [
         "--bg-color",
         "--font-sans",
+        "--interface-environment",
+        "--interface-ink",
+        "--interface-panel",
         "--text-main"
       ]
     },
@@ -3746,7 +3751,7 @@
     {
       "path": "src/profileDocument/components/visitorProfile.css",
       "role": "Local",
-      "sha256": "7e7433dde7fd19c2d67aff9ab015c4939fdb99908421e60732fa8f67eae5e295",
+      "sha256": "35eb0648ea86b78e94892a0fe214fc06d40bb2bb9dacb062b2155cd3f1e86bf8",
       "definitions": [
         {
           "name": "--field-tint",
@@ -4235,7 +4240,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 56,
+          "line": 58,
           "references": [
             "--field-high"
           ]
@@ -4246,39 +4251,10 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
           ],
-          "line": 56,
+          "line": 58,
           "references": [
             "--field-low"
           ]
-        },
-        {
-          "name": "--field-fallback-mask",
-          "value": "url('/assets/visitor/field-range.png')",
-          "scope": [
-            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
-          ],
-          "line": 57,
-          "references": []
-        },
-        {
-          "name": "--field-fallback-face",
-          "value": "var(--field-high)",
-          "scope": [
-            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
-          ],
-          "line": 58,
-          "references": [
-            "--field-high"
-          ]
-        },
-        {
-          "name": "--field-fallback-opacity",
-          "value": "1",
-          "scope": [
-            ":root[data-palette]:not([data-palette='charcoal']) .visitor-publication"
-          ],
-          "line": 58,
-          "references": []
         },
         {
           "name": "--spread-heading",
@@ -4514,7 +4490,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='dark'] .visitor-publication"
           ],
-          "line": 75,
+          "line": 74,
           "references": [
             "--palette-canvas"
           ]
@@ -4525,7 +4501,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 78,
+          "line": 77,
           "references": [
             "--palette-glass"
           ]
@@ -4536,7 +4512,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 79,
+          "line": 78,
           "references": [
             "--palette-glass",
             "--palette-ink"
@@ -4549,7 +4525,7 @@
             "@media (max-width: 1250px)",
             ".visitor-publication:has(.visitor-toolbar-slot:not(:empty))"
           ],
-          "line": 114,
+          "line": 112,
           "references": []
         },
         {
@@ -4558,7 +4534,7 @@
           "scope": [
             ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 175,
+          "line": 189,
           "references": []
         },
         {
@@ -4567,7 +4543,7 @@
           "scope": [
             ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 175,
+          "line": 189,
           "references": [
             "--inner-rim"
           ]
@@ -4587,9 +4563,6 @@
         "--card-shadow",
         "--color-text-primary",
         "--color-text-secondary",
-        "--field-fallback-face",
-        "--field-fallback-mask",
-        "--field-fallback-opacity",
         "--field-high",
         "--field-low",
         "--field-tint",
@@ -5285,7 +5258,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "d3cf297f7925fa2bd313a7f66f6833729a4381f6f8be467f5a6cfe1f589f4a12",
+      "sha256": "b00d453d9e3410341ed13c69959d37f246d465a63d1f45d0a5f33ce794784b3d",
       "definitions": [
         {
           "name": "--editor-workspace-radius",
@@ -6620,7 +6593,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchDestinationPanel.css",
       "role": "Destinations",
-      "sha256": "9b801fb4dbcf5928617a904e39b08c837821106f5d068eca209e84a4a8d98d3d",
+      "sha256": "2351b03a81b1279a701b3e69313935610364bcd6d68344b149ed6fae3a2ade15",
       "definitions": [
         {
           "name": "--destination-inset",
@@ -6732,20 +6705,11 @@
         },
         {
           "name": "--destination-width",
-          "value": "540px",
-          "scope": [
-            ".system-workflow__manual"
-          ],
-          "line": 36,
-          "references": []
-        },
-        {
-          "name": "--destination-width",
           "value": "300px",
           "scope": [
             ".system-workflow__profile"
           ],
-          "line": 46,
+          "line": 36,
           "references": []
         },
         {
@@ -6755,7 +6719,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".workbench-destination-panel.workbench-tool-panel"
           ],
-          "line": 60,
+          "line": 50,
           "references": []
         }
       ],
@@ -9806,7 +9770,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "f49b382e14242c88414c62afc8665a95352ad2ada74b726bc27e5840b1d76abf",
+      "sha256": "dc65e479289e92aa898b84856728af860d9c815d36fc9b22e67c9aef1420e164",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -9897,12 +9861,21 @@
           "references": []
         },
         {
+          "name": "--studio-chrome-exchange",
+          "value": "460ms",
+          "scope": [
+            ":root:active-view-transition-type(studio-to-gallery)"
+          ],
+          "line": 29,
+          "references": []
+        },
+        {
           "name": "--overview-glass",
           "value": "color-mix(in srgb, var(--interface-panel) 50%, transparent)",
           "scope": [
             ".workbench-overview-navigation"
           ],
-          "line": 45,
+          "line": 48,
           "references": [
             "--interface-panel"
           ]
@@ -9914,7 +9887,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 96,
+          "line": 99,
           "references": [
             "--interface-panel"
           ]
@@ -9926,7 +9899,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 96,
+          "line": 99,
           "references": []
         },
         {
@@ -9936,7 +9909,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 96,
+          "line": 99,
           "references": []
         },
         {
@@ -9945,7 +9918,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-selecting]"
           ],
-          "line": 104,
+          "line": 107,
           "references": []
         }
       ],
@@ -9981,6 +9954,7 @@
         "--spread-line",
         "--spread-muted",
         "--spread-panel",
+        "--studio-chrome-exchange",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-hover",
@@ -9995,7 +9969,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "8c4a3488f35129f213897919de852c5d86b5c174218b49b68631da635e709e57",
+      "sha256": "57da1c388838c1882ef0349c799da6e957119a9058a1ef83cfc39f41a74a8c83",
       "definitions": [
         {
           "name": "--gallery-columns",

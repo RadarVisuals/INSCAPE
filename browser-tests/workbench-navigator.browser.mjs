@@ -11,7 +11,7 @@ const settle = page => page.evaluate(() => new Promise(resolve => requestAnimati
 const camera = page => page.locator('main.system-workflow').evaluate(n => ({ x: +n.dataset.workbenchCameraX, y: +n.dataset.workbenchCameraY, scale: +n.dataset.workbenchCameraScale }));
 const hit = node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); };
 
-test('fixed Reception text saves update miniatures without remeasuring the Navigator viewport', { timeout: 60000 }, async () => {
+test('fixed Composition text saves update miniatures without remeasuring the Navigator viewport', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -32,27 +32,27 @@ test('fixed Reception text saves update miniatures without remeasuring the Navig
         return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
       return route.abort();
     });
-    await page.goto(`${origin}/browser-tests/reception-native-editor-fixture.html?tiling=1&session=${crypto.randomUUID()}`);
+    await page.goto(`${origin}/browser-tests/composition-native-editor-fixture.html?tiling=1&session=${crypto.randomUUID()}`);
     const sidebar = page.getByRole('button', { name: 'Inscape menu', exact: true });
     if (await sidebar.getAttribute('aria-expanded') === 'true') await sidebar.click();
     await page.getByRole('group', { name: 'Upper text bento cell', exact: true }).press('Enter');
     const body = page.locator('[contenteditable="true"][aria-label="Article text"]');
     await body.press('Control+Home'); await page.evaluate(() => document.fonts.ready); await settle(page);
-    const before = await page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception);
+    const before = await page.evaluate(() => window.nativeCompositionFixture.root.getDraft().composition);
     const beforeCamera = await camera(page), text = 'navigator typing performance 01';
     await page.evaluate(() => { window.navigatorViewportReads = 0; });
     await page.keyboard.type(text, { delay: 10 }); await settle(page);
     assert.equal(await page.evaluate(() => window.navigatorViewportReads), 0, 'text-only updates do not read viewport CSS');
-    const saved = await page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception);
+    const saved = await page.evaluate(() => window.nativeCompositionFixture.root.getDraft().composition);
     assert.ok(JSON.stringify(saved.texts).includes(text), 'each edit still reaches the draft');
     assert.deepEqual(saved.workbench, before.workbench, 'fixed text editing preserves authored geometry');
     assert.deepEqual(await camera(page), beforeCamera, 'typing does not move the camera');
     assert.ok((await page.locator('[data-navigator-object^="text:"]').allTextContents()).some(value => value.includes(text)), 'the miniature remains live');
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click();
     await editorCommand(page, 'Edit', 'Undo');
-    assert.notDeepEqual(await page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception), saved);
+    assert.notDeepEqual(await page.evaluate(() => window.nativeCompositionFixture.root.getDraft().composition), saved);
     await editorCommand(page, 'Edit', 'Redo');
-    assert.deepEqual(await page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception), saved);
+    assert.deepEqual(await page.evaluate(() => window.nativeCompositionFixture.root.getDraft().composition), saved);
     const scene = page.locator('.navigator-scene'), originalProjection = await scene.getAttribute('style');
     await sidebar.click(); await page.setViewportSize({ width: 900, height: 800 }); await settle(page);
     assert.notEqual(await scene.getAttribute('style'), originalProjection, 'host/inset changes refresh the map');
@@ -61,8 +61,8 @@ test('fixed Reception text saves update miniatures without remeasuring the Navig
     const beforePan = await camera(page);
     await page.getByRole('button', { name: 'Navigate Workbench', exact: true }).press('ArrowRight'); await settle(page);
     assert.notEqual((await camera(page)).x, beforePan.x, 'Navigator keyboard movement still pans');
-    assert.deepEqual(await page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception), saved, 'navigation never authors content');
-    await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/reception-text-navigation.png` });
+    assert.deepEqual(await page.evaluate(() => window.nativeCompositionFixture.root.getDraft().composition), saved, 'navigation never authors content');
+    await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/composition-text-navigation.png` });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -90,8 +90,10 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     assert.equal(await nav.locator('iframe, [contenteditable="true"], [data-navigator-object^="keeper:"]').count(), 0);
     const n = await nav.boundingBox(), k = await keeper.boundingBox();
     assert.ok(n.x + n.width <= k.x - 10 && k.x + k.width <= width - 8, JSON.stringify({ n, k }));
-    for (const button of await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).getByRole('button').all())
+    for (const button of await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).getByRole('button').all()) {
+      await button.scrollIntoViewIfNeeded();
       assert.equal(await button.evaluate(hit), true, 'creation controls stay clickable above floating and docked utilities');
+    }
     assert.equal(await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).evaluate(hit), true);
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/initial-${theme}-${width}.png` });
@@ -138,10 +140,11 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), before, 'navigation leaves saved content/history alone');
     if (width === 1440) {
       await editorCommand(page, 'Canvas', 'Preview');
-      await page.getByRole('button', { name: 'EXIT', exact: true }).waitFor(); await settle(page);
-      assert.equal(await page.locator('main.system-workflow[inert]').count(), 1);
-      assert.equal(await page.locator('main.system-workflow[inert] .workbench-navigator').count(), 0, 'hidden owner preview unmounts its Navigator');
-      await page.getByRole('button', { name: 'EXIT', exact: true }).click(); await map.waitFor();
+      const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+      await preview.waitFor();
+      assert.ok(await preview.evaluate(node => node.matches(':modal')), 'the preview blocks editor input');
+      assert.equal(await preview.locator('.workbench-navigator').count(), 0);
+      await preview.getByRole('button', { name: 'Back to editing', exact: true }).click(); await map.waitFor();
     }
 
     await page.getByRole('button', { name: 'Keeper settings', exact: true }).click(); await settle(page);
@@ -217,7 +220,6 @@ test('a filled composition keeps miniature media mounted during live camera trav
       if (url.origin === origin) return route.continue();
       if (url.hostname === 'workbench-perf.invalid') {
         if (url.pathname.startsWith('/__perf-')) return route.fulfill({ path: 'browser-tests/fixtures/keeper-layered.svg', contentType: 'image/svg+xml' });
-        if (url.pathname === '/panel.html') return route.fulfill({ contentType: 'text/html', body: '<p>Static artwork</p>' });
         return route.fulfill({ path: 'public' + url.pathname });
       }
       return route.abort(); });

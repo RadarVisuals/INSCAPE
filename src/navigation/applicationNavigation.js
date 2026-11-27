@@ -54,13 +54,19 @@ export function resolveApplicationDestination(route, authority) {
   const connected = normalizeProfileAddress(authority.profileAddress);
   const settled = authority.status === 'complete';
   if (route.kind === 'home' && !settled) return {
-    kind: connected ? 'pending' : 'entry', address: null,
+    kind: 'pending', address: null,
   };
   const address = route.kind === 'profile' ? normalizeProfileAddress(route.address)
     : normalizeProfileAddress(authority.signedInAddress) || connected;
   if (!address) return { kind: 'entry', address: null };
   const intent = profileIntent(route);
+  // A returning session also restores the account strip and its saved Gallery layout.
+  if (!settled && authority.restoringSession) return { kind: 'pending', address };
   if (!Object.keys(intent).length) return { kind: 'public', address };
+  // The explicit address may start its public read while the wallet reconnects.
+  // Wait before choosing an owner surface or restoring its Gallery preferences.
+  if (!settled && !intent.target && (intent.editor || intent.curation || intent.canvas || intent.gallery))
+    return { kind: 'pending', address };
   if (intent.writing) return { kind: 'public', address, writing: true };
   const works = intent.canvas && !intent.target;
   if (intent.gallery) return { kind: 'public', address, canvas: true, ...(intent.target && { target: intent.target }) };

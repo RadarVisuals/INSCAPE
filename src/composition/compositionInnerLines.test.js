@@ -43,7 +43,7 @@ test('fractional viewport scaling preserves joins, while missing strips stay ope
 test('inner line appearance persists through undo, reload, publication, restoration and layout operations without changing shape appearance', () => {
   const profileAddress = '0x' + '7'.repeat(40), data = new Map(); let fail = false;
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => { if (fail) throw Error('Full'); data.set(key, value); }, removeItem: key => data.delete(key) };
-  const root = createSystemWorkflowDraftStore({ initialStudio: true, profileAddress, storage }), scope = createCompositionEditorScope(root);
+  const root = createSystemWorkflowDraftStore({ profileAddress, storage }), scope = createCompositionEditorScope(root);
   const edit = (action, ...args) => scope.editBento(action, args, scope.getGeneration());
   scope.generateCellLayout(COMPOSITION_LAYOUT_DEFAULTS, 42, scope.getGeneration());
   editShape(scope, profileAddress, scope.getSnapshot().shapes[0], { opacity: 0, outline: { width: 4, color: '#abcdef', opacity: 1 } });
@@ -52,7 +52,7 @@ test('inner line appearance persists through undo, reload, publication, restorat
   edit('settings', { showFrame: false, innerLines });
   const saved = structuredClone(scope.getComposition());
   assert.deepEqual(saved, { ...before, showFrame: false, innerLines });
-  const loaded = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress, storage }));
+  const loaded = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress, storage }));
   assert.deepEqual(loaded.getComposition(), saved); loaded.release();
   assert.ok(scope.undo()); assert.deepEqual(scope.getComposition(), before); assert.ok(scope.redo());
   fail = true; assert.throws(() => edit('settings', { innerLines: null })); fail = false;
@@ -72,6 +72,6 @@ test('inner line appearance persists through undo, reload, publication, restorat
   for (const shape of saved.shapes) assert.deepEqual(scope.getComposition().shapes.find(item => item.id === shape.id), shape);
   assert.deepEqual(root.getDraft().workbenches, canvases);
   const final = structuredClone(scope.getComposition()); scope.release();
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress, storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress, storage }));
   assert.deepEqual(reopened.getComposition(), final); reopened.release();
 });

@@ -396,9 +396,9 @@ export function WorkbenchViewControls({
   const groupScene = view.groupScene;
   const [moveError, setMoveError] = useState('');
   const [groupsOpen, setGroupsOpen] = useState(false);
-  const canManageGroups = view.store && !view.store.getCells;
+  const canManageGroups = Boolean(view.store);
   const stackContent =
-    view.store?.getCells && view.layers.some(layer => layer.stackPosition)
+    view.store && view.layers.some(layer => layer.stackPosition)
       ? view.content
       : !view.store && view.groupContent?.workbenchGroups?.length
         ? view.groupContent

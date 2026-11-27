@@ -1,8 +1,7 @@
-import { restoreCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 as createOwnerDraftFromPublishedProfile } from '../domain/profileDocumentV9Reconciliation.js';
 import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
-import { canvasDocument, publishedCanvasEntries } from '../domain/publishedCanvases.js';
+import { canvasDocument, canvasDetails, publishedCanvasEntries } from '../domain/publishedCanvases.js';
 import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
 
 export { reconcileSystemWorkflowDraftFromProfileDocumentV9 as createOwnerDraftFromPublishedProfile } from '../domain/profileDocumentV9Reconciliation.js';
@@ -18,10 +17,9 @@ function matchingDocument(documentInput, profileAddress) {
 }
 
 function restoreCanvasDraft(document, entry) {
-  // Links were verified against the whole publication, not this canvas alone.
-  const { composition, ...content } = canvasDocument(document, entry);
-  const draft = createOwnerDraftFromPublishedProfile(content);
-  return composition ? { ...draft, composition: restoreCompositionEditorDocument(composition) } : draft;
+  // Keep the full verified link context while selecting the work to restore.
+  return createOwnerDraftFromPublishedProfile({ ...canvasDocument(document, entry), canvas: canvasDetails(entry),
+    canvases: publishedCanvasEntries(document).filter(item => item.id !== entry.id) });
 }
 
 export function openStudioWorkbench(store, id, resolution) {
@@ -40,7 +38,7 @@ export function openStudioWorkbench(store, id, resolution) {
     if (localIds.has(key) || !entry) continue;
     const { name, introduction, thumbnailCrop } = entry;
     recovered.push({ id: key, name, introduction, thumbnailCrop, draft: restoreCanvasDraft(document, entry) });
-    for (const link of entry.content.composition?.links || []) {
+    for (const link of (entry.content.composition || entry.content).links || []) {
       for (const ref of [link.destination, link.source, link.controller, ...Object.values(link.sources || {})]) {
         if (ref?.profileAddress === document.profile.address) required.add(ref.canvasId);
       }

@@ -86,14 +86,12 @@ export default function OwnerEditorMenuBar({ busy, hidden, preserveHeaderSpace, 
         : [command('empty', 'Create your first composition with + New.', undefined, { disabled: true })] },
       command('delete', 'Delete local composition…', () => setForm('delete'), { disabled: blocked || items.length < 2,
         reason: items.length === 1 ? 'Studio keeps at least one composition.' : undefined }),
-      ...(documentNavigation.beginFirstCell || documentNavigation.cellsUnavailableReason ? [command('add-cell', 'Add cell', () => {
+      ...(cells ? [command('add-cell', 'Add cell', () => {
         if (!creationBarVisible) onCreationBarChange(true);
         setInteractionTool('cell');
         hostRef.current?.focus({ preventScroll: true });
-      }, { disabled: blocked || Boolean(documentNavigation.cellsUnavailableReason), reason: documentNavigation.cellsUnavailableReason })] : []),
-      ...(documentNavigation.enableCanvasModules ? [command('enable-canvas-modules', 'Use canvas modules',
-        documentNavigation.enableCanvasModules, { disabled: blocked })] : []),
-      command('size', cells ? 'Cell settings' : 'Canvas size', () => cells ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),
+      }, { disabled: blocked })] : []),
+      command('size', 'Canvas size', () => setSizeOpen(true), { disabled: blocked }),
       command('preview', 'Preview', () => onPreview(trigger.current), { disabled: blocked }),
     ],
     Edit: historyCommands,
@@ -102,8 +100,8 @@ export default function OwnerEditorMenuBar({ busy, hidden, preserveHeaderSpace, 
       command('focus', 'Focus selection', navigation.focusSelection, { disabled: camera.locked || !navigation.canFocusSelection }),
       command('back', 'Previous view', navigation.goBack, { disabled: camera.locked || !navigation.canGoBack }),
       check('snap-grid', 'Snap to grid', preferences.shortcutSnap, () => change({ shortcutSnap: !preferences.shortcutSnap })),
-      ...(!cells ? [check('grid', 'Grid', preferences.gridMode !== 'NONE', () => change({ gridMode: preferences.gridMode === 'NONE' ? 'DOTS' : 'NONE' })),
-      check('snap-edges', 'Snap to edges', preferences.edgeSnap, () => change({ edgeSnap: !preferences.edgeSnap }))] : []),
+      check('grid', 'Grid', preferences.gridMode !== 'NONE', () => change({ gridMode: preferences.gridMode === 'NONE' ? 'DOTS' : 'NONE' })),
+      check('snap-edges', 'Snap to edges', preferences.edgeSnap, () => change({ edgeSnap: !preferences.edgeSnap })),
     ],
     Tools: [
       ...(cells ? [command('bento', 'Bento settings', cells.openSettings, { disabled: blocked })] : []),
@@ -115,7 +113,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, preserveHeaderSpace, 
         () => docks.change({ type: toolIsVisible(layout, 'Inspector') ? 'close' : 'open', tab: 'Inspector' })),
     ],
   };
-  return <div hidden={hidden} inert={hidden ? '' : undefined} className="editor-menu-shell" data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor" data-system-workflow-overlay data-workbench-selection-tools>
+  return <><div hidden={hidden} inert={hidden ? '' : undefined} className="editor-menu-shell" data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor" data-system-workflow-overlay data-workbench-selection-tools>
     <header className="workspace-header editor-menu-bar" data-document={activeId} ref={node => { bar.current = node; navigationRef.current = node; }}>
       <div className="editor-menu-start">
         {!hidden && <WorkspaceBrand key={activeId} current="Studio" trigger={trigger} groups={commands}
@@ -152,6 +150,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, preserveHeaderSpace, 
     </div>}
     <Suspense fallback={null}><CanvasControls hostRef={hostRef} navigation={navigation} historyBlocked={historyBlocked}
       open={sizeOpen} onOpenChange={setSizeOpen} returnFocus={trigger.current} /></Suspense>
-    <EditorCellEditingNotice />
-  </div>;
+  </div>
+    {!hidden && <EditorCellEditingNotice />}
+  </>;
 }

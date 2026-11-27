@@ -7,6 +7,64 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/published-gallery';
 const address = '0x' + '1'.repeat(40);
+test('cold Profile keeps its device palette while the light field loads or fails', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    await mkdir(output, { recursive: true });
+    for (const [theme, width, fail] of [['dark', 2067, false], ['dark', 960, true], ['light', 1440, false]]) {
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      await page.emulateMedia({ reducedMotion: fail ? 'reduce' : 'no-preference' });
+      await page.addInitScript(theme => {
+        window.profileReveals = [];
+        const animate = Element.prototype.animate;
+        Element.prototype.animate = function (...args) {
+          const animation = animate.apply(this, args);
+          if (this.matches('.application-interface'))
+            window.profileReveals.push({ duration: animation.effect.getTiming().duration,
+              opacity: animation.effect.getKeyframes().map(frame => frame.opacity) });
+          return animation;
+        };
+        localStorage.setItem('inscape:interface-theme', theme);
+        localStorage.setItem('inscape:interface-palette', 'brass-ink');
+      }, theme);
+      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      let release;
+      const field = new Promise(resolve => { release = resolve; });
+      await page.route('**/assets/visitor/field-tones.bin', async route => {
+        await field;
+        if (fail) await route.abort(); else await route.continue();
+      });
+      try {
+        await page.goto(`${origin}/browser-tests/startup-fixture.html?owner=${address}&view=${address}&delay=1`);
+        await page.locator('.destination-opening').waitFor();
+        const expected = await page.locator('.destination-opening').evaluate(node => getComputedStyle(node).backgroundColor);
+        await page.evaluate(address => window.__startup.resolve(address), address);
+        await page.locator('.visitor-profile-card').waitFor({ state: 'attached' });
+        assert.equal(await page.locator('.application-interface[data-visible] .visitor-profile-card').count(), 0);
+        assert.equal(await page.locator('.visitor-light-field[data-ready]').count(), 0);
+        const png = await page.screenshot({ path: `${output}/cold-profile-${theme}-${width}.png` });
+        const pixel = await page.evaluate(async data => {
+          const image = new Image(); image.src = 'data:image/png;base64,' + data; await image.decode();
+          const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+          const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+          return [...context.getImageData(20, 400, 1, 1).data].slice(0, 3);
+        }, png.toString('base64'));
+        const channels = expected.match(/\d+/g).slice(0, 3).map(Number);
+        assert.ok(pixel.every((value, index) => Math.abs(value - channels[index]) <= 4),
+          `${theme}/${width}: the revealed page retains the loading palette, got ${pixel}, expected ${channels}`);
+        release();
+        await page.locator('.application-interface[data-visible] .visitor-profile-card').waitFor();
+        assert.deepEqual(await page.evaluate(() => window.profileReveals),
+          fail ? [] : [{ duration: 200, opacity: ['0', '1'] }]);
+        if (!fail) await page.locator('.visitor-light-field[data-ready]').waitFor();
+        await page.locator('.visitor-tabs').getByRole('button', { name: 'Gallery', exact: true }).click();
+        await page.locator('.workbench-overview').waitFor();
+        await page.evaluate(() => document.activeViewTransition?.finished);
+        assert.equal(await page.locator('.destination-opening').count(), 0);
+      } finally { release(); await page.close(); }
+    }
+  } finally { await browser.close(); }
+});
 test('Profile and Gallery keep header controls on the same row', async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
@@ -15,9 +73,12 @@ test('Profile and Gallery keep header controls on the same row', async () => {
     const header = page.locator('.visitor-header');
     const tab = name => header.getByRole('button', { name, exact: true });
     const positions = () => header.locator('.workspace-brand, .visitor-tabs, .visitor-tools').evaluateAll(nodes =>
-      nodes.map(node => node.getBoundingClientRect().top));
+      nodes.map(node => {
+        const { top, left } = node.getBoundingClientRect();
+        return node.matches('.visitor-tabs') ? [top, left] : [top];
+      }));
     await tab('Gallery').waitFor();
-    for (const width of [1600, 1251, 1250, 940, 390]) {
+    for (const width of [1600, 1440, 1251, 1250, 940, 390]) {
       await page.setViewportSize({ width, height: 900 });
       const before = await positions();
       await tab('Gallery').click();
@@ -30,6 +91,90 @@ test('Profile and Gallery keep header controls on the same row', async () => {
       await tab('Profile').click();
       await toolbar.waitFor({ state: 'detached' });
       assert.deepEqual(await positions(), before);
+    }
+  } finally { await browser.close(); }
+});
+test('Profile, Gallery and Writing crossfade together with the tab underline', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.addInitScript(() => {
+      const start = document.startViewTransition.bind(document);
+      document.startViewTransition = options => {
+        const transition = start(options);
+        window.tabEffects = transition.ready.then(() => document.getAnimations()
+          .filter(animation => animation.effect.getKeyframes().some(frame => frame.opacity !== undefined))
+          .map(animation => animation.effect.pseudoElement));
+        return transition;
+      };
+    });
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&collection=1`);
+    for (const motion of ['no-preference', 'reduce']) {
+      await page.emulateMedia({ reducedMotion: motion });
+      for (const name of ['Gallery', 'Writing', 'Profile', 'Writing', 'Gallery', 'Profile']) {
+        await page.locator('.visitor-tabs').getByRole('button', { name, exact: true }).click();
+        const effects = await page.evaluate(() => window.tabEffects);
+        for (const side of ['old', 'new']) {
+          assert.equal(effects.includes(`::view-transition-${side}(visitor-page)`), motion === 'no-preference' && side === 'old');
+          assert.equal(effects.includes(`::view-transition-${side}(visitor-header)`), false);
+        }
+        await page.evaluate(() => document.activeViewTransition?.finished);
+      }
+    }
+  } finally { await browser.close(); }
+});
+test('public tab backgrounds stay equally bright throughout the dissolve', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    await mkdir(output, { recursive: true });
+    for (const [width, layout, theme, palette] of [[2067, 'grid', 'dark', 'brass-ink'],
+      [960, 'list', 'dark', 'brass-ink'], [1440, 'grid', 'light', 'brass-ink'], [1440, 'list', 'dark', 'charcoal']]) {
+      const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'no-preference' });
+      await page.addInitScript(({ theme, palette, layout, address }) => {
+        localStorage.setItem('inscape:interface-theme', theme);
+        localStorage.setItem('inscape:interface-palette', palette);
+        sessionStorage.setItem('inscape.gallery.view.' + address, JSON.stringify({ layout }));
+        const start = document.startViewTransition.bind(document);
+        document.startViewTransition = options => {
+          const transition = start(options);
+          window.backgroundReady = transition.ready.then(() => {
+            window.backgroundAnimations = document.getAnimations();
+            window.backgroundAnimations.forEach(animation => { animation.pause(); animation.currentTime = 0; });
+          });
+          return transition;
+        };
+      }, { theme, palette, layout, address });
+      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&collection=1&owner=1`);
+      await page.locator('.visitor-light-field[data-ready]').waitFor();
+      await page.locator('.visitor-profile-card').waitFor();
+      await page.locator('.destination-opening').waitFor({ state: 'detached' });
+      // Hold the intentional slow light movement so this measures the route blend alone.
+      await page.evaluate(() => document.documentElement.style.setProperty('--field-speed', '0'));
+      const pixels = async name => {
+        const png = await page.screenshot({ path: `${output}/tab-field-${width}-${layout}-${theme}-${palette}-${name}.png` });
+        return page.evaluate(async data => {
+          const image = new Image(); image.src = 'data:image/png;base64,' + data; await image.decode();
+          const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+          const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+          return [[20, 150], [image.width - 20, 150], [20, image.height - 20]].flatMap(([x, y]) =>
+            [...context.getImageData(x, y, 1, 1).data].slice(0, 3));
+        }, png.toString('base64'));
+      };
+      const before = await pixels('before');
+      for (const name of ['Gallery', 'Writing', 'Profile']) {
+        await page.locator('.visitor-tabs').getByRole('button', { name, exact: true }).click();
+        await page.evaluate(() => window.backgroundReady);
+        for (const time of [0, 50, 100, 150, 199]) {
+          await page.evaluate(time => window.backgroundAnimations.forEach(animation => { animation.currentTime = time; }), time);
+          const current = await pixels(`${name}-${time}`);
+          assert.ok(current.every((value, index) => Math.abs(value - before[index]) < 4),
+            `${width}/${theme}/${layout}/${name}/${time}: the unchanged background must not brighten or darken`);
+        }
+        await page.evaluate(() => window.backgroundAnimations.forEach(animation => animation.finish()));
+        await page.evaluate(() => document.activeViewTransition?.finished);
+      }
+      await page.close();
     }
   } finally { await browser.close(); }
 });
@@ -411,6 +556,10 @@ test('the first List to Grid flight lands while later script requests are held',
       if (['script', 'stylesheet'].includes(route.request().resourceType())) await held;
       await route.continue();
     });
+    const indexMat = await page.locator('.composition-explorer-viewport > .workbench-overview-preview').evaluate(node => {
+      const style = getComputedStyle(node);
+      return { background: style.backgroundColor, clip: style.clipPath };
+    });
     // Exercise a first-mount adjustment after the tile's initial measurement.
     await page.evaluate(() => {
       const observer = new MutationObserver(() => {
@@ -431,9 +580,15 @@ test('the first List to Grid flight lands while later script requests are held',
       const motion = node.getAnimations()[0];
       const end = motion.effect.getKeyframes().at(-1);
       const reveal = document.querySelector('.workbench-overview-grid-host').getAnimations()[0];
-      return { frame: [end.left, end.top, end.width, end.height].map(parseFloat),
+      const mount = node.querySelector('.workbench-overview-preview').getAnimations()[0];
+      const [start] = mount.effect.getKeyframes();
+      return { mat: { background: start.backgroundColor, clip: start.clipPath },
+        mountStart: mount.startTime === motion.startTime,
+        frame: [end.left, end.top, end.width, end.height].map(parseFloat),
         synchronized: reveal && reveal.startTime === motion.startTime };
     });
+    assert.deepEqual(landing.mat, indexMat, 'The moving frame starts with the visible index mat and inset');
+    assert.equal(landing.mountStart, true, 'The mat and canvas share their start time');
     assert.equal(landing.synchronized, true, 'Tiles reveal on the same timeline as the moving work');
     await page.locator('.gallery-layout-flight').waitFor({ state: 'hidden' });
     assert.ok(await page.locator(`[data-card-id="${id}"] .workbench-overview-canvas`).first().isVisible());
@@ -663,5 +818,28 @@ test('returning to the List inspector clips the artwork above the controls', asy
     const background = await sampleBelowFooter();
     assert.ok(visible.every((value, i) => Math.abs(value - background[i]) < 8),
       `Artwork changed the background below its controls: ${visible} vs ${background}`);
+  } finally { await browser.close(); }
+});
+
+test('Escape closes the reader utility panel before moving the composition camera back', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ reducedMotion: 'reduce' });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(origin + '/browser-tests/profile-overview-fixture.html?view=' + address + '&owner=1&module=image%3Astudy');
+    const reader = page.locator('.visitor-grid-world');
+    await reader.waitFor();
+    for (const name of ['Settings', 'Activity']) {
+      await page.getByRole('button', { name: 'Inscape menu' }).click();
+      await page.getByRole('menuitem', { name, exact: true }).click();
+      const panel = page.locator('dialog.public-utility-panel');
+      await panel.waitFor();
+      assert.equal(await panel.getAttribute('aria-label'), name);
+      const camera = () => reader.evaluate(node => [node.dataset.workbenchCameraX, node.dataset.workbenchCameraY, node.dataset.workbenchCameraScale]);
+      const original = await camera();
+      await page.keyboard.press('Escape');
+      await panel.waitFor({ state: 'detached' });
+      assert.deepEqual(await camera(), original);
+    }
   } finally { await browser.close(); }
 });

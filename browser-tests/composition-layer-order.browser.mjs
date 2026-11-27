@@ -551,7 +551,18 @@ test('an upcoming image stays mounted and tracks fractional positions through a 
     });
     const image = cell.locator('[data-layer-id="image:art"]');
     assert.equal(await image.count(), 0, 'inactive artwork is unmounted before the first swipe');
-    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x - box.width * .2, y);
+    // Release speed is part of the gesture under test. Assertions and protocol
+    // round trips between moves must not change the distance the track coasts.
+    const input = await page.context().newCDPSession(page);
+    await page.mouse.move(x, y);
+    const start = Date.now() / 1000;
+    const pointer = (type, fraction, elapsed) => input.send('Input.dispatchMouseEvent', {
+      type, x: x - box.width * fraction, y, timestamp: start + elapsed,
+      button: 'left', buttons: type === 'mouseReleased' ? 0 : 1,
+      clickCount: type === 'mouseMoved' ? 0 : 1,
+    });
+    await pointer('mousePressed', 0, 0);
+    await pointer('mouseMoved', .2, .080);
     assert.equal(await image.count(), 1, 'slide three is prepared before slide two comes into view');
     const progress = await image.evaluate(node => [node, node.firstElementChild].map(element =>
       Number(getComputedStyle(element).getPropertyValue('--slide-position'))));
@@ -577,12 +588,15 @@ test('an upcoming image stays mounted and tracks fractional positions through a 
       requestAnimationFrame(sample);
       return result;
     });
-    await page.mouse.move(x - box.width * .65, y); await page.mouse.up();
+    await pointer('mouseMoved', .65, .260);
+    await pointer('mouseReleased', .65, .268);
     await page.waitForFunction(() => !document.querySelector('[data-swiping]'));
     const { positions, errors } = await samples.jsonValue();
     assert.ok(positions.some(value => value > 1), 'coast crosses the boundary');
     assert.deepEqual(errors, []);
+    assert.equal(await cell.getAttribute('data-slide'), '3', 'the linked cell lands on the upcoming image');
     await samples.dispose();
+    await input.detach();
   } finally { await browser.close(); }
 });
 

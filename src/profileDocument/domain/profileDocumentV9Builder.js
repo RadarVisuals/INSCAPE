@@ -1,12 +1,9 @@
 import { compositionReferenceCount } from '../../composition/compositionReferenceCount.js';
 import { projectCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { projectWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
-import { projectArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { normalizeProfileAddress } from '../../library/config.js';
-import {
-  assertValidSystemWorkflowDraft,
-} from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { currentStudioDraft } from '../../systemWorkflow/domain/studioComposition.js';
 import {
   INSCAPE_PROFILE_DOCUMENT_TYPE,
   INSCAPE_PROFILE_DOCUMENT_VERSION,
@@ -14,12 +11,9 @@ import {
 } from './constants.js';
 import { parsePublishedAssetUrl } from './publishedAssetUrl.js';
 import { createProfileDocumentV9AssetResolver } from './profileDocumentV9Asset.js';
-import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
+import { assertValidProfileDocumentV9, assertValidProfileDocumentV9Candidate } from './profileDocumentV9Validation.js';
 import { projectIdentityCard } from '../../profileIdentity/domain/identityCard.js';
-import { projectImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
-import { projectShapes } from '../../shapes/shapes.js';
 import { projectKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
-import { projectTextModules } from '../../text/domain/article.js';
 
 function timestamp(value, label) {
   const milliseconds = value instanceof Date ? value.getTime()
@@ -42,7 +36,11 @@ function publicationError(code, message) {
   return Object.assign(new TypeError(message), { code });
 }
 
-export function buildProfileDocumentV9({
+export function buildProfileDocumentV9(input) {
+  return assertValidProfileDocumentV9(buildProfileDocumentV9Candidate(input));
+}
+
+export function buildProfileDocumentV9Candidate({
   assetRecords = [],
   createdAt,
   documentId,
@@ -58,7 +56,7 @@ export function buildProfileDocumentV9({
   if (!Number.isSafeInteger(revision) || revision < 1) {
     throw publicationError('INSCAPE_PROFILE_REVISION_INVALID', 'Profile document revision must be a positive integer');
   }
-  const draft = assertValidSystemWorkflowDraft(systemWorkflowDraft);
+  const draft = currentStudioDraft(systemWorkflowDraft);
   if (draft.profileAddress !== address) {
     throw new TypeError('The System Workflow draft must match the profile document authority');
   }
@@ -70,23 +68,12 @@ export function buildProfileDocumentV9({
   const avatarAsset = identity.avatar.mode === 'inscape' && identity.avatar.stableAssetId
     ? resolveAvatarAsset(identity.avatar.stableAssetId, identity.avatar.selectedMedia)
     : null;
-  const presentation = workbench || draft.workbench;
-  const shapes = draft.shapes ? projectShapes(draft.shapes) : undefined;
+  const { version: _artworkVersion, ...publicArtwork } = projectCompositionEditorDocument({ ...draft, workbench: workbench || draft.workbench });
+  const { shapes, imageModules, texts, workbench: publicWorkbench } = publicArtwork;
   const keeperDocks = draft.keeperDocks ? projectKeeperDocks(draft.keeperDocks) : undefined;
-  const imageModules = draft.imageModules ? projectImageModules(draft.imageModules) : undefined;
-  const texts = draft.texts ? projectTextModules(draft.texts) : undefined;
-  const publicWorkbench = presentation ? structuredClone(presentation) : null;
-  if (publicWorkbench) {
-    delete publicWorkbench.keeperDocks;
-    delete publicWorkbench.lockedLayerIds;
-  }
-  if (publicWorkbench?.shapes) publicWorkbench.shapes = publicWorkbench.shapes.filter(item => shapes?.some(shape => shape.id === item.id));
-  if (publicWorkbench?.imageModules) publicWorkbench.imageModules = publicWorkbench.imageModules.filter(item => imageModules?.some(image => image.id === item.id));
-  if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));
   const workbenchGroups = projectPublishedWorkbenchGroups(draft.workbenchGroups, { texts, imageModules, shapes, keeperDocks });
   const workbenchIndex = projectWorkbenchIndex(draft.workbenchIndex, { workbench: publicWorkbench, workbenchGroups, texts, imageModules, shapes, keeperDocks });
-  const artworkOrder = projectArtworkLayers(draft, { texts, imageModules, shapes });
-  return assertValidProfileDocumentV9({
+  return assertValidProfileDocumentV9Candidate({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,
     version: INSCAPE_PROFILE_DOCUMENT_VERSION,
     documentId: documentId || `profile:${address}`,
@@ -106,21 +93,16 @@ export function buildProfileDocumentV9({
       tags: structuredClone(identity.tags),
       visibility: { ...identity.visibility },
     },
-    ...(artworkOrder.length ? { artworkLayers: artworkOrder } : {}),
+    ...publicArtwork,
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
     ...(workbenchIndex ? { workbenchIndex } : {}),
-    ...(draft.composition ? { composition: projectCompositionEditorDocument(draft.composition) } : {}),
-    ...(shapes?.length ? { shapes } : {}),
     ...(keeperDocks?.length ? { keeperDocks } : {}),
-    ...(imageModules?.length ? { imageModules } : {}),
-    ...(texts?.length ? { texts } : {}),
-    ...(publicWorkbench ? { workbench: publicWorkbench } : {}),
   });
 }
 
 export function countProfileDocumentV9Assets(document) {
   const value = assertValidProfileDocumentV9(document);
-  const countCanvas = value => imageReferenceCount(value.imageModules) + compositionReferenceCount(value.composition);
+  const countCanvas = value => compositionReferenceCount(value) + compositionReferenceCount(value.composition);
   return countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
     + (value.identityPresentation.avatar.asset ? 1 : 0) + keeperReferenceCount(value.keeperDocks);
 }

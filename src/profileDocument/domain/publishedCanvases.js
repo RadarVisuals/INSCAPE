@@ -1,9 +1,10 @@
+import { COMPOSITION_LAYOUT_KEYS } from '../../composition/compositionEditorDocument.js';
 import { hasAllowedKeys } from '../../recordValidation.js';
 import { FIRST_WORKBENCH_ID, MAX_WORKBENCHES, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop } from '../../systemWorkflow/domain/workbenchCollection.js';
 
 // The root is the entry canvas. Additional canvases contain composition facts
 // only; profile identity, and Keeper have one owner at the root.
-export const CANVAS_CONTENT_KEYS = ['workbench', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition'];
+export const CANVAS_CONTENT_KEYS = ['workbench', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition', ...COMPOSITION_LAYOUT_KEYS];
 export function canvasContent(document) {
   return Object.fromEntries(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(document, key)).map(key => [key, structuredClone(document[key])]));
 }

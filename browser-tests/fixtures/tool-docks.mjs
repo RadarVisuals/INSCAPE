@@ -1,11 +1,8 @@
+import { routeLocalWorkflowArtwork } from './legacy-workflow-artwork.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 export async function mountToolDockFixture(page, options = {}) {
   page.setDefaultTimeout(12000);
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
-    const file = new URL(route.request().url()).pathname.split('/public/')[1];
-    await route.fulfill({ response: await route.fetch({ url: `${origin}/${file}` }) });
-  });
+  await routeLocalWorkflowArtwork(page, origin);
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
   await page.locator('.editor-menu-bar').waitFor();
   await page.evaluate(async options => {

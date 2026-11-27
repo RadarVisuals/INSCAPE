@@ -1,6 +1,5 @@
 import { cloneElement, lazy, Suspense } from 'react';
 import { X } from 'lucide-react';
-import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
 import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
 import OwnerSystemWorkflowSettings from './OwnerSystemWorkflowSettings.jsx';
 
@@ -17,7 +16,6 @@ export default function OwnerSystemWorkflowPanelLayer({ activity,
   workbenchPreferences, onWorkbenchPreferencesChange, backupControls, canvasGuides = true }) {
   const show = (id) => panels.presence[id];
   return <>
-    {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <OwnerSystemWorkflowProfile identity={profileIdentity} model={profileModel} onClose={onClose} onOpenIdentity={onOpenIdentity}

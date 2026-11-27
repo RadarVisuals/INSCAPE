@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { GalleryStudioMotion } from '../../navigation/galleryStudioMotion.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import useWorkbenchPan, { isWorkbenchHandSurface } from './useWorkbenchPan.js';
 import { zoomWorkbenchCamera } from './workbenchViewScale.js';
@@ -31,6 +32,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
+  const chrome = useContext(GalleryStudioMotion)?.chrome;
   const { offset, locked, entryFramed, setEntryFramed, getCamera, updateCamera } = camera;
   const navigatorGesture = useRef(null);
   const interaction = useRef(null);
@@ -239,13 +241,17 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       // camera or moves authored windows to fit a screen or composition frame.
       if (!locked) stopTravel();
     };
-    // The first layout measurement includes the registered docks and measured header.
+    // Dock registration can synchronously commit again during mount. Read the final chrome
+    // after that commit when a route snapshot defers ResizeObserver. Artwork flights
+    // still take their destination from the editor's first layout notification.
+    let active = true;
+    if (chrome?.current?.route) queueMicrotask(() => { if (active) measure(); });
     const observer = new ResizeObserver(measure);
     observer.observe(host);
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
-    return () => observer.disconnect();
-  }, [hostRef, controlsRef, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, entryFramed, setEntryFramed, homeCamera, updateCamera]);
+    return () => { active = false; observer.disconnect(); };
+  }, [chrome, hostRef, controlsRef, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, entryFramed, setEntryFramed, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;

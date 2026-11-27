@@ -1,10 +1,11 @@
+import { compositionArtworkFields } from './retiredInterfaceAppearance.js';
 import { createImagePresentation } from '../../imageModule/imageModule.js';
 import { createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
-import { createCompositionEditorDocument, reconcileCompositionCells } from '../../composition/compositionEditorDocument.js';
+import { COMPOSITION_LAYOUT_KEYS, validCompositionEditorDocument, createCompositionEditorDocument, reconcileCompositionCells } from '../../composition/compositionEditorDocument.js';
 import { applyCompositionLayout, COMPOSITION_LAYOUT_DEFAULTS } from '../../composition/compositionLayoutGenerator.js';
 import { createShapePresentation } from '../../shapes/shapes.js';
 import { artworkLayers } from './artworkLayers.js';
-import { validateSystemWorkflowDraft } from './systemWorkflowDraft.js';
+import { assertValidSystemWorkflowDraft, createBlankWorkbenchDraft } from './systemWorkflowDraft.js';
 import { DEFAULT_WORKBENCH_AREA } from './workbenchArea.js';
 
 export function createStudioComposition(layout) {
@@ -14,41 +15,56 @@ export function createStudioComposition(layout) {
   return { ...blank, workbench: { ...blank.workbench, area: { ...DEFAULT_WORKBENCH_AREA } } };
 }
 
-// These existing module types have their own canvas presentation and reader.
-// Moving them into a native layer document would change their behavior.
-export function studioCellsUnavailableReason(draft) {
-  if (draft.workbench?.keeperDocks?.length) return 'This canvas uses a Keeper dock.';
-  if (draft.workbenchGroups?.length || draft.workbenchIndex) return 'This canvas uses workspace groups or a camera index.';
-  if (draft.texts?.some(text => text.pagination) || draft.workbench?.texts?.some(text => text.frames))
-    return 'This canvas uses linked or paginated text.';
-  return '';
+export function createStudioDraft(profileAddress, layout = 'canvas') {
+  const { version, ...content } = createStudioComposition(layout);
+  return { ...createBlankWorkbenchDraft(profileAddress), ...content };
 }
 
-export function enableStudioCells(draft) {
-  const reason = studioCellsUnavailableReason(draft);
-  if (reason) throw new Error(reason);
-  const { workbench, shapes = [], texts = [], imageModules = [], artworkLayers: layers, ...rest } = draft;
-  const blank = createStudioComposition('canvas');
-  const presentation = { ...blank.workbench, ...workbench };
-  const records = { shapes, texts, imageModules };
+// One-time read boundary for the two shapes written by the current editor.
+// Neither shape is retained as an editing mode. Conflicting IDs fail explicitly:
+// opening a workspace never overwrites or renames authored content to fit it.
+export function currentStudioDraft(input, livePresentation) {
+  if (Array.isArray(input?.cells) && !Object.hasOwn(input, 'composition')) return assertValidSystemWorkflowDraft(input);
+  const { composition: saved, ...base } = input || {};
+  const composition = saved === undefined ? undefined : compositionArtworkFields(saved);
+  if (saved !== undefined && (COMPOSITION_LAYOUT_KEYS.some(key => Object.hasOwn(base, key)) || !validCompositionEditorDocument(composition)))
+    throw new Error('Invalid saved Studio composition. Its stored copy has been kept.');
+  const outer = assertValidSystemWorkflowDraft(base);
+  const { version, ...blank } = createStudioComposition('canvas');
+  const mergeRecords = (first = [], second = []) => {
+    const result = [...first];
+    for (const item of second) {
+      const existing = result.find(value => value.id === item.id);
+      if (!existing) result.push(item);
+      else if (JSON.stringify(existing) !== JSON.stringify(item))
+        throw Object.assign(new Error(`The two saved document paths contain conflicting data for ${item.id}. Their stored copy has been kept.`), { code: 'STUDIO_DOCUMENT_CONFLICT' });
+    }
+    return result;
+  };
+  const next = { ...blank, ...outer };
+  const presentation = { ...blank.workbench, ...outer.workbench, ...livePresentation };
+  if (composition) {
+    const { version: _version, ...content } = composition;
+    Object.assign(next, content);
+    Object.assign(presentation, composition.workbench);
+    const area = outer.workbench?.area;
+    if (area) {
+      const other = presentation.area, left = Math.min(area.left || 0, other.left || 0), top = Math.min(area.top || 0, other.top || 0);
+      presentation.area = { left, top, width: Math.max((area.left || 0) + area.width, (other.left || 0) + other.width) - left,
+        height: Math.max((area.top || 0) + area.height, (other.top || 0) + other.height) - top };
+    }
+  }
   const defaults = { shapes: createShapePresentation, texts: createTextPresentation, imageModules: createImagePresentation };
-  for (const [key, items] of Object.entries(records)) {
-    const positions = new Map(workbench?.[key]?.map(item => [item.id, item]));
+  for (const key of Object.keys(defaults)) {
+    const items = mergeRecords(outer[key], composition?.[key]);
+    next[key] = items;
+    const positions = new Map(mergeRecords((livePresentation || outer.workbench)?.[key], composition?.workbench[key]).map(item => [item.id, item]));
     presentation[key] = items.map((item, index) => positions.get(item.id) || defaults[key](item.id, index));
   }
-  return { ...rest, composition: { ...blank, ...records, workbench: presentation, artworkLayers: layers || artworkLayers(draft) } };
-}
-
-
-// The full canvas host can open this exact artwork only while every authored
-// field has a counterpart there. Unknown or Bento-only metadata stays native.
-export function canvasModuleDraft(draft) {
-  const { composition, ...rest } = draft;
-  if (!composition) return null;
-  const { cells, version, shapes, texts, imageModules, workbench, artworkLayers: layers, ...bentoSettings } = composition;
-  if (version !== 3 || cells.length || Object.keys(bentoSettings).length) return null;
-  const artwork = { shapes, texts, imageModules, workbench, artworkLayers: layers };
-  if (Object.keys(artwork).some(key => Object.hasOwn(rest, key))) return null;
-  const next = { ...rest, ...artwork };
-  return validateSystemWorkflowDraft(next).valid ? next : null;
+  next.workbench = presentation;
+  next.artworkLayers = composition ? [...artworkLayers(outer), ...artworkLayers(composition)] : artworkLayers(outer);
+  if (outer.workbench?.keeperDocks) next.workbench.keeperDocks = outer.workbench.keeperDocks;
+  const locks = [...new Set([...(outer.workbench?.lockedLayerIds || []), ...(composition?.workbench.lockedLayerIds || [])])];
+  if (locks.length) next.workbench.lockedLayerIds = locks;
+  return assertValidSystemWorkflowDraft(next);
 }

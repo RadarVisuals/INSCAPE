@@ -1,3 +1,4 @@
+import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { StudioHeaderTools, WorkspaceBrand } from '../menus/WorkspaceHeader.jsx';
@@ -24,6 +25,7 @@ function StudioCollectionHeader({ ownerDestinations, onEdit, onPanel }) {
 }
 
 export default function OwnerWorkbenchOverview({ store, preferences, profileModel, account, view, onViewChange, onEdit, onOpenProfile, onOpenGallery, onOpenWriting, ownerDestinations, workspace }) {
+  useStartupDestinationReady(!workspace.exiting);
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const { galleryCardSize } = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
   const preferenceError = useSyncExternalStore(preferences.subscribe, preferences.getError);
@@ -32,7 +34,7 @@ export default function OwnerWorkbenchOverview({ store, preferences, profileMode
   const items = store.listWorkbenches();
   const selectedId = items.some(item => item.id === previewedId) ? previewedId : store.getWorkbenchId();
   const selectedItem = store.readWorkbench(selectedId);
-  const hasLinks = Boolean(selectedItem?.draft.composition?.links?.length);
+  const hasLinks = Boolean(selectedItem?.draft.links?.length);
   // Read the complete collection only when tiles or linked sources need it.
   const previewId = view.layout === 'grid' || hasLinks ? null : selectedId;
   const snapshot = useMemo(() => ({ kind: 'local', profileAddress: store.getProfileAddress(), generation,

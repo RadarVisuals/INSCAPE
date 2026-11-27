@@ -12,8 +12,9 @@ export function VisitorPortrait({ src, name = '', className }) {
   </span>;
 }
 
-export default function VisitorProfile({ model }) {
-  useStartupDestinationReady();
+export default function VisitorProfile({ model, identityStatus, backgroundReady = true }) {
+  const identityPending = identityStatus === 'IDLE' || identityStatus === 'LOADING';
+  useStartupDestinationReady(!identityPending && backgroundReady);
   const { officialProfile, authoredProfile, profile } = model;
   const paragraphs = (profile.description || '').split(/\n\s*\n/u).map(p => p.trim()).filter(Boolean);
   const contacts = model.links.filter(link => link.kind === 'AUTHORED');

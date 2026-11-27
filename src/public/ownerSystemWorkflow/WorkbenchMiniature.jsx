@@ -1,3 +1,4 @@
+import { markPreviewPainted } from '../../navigation/initialArtworkPaint.js';
 import { memo, useState } from 'react';
 import ShapeSurface from '../../shapes/ShapeSurface.jsx';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
@@ -18,7 +19,7 @@ function ImageMiniature({ source, width, height }) {
   const rectangle = { left: 0, top: 0, width, height };
   const fitted = source.crop ? projectCroppedMediaRectangle(rectangle, projection.dimensions, projection.crop) : fitNativeMediaRectangle(rectangle, projection.dimensions);
   const image = projectSystemWorkflowImageRenderRectangle(fitted, projection);
-  return <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none"><image href={resolvePublishedAssetUrl(media.url)}
+  return <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none"><image key={media.url} data-preview-paint="pending" onLoad={markPreviewPainted} href={resolvePublishedAssetUrl(media.url)}
     x={image.left} y={image.top} width={image.width} height={image.height} preserveAspectRatio="none" onError={() => setFailed(media.url)}
     transform={`translate(${fitted.left + fitted.width / 2} ${fitted.top + fitted.height / 2}) scale(${artwork.transform.mirrorX ? -1 : 1} ${artwork.transform.mirrorY ? -1 : 1}) rotate(${artwork.transform.quarterTurns * 90}) translate(${-image.left - image.width / 2} ${-image.top - image.height / 2})`} /></svg>;
 }

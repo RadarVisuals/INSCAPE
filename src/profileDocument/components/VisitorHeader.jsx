@@ -36,7 +36,7 @@ export default function VisitorHeader({ model, account, works, current = works ?
     </div>
     {model ? <nav ref={tabList} aria-label="Profile navigation" className="visitor-tabs">
       {profileTabs.map(label => <button type="button" key={label} disabled={label !== current && !tabs[label]}
-        aria-current={label === current ? 'page' : undefined} onClick={tabs[label]}>{label}</button>)}
+        aria-current={label === current ? 'page' : undefined} onClick={tabs[label]}>{label}{label === current && <span aria-hidden="true" className="visitor-tab-line" />}</button>)}
     </nav> : null}
     </div>
     {toolbarRef && <div className="visitor-toolbar-slot" ref={toolbarRef} />}

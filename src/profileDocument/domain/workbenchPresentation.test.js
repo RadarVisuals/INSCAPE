@@ -1,3 +1,4 @@
+import { createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
@@ -16,10 +17,11 @@ const build = draft => buildProfileDocumentV9({ systemWorkflowDraft: draft, prof
 
 test('old v9 bytes still validate and restore; the next save includes the Workbench and new Identity card', () => {
   const old = build(createEmptySystemWorkflowDraft(profileAddress));
+  for (const key of ['workbench', 'cells', 'texts', 'imageModules', 'shapes', 'artworkLayers']) delete old[key];
   const bytes = canonicalSerializeProfileDocumentV9(old);
   assert.equal(Object.hasOwn(old, 'workbench'), false);
   const draft = reconcileSystemWorkflowDraftFromProfileDocumentV9(JSON.parse(bytes));
-  draft.workbench = createDefaultWorkbenchPresentation();
+  draft.workbench = { ...createDefaultWorkbenchPresentation(), texts: [], shapes: [], imageModules: [] };
   draft.workbench.identity.open = true;
   draft.identityPresentation.card = resolveIdentityCard(draft.identityPresentation);
   draft.identityPresentation.card.fields = [{ id: 'field:place', label: 'Location', type: 'text', value: 'The Underneath' }];
@@ -52,9 +54,10 @@ test('explicit Workbench saving uses draft storage and preserves unrelated priva
   const store = createSystemWorkflowDraftStore({ profileAddress, storage });
   const draft = store.getDraft();
   draft.texts = [{ id: 'text:private', article: createArticle('Private study'), visibility: 'PRIVATE' }];
+  draft.workbench.texts = draft.texts.map((text, i) => createTextPresentation(text.id, i));
   assert.equal(store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }), true);
   const session = createWorkbenchSession({ store });
-  const workbench = createDefaultWorkbenchPresentation();
+  const workbench = store.getDraft().workbench;
   assert.equal(session.saveWorkbench(workbench), true);
   const saved = [...records.values()][0];
   denied = true;
@@ -63,5 +66,5 @@ test('explicit Workbench saving uses draft storage and preserves unrelated priva
   assert.equal([...records.values()][0], saved);
   assert.equal(createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft().workbench.identity.open, false);
   assert.equal(createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft().texts[0].article.title, 'Private study');
-  assert.equal(build(store.getDraft()).texts, undefined);
+  assert.deepEqual(build(store.getDraft()).texts, []);
 });

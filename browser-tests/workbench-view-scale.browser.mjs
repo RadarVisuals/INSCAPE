@@ -50,35 +50,32 @@ async function mount(page, visitor = false, fractional = false) {
     const { createRoot } = (await import('/@id/react-dom/client')).default;
     const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
     const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
-    const { createSystemWorkflowAuthoringSession } = await import('/src/systemWorkflow/systemWorkflowAuthoringSession.js');
+    const { addShape } = await import('/src/shapes/shapeSession.js');
     const { createDefaultWorkbenchPresentation, createTextPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
     const { createArticle } = await import('/src/text/domain/article.js');
     const profileAddress = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE;
+    const { hydrateWorkspace } = await import('/src/workspace/profileWorkspace.js');
+    await hydrateWorkspace(profileAddress);
     const store = createSystemWorkflowDraftStore({ profileAddress, storage: localStorage });
     if (!store.getDraft().texts?.length) {
-      const session = createSystemWorkflowAuthoringSession({ store });
-      session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[6].id,
-        destination: { column: 0, row: 0, columnSpan: 32, rowSpan: 18 } });
-      session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0].id,
-        destination: { column: 12, row: 4, columnSpan: 8, rowSpan: 8 } });
-      const draft = structuredClone(store.getDraft());
-      draft.appearance = { ...draft.appearance, guideMode: 'NONE', surfaceId: 'carbon', frame: false, edges: { corners: [0, 0, 0, 0], shadow: false, grain: 0 } };
+      const shapeId = addShape(store, profileAddress);
+      const draft = store.getDraft();
+      draft.shapes[0].color = '#2763c5';
       const article = createArticle('// ARRIVAL');
       article.content = { type: 'doc', content: Array.from({ length: 4 }, () => ({ type: 'paragraph', content: [{ type: 'text', text: 'I lift my head. A rope of spit pulls the dirt up with me before it snaps. There are no tracks leading to where I woke.' }] })) };
       article.appearance.background = '#101111';
       draft.texts = [{ id: 'text:zoom', visibility: 'PUBLIC', article }];
       draft.workbench = createDefaultWorkbenchPresentation();
-      draft.workbench.display.window = { left: 460, top: 100, width: 800, height: 450 };
+      draft.workbench.shapes = [{ id: shapeId, open: true, window: { left: 460, top: 100, width: 800, height: 450 } }];
       draft.workbench.identity.open = false;
       // Keep the authored resize scenario above Text's minimum width even
       // after shrinking to 60%; limit clamping is covered independently.
       draft.workbench.texts = [{ ...createTextPresentation('text:zoom'), window: { left: 100, top: 100, width: 360, height: 450 } }];
       if (fractional) {
-        draft.grids[0].placements[0].crop = { x: .5, y: .5, zoom: 1 };
         draft.workbench.texts[0].window = { left: 100.3, top: 100.7, width: 360.3, height: 450.3 };
-        draft.workbench.display.window = { left: 460.6, top: 100.7, width: 800.4, height: 450.3 };
+        draft.workbench.shapes[0].window = { left: 460.6, top: 100.7, width: 800.4, height: 450.3 };
       }
-      if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Fixture failed');
+      if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }) || !await store.whenCommitted()) throw Error('Fixture failed');
       localStorage.setItem(`inscape:workbench:preferences:${profileAddress}`, JSON.stringify({ gridMode: 'NONE', surfaceId: 'graphite', shortcutSnap: false, edgeSnap: true }));
     }
     window.readZoomDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage: localStorage }).getDraft();
@@ -96,8 +93,8 @@ async function mount(page, visitor = false, fractional = false) {
         reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Zoom review' } }));
     }
   }, { visitor, fractional });
-  await page.locator('.text-window').waitFor();
-  await page.locator('.system-workflow__presentation-board').waitFor();
+  await page.locator('aside.text-window').waitFor();
+  await page.locator('aside.shape-window').waitFor();
   // Canvas paint/resize probes need an unobstructed canvas, including the new
   // default desktop Layers companion. Its own reachability has separate checks.
   if (!visitor && await page.getByRole('button', { name: 'Close Workbench Layers' }).count())
@@ -108,8 +105,8 @@ async function mount(page, visitor = false, fractional = false) {
 }
 
 async function zoomToHalf(page) {
-  const board = page.locator('.system-workflow__presentation-board').first();
-  const text = page.locator('.text-window').first();
+  const board = page.locator('aside.shape-window').first();
+  const text = page.locator('aside.text-window').first();
   const beforeBoard = await board.boundingBox(), beforeText = await text.boundingBox();
   const joined = Math.abs(beforeText.x + beforeText.width - beforeBoard.x) < .02 && Math.abs(beforeText.y - beforeBoard.y) < .02;
   for (let i = 0; i < 5; i++) {
@@ -129,16 +126,15 @@ async function zoomToHalf(page) {
 async function measure(page) {
   return page.evaluate(() => {
     const rect = node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; };
-    const text = document.querySelector('.text-window');
+    const text = document.querySelector('aside.text-window');
     // Owner keeps the Write editor mounted while Read is active. Measure the
     // visible article, never the hidden editor's zero-size paragraph ranges.
     const paragraph = [...text.querySelectorAll('.text-document p')].find(node => node.getClientRects().length);
     if (!paragraph) throw new Error('The fixture must expose a visible article paragraph');
     const range = document.createRange(); range.selectNodeContents(paragraph);
     return {
-      board: rect(document.querySelector('.system-workflow__presentation-board')), text: rect(text),
+      board: rect(document.querySelector('aside.shape-window')), text: rect(text),
       dock: rect(document.querySelector('.workbench-sidebar, .visitor-grid-world__dock')),
-      shortcut: rect(document.querySelector('.system-workflow__desktop-shortcut')),
       lines: [...range.getClientRects()].map(rectangle => ({ x: rectangle.x, y: rectangle.y, width: rectangle.width, height: rectangle.height })),
       scroll: [text.querySelector('.text-module-scroll').clientWidth, text.querySelector('.text-module-scroll').scrollHeight],
     };
@@ -161,12 +157,12 @@ test('fractional adjoining windows leave no painted seam while zooming and scrol
       // A contrasting Workbench exposes even a partially transparent raster gap.
       await page.addStyleTag({ content: 'main, .system-workflow__workbench { background: rgb(0,255,0) !important; background-image: none !important; }' });
       await page.mouse.move(1400, 900);
-      const board = page.locator('.system-workflow__presentation-board');
+      const board = page.locator('aside.shape-window');
       for (let step = 0; step < 8; step++) {
         if (step) await board.dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true });
         await page.locator('.text-module-scroll').evaluate((node, step) => { node.scrollTop = step; }, step);
         await settle(page);
-        const b = await board.boundingBox(), t = await page.locator('.text-window').boundingBox();
+        const b = await board.boundingBox(), t = await page.locator('aside.text-window').boundingBox();
         const clip = { x: Math.floor(b.x) - 3, y: Math.floor(Math.min(b.y, t.y)) - 3, width: 6,
           height: Math.floor(Math.min(b.height, t.height)) };
         const png = await page.screenshot({ path: `${output}/seam-pixel-probe.png` });
@@ -240,7 +236,6 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       const after = await measure(page);
       for (const item of ['board', 'text']) for (const key of ['x', 'y', 'width', 'height']) closeTo(after[item][key], before[item][key] / 2, `${item} ${key}`);
       assert.deepEqual(after.dock, before.dock, 'dock unchanged');
-      assert.deepEqual(after.shortcut, before.shortcut, 'shortcut unchanged');
       sameTextLayout(after.scroll, before.scroll);
       assert.equal(after.lines.length, before.lines.length, 'same line breaks');
       for (let i = 0; i < after.lines.length; i++) for (const key of ['x', 'y', 'width', 'height']) closeTo(after.lines[i][key], before.lines[i][key] / 2, `text glyph line ${key}`);
@@ -264,7 +259,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       await sharedToolPanel(page).waitFor({ state: 'detached' });
       await closeSelectionTools(page);
     }
-    const board = page.locator('.system-workflow__presentation-board');
+    const board = page.locator('aside.shape-window');
     const original = await measure(page);
     const groupRight = Math.max(original.board.x + original.board.width, original.text.x + original.text.width);
     const groupBottom = Math.max(original.board.y + original.board.height, original.text.y + original.text.height);
@@ -291,7 +286,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     } else {
       assert.notDeepEqual(draftAfterResize.workbench, draftBeforeResize.workbench, 'owner resize saves real window geometry');
       assert.deepEqual(draftAfterResize.texts, draftBeforeResize.texts, 'resize leaves article content and appearance unchanged');
-      assert.deepEqual(draftAfterResize.grids, draftBeforeResize.grids, 'Display resize leaves its placements unchanged');
+      assert.deepEqual(draftAfterResize.shapes, draftBeforeResize.shapes, 'Resizing preserves shape appearance');
     }
     await page.screenshot({ path: `${output}/workbench-marquee-${visitor ? 'visitor' : 'owner'}.png` });
     // Escape rolls back an unfinished resize; a completed gesture remains.
@@ -322,7 +317,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       await page.waitForFunction(({ board, text }) => {
         const key = Object.keys(localStorage).find(key => key.startsWith('inscape:workbench:layout:v1:'));
         const layout = key && JSON.parse(localStorage.getItem(key)).layout;
-        return layout && Math.abs(layout.display.window.left - board.x) <= 1 && Math.abs(layout.display.window.top - board.y) <= 1
+        return layout && Math.abs(layout.shapes[0].window.left - board.x) <= 1 && Math.abs(layout.shapes[0].window.top - board.y) <= 1
           && Math.abs(layout.texts[0].window.left - text.x) <= 1 && Math.abs(layout.texts[0].window.top - text.y) <= 1;
       }, shown);
       assert.notEqual(await page.evaluate(() => JSON.stringify({ ...localStorage })), savedBeforeMove, 'owner group movement persists window positions');
@@ -363,12 +358,12 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     await page.getByLabel('Move Text window', { exact: true }).focus(); await page.keyboard.press('Shift+Enter');
     await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
     const untouched = await board.boundingBox();
-    await page.locator('.text-window').dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true }); await settle(page);
+    await page.locator('aside.text-window').dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true }); await settle(page);
     closeTo((await board.boundingBox()).width, untouched.width * Math.exp(-.3), 'wheel zoom includes unselected modules');
     await page.locator('main').first().focus(); await page.keyboard.press('Control+0'); await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
     await zoomToHalf(page);
-    for (const name of ['Move Text window', 'Move Display Module: DISPLAY MODULE']) {
+    for (const name of ['Move Text window', 'Move Shape window']) {
       await page.getByLabel(name, { exact: true }).focus(); await page.keyboard.press('Shift+Enter');
     }
     const halfStart = await measure(page);
@@ -377,7 +372,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     for (const item of ['board', 'text']) closeTo((await measure(page))[item].x - halfStart[item].x, 20, 'group drag at 50% follows pointer');
     await page.keyboard.press('Escape');
     // Deselecting a shrunk group must not restore the old unscaled drag limits.
-    for (const name of ['Move Text window', 'Move Display Module: DISPLAY MODULE']) {
+    for (const name of ['Move Text window', 'Move Shape window']) {
       const moveHeader = page.getByLabel(name, { exact: true }), headerBox = await moveHeader.boundingBox();
       const module = name === 'Move Text window' ? 'text' : 'board', beforeFreeMove = await measure(page);
       await moveHeader.focus();
@@ -385,7 +380,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       await page.mouse.move(headerBox.x + 635, headerBox.y + headerBox.height / 2, { steps: 5 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
       closeTo((await measure(page))[module].x - beforeFreeMove[module].x, 600, `resized ${module} uses available screen space`);
     }
-    const text = page.locator('.text-window'), header = page.getByLabel('Move Text window', { exact: true });
+    const text = page.locator('aside.text-window'), header = page.getByLabel('Move Text window', { exact: true });
     await header.focus(); await settle(page);
     const start = await text.boundingBox(), h = await header.boundingBox();
     await page.keyboard.down('Alt'); await page.mouse.move(h.x + 5, h.y + h.height / 2); await page.mouse.down();
@@ -395,7 +390,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       // At 50%, move Text to the Display's visible right edge. Edge snapping
       // operates on screen rectangles, then returns logical window coordinates.
       await header.focus(); await settle(page);
-      const b = await page.locator('.system-workflow__presentation-board').boundingBox();
+      const b = await page.locator('aside.shape-window').boundingBox();
       const current = await text.boundingBox(), handle = await header.boundingBox();
       const dx = b.x + b.width - current.x + 3, dy = b.y - current.y;
       await page.mouse.move(handle.x + 5, handle.y + handle.height / 2); await page.mouse.down();

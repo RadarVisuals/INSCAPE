@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
 import { assertWorkbenchName } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { canvasModuleDraft, studioCellsUnavailableReason } from '../../systemWorkflow/domain/studioComposition.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
 import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
 import { createCompositionEditorScope } from '../../composition/compositionEditorScope.js';
 import { createCompositionTextMeasure } from '../../composition/measureCompositionText.jsx';
-import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
+import { StartupDestinationContext, StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import WorkbenchBackupControls from '../../systemWorkflow/WorkbenchBackupControls.jsx';
 import { workbenchSaveError } from './namedWorkbenchActions.js';
 import { openStudioWorkbench } from '../../profileDocument/storage/ownerDraftReconciliation.js';
@@ -32,6 +31,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   const [journey, setJourney] = useState(null);
   const saveBeforeRoute = useRef(null);
   const localNavigation = useRef(null);
+  const overviewSource = useRef(null);
   const returning = useRef(false);
   const overviewMemory = useRef({ cameras: new Map(), scroll: null });
   const [composition, setComposition] = useState(null);
@@ -40,13 +40,13 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   const { requestedWorkId, onEditorDocumentChange } = props;
   const request = requestedWorkId || (props.canvasOverviewRequested ? 'overview' : 'canvas');
   const [readyRequest, setReadyRequest] = useState(null);
+  const onDestinationReady = useContext(StartupDestinationContext);
   const [overviewView, setOverviewView] = useState(() => ({ layout: props.canvasOverviewRequested && innerWidth < 900 ? 'grid' : 'list', wrap: true }));
   const [store] = useState(() =>
     rootStore || createSystemWorkflowDraftStore({
       profileAddress: props.profileAddress,
       storage: props.reviewStorage ?? globalThis.localStorage,
       requireEditor: true,
-      initialStudio: true,
     })
   );
   const [editorPreferences] = useState(() =>
@@ -86,25 +86,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     };
   }, [editorPreferences, workbenchPreferenceStore, props.profileAddress]);
   const activation = useSyncExternalStore(store.subscribe, store.getActivation);
-  const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
-  const activeCanvasId = store.getWorkbenchId();
-  const lastCanvas = editorPreferences.section('lastCanvasId');
-  // A legacy single-canvas draft can predate the picker. Its saved layout or
-  // artwork identifies the canvas.
-  const [previousCanvas] = useState(() => {
-    if (lastCanvas.getSnapshot() !== undefined || store.getRecordState().status !== 'valid') return null;
-    const draft = store.getSnapshot();
-    const hasCanvas = store.isCollection() || draft.composition || draft.workbench || draft.shapes?.length || draft.imageModules?.length
-      || draft.texts?.length;
-    return hasCanvas ? store.getWorkbenchId() : null;
-  });
-  useEffect(() => {
-    if (readyRequest !== request || openingError || !store.hasWriteAccess()) return;
-    if (!overview) {
-      if (lastCanvas.getSnapshot() !== activeCanvasId) lastCanvas.update(activeCanvasId);
-    } else if (lastCanvas.getSnapshot() === undefined) lastCanvas.update(previousCanvas);
-  }, [activeCanvasId, lastCanvas, openingError, overview, previousCanvas, readyRequest, composition, request, store]);
-  const openNative = useCallback(id => createCompositionEditorScope(store, {
+  const openEditor = useCallback(id => createCompositionEditorScope(store, {
     ...createCompositionTextMeasure(), documentId: id,
   }), [store]);
   const showOverview = useCallback(source => {
@@ -114,9 +96,15 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   }, [composition]);
   const openOverview = source => {
     returning.current = true;
-    showOverview(source);
     localNavigation.current = 'overview';
-    (props.onManageCompositions || props.onReturnToWorks)?.();
+    if (props.onManageCompositions) {
+      // The router captures the live editor before committing its overview.
+      overviewSource.current = source;
+      props.onManageCompositions();
+    } else {
+      showOverview(source);
+      props.onReturnToWorks?.();
+    }
   };
   const updateEditorRoute = id => {
     localNavigation.current = id;
@@ -130,9 +118,9 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     // Switch first: failed persistence must leave the originating scope usable.
     if (!openStudioWorkbench(store, id, props.publishedResolution)) throw workbenchSaveError(store);
     composition?.release();
-    setComposition(store.getSnapshot().composition ? openNative(id) : null);
+    setComposition(openEditor(id));
     setOverview(false); setOpeningError(null);
-  }, [openNative, props.publishedResolution, composition, store]);
+  }, [openEditor, props.publishedResolution, composition, store]);
   const selectDocument = (id, source) => {
     activateCanvas(id);
     setJourney(source ? { source, direction: 'editor' } : null);
@@ -153,10 +141,6 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     if (!id) throw workbenchSaveError(store);
     selectDocument(id);
   };
-  const enableCanvasModules = () => {
-    prepareDocumentChange();
-    if (!store.enableCurrentCanvasModules()) throw workbenchSaveError(store);
-  };
   const renameDocument = name => {
     const title = name.trim();
     assertWorkbenchName(title);
@@ -176,7 +160,10 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     const previous = appliedRequest.current;
     appliedRequest.current = request;
     const handled = localNavigation.current === request;
+    const source = overviewSource.current;
     localNavigation.current = null;
+    overviewSource.current = null;
+    if (handled && request === 'overview') showOverview(source);
     if (!handled) {
       if (previous && !overview && !openingError && saveBeforeRoute.current && !saveBeforeRoute.current()) {
         const id = composition?.getWorkbenchId() || store.getWorkbenchId();
@@ -192,16 +179,6 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     }
     setReadyRequest(request);
   }, [request, overview, openingError, composition, store, requestedWorkId, onEditorDocumentChange, activateCanvas, showOverview]);
-  // The in-place adoption is an ordinary Undo entry, so undo/redo may change
-  // which projection is appropriate without changing the work's ID or URL.
-  useLayoutEffect(() => {
-    if (readyRequest !== request || overview || openingError) return;
-    if (store.getSnapshot().composition && !composition?.isCurrent()) setComposition(openNative(store.getWorkbenchId()));
-    else if (!store.getSnapshot().composition && composition?.isCurrent()) {
-      composition.release({ force: true });
-      setComposition(null);
-    }
-  }, [generation, openNative, openingError, overview, readyRequest, composition, request, store]);
   useEffect(() => () => composition?.release({ force: true }), [composition]);
   if (!readyRequest) return <p role="status">Opening Studio…</p>;
   if (openingError) return <main className="published-profile-status" data-published-focus-fallback tabIndex={-1}>
@@ -216,28 +193,22 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     </section>
   </main>;
   const scope = composition?.isCurrent() ? composition : store.getWorkbenchScope();
-  const canUseCanvasModules = readyRequest === request && scope === composition
-    && Boolean(canvasModuleDraft(store.getSnapshot()));
-  const cellsUnavailableReason = scope === composition ? '' : studioCellsUnavailableReason(store.getSnapshot());
   return (
-    <Session key={activation} sharedStore={scope}
+    <StartupDestinationContext.Provider value={readyRequest === request ? onDestinationReady : null}>
+      <Session key={activation} sharedStore={scope}
         {...props}
         overview={{ active: overview, store, view: overviewView, onViewChange: setOverviewView, memory: overviewMemory.current,
           onEdit: selectDocument, journey, saveBeforeRoute, returning: returning.current,
           onJourneyComplete: () => setJourney(null) }}
         onOpenWorkbenchOverview={openOverview}
-        documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), lastCanvas: lastCanvas.getSnapshot, select: selectDocument, create: createDocument, rename: renameDocument, remove: removeDocument,
-          enableCanvasModules: canUseCanvasModules ? enableCanvasModules : undefined,
-          beginFirstCell: scope !== composition && !cellsUnavailableReason ? store.beginFirstCell : undefined, cellsUnavailableReason,
+        documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), select: selectDocument, create: createDocument, rename: renameDocument, remove: removeDocument,
           onCanvasChange: updateEditorRoute }}
-        compositionBackup={scope === composition ? <WorkbenchBackupControls store={store}
-          storage={props.reviewStorage ?? globalThis.localStorage}
-          onRestored={props.onDraftRestored} /> : undefined}
         editorPreferences={editorPreferences}
         workbenchPreferenceStore={workbenchPreferenceStore}
         keeperDockPositions={keeperDockPositions}
         navigatorPosition={navigatorPosition}
         focusWorkbench={activation > 0 || Boolean(props.requestedWorkId)}
       />
+    </StartupDestinationContext.Provider>
   );
 }

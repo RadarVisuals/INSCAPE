@@ -40,7 +40,6 @@
 .editor-menu-form :is(input, select) { box-sizing: border-box; min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--tactile-edge); background: var(--tactile-well); color: inherit; font: inherit; }
 .editor-menu-form > div { display: flex; gap: 8px; }
 .editor-menu-form button, .editor-menu-error button { padding: 8px 12px; border: 1px solid var(--tactile-edge); background: var(--tactile-face); color: inherit; font: inherit; }
-.editor-menu-shell > .editor-cell-editing { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--tactile-face); max-width: calc(100vw - 24px); }
 @media (max-width: 900px) {
   .editor-menu-start { gap: 10px; }
   .editor-header-actions { gap: 8px; }

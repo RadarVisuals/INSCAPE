@@ -3,12 +3,12 @@ if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(loca
   interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
 }
 import React from 'react';
+import { authoredStorage, confirmWorkspaceSaved, hydrateWorkspace } from '../src/workspace/profileWorkspace.js';
 import { createRoot } from 'react-dom/client';
 import Runtime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
 import ProfileEditingBoundary from '../src/systemWorkflow/ProfileEditingBoundary.jsx';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
-import { createSystemWorkflowAuthoringSession } from '../src/systemWorkflow/systemWorkflowAuthoringSession.js';
 import { addKeeperDock } from '../src/keeper/keeperSession.js';
 import { addTextModule, saveTextModule } from '../src/text/textSession.js';
 import { addShape } from '../src/shapes/shapeSession.js';
@@ -24,15 +24,17 @@ async function mountFixture() {
   const values = new Map();
   const storage = params.has('persistent') ? localStorage : { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) };
   const profileAddress = '0x9999999999999999999999999999999999999999';
-  const seeded = storage.getItem(systemWorkflowDraftKey(profileAddress)) !== null;
+  if (params.has('persistent')) await hydrateWorkspace(profileAddress);
+  const seeded = authoredStorage(storage).getItem(systemWorkflowDraftKey(profileAddress)) !== null;
   const assets = OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => sample === 'navigator' ? asset : ({ ...asset, imageUrl: asset.src, thumbnailUrl: asset.src, originalImageUrl: asset.src }));
   const store = createSystemWorkflowDraftStore({ profileAddress, storage });
-  const session = createSystemWorkflowAuthoringSession({ store });
   if (!seeded) {
-  for (let index = 0; index < (sample === 'layers' ? 24 : 1); index++) {
-    session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: assets[index % assets.length].id,
-      destination: { column: 2 + index % 6 * 4, row: 2 + Math.floor(index / 6) * 3, columnSpan: 5, rowSpan: 5 } });
+  if (sample === 'layers') {
+    for (let index = 0; index < 24; index++) {
+      addShape(store, profileAddress, { position: { left: 24 + index % 6 * 48, top: 80 + Math.floor(index / 6) * 48 } });
+    }
   }
+  if (sample === 'keeper') addShape(store, profileAddress);
   if (sample === 'keeper') addKeeperDock(store, profileAddress, { position: { left: 24, top: 24 } });
   if (sample === 'shape') addShape(store, profileAddress, { position: { left: 100, top: 100 } });
   if (sample === 'image') addImageModule(store, profileAddress);
@@ -53,6 +55,7 @@ async function mountFixture() {
     saveTextModule(store, profileAddress, text, { ...text, article: { ...text.article, title: 'Navigator study', content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A live miniature of this composition.' }] }] } } });
   }
   }
+  if (params.has('persistent')) await confirmWorkspaceSaved(profileAddress);
   // Test-only read access to the disposable draft. All edits use the real UI.
   window.readToolChromeDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
   // Activity exercises the real signal hook and read-marker persistence. Only the

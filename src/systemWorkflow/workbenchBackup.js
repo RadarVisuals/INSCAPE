@@ -1,4 +1,4 @@
-import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
+import { currentStudioDraft } from './domain/studioComposition.js';
 import { LUKSO_CHAIN_ID, normalizeProfileAddress } from '../library/config.js';
 import { textRecoveries, workbenchTextRecovery } from '../text/textEditRecovery.js';
 import { workbenchLayoutKey } from './workbenchLayoutKey.js';
@@ -19,7 +19,7 @@ const keys = ['type', 'version', 'createdAt', 'draft'];
 export function serializeWorkbenchBackup(draft, createdAt = new Date().toISOString()) {
   const collection = isWorkbenchCollection(draft);
   const backup = { type: WORKBENCH_BACKUP_TYPE, version: collection ? 2 : 1, createdAt,
-    draft: collection ? assertValidWorkbenchCollection(draft) : assertValidSystemWorkflowDraft(draft) };
+    draft: collection ? assertValidWorkbenchCollection(draft) : currentStudioDraft(draft) };
   const source = JSON.stringify(backup);
   parseLegacyWorkbenchBackup(source, draft.profileAddress);
   return source;
@@ -36,7 +36,7 @@ export function parseLegacyWorkbenchBackup(source, profile) {
     || typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt)))
     throw new Error('This is not a supported INSCAPE Workbench backup.');
   const candidate = value.draft;
-  const draft = isWorkbenchCollection(candidate) ? assertValidWorkbenchCollection(candidate) : assertValidSystemWorkflowDraft(candidate);
+  const draft = isWorkbenchCollection(candidate) ? assertValidWorkbenchCollection(candidate) : currentStudioDraft(candidate);
   if (draft.profileAddress !== normalizeProfileAddress(profile)) throw new Error('This backup belongs to a different Universal Profile.');
   return { ...value, draft: structuredClone(draft) };
 }
@@ -49,7 +49,7 @@ export function summarizeWorkbenchBackup(draft) {
     ['Shapes', draft.shapes?.length || 0],
     ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
-    ['Bento cells', draft.composition?.cells?.length ?? 0],
+    ['Bento cells', draft.cells?.length ?? 0],
   ].map(([name, count]) => `${count} ${name}`).join(' · ');
 }
 
@@ -112,7 +112,7 @@ function validatePortable(workspace, profile) {
     const ids = new Set(group.workbenches.map(item => item.id));
     for (const id of ids) recoveryContexts.add(profile + '/' + id);
     const view = { profileAddress: profile, entries: group.workbenches.map(item => ({ id: item.id, draft: projectWorkbenchDraft(group, item.id) })) };
-    for (const surface of group.workbenches.map(item => item.content.composition)) {
+    for (const surface of group.workbenches.map(item => item.content)) {
       const [issue] = compositionLinkProblems(surface, view);
       if (issue) throw Error('Unresolved canvas link ' + issue.id + '. ' + issue.reason);
     }
@@ -147,6 +147,8 @@ export function parseWorkbenchBackup(source, profile) {
     || !Number.isSafeInteger(value.workspaceRevision) || value.workspaceRevision < 0
     || typeof value.exportedAt !== 'string' || !Number.isFinite(Date.parse(value.exportedAt))) throw Error('Invalid workspace backup envelope.');
   if (!exactRecord(value.workspace, recordKinds)) throw Error('Incomplete workspace backup.');
+  if (value.workspace.workbenches) value.workspace.workbenches = isWorkbenchCollection(value.workspace.workbenches)
+    ? assertValidWorkbenchCollection(value.workspace.workbenches) : createWorkbenchCollection(currentLocalDraft(value.workspace.workbenches));
   validatePortable(value.workspace, value.profileAddress);
   return value;
 }
@@ -224,7 +226,7 @@ export async function previewWorkspaceRestore(source, address, mode = 'replace')
   for (const key of recordKinds) if (equivalent(workspace[key], local[key]) && base.rows[key] !== null && local[key] !== null) rows[key] = base.rows[key];
   if (local.workbenches && !isWorkbenchCollection(local.workbenches) && isWorkbenchCollection(workspace.workbenches)) {
     try {
-      const current = assertValidSystemWorkflowDraft(local.workbenches);
+      const current = currentStudioDraft(local.workbenches);
       if (equivalent(current, local.workbenches) && equivalent(createWorkbenchCollection(current), workspace.workbenches))
         rows.workbenches = base.rows.workbenches;
     } catch { /* Explicit Replace can repair an invalid local draft. */ }

@@ -18,8 +18,9 @@ function addCaption(document, id, title, visibility) {
 }
 
 function inputs(draft, composition) {
+  if (composition) { const { version, ...artwork } = composition; draft = { ...draft, ...artwork }; }
   return {
-    current: () => true, activeWork, draft, composition, profileAddress,
+    current: () => true, activeWork, draft, profileAddress,
     store: { getProfileAddress: () => profileAddress, getGeneration: () => 1 },
     workbench: composition?.workbench || draft.workbench, publicationProfile: { name: 'Maker' },
     library: { assetsById: new Map(), decodedDimensions: new Map(), records: [] },
@@ -37,7 +38,7 @@ test('the selected composition preview filters unpublished layers and preserves 
   assert.equal(entry.id, activeWork.id);
   assert.equal(entry.name, activeWork.name);
   assert.deepEqual(snapshot.entries.map(item => item.id), [activeWork.id]);
-  const shown = entry.draft.composition;
+  const shown = entry.draft;
   assert.deepEqual(shown.cells.map(cell => cell.id), before.cells.map(cell => cell.id));
   assert.deepEqual(shown.artworkLayers, before.artworkLayers.filter(id => id !== 'text:private'));
   assert.deepEqual(shown.texts.map(text => text.article.title), ['First visible title', 'Last visible title']);

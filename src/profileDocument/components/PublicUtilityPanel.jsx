@@ -1,12 +1,11 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import OwnerSystemWorkflowActivity from '../../public/ownerSystemWorkflow/OwnerSystemWorkflowActivity.jsx';
 import OwnerSystemWorkflowSettings from '../../public/ownerSystemWorkflow/OwnerSystemWorkflowSettings.jsx';
-import OwnerSystemWorkflowManual from '../../public/ownerSystemWorkflow/OwnerSystemWorkflowManual.jsx';
 import useOwnerSystemWorkflowActivity from '../../public/ownerSystemWorkflow/useOwnerSystemWorkflowActivity.js';
 import { createWorkbenchPreferencesStore } from '../../public/ownerSystemWorkflow/workbenchPreferences.js';
 import './publicUtilityPanel.css';
 
-const titles = { activity: 'Activity', settings: 'Settings', docs: 'Help & Docs' };
+const titles = { activity: 'Activity', settings: 'Settings' };
 
 function PublicSettings({ profileAddress, onClose }) {
   const [store] = useState(() => createWorkbenchPreferencesStore({
@@ -29,12 +28,11 @@ export default function PublicUtilityPanel({ panel, profileAddress, onClose }) {
     node.showModal();
     return () => node.close();
   }, []);
-  return <dialog ref={dialog} className="public-utility-panel system-workflow__token-scope"
+  return <dialog ref={dialog} data-system-workflow-panel className="public-utility-panel system-workflow__token-scope"
     data-workflow-material="tactile" data-workflow-finish="flat" aria-label={titles[panel]}
     onCancel={event => { event.preventDefault(); onClose(); }}
     onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
     {panel === 'activity' && <OwnerSystemWorkflowActivity activity={activity} onClose={onClose} />}
     {panel === 'settings' && <PublicSettings key={profileAddress} profileAddress={profileAddress} onClose={onClose} />}
-    {panel === 'docs' && <OwnerSystemWorkflowManual onClose={onClose} />}
   </dialog>;
 }

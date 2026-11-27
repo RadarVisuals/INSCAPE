@@ -51,7 +51,7 @@ for (const width of [1440, 390]) test(`article search and replacement preserve c
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seed(page);
-    const win = page.locator('.text-window'), body = bodyFor(win), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
+    const win = page.locator('aside.text-window'), body = bodyFor(win), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const baseline = await article(page);
     await body.focus(); await body.press('Control+f');
     const query = tools.getByRole('textbox', { name: 'Find in article', exact: true });
@@ -116,7 +116,7 @@ test('search remains scoped to its editor across module changes and native find 
   try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } }); page.setDefaultTimeout(10000);
     await seed(page, 2);
-    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), wins = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), wins = page.locator('aside.text-window');
     const first = bodyFor(wins.nth(0)), second = bodyFor(wins.nth(1));
     const firstBefore = await article(page), secondBefore = await article(page, 1);
     await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
@@ -150,7 +150,7 @@ test('oversized replacement preserves live and saved text and permits a correcte
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); page.setDefaultTimeout(10000);
     await mountTextToolsFixture(page, origin);
-    const body = bodyFor(page.locator('.text-window')), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
+    const body = bodyFor(page.locator('aside.text-window')), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const text = 'x '.repeat(110).trim();
     await body.fill(text); await settle(page);
     const before = await article(page);

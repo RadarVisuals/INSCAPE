@@ -33,8 +33,8 @@ test('modules move beyond the screen, remain editable after panning, and restore
     for (const visitor of [false, true]) {
       const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: 600 });
-      const board = page.locator('.system-workflow__presentation-board').first();
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, shapeWidth: 600 });
+      const board = page.locator('aside.shape-window').first();
       const image = page.locator('[data-workbench-view-id="image:motion-4"]');
       await image.waitFor(); await page.waitForTimeout(600);
       assert.equal(await page.getByRole('button', { name: 'Fit canvas in view' }).isVisible(), true);
@@ -54,8 +54,8 @@ test('modules move beyond the screen, remain editable after panning, and restore
       await page.waitForTimeout(200);
       const moved = await layout(page);
       if (!visitor) {
-        assert.equal(moved.display.window.left, initialBoard.x + 1840);
-        assert.equal(moved.display.window.top, initialBoard.y + 1024);
+        assert.equal(moved.shapes[0].window.left, initialBoard.x + 1840);
+        assert.equal(moved.shapes[0].window.top, initialBoard.y + 1024);
         assert.equal(moved.imageModules.find(item => item.id === 'image:motion-4').position.left, initialImage.x + 2200);
       }
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'moving windows does not edit module content');
@@ -66,13 +66,13 @@ test('modules move beyond the screen, remain editable after panning, and restore
       await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
       assert.equal((await board.boundingBox()).x, initialBoard.x + 1840);
       assert.equal(await page.getByRole('button', { name: 'Fit canvas in view' }).isVisible(), true);
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: 600 });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, shapeWidth: 600 });
       await page.locator('[data-workbench-view-id="image:motion-6"]').waitFor(); await page.waitForTimeout(300);
       assert.equal((await board.boundingBox()).x, initialBoard.x + (visitor ? 0 : 1840));
       if (!visitor) {
         await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(250);
-        assert.equal((await board.boundingBox()).x, moved.display.window.left, 'viewport changes do not pull the window back');
-        await pan(page, -moved.display.window.left + 20, -moved.display.window.top + 40);
+        assert.equal((await board.boundingBox()).x, moved.shapes[0].window.left, 'viewport changes do not pull the window back');
+        await pan(page, -moved.shapes[0].window.left + 20, -moved.shapes[0].window.top + 40);
         assert.equal((await board.boundingBox()).x, 20);
         await page.screenshot({ path: '.browser-test-runtime/workbench-space-narrow.png' });
       }

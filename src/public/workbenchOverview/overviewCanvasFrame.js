@@ -29,7 +29,10 @@ export function captureOverviewCanvas(node, model, name, id) {
   const frame = node.getBoundingClientRect(), content = canvas.getBoundingClientRect();
   if (!frame.width || !content.width) return null;
   const style = getComputedStyle(node);
+  const mat = getComputedStyle(canvas.parentElement);
+  // The index mat and its inset belong to the displayed frame, outside the authored canvas.
+  const mount = { backgroundColor: mat.backgroundColor, clipPath: mat.clipPath === 'none' ? 'inset(0px round 0px)' : mat.clipPath };
   return { id, name, model, frame: { left: frame.left, top: frame.top, width: frame.width, height: frame.height },
-    radius: parseFloat(style.borderRadius) || 0, background: style.backgroundColor,
+    radius: parseFloat(style.borderRadius) || 0, background: style.backgroundColor, shadow: style.boxShadow, mount,
     paint: { left: content.left - frame.left, top: content.top - frame.top, scale: content.width / (Number(canvas.dataset.worldWidth) || model.area.width) } };
 }

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { createCompositionEditorScope } from './compositionEditorScope.js';
 import { COMPOSITION_LAYOUT_DEFAULTS } from './compositionLayoutGenerator.js';
-import { compositionModuleWindow, validCompositionEditorDocument, projectCompositionEditorDocument, restoreCompositionEditorDocument } from './compositionEditorDocument.js';
+import { compositionModuleWindow, validCompositionArtwork, projectCompositionEditorDocument, restoreCompositionEditorDocument } from './compositionEditorDocument.js';
 import { editorCellPreviewTransforms } from './editorCellGeometry.js';
 import { moveCompositionBentoCell } from './compositionBentoInsertion.js';
 import { compositionCellSizeControl } from './compositionCellSizing.js';
@@ -16,7 +16,7 @@ const profile = '0x' + '8'.repeat(40);
 function fixture() {
   const data = new Map(); let failing = false;
   const storage = { getItem: k => data.get(k) ?? null, setItem: (k, v) => { if (failing) throw Error('Storage full'); data.set(k, v); }, removeItem: k => data.delete(k) };
-  const root = createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
+  const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
   scope.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, width: 1793, height: 1164, gap: 16, padding: 16, columns: 1, rows: 1 }, 1, scope.getGeneration());
   const entries = [
     ['shape:header', { left: 16, top: 16, width: 1761, height: 134 }],
@@ -25,7 +25,7 @@ function fixture() {
     ['shape:bio', { left: 16, top: 957, width: 479, height: 191 }],
     ['shape:right', { left: 511, top: 166, width: 1266, height: 982 }],
   ];
-  const draft = root.getDraft(), value = draft.composition, shape = value.shapes[0], cell = value.cells[0], placement = value.workbench.shapes[0];
+  const draft = root.getDraft(), value = draft, shape = value.shapes[0], cell = value.cells[0], placement = value.workbench.shapes[0];
   value.shapes = entries.map(([id]) => ({ ...shape, id, name: id.slice(6) }));
   value.cells = entries.map(([id]) => ({ ...structuredClone(cell), id, members: [] }));
   value.workbench.shapes = entries.map(([id, window]) => ({ ...placement, id, window }));
@@ -41,7 +41,7 @@ function fixture() {
 }
 const frame = compositionModuleWindow;
 function bounded(value) {
-  assert.ok(validCompositionEditorDocument(value));
+  assert.ok(validCompositionArtwork(value));
   const { width, height, gap, padding } = compositionBentoSettings(value), area = value.workbench.area;
   const frames = value.cells.map(cell => frame(value, cell.id));
   for (const [i, a] of frames.entries()) {
@@ -62,7 +62,7 @@ function retainedText(before, after, text) {
 function historyAndReload(f, before, after) {
   assert.ok(f.scope.undo()); assert.deepEqual(f.scope.getComposition(), before);
   assert.ok(f.scope.redo()); assert.deepEqual(f.scope.getComposition(), after);
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage: f.storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
   assert.deepEqual(restoreCompositionEditorDocument(projectCompositionEditorDocument(after)).workbench.texts, after.workbench.texts);
 }
@@ -166,7 +166,7 @@ test('repeated local additions preserve all existing sizes in increasingly compl
 });
 
 test('interlocking cells support independent growth without flattening authored geometry', () => {
-  const f = fixture(), draft = f.root.getDraft(), value = draft.composition;
+  const f = fixture(), draft = f.root.getDraft(), value = draft;
   // Five-cell pinwheel: a valid dense partition without a complete slicing cut.
   const unitX = 1777 / 3, unitY = 1148 / 3;
   const regions = [[0, 0, 2, 1], [2, 0, 1, 2], [1, 2, 2, 1], [0, 1, 1, 2], [1, 1, 1, 1]];

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { createCompositionEditorScope } from './compositionEditorScope.js';
 import { COMPOSITION_LAYOUT_DEFAULTS } from './compositionLayoutGenerator.js';
-import { compositionModuleWindow, reconcileCompositionCells, projectCompositionEditorDocument, validCompositionEditorDocument } from './compositionEditorDocument.js';
+import { compositionModuleWindow, reconcileCompositionCells, projectCompositionEditorDocument, validCompositionArtwork } from './compositionEditorDocument.js';
 import { compositionCellFrames, compositionBentoSettings, setCompositionBentoSettings } from './compositionBento.js';
 import { resizeCompositionCell, setCompositionCellSize } from './compositionCellSizing.js';
 import { moveCompositionBentoCell } from './compositionBentoInsertion.js';
@@ -17,15 +17,15 @@ const profile = '0x' + '7'.repeat(40);
 function fixture() {
   const data = new Map(); let fail = false;
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => { if (fail) throw Error('Full'); data.set(key, value); }, removeItem: key => data.delete(key) };
-  const root = createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
+  const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage }), scope = createCompositionEditorScope(root);
   scope.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, width: 1440, height: 900, columns: 3, rows: 1 }, 42, scope.getGeneration());
-  const value = root.getDraft(), cells = value.composition.cells;
-  cells.forEach((cell, i) => { value.composition.workbench.shapes.find(s => s.id === cell.id).window = { left: 24 + i * 344, top: 24, width: 320, height: 280 }; });
+  const value = root.getDraft(), cells = value.cells;
+  cells.forEach((cell, i) => { value.workbench.shapes.find(s => s.id === cell.id).window = { left: 24 + i * 344, top: 24, width: 320, height: 280 }; });
   assert.ok(root.commitCompletedOperation(value, { expectedGeneration: root.getGeneration() }));
   return { root, scope, storage, ids: cells.map(c => c.id), fail: value => { fail = value; }, edit: (action, ...args) => scope.editBento(action, args, scope.getGeneration()) };
 }
 function valid(value) {
-  assert.ok(validCompositionEditorDocument(value));
+  assert.ok(validCompositionArtwork(value));
   const { gap, padding } = compositionBentoSettings(value), area = value.workbench.area, frames = compositionCellFrames(value);
   for (const [i, a] of frames.entries()) {
     assert.ok(a.left >= area.left + padding - .001 && a.top >= area.top + padding - .001);
@@ -37,9 +37,9 @@ function valid(value) {
 function history(f, before, after) {
   assert.ok(f.scope.undo()); assert.deepEqual(f.scope.getComposition(), before);
   assert.ok(f.scope.redo()); assert.deepEqual(f.scope.getComposition(), after);
-  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ initialStudio: true, profileAddress: profile, storage: f.storage }));
+  const reopened = createCompositionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }));
   assert.deepEqual(reopened.getComposition(), after); reopened.release();
-  assert.ok(validCompositionEditorDocument(projectCompositionEditorDocument(after), true));
+  assert.ok(validCompositionArtwork(projectCompositionEditorDocument(after), true));
 }
 
 test('resizing pushes a chain without resizing neighbours, text or articles; preview, save and Undo agree', () => {

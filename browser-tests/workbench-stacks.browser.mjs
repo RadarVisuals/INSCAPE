@@ -20,7 +20,7 @@ test('compact groups move and cancel independently, open live members, return, u
       const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320, seamReview: 'single' });
+      await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 320, seamReview: 'single' });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey));
@@ -87,18 +87,20 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: width === 390 ? 2 : 1 });
       page.setDefaultTimeout(15000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 480, textModes: true, heavy: true });
+      await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 480, textModes: true, heavy: true });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey));
-        draft.workbenchGroups = [{ id: 'workbench-group:mixed', name: 'Mixed study', memberIds: ['image:motion-0', 'text:overflow', 'display:primary'], position: { left: 80, top: 300 } }];
+        draft.texts = draft.texts.filter(text => text.id === 'text:overflow');
+        draft.workbench.texts = draft.workbench.texts.filter(text => text.id === 'text:overflow');
+        draft.workbenchGroups = [{ id: 'workbench-group:mixed', name: 'Mixed study', memberIds: ['image:motion-0', 'text:overflow', 'shape:motion'], position: { left: 80, top: 300 } }];
         localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
       });
       const stack = page.locator('[data-workbench-stack]'); await stack.waitFor();
       await page.waitForFunction(() => document.querySelector('[data-workbench-view-id="text:overflow"] .tiptap'));
       await hideWorkspaceSidebar(page);
       const initial = await saved(page);
-      await page.evaluate(() => { window.mixedNodes = [...document.querySelectorAll('[data-workbench-view-id], .tiptap')]; });
+      await page.evaluate(() => { window.mixedNodes = [...document.querySelectorAll('[data-workbench-artwork][data-workbench-view-id], .tiptap')]; });
       const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
       if (await closeTools.isVisible()) await closeTools.click();
       const open = async () => { await stack.getByRole('button', { name: 'Open Mixed study group', exact: true }).click(); await settle(page); };
@@ -141,7 +143,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       assert.equal(await page.locator('[data-workbench-group-presented]').count(), 3);
       await nav.getByRole('button', { name: 'Back', exact: true }).click(); await settle(page); await stack.waitFor();
       assert.equal(await saved(page), initial);
-      await open(); await select.selectOption('display:primary'); await settle(page);
+      await open(); await select.selectOption('shape:motion'); await settle(page);
       await page.screenshot({ path: '.browser-test-runtime/workbench-group-mixed-' + width + '.png' });
       await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page); await stack.waitFor();
       assert.equal(await saved(page), initial);
@@ -155,7 +157,7 @@ test('spatial stack drops clear hidden selection and named routes restore item a
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
-    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320 });
+    await mountGridMotionFixture(page, { origin, count: 1, shapeWidth: 320 });
     await page.evaluate(() => {
       const draft = JSON.parse(localStorage.getItem(window.__motionKey));
       draft.workbench.imageModules[0].position = { left: 80, top: 240 };

@@ -55,7 +55,7 @@ export interface CommitOptions {
   historyLabel?: string;
   recordHistory?: boolean;
   historyPresentation?: WorkbenchPresentation;
-  historyComposition?: unknown;
+  cellReconciliation?: { resizeContents?: boolean; preserveMemberAnchors?: boolean; moveContents?: boolean };
 }
 export interface RestoreOptions { expectedGeneration?: number; expectedFingerprint?: string }
 export type SaveResult = boolean;
@@ -67,6 +67,7 @@ export interface WorkbenchScope {
   whenCommitted?(): boolean | Promise<boolean>;
   hasWriteAccess(): boolean;
   isCurrent(): boolean;
+  release?(): void;
   getProfileAddress(): string;
   getWorkbenchId(): WorkbenchId;
   getSnapshot(): WorkflowDraft | null;

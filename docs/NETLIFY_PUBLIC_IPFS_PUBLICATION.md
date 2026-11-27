@@ -55,7 +55,7 @@ public, nonsecret `VITE_PUBLICATION_SERVICE_ORIGIN` to another configured HTTPS
 service origin if that development target changes. Vite preview includes that one service in its local connection policy. Hosted production builds
 ignore this development override and use their own same-origin function.
 
-Every current document requires the upload challenge to advertise `v9-studio-publication-3`. The browser checks this before asking for a wallet signature. Deploy the matching upload function and public reader together.
+Every current document requires the upload challenge to advertise `v9-studio-publication-5`. The browser checks this before asking for a wallet signature. Deploy the matching upload function and public reader together.
 
 The service must include the 30 October loopback CORS support. It allows POST
 and only the content-type/upload-authorization/upload-signature request headers;

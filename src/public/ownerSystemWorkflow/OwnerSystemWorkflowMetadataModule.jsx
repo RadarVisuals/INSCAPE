@@ -1,3 +1,4 @@
+import TokenMetadataDetails from '../../library/TokenMetadataDetails.jsx';
 import { ExternalLink, UserRound } from 'lucide-react';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { useProfileIdentity } from '../../profileIdentity/index.js';
@@ -23,14 +24,11 @@ export function OwnerSystemWorkflowMetadataContent({ dossier }) {
     <header><h3>{dossier.title || 'Untitled artwork'}</h3>
       {dossier.collection && <p>{dossier.collection}</p>}
     </header>
-    <section aria-label="Description"><h4>Description</h4>
-      <p>{dossier.description || 'No description provided.'}</p></section>
+    <TokenMetadataDetails key={dossier.stableAssetId} id={dossier.stableAssetId} standard={dossier.standard}
+      description={dossier.description} traits={dossier.traits} />
     <section className="artwork-info-creators" aria-label="Creators"><h4>{dossier.creators?.length > 1 ? 'Creators' : 'Creator'}</h4>
       {dossier.creators?.length ? dossier.creators.map((creator, index) => <MetadataCreator key={`${creator.address}-${index}`} creator={creator} />) : <MetadataCreator />}
     </section>
-    {dossier.traits?.length > 0 && <section><h4>Attributes</h4><dl aria-label="Traits">
-      {dossier.traits.map((entry, index) => <div key={`${entry.label}-${index}`}><dt>{entry.label}</dt><dd>{entry.value}</dd></div>)}
-    </dl></section>}
     {(dossier.technical?.length > 0 || dossier.assetDetailHref) && <details className="artwork-info-sources">
       <summary>Source details</summary>
       {dossier.technical?.length > 0 && <dl>{dossier.technical.map((entry, index) =>

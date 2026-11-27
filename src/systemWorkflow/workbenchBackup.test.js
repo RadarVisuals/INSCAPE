@@ -1,4 +1,4 @@
-import { createStudioComposition } from './domain/studioComposition.js';
+import { createStudioComposition, currentStudioDraft } from './domain/studioComposition.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
@@ -70,7 +70,7 @@ test('corruption requires the reviewed fingerprint and can be replaced without f
   assert.equal(f.storage.getItem(systemWorkflowDraftKey(profile)), '{corrupt');
   f.fail(false);
   assert.equal(f.store.restoreBackup(draft, { expectedGeneration: 0, expectedFingerprint: fingerprint }), true);
-  assert.deepEqual(f.store.getDraft(), draft);
+  assert.deepEqual(f.store.getDraft(), currentStudioDraft(draft));
 });
 test('restore rejects profile switches and never accepts unreadable storage as empty', () => {
   const f = setup(), draft = f.store.getDraft(); f.store.setProfileAddress(other);
@@ -129,11 +129,13 @@ test('opening a mixed single Studio draft preserves artwork and only saves curre
   const { store, records } = setup(raw);
   assert.equal(store.getRecordState().status, 'valid');
   assert.equal(records.get(systemWorkflowDraftKey(profile)), raw);
-  assert.deepEqual(store.getDraft().composition, draft.composition);
+  assert.deepEqual(store.getDraft(), currentStudioDraft(draft));
+  assert.equal(Object.hasOwn(store.getDraft(), 'composition'), false);
   assert.equal(Object.hasOwn(store.getDraft(), 'reception'), false);
   assert.ok(store.renameWorkbench('The Last one'));
   const saved = records.get(systemWorkflowDraftKey(profile));
   assert.doesNotMatch(saved, /"reception"/iu);
   const copy = parseWorkbenchBackup(serializeWorkbenchBackup(store.getBackupSnapshot()), profile);
-  assert.deepEqual(copy.draft.workbenches[0].content.composition, draft.composition);
+  assert.deepEqual(copy.draft.workbenches[0].content.cells, draft.composition.cells);
+  assert.equal(Object.hasOwn(copy.draft.workbenches[0].content, 'composition'), false);
 });

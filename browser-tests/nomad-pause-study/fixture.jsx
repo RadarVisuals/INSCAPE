@@ -48,10 +48,10 @@ const nomads = params.get('nomad') === '1' ? Array.from({ length: 4 }, (_, i) =>
       [key, mediaOrigin + '/study-media/' + (params.get('variant') === 'baseline' ? 'baseline' : 'compact') + '.svg'])) };
 }) : [];
 const assets = [...sources, layered, keeperSource, ...nomads], resolve = createProfileDocumentV9AssetResolver(assets);
-const draft = createEmptySystemWorkflowDraft(profile); draft.grids = [];
+const draft = createEmptySystemWorkflowDraft(profile);
 
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 4200, height: 3200 } };
-draft.workbench.display.open = false;
+
 const numbers = size === 'small' ? { images: 4, texts: 2, shapes: 4, paragraphs: 3 }
   : { images: 16, texts: 12, shapes: 24, paragraphs: 12 };
 draft.imageModules = Array.from({ length: numbers.images }, (_, i) => ({
@@ -81,9 +81,9 @@ draft.workbench.shapes = draft.shapes.map((item, i) => ({ id: item.id, open: tru
 draft.keeperDocks = [{ id: 'keeper:perf', name: 'Shared Keeper', asset: resolve(keeperSource.id), faces: 'right',
   movement: 'swim', size: 192, visibility: 'PRIVATE' }];
 draft.workbench.keeperDocks = [{ id: 'keeper:perf', position: { left: 24, top: 32 } }];
-const empty = createEmptySystemWorkflowDraft(profile); empty.grids = [];
+const empty = createEmptySystemWorkflowDraft(profile);
 empty.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 2000, height: 1600 } };
-empty.workbench.display.open = false;
+
 empty.workbench.keeperDocks = structuredClone(draft.workbench.keeperDocks);
 if (!studyStorage.getItem(key)) {
   let collection = createWorkbenchCollection(draft); collection.workbenches[0].name = 'Filled study';

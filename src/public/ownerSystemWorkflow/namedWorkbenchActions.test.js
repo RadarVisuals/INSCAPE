@@ -119,9 +119,10 @@ test('a local Bento link to the canvas prevents deletion', () => {
   const added = actions.create('Linked canvas');
   root.switchWorkbench('workbench:main');
   const linked = root.getDraft();
-  linked.composition = createStudioComposition('bento');
-  linked.composition.cells[0].content = 'link:study';
-  linked.composition.links = [{ id: 'link:study', kind: 'source', destination: null,
+  const { version, ...layout } = createStudioComposition('bento');
+  Object.assign(linked, layout);
+  linked.cells[0].content = 'link:study';
+  linked.links = [{ id: 'link:study', kind: 'source', destination: null,
     source: { profileAddress: profile, canvasId: added, moduleId: 'text:study' } }];
   assert.ok(root.commitCompletedOperation(linked, { expectedGeneration: root.getGeneration() }));
   root.switchWorkbench(added);
@@ -149,7 +150,7 @@ test('creation captures the departing canvas and delayed actions cannot touch it
   actions.create('Studies');
   const accepted = raw(), count = flushes();
   assert.notEqual(root.getWorkbenchId(), first);
-  assert.equal(root.getDraft().texts, undefined);
+  assert.deepEqual(root.getDraft().texts, []);
   assert.deepEqual(JSON.parse(accepted).workbenches[0].content.workbench, projection.value);
   assert.throws(() => actions.rename('Late rename'), /cannot save/);
   assert.throws(() => actions.switchTo(root.getWorkbenchId()), /cannot save/);

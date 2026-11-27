@@ -139,23 +139,26 @@ export async function launchOwnedChromium(options, {
     onOwnedProcess({ rootPid: child.pid, processTree: tree, identity: root.identity });
     timer = setInterval(() => { if (!observing && !stopped) void observe().catch(error => errors.push(error)); }, BROWSER_LIFECYCLE_TIMEOUTS.processObservationMs);
     timer.unref();
-    let endpoint;
+    let endpoint, portFileSeen = false;
     while (!endpoint) {
       if (stopped) throw Error('Owned Chromium launch was cancelled');
       if (launchError) throw launchError;
       if (!alive()) throw Error('Owned Chromium exited before its debugging endpoint was ready');
-      if (Date.now() - startedAt >= timeout) throw Error('Owned Chromium launch deadline exceeded');
+      if (Date.now() - startedAt >= timeout) throw Error(portFileSeen
+        ? 'Owned Chromium launch deadline exceeded with an incomplete or invalid debugging endpoint'
+        : 'Owned Chromium launch deadline exceeded');
       try {
-        const [port, path] = (await readEndpoint(join(profile, 'DevToolsActivePort'), 'utf8')).trim().split(/\r?\n/u);
-        if (!/^\d+$/u.test(port) || Number(port) < 1 || Number(port) > 65535 || !/^\/devtools\/browser\/[\w-]+$/u.test(path))
-          throw Error('Invalid owned Chromium debugging endpoint');
-        endpoint = `ws://127.0.0.1:${port}${path}`;
+        // The file can exist before Chromium finishes writing its port and browser UUID.
+        const contents = await readEndpoint(join(profile, 'DevToolsActivePort'), 'utf8');
+        portFileSeen = true;
+        const match = /^(\d{1,5})\r?\n(\/devtools\/browser\/[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})$/iu.exec(contents.trimEnd());
+        if (match && Number(match[1]) > 0 && Number(match[1]) <= 65535)
+          endpoint = `ws://127.0.0.1:${match[1]}${match[2]}`;
       } catch (error) {
         // Chromium can still hold the freshly-created port file on Windows.
-        // Only these transient file states retry, under the same launch deadline.
         if (!['ENOENT', 'EBUSY', 'EPERM'].includes(error.code)) throw error;
-        await delay(20);
       }
+      if (!endpoint) await delay(20);
     }
     // CDP connects to our freshly-created endpoint and leaves process ownership
     // here. It cannot invoke Playwright's launchServer taskkill/process-group fallback.

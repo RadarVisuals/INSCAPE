@@ -13,8 +13,7 @@ export function createWorkbenchSession({ store }) {
     const generation = store.getGeneration();
     const candidate = makeCandidate(store.getDraft());
     if (candidate === null) return false;
-    // The Studio cell scope validates its native modules together with their cells during the commit.
-    const document = store.getCells ? candidate : assertValidSystemWorkflowDraft(candidate);
+    const document = assertValidSystemWorkflowDraft(candidate);
     if (!store.commitCompletedOperation(document, { ...options, expectedGeneration: generation })) {
       throw failure('SYSTEM_WORKFLOW_OPERATION_STALE', 'The change could not be saved. Storage may be unavailable or the draft changed in another tab.');
     }

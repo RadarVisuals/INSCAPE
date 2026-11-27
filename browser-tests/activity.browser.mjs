@@ -40,9 +40,9 @@ for (const theme of ['dark', 'light']) for (const [width, height] of [[1440,900]
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await mount(browser, width, height, theme), before = await saved(page), view = await camera(page);
-      await destination(page, 'Docs');
+      await destination(page, 'Publish');
       const expected = await page.locator('.workbench-destination-panel').evaluate(material);
-      await page.getByRole('button', { name: 'Close Docs' }).click();
+      await page.getByRole('button', { name: 'Close Publication' }).click();
       const trigger = await destination(page, 'Activity'); await drawer(page).waitFor();
       const check = async panel => {
         const box = await panel.boundingBox();

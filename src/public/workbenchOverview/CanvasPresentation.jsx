@@ -21,7 +21,7 @@ function Reveal({ label, icon: Icon, active, onActivate, children }) {
     onKeyDown={event => { if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); button.current?.focus(); setHovered(false); setFocused(false); setPinned(false); } }}>
     <button ref={button} type="button" aria-label={label} title={label} aria-expanded={open}
       onClick={() => { onActivate(); setPinned(!pinned); if (pinned) { setHovered(false); setFocused(false); } }}><Icon size={16} aria-hidden="true" /></button>
-    <section className="canvas-presentation-popover" aria-label={label} aria-hidden={!open} inert={open ? undefined : ''}>{children}</section>
+    <section className="canvas-presentation-popover" aria-label={label} aria-hidden={!open} inert={open ? undefined : ''}>{typeof children === 'function' ? children(open) : children}</section>
   </div>;
 }
 
@@ -210,14 +210,14 @@ export default function CanvasPresentation({ selected: openingWork, model: openi
                   <h2>{selected.name}</h2><p>{selected.introduction || 'No description yet.'}</p>
                   <dl><div><dt>Canvas</dt><dd>{model.area.width} × {model.area.height}</dd></div><div><dt>Contains</dt><dd>{model.contains}</dd></div></dl>
                 </Reveal>
-                <Reveal label="Artwork info" icon={Tags} active={reveal === 'artwork'} onActivate={() => setReveal('artwork')}>
+                <Reveal label="Artwork info" icon={Tags} active={reveal === 'artwork'} onActivate={() => setReveal('artwork')}>{open => <>
                   <label className="canvas-presentation-source">Artwork<select aria-label="Artwork source" value={source?.id || ''} onChange={event => setSourceId(event.target.value || null)}>
                     <option value="">Choose a piece</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name}{item.frames.length > 1 ? ` (${item.frames.length} placements)` : ''}</option>)}
                   </select></label>
-                  {source ? <>{source.dossier ? <OwnerSystemWorkflowMetadataContent dossier={source.dossier} /> : <p>Source information is currently unavailable for this piece.</p>}
+                  {open && source ? <>{source.dossier ? <OwnerSystemWorkflowMetadataContent dossier={source.dossier} /> : <p>Source information is currently unavailable for this piece.</p>}
                     <button type="button" onClick={() => setSourceId(null)}>Clear highlight</button></>
                     : <p>{sources.length ? 'Choose a piece to see its creator, description, attributes and source.' : 'No artwork sources in this composition.'}</p>}
-                </Reveal>
+                </>}</Reveal>
                 <button type="button" title="Camera index" aria-label="Camera index" aria-expanded={indexOpen} onClick={() => setIndexOpen(!indexOpen)}><PanelRight size={16} /></button>
               </div>
               <nav className="canvas-presentation-views" aria-label="Camera points">

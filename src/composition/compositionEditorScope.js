@@ -4,12 +4,7 @@ import { duplicateCompositionLayers, duplicateCompositionSlide } from './duplica
 import { editCellSlides, slideIndex, slideKey, assignSlide } from './cellSlides.js';
 import { drawCompositionBentoCell } from './compositionCellDrawing.js';
 import { moveCompositionBentoCell, placeCompositionBentoCells } from './compositionBentoInsertion.js';
-import { projectCompositionCellMembers } from './editorCellGeometry.js';
-import { createBlankWorkbenchDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
-import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
-import { createShapePresentation } from '../shapes/shapes.js';
-import { createImagePresentation } from '../imageModule/imageModule.js';
 import { applyCompositionLayout } from './compositionLayoutGenerator.js';
 import { resizeCompositionBentoFrame, setCompositionBentoSettings,
   setCompositionCellRadius, setCompositionCellClip, setCompositionCellGrain, setCompositionCellMemberAnchor, setCompositionCellSingleLine } from './compositionBento.js';
@@ -25,8 +20,6 @@ import { changesLockedArtwork, withArtworkLocks } from '../systemWorkflow/domain
 const lockedLayerError = () => Object.assign(new Error('Unlock this layer before changing it.'), { code: 'locked' });
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const moduleKeys = ['imageModules', 'texts', 'shapes'];
-const nativeKeys = ['workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers'];
-const nativeContent = value => Object.fromEntries(nativeKeys.map(key => [key, value[key]]));
 // Preserve host-only values when capturing a Composition edit.
 const compositionWorkbench = (presentation, saved) => {
   const next = { ...presentation };
@@ -36,51 +29,32 @@ const compositionWorkbench = (presentation, saved) => {
   return next;
 };
 const recordIds = draft => moduleKeys.flatMap(key => (draft[key] || []).map(item => item.id));
-const freeze = value => {
-  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
-  Object.values(value).forEach(freeze); return Object.freeze(value);
-};
 
 export function createCompositionEditorScope(rootStore, options = {}) {
   const documentId = options.documentId ?? rootStore.getWorkbenchId();
   if (documentId !== rootStore.getWorkbenchId()) throw new Error('Reopen the composition to edit it.');
-  const underlying = rootStore.acquireCompositionScope();
+  const underlying = rootStore.getWorkbenchScope();
   const profile = underlying.getProfileAddress();
-  const base = freeze(createBlankWorkbenchDraft(profile));
-  let snapshot, source, projectedComposition, released = false, editingCell = null, commitFailure = null;
+  let snapshot, released = false, editingCell = null, commitFailure = null;
   let slidePositions = {};
   const guards = new Set(), listeners = new Set();
   const current = () => !released && underlying.isCurrent();
-  const writable = () => current() && underlying.hasWriteAccess()
-    && Boolean(underlying.getSnapshot().composition);
+  const writable = () => current() && underlying.hasWriteAccess();
   const read = () => {
     if (!current()) return snapshot;
     const next = underlying.getSnapshot();
-    if (next !== source && next.composition) {
+    if (next !== snapshot) {
       commitFailure = null;
-      const composition = next.composition;
-      projectedComposition = freeze(composition);
-      if (editingCell && !composition.cells.some(cell => cell.id === editingCell)) editingCell = null;
-      snapshot = freeze({ ...base, identityPresentation: next.identityPresentation,
-        ...nativeContent(composition) });
-      source = next;
+      if (editingCell && !next.cells.some(cell => cell.id === editingCell)) editingCell = null;
+      snapshot = next;
     }
     return snapshot;
   };
-  const convert = (candidate, rootDocument = underlying.getSnapshot(), previous = read(), targetCell = editingCell, newText) => {
+  const completeCellEdit = (candidate, before = read(), targetCell = editingCell, newText) => {
     if (!candidate || candidate.profileAddress !== profile) throw new Error('This composition is no longer active.');
-    const stable = value => Object.fromEntries(Object.entries(value).filter(([key]) => !nativeKeys.includes(key) && key !== 'identityPresentation'));
-    if (!same(stable(candidate), stable(previous))) throw Object.assign(new Error('This command is unavailable for this composition.'), { code: 'composition_command' });
-    const before = rootDocument.composition;
     if (targetCell && !before.cells.some(cell => cell.id === targetCell)) throw new Error('This Bento cell is no longer available.');
-    let next = { ...before, ...Object.fromEntries(nativeKeys.map(key => [key, candidate[key] || (key === 'workbench' ? before.workbench : [])])) };
-    next.workbench = compositionWorkbench(next.workbench, before.workbench);
-    const added = recordIds(candidate).filter(id => !recordIds(previous).includes(id));
-    for (const id of added) if (!compositionModuleWindow(next, id)) {
-      const key = moduleKeys.find(key => next[key].some(item => item.id === id));
-      const make = { imageModules: createImagePresentation, texts: createTextPresentation, shapes: createShapePresentation }[key];
-      next = { ...next, workbench: { ...next.workbench, [key]: [...(next.workbench[key] || []), make(id, next[key].length - 1)] } };
-    }
+    let next = candidate;
+    const added = recordIds(candidate).filter(id => !recordIds(before).includes(id));
     if (targetCell && added.length) next = {
       ...next, cells: next.cells.map(cell => cell.id === targetCell ? assignSlide({ ...cell, members: [...cell.members, ...added] }, added, slideIndex(cell, slidePositions)) : cell),
     };
@@ -117,33 +91,24 @@ export function createCompositionEditorScope(rootStore, options = {}) {
       }
     }
     if (changesLockedArtwork(before, next)) throw lockedLayerError();
-    assertLockedLayersUnchanged(before, next);
-    next = reconcileCompositionCells(before, next);
-    return { ...rootDocument, composition: next, identityPresentation: candidate.identityPresentation };
-  };
-  const safeOptions = opts => {
-    // Translate native live geometry to Composition history, never the active canvas.
-    const { historyPresentation, newText, ...safe } = opts || {};
-    read();
-    return { ...safe, ...(historyPresentation ? { historyComposition: { ...projectedComposition, workbench: compositionWorkbench(historyPresentation, projectedComposition.workbench) } } : {}) };
+    return next;
   };
   const reject = reason => { commitFailure = reason; listeners.forEach(listener => listener()); return false; };
   const commit = (candidate, opts = {}, targetCell = editingCell) => {
     commitFailure = null;
     if (!writable()) return reject('editor_unavailable');
-    try { return underlying.commitCompletedOperation(convert(candidate, undefined, undefined, targetCell, opts.newText), safeOptions(opts)); } catch (error) { return reject(error.code || 'invalid'); }
+    try { return underlying.commitCompletedOperation(completeCellEdit(candidate, undefined, targetCell, opts.newText), opts); } catch (error) { return reject(error.code || 'invalid'); }
   };
   const mutate = (make, label, presentation, reconciliationOptions) => {
     if (!writable()) throw new Error('This composition is no longer active.');
-    const generation = underlying.getGeneration(), accepted = underlying.getSnapshot();
-    const original = accepted.composition;
+    const generation = underlying.getGeneration(), original = underlying.getSnapshot();
     const before = presentation ? reconcileCompositionCells(original,
       { ...original, workbench: compositionWorkbench(structuredClone(presentation), original.workbench) }) : original;
-    const composition = reconcileCompositionCells(before, make(before), reconciliationOptions);
+    const composition = make(before);
     if (changesLockedArtwork(original, composition)) throw lockedLayerError();
     if (same(composition, original)) return true;
-    if (!underlying.commitCompletedOperation({ ...accepted, composition: composition }, { expectedGeneration: generation, historyLabel: label,
-      ...(presentation ? { historyComposition: before } : {}) }))
+    if (!underlying.commitCompletedOperation(composition, { expectedGeneration: generation, historyLabel: label, cellReconciliation: reconciliationOptions,
+      ...(presentation ? { historyPresentation: before.workbench } : {}) }))
       throw new Error('The change could not be saved. Your saved work is unchanged.');
     return true;
   };
@@ -165,7 +130,7 @@ export function createCompositionEditorScope(rootStore, options = {}) {
     whenCommitted: underlying.whenCommitted,
     getBackupSnapshot(candidate) {
       if (!current()) throw new Error('This composition is no longer active.');
-      return underlying.getBackupSnapshot(candidate ? convert(candidate) : undefined);
+      return underlying.getBackupSnapshot(candidate);
     },
     subscribe: listener => {
       listeners.add(listener);
@@ -179,18 +144,24 @@ export function createCompositionEditorScope(rootStore, options = {}) {
       commitFailure = null;
       if (!writable()) return reject('editor_unavailable');
       return underlying.retryCompletedOperation(recovered => {
-        const composition = recovered.composition;
-        const previous = { ...base, identityPresentation: recovered.identityPresentation, ...nativeContent(composition) };
-        try { const next = make(structuredClone(previous)); return next && convert(next, recovered, previous); }
+        try { const next = make(structuredClone(recovered)); return next && completeCellEdit(next, recovered); }
         catch (error) { return reject(error.code || 'invalid'); }
-      }, safeOptions(opts));
+      }, opts);
     },
     undo: () => writable() && underlying.undo(), redo: () => writable() && underlying.redo(),
     beginHistoryGroup: () => writable() && underlying.beginHistoryGroup(), endHistoryGroup: () => writable() && underlying.endHistoryGroup(),
-    isCollection: () => false, listWorkbenches: () => [],
-    guardWorkbenchTransition: check => { guards.add(check); return () => guards.delete(check); },
-    getCells: () => { read(); return current() ? projectedComposition.cells : []; },
-    getComposition: () => { read(); return current() ? projectedComposition : null; },
+    isCollection: underlying.isCollection, listWorkbenches: underlying.listWorkbenches,
+    restoreBackup: underlying.restoreBackup,
+    createWorkbench: underlying.createWorkbench, deleteWorkbench: underlying.deleteWorkbench,
+    switchWorkbench: underlying.switchWorkbench, renameWorkbench: underlying.renameWorkbench,
+    leaveWorkbench: underlying.leaveWorkbench,
+    guardWorkbenchTransition: check => {
+      guards.add(check);
+      const stop = underlying.guardWorkbenchTransition(check);
+      return () => { guards.delete(check); stop(); };
+    },
+    getCells: () => { read(); return current() ? snapshot.cells : []; },
+    getComposition: () => { read(); return current() ? snapshot : null; },
     previewFittedTextFrame(cellId, id, article) {
       const before = api.getComposition();
       if (!before?.cells.some(cell => cell.id === cellId && cell.fitText?.includes(id))) return null;
@@ -282,21 +253,4 @@ export function createCompositionEditorScope(rootStore, options = {}) {
   });
   bindWorkbenchTextRecovery(api);
   return api;
-}
-
-function assertLockedLayersUnchanged(before, next) {
-  // A child lock protects direct edits; deleting its owning cell removes the whole contents.
-  for (const cell of before.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id))) for (const id of cell.lockedMembers || []) {
-    const key = moduleKeys.find(key => before[key].some(item => item.id === id));
-    const old = before[key].find(item => item.id === id), current = next[key].find(item => item.id === id);
-    const content = record => key === 'imageModules' && record ? Object.fromEntries(Object.entries(record).filter(([key]) => !['width', 'height'].includes(key))) : record;
-    if (!same(content(old), content(current))) throw lockedLayerError();
-    const oldFrame = compositionModuleWindow(before, id), newFrame = compositionModuleWindow(next, id);
-    if (same(oldFrame, newFrame)) continue;
-    const oldCell = compositionModuleWindow(before, cell.id), newCell = compositionModuleWindow(next, cell.id);
-    if (!oldCell || !newCell || same(oldCell, newCell)) throw lockedLayerError();
-    const frames = Object.fromEntries(cell.members.map(id => [id, compositionModuleWindow(before, id)]));
-    const expected = projectCompositionCellMembers(oldCell, newCell, frames, cell)[id];
-    if (!newFrame || Object.keys(expected).some(key => Math.abs(newFrame[key] - expected[key]) > 1)) throw lockedLayerError();
-  }
 }

@@ -1,3 +1,4 @@
+import { StartupDestinationContext } from '../src/startveil/StartupDestinationContext.jsx';
 import { interfaceTheme } from '../src/interfaceTheme.js';
 if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
   interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
@@ -166,7 +167,12 @@ function Fixture() {
     Profile: () => navigation.openOverview(account.address), Gallery: () => navigation.openCanvas(account.address),
     Writing: () => navigation.openWriting(account.address), Studio: owner ? () => navigation.openStudio(address) : undefined,
   };
-  return <GalleryStudioMotion.Provider value={navigation.motion}><div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
+  const destinationReady = () => {
+    const ticket = navigation.motion.chrome.current;
+    if (ticket?.route === navigation.route) ticket.ready();
+  };
+  return <GalleryStudioMotion.Provider value={navigation.motion}>
+    <StartupDestinationContext.Provider value={destinationReady}><div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
     {content?.kind === 'workbench' ? <Suspense fallback={null}>
       <OwnerWorkspace profileAddress={address} canvasOverviewRequested={content.canvas === true}
         requestedWorkId={content.worksEditorId}
@@ -196,6 +202,6 @@ function Fixture() {
       entry={{ surface: content?.writing ? 'writing' : content?.canvas ? 'canvas' : 'overview', target: content?.target }}
       onOpenCanvas={() => navigation.openCanvas(address)} onOpenOverview={() => navigation.openOverview(address)} />}
     {confirmation && <Suspense fallback={null}><PublicationConfirmation confirmation={confirmation} onClose={() => setConfirmation(null)} /></Suspense>}
-  <GalleryStudioStage /></div></div></GalleryStudioMotion.Provider>;
+  <GalleryStudioStage /></div></div></StartupDestinationContext.Provider></GalleryStudioMotion.Provider>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

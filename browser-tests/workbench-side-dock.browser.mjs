@@ -40,12 +40,12 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await page.goto(`${origin}/browser-tests/reception-editor-fixture.html?sample&session=sidebar-${theme}`);
+    await page.goto(`${origin}/browser-tests/composition-native-editor-fixture.html?sample&session=sidebar-${theme}`);
     const layers = sharedToolPanel(page, 'Layers');
     const inspector = page.getByRole('region', { name: 'Inspector', exact: true });
     const navigator = page.getByRole('region', { name: 'Navigator', exact: true });
     await layers.waitFor(); await navigator.waitFor(); await settle(page);
-    if (theme === 'light') await page.getByRole('button', { name: 'Switch to Light', exact: true }).click();
+    if (theme === 'light') await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
     const original = await layers.boundingBox();
     await page.locator('main.system-workflow').press('Escape');
     assert.match(await inspector.innerText(), /Select a cell or artwork/);
@@ -61,7 +61,7 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     assert.equal(await inspector.getByRole('tab', { name: 'Inspector', exact: true }).evaluate(node => getComputedStyle(node).boxShadow), 'none', 'a sole panel title has no selection underline');
     const draft = await page.evaluate(() => {
       window.sidebarOriginalNodes = [...document.querySelectorAll('.workbench-tool-panel')];
-      return window.receptionFixture.root.getDraft();
+      return window.nativeCompositionFixture.root.getDraft();
     });
     await page.getByRole('button', { name: 'Collapse left sidebar', exact: true }).click(); await settle(page);
     assert.equal(await layers.isVisible(), false); assert.equal(await navigator.isVisible(), false);
@@ -92,7 +92,7 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     assert.deepEqual(await collapse.boundingBox(), controlBounds, 'panel controls do not move between Layers and Library');
     const search = page.getByRole('searchbox', { name: 'Search', exact: true });
-    const labels = await page.getByRole('button', { name: 'Library display options', exact: true }).boundingBox();
+    const labels = await page.getByRole('button', { name: 'Library view options', exact: true }).boundingBox();
     const assets = await layers.locator('.lattice-browser-results').boundingBox();
     assert.ok(labels.y < assets.y, 'display controls stay above assets');
     assert.equal(await layers.locator('header').getByRole('button', { name: 'Layers and Library window options', exact: true }).count(), 1);
@@ -101,19 +101,21 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     assert.equal(await layers.getByRole('button', { name: /^Undock / }).count(), 0);
     await search.fill('skull');
     await page.getByRole('button', { name: 'Collapse left sidebar', exact: true }).click();
-    await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).press('Space');
+    const expand = page.getByRole('button', { name: 'Expand left sidebar', exact: true });
+    await expand.hover(); await expand.press('Space');
     assert.equal(await search.inputValue(), 'skull', 'Library content survives collapse');
     await page.getByRole('button', { name: 'Collapse left sidebar', exact: true }).click();
     await page.waitForFunction(key => {
       const stored = localStorage.getItem(key);
       const collapsed = stored && JSON.parse(stored).value.sideDock.collapsed;
       return collapsed?.left && collapsed?.right;
-    }, `reception-test:sidebar-${theme}:inscape:editor-preferences:v1:0x${'1'.repeat(40)}`);
+    }, `native-composition:sidebar-${theme}:inscape:editor-preferences:v1:0x${'3'.repeat(40)}`);
     await page.reload();
     await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Expand right sidebar', exact: true }).isVisible(), true);
     await page.getByRole('button', { name: 'Expand right sidebar', exact: true }).click();
     await editorDestination(page, 'Preview');
+    await page.getByRole('dialog', { name: 'Composition preview' }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).isVisible(), false, 'Preview has no editor handles');
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).waitFor();
@@ -122,7 +124,7 @@ for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sideb
     await layers.getByRole('tab', { name: 'Layers', exact: true }).click();
     await layers.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
     assert.equal(await navigator.isVisible(), true, 'X closes a panel, not its sidebar');
-    assert.deepEqual(await page.evaluate(() => window.receptionFixture.root.getDraft()), draft, 'shell actions never alter the Reception');
+    assert.deepEqual(await page.evaluate(() => window.nativeCompositionFixture.root.getDraft()), draft, 'shell actions never alter the Composition');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

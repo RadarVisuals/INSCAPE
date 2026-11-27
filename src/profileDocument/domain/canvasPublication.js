@@ -1,9 +1,8 @@
 import { compositionArtworkFields } from '../../systemWorkflow/domain/retiredInterfaceAppearance.js';
 import { FIRST_WORKBENCH_ID, isWorkbenchCollection, createWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
+import { buildProfileDocumentV9Candidate } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { CANVAS_CONTENT_KEYS, canvasContent, canvasDetails, canvasDocument, publishedCanvasEntries, publishedCompositionEntries, validPublicationDestinations } from './publishedCanvases.js';
-import { projectCompositionEditorDocument, validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 
 import { canReplaceInvalidPublication } from './canReplaceInvalidPublication.js';
@@ -29,17 +28,12 @@ const canonical = value => JSON.stringify(value, function (key, item) {
 });
 export function canvasPublicationCandidates({ record, assetRecords, profile }) {
   const collection = isWorkbenchCollection(record) ? record : createWorkbenchCollection(record);
-  const build = draft => buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: collection.profileAddress,
+  const build = draft => buildProfileDocumentV9Candidate({ systemWorkflowDraft: draft, profileAddress: collection.profileAddress,
     profileIdentity: profile, assetRecords });
   const candidates = collection.workbenches.map(item => {
     try {
-      const { composition, ...draft } = projectWorkbenchDraft(collection, item.id);
-      const document = build(draft);
+      const document = build(projectWorkbenchDraft(collection, item.id));
       const content = canvasContent(document);
-      if (composition) {
-        if (composition.version !== 3 || !validCompositionEditorDocument(composition)) throw new Error('Invalid Studio composition.');
-        content.composition = projectCompositionEditorDocument(composition);
-      }
       return { ...canvasDetails(item), content, document };
     } catch (error) { return { ...canvasDetails(item), error: error.message }; }
   });

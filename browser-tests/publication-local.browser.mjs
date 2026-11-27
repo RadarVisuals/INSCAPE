@@ -21,6 +21,8 @@ for (const width of [1440, 390]) test(`local publication prepares 30 canvases wi
     const work = rack.getByRole('group', { name: 'Canvas 2', exact: true });
     await work.getByRole('checkbox', { name: 'Profile', exact: true }).check();
     await work.getByRole('checkbox', { name: 'Gallery', exact: true }).uncheck();
+    const both = rack.getByRole('group', { name: 'Canvas 3', exact: true });
+    await both.getByRole('checkbox', { name: 'Profile', exact: true }).check();
     const prepare = rack.getByRole('button', { name: 'Prepare publication', exact: true });
     assert.equal(await prepare.isEnabled(), true);
     await prepare.click();
@@ -34,8 +36,10 @@ for (const width of [1440, 390]) test(`local publication prepares 30 canvases wi
     assert.equal(state.writes, 0, 'upload does not publish an on-chain pointer');
     const document = JSON.parse(state.bytes), entries = publishedCanvasEntries(document);
     assert.equal(entries.length, 30);
-    assert.deepEqual(publishedCompositionEntries(document, 'profile').map(item => item.name), ['Canvas 2']);
-    assert.equal(publishedCompositionEntries(document, 'gallery').length, 29);
+    assert.deepEqual(publishedCompositionEntries(document, 'profile').map(item => item.name), ['Canvas 2', 'Canvas 3']);
+    assert.deepEqual(publishedCompositionEntries(document, 'gallery').map(item => item.id),
+      entries.filter(item => item.name !== 'Canvas 2').map(item => item.id));
+    assert.equal(new Set(entries.map(item => item.id)).size, 30);
     for (const entry of entries) {
       assert.deepEqual(entry.content.imageModules.map(image => image.artwork.asset.name), ['ABYSSAL STUDY', 'MOUNTAIN SIGNAL II']);
     }

@@ -159,6 +159,8 @@ test('public projection excludes private cells and their children and filters mo
 test('cell validation rejects cycles, double membership, stale references and unknown module frames', () => {
   const value = sample();
   const invalid = make => { const next = structuredClone(value); make(next); assert.equal(validComposition(next), false); };
+  invalid(v => { v.texts = {}; });
+  invalid(v => { v.workbench.texts = {}; });
   invalid(v => v.cells[0].members.push(v.cells[0].id));
   invalid(v => v.cells[0].members.push(v.cells[0].members[0]));
   invalid(v => v.cells[0].members.push('shape:missing'));

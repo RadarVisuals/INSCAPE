@@ -1,9 +1,10 @@
 // src/App.jsx
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { WorkspaceBrand } from './public/menus/WorkspaceHeader.jsx';
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import ProfileSignIn from './startveil/ProfileSignIn.jsx';
 import { Startveil } from './startveil/index.js';
-import { StartupDestinationBoundary, StartupDestinationContext, StartupDestinationReady } from './startveil/StartupDestinationContext.jsx';
+import { StartupDestinationBoundary, StartupDestinationContext } from './startveil/StartupDestinationContext.jsx';
 import { getConnectedProfileAddress, useWalletStore } from './store/useWalletStore.js';
 import { GalleryStudioMotion } from './navigation/galleryStudioMotion.js';
 import GalleryStudioStage from './navigation/GalleryStudioStage.jsx';
@@ -28,7 +29,7 @@ function App() {
   const standaloneWalletSessionRef = useRef(null);
   const creepsMetadataRecoveryRoute = useMemo(() => import.meta.env.DEV
     && window.location.pathname.replace(/\/+$/, '') === '/development/creeps-recovery', []);
-  const [revealStage, setRevealStage] = useState('sealed');
+  const openingMenu = useRef(null);
   const [readyDestinationKey, setReadyDestinationKey] = useState(null);
   const interfaceRef = useRef(null);
   const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
@@ -44,9 +45,12 @@ function App() {
   const initWallet = useWalletStore((state) => state.initWallet);
   const beginWalletTransition = useWalletStore((state) => state.beginWalletTransition);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
-  const navigation = useApplicationNavigation({ status: authorityLifecycleStatus,
+  const [restoringSession] = useState(() => window.parent !== window || hasPersistedStandaloneConnection());
+  const navigation = useApplicationNavigation({ restoringSession, status: authorityLifecycleStatus,
     profileAddress: verifiedOwnerProfileAddress, signedInAddress: connectedProfileAddress, ownershipVerified });
   const { destination, beginDisconnect } = navigation;
+  const [revealStage, setRevealStage] = useState(() => navigation.route.kind === 'home'
+    && !restoringSession ? 'sealed' : 'complete');
   const viewedProfileAddress = destination.address || null;
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
   const ownerAuthoringEnabled = destination.kind === 'workbench';
@@ -80,12 +84,36 @@ function App() {
 
   // Reveal a resolved destination or its recovery UI; optional artwork media
   // continues loading inside that destination. Sign-in is immediately available.
-  const destinationKey = `${destination.kind}:${destination.address || ''}`;
-  const onDestinationReady = useCallback(() => setReadyDestinationKey(destinationKey), [destinationKey]);
+  const route = navigation.route;
+  const surface = destination.kind === 'public' ? (destination.target ? 'Composition' : destination.writing ? 'Writing' : destination.canvas ? 'Gallery' : 'Profile')
+    : route.curation ? 'Curation' : route.editor ? 'Studio' : route.canvas ? 'Manage works'
+    : route.writing ? 'Writing' : route.gallery ? 'Gallery' : route.target ? 'Composition' : 'Profile';
+  const destinationKey = `${destination.kind}:${destination.address || ''}:${surface}:${route.workId || route.target?.moduleId || ''}`;
+  const { chrome } = navigation.motion;
+  const onDestinationReady = useCallback((ready = true) => {
+    if (!ready) {
+      setReadyDestinationKey(current => current === destinationKey ? null : current);
+      return;
+    }
+    setReadyDestinationKey(destinationKey);
+    if (chrome.current?.route === route) chrome.current.ready();
+  }, [chrome, destinationKey, route]);
   const entryDestinationReady = showStartveilSignIn || (destination.kind !== 'pending'
-    && (destination.kind === 'curation' || ownerSourceReady) && readyDestinationKey === destinationKey);
+    && readyDestinationKey === destinationKey);
+  const opening = revealStage === 'complete' && !standaloneSignInActive && destination.kind !== 'entry'
+    && !navigation.motion.journey && !entryDestinationReady;
+  const openingProfile = useRef(false);
+  useLayoutEffect(() => {
+    const wasOpening = openingProfile.current;
+    openingProfile.current = opening && surface === 'Profile';
+    if (!wasOpening || opening || surface !== 'Profile' || !entryDestinationReady
+      || chrome.current || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const fade = interfaceRef.current?.animate([{ opacity: 0 }, { opacity: 1 }],
+      { duration: 200, easing: 'ease-out' });
+    return () => fade?.cancel();
+  }, [opening, surface, entryDestinationReady, chrome]);
   useEffect(() => {
-    if (revealStage !== 'complete') return;
+    if (revealStage !== 'complete' || opening) return;
     const node = interfaceRef.current;
     if (!node) return;
     if (document.activeElement !== node && node.contains(document.activeElement)
@@ -93,7 +121,7 @@ function App() {
     const focusTarget = [...node.querySelectorAll('[data-published-focus-fallback], .visitor-grid-world, .workspace-header .workspace-brand')]
       .find((target) => !target.closest('[inert]') && target.getClientRects().length && !target.disabled);
     (focusTarget || node).focus({ preventScroll: true });
-  }, [revealStage, destinationKey, readyDestinationKey]);
+  }, [revealStage, destinationKey, readyDestinationKey, opening]);
 
   useEffect(() => {
     if (window.parent !== window) {
@@ -226,12 +254,16 @@ function App() {
         onContextMenu={(event) => desktopContextMenuRef.current?.(event)}
       >
       </div>
+      {opening && <div className="destination-opening">
+        <header className="workspace-header"><WorkspaceBrand current={surface} destinations={ownerDestinations} trigger={openingMenu} />
+          <span role="status">Opening {surface}…</span></header>
+      </div>}
       <div
         className="application-interface"
         ref={interfaceRef} tabIndex={-1}
-        data-visible={interfaceVisible || undefined}
-        aria-hidden={!interfaceVisible}
-        inert={revealStage === 'complete' ? undefined : ''}
+        data-visible={(interfaceVisible && !opening) || undefined}
+        aria-hidden={!interfaceVisible || opening}
+        inert={!opening && revealStage === 'complete' ? undefined : ''}
       >
       <StartupDestinationContext.Provider key={`${destination.kind}:${viewedProfileAddress || ''}`} value={onDestinationReady}>
       <StartupDestinationBoundary>
@@ -244,7 +276,6 @@ function App() {
             : destination.kind === 'entry' ? <ProfileSignIn onConnect={requestStandaloneSignIn} />
             : destination.kind === 'curation' && canOpenStudio ? <Suspense fallback={<div className="mode-loading" role="status">Opening Curation...</div>}>
               <CurationPage key={destination.address} profileAddress={destination.address} destinations={ownerDestinations} onBack={navigation.closeCuration} />
-              <StartupDestinationReady />
             </Suspense> : localOwnerRoute ? ownerWorkspace : <Suspense fallback={<div className="mode-loading" role="status">Opening profile…</div>}>
             <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
             connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn} ownerDestinations={ownerDestinations}
@@ -273,13 +304,13 @@ function App() {
         }} />
       </Suspense>}
       </div>
-      <Startveil
+      {revealStage !== 'complete' && <Startveil
         ready={entryDestinationReady}
         portal={showStartveilSignIn}
         onConnect={requestStandaloneSignIn}
         onRevealInterface={() => setRevealStage('interface')}
         onComplete={() => setRevealStage('complete')}
-      />
+      />}
     </div></GalleryStudioMotion.Provider>
   );
 }

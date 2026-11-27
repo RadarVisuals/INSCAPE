@@ -31,7 +31,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
     for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, heavy: true, count: 2, displayWidth: 600, textModes: true });
+      await mountGridMotionFixture(page, { origin, heavy: true, count: 2, shapeWidth: 600, textModes: true });
       await page.locator('.editor-menu-bar').waitFor();
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => document.fonts.ready); await settle(page);
@@ -39,7 +39,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaX: -160, deltaY: 80, bubbles: true, cancelable: true });
       await settle(page);
       const before = await draft(page), initialCamera = await camera(page);
-      await page.evaluate(() => { window.groupModuleNodes = [...document.querySelectorAll('[data-workbench-view-id]')]; });
+      await page.evaluate(() => { window.groupModuleNodes = [...document.querySelectorAll('[data-workbench-artwork][data-workbench-view-id]')]; });
       await choose(page, ['image:motion-0', 'image:motion-1']);
       await navigateWorkbench(page, 'groups');
       const panel = page.getByRole('complementary', { name: 'Workbench groups — Groups', exact: true });

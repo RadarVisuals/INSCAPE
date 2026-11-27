@@ -28,20 +28,10 @@
 }
 .workbench-destination-panel button:disabled { color: var(--tactile-disabled); cursor: default; }
 .workbench-destination-panel button:hover:not(:disabled) { background: var(--tactile-hover); }
-.workbench-destination-panel :is(button, input, summary, [role=tabpanel]):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.workbench-destination-panel :is(button, input, summary):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
 .workbench-destination-panel :focus:not(:focus-visible) { outline: none; }
 .workbench-destination-panel > footer { flex: none; padding: 10px 12px; border-top: 1px solid var(--tactile-edge); }
 .workbench-destination-empty { padding: 12px; color: var(--tactile-muted); }
-
-.system-workflow__manual { --destination-width: 540px; height: min(520px, calc(100dvh - var(--destination-top) - 12px)); }
-.system-workflow__manual .system-workflow__manual-tabs { flex: none; display: flex; min-width: 0; overflow-x: auto; border-bottom: 1px solid var(--tactile-edge); scrollbar-width: thin; }
-.system-workflow__manual-tabs button { flex: none; min-height: 36px; padding: 6px 10px; border: 0; background: transparent; color: var(--tactile-muted); font: inherit; cursor: pointer; }
-.system-workflow__manual-tabs button[aria-selected=true] { color: var(--tactile-ink); box-shadow: inset 0 -1px var(--tactile-ink); }
-.system-workflow__manual-body { flex: 1; padding: 0 12px; }
-.system-workflow__manual-body section { padding: 12px 0; }
-.system-workflow__manual-body section + section { border-top: 1px solid var(--tactile-edge); }
-.system-workflow__manual-body h2 { margin: 0 0 6px; font: 500 12px/1.5 var(--font-interface); }
-.system-workflow__manual-body p { margin: 0; color: var(--tactile-muted); line-height: 1.7; }
 
 .system-workflow__profile { --destination-width: 300px; }
 .system-workflow__profile-card { width: 100%; padding: 12px; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
@@ -60,5 +50,5 @@
   .workbench-destination-panel.workbench-tool-panel { --destination-target: 44px; }
   .workbench-destination-panel > .workbench-tool-panel-header { min-height: 52px; }
   .workbench-destination-panel .workbench-tool-panel-close { width: 44px; height: 44px; }
-  .system-workflow__manual-tabs button, .system-workflow__profile .system-workflow__profile-action { min-height: 44px; }
+  .system-workflow__profile .system-workflow__profile-action { min-height: 44px; }
 }

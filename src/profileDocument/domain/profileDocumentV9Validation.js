@@ -1,6 +1,7 @@
+import { MIN_CROP_PROJECTION_ZOOM } from '../../lattice/rendering/latticeCrop.js';
 import { isRecord as record, hasExactKeys as exactKeys, hasAllowedKeys as allowedKeys } from '../../recordValidation.js';
 import { compositionReferenceCount } from '../../composition/compositionReferenceCount.js';
-import { validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
+import { COMPOSITION_LAYOUT_KEYS, validCompositionArtwork, validCompositionEditorDocument } from '../../composition/compositionEditorDocument.js';
 import { compositionLinkProblems } from './compositionLinks.js';
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
 import { validatePublishedCanvases } from './publishedCanvases.js';
@@ -21,7 +22,7 @@ import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
-import { validImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
+import { validImageModules } from '../../imageModule/imageModule.js';
 import { validShapes } from '../../shapes/shapes.js';
 import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { validTextModules, assertArticle, ARTICLE_TYPE } from '../../text/domain/article.js';
@@ -109,7 +110,7 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   // collection envelope must not consume the composition's existing depth budget.
   const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
   if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition', 'canvas', 'canvases'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition', 'canvas', 'canvases', ...COMPOSITION_LAYOUT_KEYS])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -136,27 +137,30 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   validateIdentity(input.identityPresentation, fail);
   if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validCompositionEditorDocument(input.composition, true)))
     fail('composition', 'invalid_composition', 'Invalid published Studio composition');
+  if (COMPOSITION_LAYOUT_KEYS.some(key => Object.hasOwn(input, key)) && (input.composition || !validCompositionArtwork(input, true)))
+    fail('cells', 'invalid_composition', 'Invalid published Studio artwork or cells');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
   if (Object.hasOwn(input, 'shapes') && !validShapes(input.shapes, true)) fail('shapes', 'invalid_shapes', 'Invalid published Shape');
   if (Array.isArray(input.workbench?.shapes) && input.workbench.shapes.some(item => !Array.isArray(input.shapes) || !input.shapes.some(shape => shape?.id === item?.id))) fail('workbench.shapes', 'unknown_shape', 'Window refers to an unavailable Shape');
-  if (Object.hasOwn(input, 'imageModules') && !validImageModules(input.imageModules, true)) fail('imageModules', 'invalid_images', 'Invalid published Image module');
+  if (Object.hasOwn(input, 'imageModules') && !validImageModules(input.imageModules, true, { minimumCropZoom: MIN_CROP_PROJECTION_ZOOM,
+    isCellMember: id => Array.isArray(input.cells) && input.cells.some(cell => Array.isArray(cell?.members) && cell.members.includes(id)) })) fail('imageModules', 'invalid_images', 'Invalid published Image module');
   if (Array.isArray(input.workbench?.imageModules) && input.workbench.imageModules.some(item => !Array.isArray(input.imageModules) || !input.imageModules.some(image => image?.id === item?.id))) fail('workbench.imageModules', 'unknown_image', 'Window refers to an unavailable Image module');
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input, true)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid published Workbench Index');
   if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input, true)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid public artwork order');
   if (Object.hasOwn(input, 'workbenchGroups') && !validPublishedWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid public Workbench groups or unavailable members');
-  if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench, [], { published: true })) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
+  if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench, Array.isArray(input.cells) ? input.cells : [], { published: true })) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
   const documentAssetReferences = (input.identityPresentation?.avatar?.asset ? 1 : 0)
-    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + compositionReferenceCount(input.composition);
+    + keeperReferenceCount(input.keeperDocks) + compositionReferenceCount(input) + compositionReferenceCount(input.composition);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('$', 'too_many_asset_references', 'Too many total asset references');
   }
   validatePublishedCanvases(input, document => validateDocument(document, {}, false), fail);
   if (checkLinks && !errors.length) {
-    const linkedLayouts = [['composition', input.composition, input.canvas?.name || 'Canvas'],
-      ...(input.canvases || []).map(item => ['canvases.' + item.id + '.composition', item.content.composition, item.name])]
+    const linkedLayouts = [['cells', input.composition || input, input.canvas?.name || 'Canvas'],
+      ...(input.canvases || []).map(item => ['canvases.' + item.id + '.composition', item.content.composition || item.content, item.name])]
       .filter(([, layout]) => layout?.links?.length);
     if (linkedLayouts.length) {
       const snapshot = publishedPresentationSnapshot(input);
@@ -169,6 +173,14 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
 
 export function assertValidProfileDocumentV9(input, options) {
   const result = validateProfileDocumentV9(input, options);
+  if (!result.valid) throw new ProfileDocumentV9ValidationError(result.errors);
+  return result.value;
+}
+
+// A single selected work cannot resolve references to the other selected or
+// retained works yet. Final publication always uses assertValidProfileDocumentV9.
+export function assertValidProfileDocumentV9Candidate(input) {
+  const result = validateDocument(input, {}, false);
   if (!result.valid) throw new ProfileDocumentV9ValidationError(result.errors);
   return result.value;
 }

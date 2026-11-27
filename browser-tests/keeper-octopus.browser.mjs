@@ -26,7 +26,7 @@ async function seed(page) {
   await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
   await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
 }
-const sample = page => page.locator('.keeper-octopus').evaluate(node => ({
+const sample = page => page.locator('.keeper-roamer .keeper-octopus').evaluate(node => ({
   paths: [...node.querySelectorAll('[data-keeper-part^="tentacle-"]')].map(p => p.getAttribute('d')),
   eyes: [...node.querySelectorAll('clipPath path')].map(p => p.getAttribute('d')),
   gaze: [...node.querySelectorAll('[data-keeper-gaze]')].map(p => p.getAttribute('transform')),
@@ -35,6 +35,12 @@ const sample = page => page.locator('.keeper-octopus').evaluate(node => ({
 const arrives = (page, x, y) => page.waitForFunction(({ x, y }) => {
   const r = document.querySelector('.keeper-roamer').getBoundingClientRect(); return Math.hypot(r.x - x, r.y - y) < 8;
 }, { x, y });
+async function emptyWorkbenchPoint(page, candidates) {
+  const point = await page.evaluate(candidates => candidates.find(([x, y]) =>
+    document.elementFromPoint(x, y)?.matches('main.system-workflow, .system-workflow__workbench')), candidates);
+  assert.ok(point, 'a visible empty workbench surface is available for steering');
+  return point;
+}
 async function clickHead(page) {
   // The idle head never becomes stationary; click its current visible centre.
   const box = await page.getByRole('button', { name: 'Talk to Octopus', exact: true }).boundingBox();
@@ -86,9 +92,11 @@ test('Real dock animates eyes/tentacles/drops, steers, talks, recalls and preser
     await page.mouse.move(1300, 600); await page.waitForTimeout(250);
     const later = await sample(page);
     assert.notDeepEqual(later.paths, before.paths); assert.notDeepEqual(later.gaze, before.gaze);
-    await page.waitForFunction(() => [...document.querySelectorAll('[data-keeper-drops] > path')].some(p => p.style.display !== 'none'));
-    await page.mouse.click(1100, 700); await arrives(page, 1100, 700);
-    await page.mouse.move(750, 650); await page.mouse.down({ button: 'right' }); await arrives(page, 750, 650);
+    await page.waitForFunction(() => [...document.querySelectorAll('.keeper-roamer [data-keeper-drops] > path')].some(p => p.style.display !== 'none'));
+    const destination = await emptyWorkbenchPoint(page, [[1100, 700], [850, 620], [750, 700], [890, 480]]);
+    await page.mouse.click(...destination); await arrives(page, ...destination);
+    const follow = await emptyWorkbenchPoint(page, [[750, 650], [650, 500], [1000, 530], [700, 400]]);
+    await page.mouse.move(...follow); await page.mouse.down({ button: 'right' }); await arrives(page, ...follow);
     await page.mouse.move(950, 650); await arrives(page, 950, 650); await page.mouse.up({ button: 'right' });
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved);
     await clickHead(page);
@@ -107,8 +115,9 @@ test('Real dock animates eyes/tentacles/drops, steers, talks, recalls and preser
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved);
     await mount(page, true);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
-    assert.equal(await page.locator('[data-keeper-rig="octopus"]').count(), 1);
-    await page.mouse.click(1100, 700); await arrives(page, 1100, 700);
+    assert.equal(await page.locator('.keeper-roamer [data-keeper-rig="octopus"]').count(), 1);
+    const visitorDestination = await emptyWorkbenchPoint(page, [[1100, 700], [850, 620], [750, 700], [890, 480]]);
+    await page.mouse.click(...visitorDestination); await arrives(page, ...visitorDestination);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -127,11 +136,10 @@ test('Reduced motion and narrow viewport preserve controls; blur clears motion a
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
     const still = await sample(page); await page.mouse.move(1200, 700); await page.waitForTimeout(250);
     assert.deepEqual(await sample(page), still);
-    await page.mouse.click(1350, 900);
     await page.locator('.keeper-tools').waitFor({ state: 'hidden' });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
-    const box = await page.locator('.keeper-octopus').boundingBox();
+    const box = await page.locator('.keeper-roamer .keeper-octopus').boundingBox();
     assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= 390 && box.y + box.height <= 844);
     assert.equal(await page.evaluate(() => window.savedDraft().keeperDocks[0].size), 384);
     await page.screenshot({ path: '.browser-test-runtime/keeper-octopus-narrow.png' });
@@ -153,11 +161,13 @@ test('SVG float is the third choice: no mirrored turns, shared controls, saved s
     const returning = page.getByRole('button', { name: 'Return Keeper', exact: true });
     const selector = page.getByRole('combobox', { name: 'Keeper movement', exact: true });
     const docked = () => page.waitForFunction(() => document.querySelector('.keeper-instance').dataset.keeperPhase === 'docked');
-    const matrix = () => page.locator('[data-keeper-part="body"]').evaluate(node => {
+    const matrix = () => page.locator('.keeper-roamer [data-keeper-part="body"]').evaluate(node => {
       const m = node.transform.baseVal.consolidate().matrix; return { a: m.a, b: m.b, c: m.c, d: m.d };
     });
     const unmirrored = m => Math.abs(m.a * m.d - m.b * m.c - 1) < .001;
+    const settings = page.getByRole('button', { name: 'Keeper settings', exact: true });
     await release.click();
+    await settings.click();
     assert.deepEqual(await selector.locator('option').allTextContents(), ['Flip', 'Layered swim', 'SVG float']);
     await selector.selectOption('svg'); await docked(); await release.click();
     assert.equal(await page.getByRole('combobox', { name: 'Keeper artwork faces', exact: true }).count(), 0);
@@ -180,12 +190,12 @@ test('SVG float is the third choice: no mirrored turns, shared controls, saved s
     await returning.click(); await docked();
     await selector.selectOption('flip'); await release.click();
     assert.equal(await page.locator('.keeper-roamer > img').count(), 1);
-    assert.equal(await page.locator('.keeper-octopus').count(), 0);
+    assert.equal(await page.locator('.keeper-roamer .keeper-octopus').count(), 0);
     await returning.click(); await docked(); await selector.selectOption('svg');
     await page.reload(); await mount(page);
     const closeText = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeText.count()) await closeText.click();
-    await release.click(); assert.equal(await selector.inputValue(), 'svg');
+    await release.click(); await settings.click(); assert.equal(await selector.inputValue(), 'svg');
     await page.mouse.click(1100, 700); await arrives(page, 1100, 700);
     await page.mouse.click(700, 700); await arrives(page, 700, 700);
     assert.ok(unmirrored(await matrix()));
@@ -195,7 +205,7 @@ test('SVG float is the third choice: no mirrored turns, shared controls, saved s
     await page.setViewportSize({ width: 390, height: 844 }); await page.mouse.move(300, 200); await page.waitForTimeout(150);
     assert.deepEqual(await sample(page), still);
     assert.deepEqual(await matrix(), { a: 1, b: 0, c: 0, d: 1 });
-    const box = await page.locator('.keeper-octopus').boundingBox();
+    const box = await page.locator('.keeper-roamer .keeper-octopus').boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390);
     await page.screenshot({ path: '.browser-test-runtime/keeper-svg-narrow.png' });
     await page.setViewportSize({ width: 1440, height: 1000 }); await page.emulateMedia({ reducedMotion: 'no-preference' });

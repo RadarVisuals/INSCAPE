@@ -8,15 +8,14 @@ export async function openEditorMenu(page, name) {
     await canvas.getByRole('menuitem', { name, exact: true }).click();
     return page.getByRole('menu', { name: 'Compositions options', exact: true });
   }
-  const direct = { Docs: 'Help & Docs', Backup: 'Backup', Settings: 'Settings' };
   if (name === 'Bento') {
     await openEditorMenu(page, 'Tools');
     await page.getByRole('menu', { name: 'Tools options', exact: true }).getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
     return trigger;
   }
   const root = page.getByRole('menu', { name: 'Inscape menu', exact: true });
-  await root.getByRole('menuitem', { name: direct[name] || name, exact: true }).click();
-  return direct[name] ? trigger : page.getByRole('menu', { name: `${name} options`, exact: true });
+  await root.getByRole('menuitem', { name, exact: true }).click();
+  return ['Backup', 'Settings'].includes(name) ? trigger : page.getByRole('menu', { name: `${name} options`, exact: true });
 }
 export const activeEditorDocument = page => page.locator('.editor-menu-bar[data-document]').getAttribute('data-document');
 export async function editorCommand(page, menu, name, role = 'menuitem') {
@@ -84,7 +83,7 @@ export async function editorDestination(page, name) {
     await menu.getByRole('menuitemcheckbox', { name, exact: true }).click();
   } else {
     const menu = await openEditorMenu(page);
-    await menu.getByRole('menuitem', { name: name === 'Docs' ? 'Help & Docs' : name, exact: true }).click();
+    await menu.getByRole('menuitem', { name, exact: true }).click();
   }
   return trigger;
 }

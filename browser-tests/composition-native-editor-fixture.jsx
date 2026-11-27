@@ -29,12 +29,12 @@ if (root.listWorkbenches().length === 1) {
   addShape(root.getWorkbenchScope(), profileAddress, { position: { left: 50, top: 80 }, size: { width: 220, height: 160 } });
   root.createWorkbench('Cell study', { layout: 'canvas', generateId: () => 'cell-study' });
 }
-if (query.has('tiling') && !root.getDraft().composition?.cells.length) {
+if (query.has('tiling') && !root.getDraft()?.cells.length) {
   const scope = createCompositionEditorScope(root);
   scope.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, columns: 1, rows: 1 }, 42, scope.getGeneration());
   const left = scope.getCells()[0].id;
   // Fixed three-cell fixture: independent of the available editing commands.
-  const partition = root.getDraft(), value = partition.composition;
+  const partition = root.getDraft(), value = partition;
   const ids = [left, 'shape:tiling-top', 'shape:tiling-bottom'];
   const frames = [{ left: 24, top: 24, width: 684, height: 852 },
     { left: 732, top: 24, width: 684, height: 414 }, { left: 732, top: 462, width: 684, height: 414 }];
@@ -55,12 +55,12 @@ if (query.has('tiling') && !root.getDraft().composition?.cells.length) {
     addTextModule(inCell(id), profileAddress, { cellId: id, window }, { visibility: 'PUBLIC', appearance: { compact: true, background: null, color: '#ffffff' } });
   }
   const seeded = root.getDraft();
-  for (const [index, text] of seeded.composition.texts.entries()) {
-    const cell = seeded.composition.cells.find(cell => cell.members.includes(text.id));
-    const frame = seeded.composition.workbench.shapes.find(item => item.id === cell.id).window;
+  for (const [index, text] of seeded.texts.entries()) {
+    const cell = seeded.cells.find(cell => cell.members.includes(text.id));
+    const frame = seeded.workbench.shapes.find(item => item.id === cell.id).window;
     delete cell.fitText;
-    seeded.composition.workbench.texts.find(item => item.id === text.id).window = { left: frame.left + 30, top: frame.top + frame.height - 140, width: frame.width - 60, height: 110 };
-    if (query.has('positioning')) seeded.composition.workbench.texts.find(item => item.id === text.id).window = { left: frame.left + 30, top: frame.top + frame.height - 230, width: frame.width - 60, height: 200 };
+    seeded.workbench.texts.find(item => item.id === text.id).window = { left: frame.left + 30, top: frame.top + frame.height - 140, width: frame.width - 60, height: 110 };
+    if (query.has('positioning')) seeded.workbench.texts.find(item => item.id === text.id).window = { left: frame.left + 30, top: frame.top + frame.height - 230, width: frame.width - 60, height: 200 };
     if (query.has('automaticPadding')) { text.article.appearance.compact = false; text.article.appearance.scale = 1.25; }
     text.article.title = '';
     if (query.has('fluidText')) text.article.appearance.fontSize = index ? 28 : 16;
@@ -68,22 +68,22 @@ if (query.has('tiling') && !root.getDraft().composition?.cells.length) {
       ? "People think I'm the grim reaper but little do they know he only shows up when the work is already done."
       : 'Resize one cell; neighbours move aside without shrinking. Empty space stays where you leave it.' }] }] };
   }
-  if (query.has('fluidText')) seeded.composition.texts[0].article.content.content[0].content[0].marks = [{ type: 'textStyle', attrs: { fontSize: 28 } }];
-  if (query.has('longText')) seeded.composition.texts[0].article.content.content[0].content[0].text = seeded.composition.texts[0].article.content.content[0].content[0].text.repeat(16);
-  seeded.composition.shapes.find(item => item.id === left).name = 'Artwork';
-  seeded.composition.shapes.find(item => item.id === 'shape:tiling-top').name = 'Upper text';
-  seeded.composition.shapes.find(item => item.id === 'shape:tiling-bottom').name = 'Lower text';
+  if (query.has('fluidText')) seeded.texts[0].article.content.content[0].content[0].marks = [{ type: 'textStyle', attrs: { fontSize: 28 } }];
+  if (query.has('longText')) seeded.texts[0].article.content.content[0].content[0].text = seeded.texts[0].article.content.content[0].content[0].text.repeat(16);
+  seeded.shapes.find(item => item.id === left).name = 'Artwork';
+  seeded.shapes.find(item => item.id === 'shape:tiling-top').name = 'Upper text';
+  seeded.shapes.find(item => item.id === 'shape:tiling-bottom').name = 'Lower text';
   root.commitCompletedOperation(seeded, { expectedGeneration: root.getGeneration() });
   scope.release();
 }
-if (query.has('textAxes') && !root.getDraft().composition?.cells.length) {
+if (query.has('textAxes') && !root.getDraft()?.cells.length) {
   const scope = createCompositionEditorScope(root);
   scope.generateCellLayout({ ...COMPOSITION_LAYOUT_DEFAULTS, columns: 2, rows: 1 }, 42, scope.getGeneration());
   const cellId = scope.getCells()[1].id;
   const inCell = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(cellId, candidate, options) };
   const id = addTextModule(inCell, profileAddress, { window: { left: 794, top: 190, width: 560, height: 520 } },
     { visibility: 'PUBLIC', appearance: { compact: true, background: null, color: '#ffffff', fontSize: 28 } });
-  const draft = root.getDraft(), value = draft.composition;
+  const draft = root.getDraft(), value = draft;
   value.cells.forEach((cell, index) => {
     value.workbench.shapes.find(item => item.id === cell.id).window = { left: 24 + index * 708, top: 24, width: 684, height: 852 };
     value.shapes.find(item => item.id === cell.id).name = index ? 'Text cell' : 'Empty cell';
@@ -104,7 +104,7 @@ window.nativeCompositionFixture.showGutterReader = async (scale, phase) => {
   let node = document.getElementById('gutter-reader');
   if (!node) { node = document.createElement('div'); node.id = 'gutter-reader'; document.body.append(node); gutterReader = createRoot(node); }
   Object.assign(node.style, { position:'fixed', left:`${400 + phase}px`, top:'250px', width:'1000px', height:'500px', zIndex:9999, background:'#171717' });
-  const composition = structuredClone(root.getDraft().composition);
+  const composition = structuredClone(root.getDraft());
   composition.workbench.area.width = 1000 / scale;
   composition.workbench.area.height = 600 / scale;
   // Keep each visible cell wider than the reading threshold. This fixture

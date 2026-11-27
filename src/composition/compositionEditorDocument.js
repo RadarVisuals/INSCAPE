@@ -101,16 +101,30 @@ export function validCompositionInnerLines(lines) {
 
 export const visibleCompositionInnerLines = lines => lines?.hidden ? null : lines;
 
+// Cell layout is part of a Studio document, alongside the ordinary module
+// records. The public composition envelope adds its own exact key/version
+// boundary; authoring uses these same content rules inside the profile draft.
+export const COMPOSITION_LAYOUT_KEYS = ['cells', 'surface', 'surfaceOpacity', 'frameOpacity', 'frameColor', 'backgroundColor', 'frameRadius', 'links', 'arrangement', 'bento', 'showFrame', 'innerLines', 'stackOrder'];
+const COMPOSITION_RECORD_KEYS = ['workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers'];
+export function compositionDocumentFields(value) {
+  return { version: 3, ...Object.fromEntries([...COMPOSITION_RECORD_KEYS, ...COMPOSITION_LAYOUT_KEYS]
+    .filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])) };
+}
+
 export function validCompositionEditorDocument(value, published = false) {
   if (published) value = compositionArtworkFields(value);
-  if (!exact(value, ['version', 'workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers', 'cells'], ['surface', 'surfaceOpacity', 'frameOpacity', 'frameColor', 'backgroundColor', 'frameRadius', 'links', 'arrangement', 'bento', 'showFrame', 'innerLines', 'stackOrder'])
-    || Object.hasOwn(value, 'stackOrder') && value.stackOrder !== 'manual'
-    || value.version !== 3 || !Array.isArray(value.cells) || value.cells.length > 32
+  return exact(value, ['version', ...COMPOSITION_RECORD_KEYS, 'cells'], COMPOSITION_LAYOUT_KEYS.filter(key => key !== 'cells'))
+    && value.version === 3 && !value.workbench?.keeperDocks?.length
+    && validCompositionArtwork(value, published);
+}
+
+export function validCompositionArtwork(value, published = false) {
+  if (!value || Object.hasOwn(value, 'stackOrder') && value.stackOrder !== 'manual'
+    || !Array.isArray(value.cells) || value.cells.length > 32
     || !isValidWorkbenchPresentation(value.workbench, value.cells, { published })
     || !validShapes(value.shapes, published) || !validImageModules(value.imageModules, published, { minimumCropZoom: MIN_CROP_PROJECTION_ZOOM,
       isCellMember: id => value.cells.some(cell => Array.isArray(cell?.members) && cell.members.includes(id)) })
-    || !validTextModules(value.texts, published) || value.texts.some(item => item.pagination)
-    || value.workbench.texts?.some(item => Object.hasOwn(item, 'frames'))
+    || !validTextModules(value.texts, published)
     || !validArtworkLayers(value.artworkLayers, value, published)
     || ['surface', 'frameColor', 'backgroundColor'].some(key => Object.hasOwn(value, key) && value[key] !== null && (typeof value[key] !== 'string' || !/^#[0-9a-f]{6}$/iu.test(value[key])))
     || Object.hasOwn(value, 'links') && !validCompositionLinks(value.links)
@@ -119,7 +133,6 @@ export function validCompositionEditorDocument(value, published = false) {
     || Object.hasOwn(value, 'showFrame') && typeof value.showFrame !== 'boolean'
     || Object.hasOwn(value, 'innerLines') && value.innerLines !== null && !validCompositionInnerLines(value.innerLines)
     || Object.hasOwn(value, 'bento') && (!exact(value.bento, ['gap', 'padding']) || ![value.bento.gap, value.bento.padding].every(n => Number.isInteger(n) && number(n, 0, 256)))) return false;
-  if (['displays', 'keeperDocks'].some(key => value.workbench[key]?.length)) return false;
   const all = new Set(idsOf(value)), cellIds = new Set(), members = new Set();
   for (const key of keys) {
     const placed = value.workbench[key] || [];
@@ -195,7 +208,8 @@ export function projectCompositionEditorDocument(value) {
   const cells = pruneSwipeLinks(value.cells.filter(cell => allowed.has(cell.id)).map(cell => pruneCellMembers(cell, allowed)));
   const workbench = filterLayout(value.workbench, allowed);
   delete workbench.lockedLayerIds;
-  return structuredClone({ ...compositionArtworkFields(value), ...records, cells, workbench,
+  delete workbench.keeperDocks;
+  return structuredClone({ ...compositionDocumentFields(value), ...records, cells, workbench,
     artworkLayers: layerIds(artworkLayers(value)).filter(id => allowed.has(id)),
     ...(value.arrangement ? { arrangement: pruneCompositionArrangement(value.arrangement, cells.map(cell => cell.id)) } : {}),
     ...(value.links ? { links: value.links.filter(link => cells.some(cell => cell.content === link.id)) } : {}) });
@@ -215,6 +229,10 @@ export function createCompositionEditorDocument() {
 // children once. Explicit child transforms from a group gesture win unchanged.
 export function reconcileCompositionCells(previous, candidate, { resizeContents = true, preserveMemberAnchors = false, moveContents = false } = {}) {
   const backgrounds = new Set(candidate.shapes.map(shape => shape.id));
+  const previousIds = new Set(idsOf(previous)), candidateIds = new Set(idsOf(candidate));
+  if (candidate.cells.some(cell => !backgrounds.has(cell.id) && !previous.cells.some(old => old.id === cell.id)
+    || cell.members.some(id => !candidateIds.has(id) && !previousIds.has(id))))
+    throw new Error('The cell refers to unavailable artwork.');
   const retained = new Set(candidate.cells.filter(cell => backgrounds.has(cell.id)).flatMap(cell => cell.members));
   // Deleting a cell also deletes its native contents. Merges explicitly transfer
   // members to a surviving cell, so those records remain owned and intact.
@@ -271,7 +289,8 @@ export function reconcileCompositionCells(previous, candidate, { resizeContents 
       }
     }
   }
-  return assertCompositionEditorDocument(next);
+  if (!validCompositionArtwork(next)) throw new Error('The cells or artwork are invalid. Your saved work is unchanged.');
+  return next;
 }
 
 export function compositionResponsiveLayout(value, viewportWidth) {

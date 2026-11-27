@@ -53,6 +53,8 @@
   --spread-field: url('/assets/visitor/field-light.webp'); background-color: #dedbd3;
 }
 :root[data-palette]:not([data-palette='charcoal']) .visitor-publication {
+  /* Keep the device palette before the animated field has its first frame. */
+  background-color: var(--palette-canvas); background-image: none;
   --field-glow: var(--field-high); --field-shade: var(--field-low);
   --spread-heading: var(--palette-ink); --spread-active: var(--palette-ink);
   --spread-body: color-mix(in srgb, var(--palette-ink) 93%, var(--palette-canvas));
@@ -78,7 +80,7 @@
 
 .visitor-light-field { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; visibility: hidden; }
 .visitor-light-field[data-ready] { visibility: visible; }
-.visitor-publication:has(> .visitor-light-field:not([data-ready]))::before {
+:root:where(:not([data-palette]), [data-palette='charcoal']) .visitor-publication:has(> .visitor-light-field:not([data-ready]))::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: url('/assets/visitor/output-dither.png') repeat;
   opacity: .024;
@@ -100,8 +102,8 @@
   }
 }
 @media (min-width: 1251px) and (max-width: 1500px) {
-  .visitor-header:has(.visitor-toolbar-slot:not(:empty)) .visitor-navigation { gap: 16px; }
-  .visitor-header:has(.visitor-toolbar-slot:not(:empty)) .visitor-signature { gap: 14px; }
+  .visitor-header .visitor-navigation { gap: 16px; }
+  .visitor-header .visitor-signature { gap: 14px; }
 }
 @media (min-width: 701px) and (max-width: 1250px) {
   .visitor-header:has(.visitor-navigation) { grid-template-columns: minmax(0, 1fr) auto auto; }
@@ -136,7 +138,23 @@
 .visitor-tabs > button { position: relative; height: 32px; color: var(--spread-tab, var(--color-text-secondary)); }
 .visitor-tabs > button:disabled { opacity: .5; }
 .visitor-tabs > button[aria-current='page'] { color: var(--spread-active, var(--color-text-primary)); }
-.visitor-tabs > button[aria-current='page']::after { content: ''; position: absolute; bottom: 1px; left: 0; right: 0; height: 1px; background: currentColor; }
+.visitor-tab-line { pointer-events: none; position: absolute; bottom: 1px; left: 0; right: 0; height: 1px; background: currentColor; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:active-view-transition-type(public-tabs) {
+    .visitor-publication { view-transition-name: visitor-page; }
+    .visitor-header { view-transition-name: visitor-header; }
+    .visitor-tab-line { view-transition-name: visitor-tab-line; }
+  }
+  ::view-transition-group(visitor-page),
+  ::view-transition-group(visitor-tab-line) { animation-duration: 200ms; animation-timing-function: ease-in-out; }
+  /* Dissolve over one opaque destination; never add two full-screen fields. */
+  ::view-transition-old(visitor-page) { animation-name: visitor-page-leave; mix-blend-mode: normal; z-index: 1; }
+  ::view-transition-new(visitor-page) { animation: none; mix-blend-mode: normal; }
+  ::view-transition-group(visitor-header),
+  ::view-transition-new(visitor-header) { animation: none; }
+  ::view-transition-old(visitor-header) { display: none; }
+}
+@keyframes visitor-page-leave { from { opacity: 1; } to { opacity: 0; } }
 .visitor-tools { grid-column: 3; justify-self: end; gap: 12px; }
 .visitor-popover { position: absolute; z-index: 4; top: calc(100% + 4px); left: 0; min-width: 168px; padding: 5px; border: 1px solid var(--spread-line, var(--interface-line)); border-radius: 8px; background: var(--spread-panel, var(--interface-panel)); box-shadow: 0 8px 22px #0002; }
 .visitor-tools .visitor-popover { left: auto; right: 0; }

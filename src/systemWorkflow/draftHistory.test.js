@@ -1,3 +1,4 @@
+import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
@@ -20,7 +21,7 @@ test('chronological undo crosses Shape and Text and persists successful restorat
   const before = store.getDraft();
   rename(store, 'My shape');
   addTextModule(store, profile);
-  assert.equal(store.undo(), true); assert.equal(store.getDraft().texts, before.texts);
+  assert.equal(store.undo(), true); assert.deepEqual(store.getDraft().texts, before.texts);
   assert.equal(store.getDraft().shapes[0].name, 'My shape');
   assert.equal(store.undo(), true); assert.deepEqual(store.getDraft(), before);
   assert.equal(store.redo(), true); assert.equal(store.getDraft().shapes[0].name, 'My shape');
@@ -69,6 +70,7 @@ test('large article history stays bounded after grouped entry growth and retains
   const {store}=setup();
   const initial=store.getDraft();
   initial.texts=[{id:'text:history',visibility:'PRIVATE',article:createArticle()}];
+  initial.workbench.texts = initial.texts.map((text, i) => createTextPresentation(text.id, i));
   assert.equal(store.commitCompletedOperation(initial,{expectedGeneration:store.getGeneration()}),true);
   store.reload();
   for(let edit=0;edit<30;edit++) {

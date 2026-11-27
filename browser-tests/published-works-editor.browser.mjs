@@ -1,3 +1,4 @@
+import { ARTWORK_DOCUMENT_HEADERS, ARTWORK_DOCUMENT_HTML } from '../scripts/artworkDocumentHost.js';
 import { mkdir } from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,18 +28,27 @@ test('open a published Gallery work missing from Studio beside an existing priva
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.addInitScript(() => {
+      const start = document.startViewTransition.bind(document);
+      document.startViewTransition = options => {
+        window.lastRouteMotion = options.types;
+        return start(options);
+      };
+    });
     await page.goto(url + '&owner=1&publishedOnly=1');
     await page.getByRole('radio', { name: 'Grid view' }).check();
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
     assert.equal(await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:anatomy')), null);
     await page.getByRole('button', { name: 'Studio', exact: true }).click();
     await page.locator('.editor-menu-bar[data-document="workbench:main"]').waitFor();
+    assert.ok(await page.evaluate(() => window.lastRouteMotion.includes('studio-page')));
     await page.getByRole('button', { name: 'Back to Gallery' }).click();
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
     const original = await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:private'));
     await page.getByRole('button', { name: 'Edit Anatomy in Studio' }).click();
     const editor = page.locator('.editor-menu-bar[data-document="workbench:anatomy"]');
     await editor.waitFor();
+    assert.ok(await page.evaluate(() => window.lastRouteMotion.includes('gallery-studio')));
     await page.reload();
     await editor.waitFor();
     assert.deepEqual(await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:private')), original);
@@ -1161,4 +1171,42 @@ test('visited profile strip opens below its fixed header and QR fills the drawer
     assert.equal(await panel.getByRole('button', { name: 'Tip LYX' }).count(), 0);
     await panel.getByRole('button', { name: 'My profile' }).waitFor();
   } finally { await browser.close(); }
+});
+
+
+test('Studio keeps the outgoing screen until its visible artwork document has painted', { timeout: 45000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  let resume;
+  try {
+    const page = await browser.newPage({ reducedMotion: 'reduce' });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(url + '&owner=1');
+    await page.locator('.composition-explorer-viewport').waitFor();
+    await page.evaluate(() => {
+      const start = document.startViewTransition.bind(document);
+      document.startViewTransition = options => start({ ...options, update: async () => {
+        await options.update();
+        window.studioHandoffComplete = true;
+      } });
+    });
+    let reached;
+    const requested = new Promise(resolve => { reached = resolve; });
+    const blocked = new Promise(resolve => { resume = resolve; });
+    await page.route('**/.netlify/functions/artwork-document', async route => {
+      reached(); await blocked;
+      await route.fulfill({ headers: ARTWORK_DOCUMENT_HEADERS, body: ARTWORK_DOCUMENT_HTML });
+    });
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    const artwork = page.locator('.workbench-canvas-content iframe.artwork-svg-document').first();
+    await artwork.waitFor({ state: 'attached' });
+    await requested;
+    assert.equal(await artwork.getAttribute('data-svg-paint'), 'loading');
+    assert.equal(await page.evaluate(() => Boolean(window.studioHandoffComplete)), false);
+    resume();
+    await page.waitForFunction(() => window.studioHandoffComplete);
+    assert.equal(await artwork.getAttribute('data-svg-paint'), 'ready');
+  } finally {
+    resume?.();
+    await browser.close();
+  }
 });

@@ -9,21 +9,14 @@ import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
 import { openSharedTool, detachTool, sharedToolTab, sharedToolPanel, openSharedColorPicker, chooseSharedShape } from './fixtures/shared-tools.mjs';
 
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/shape-tools';
-const saved = page => page.evaluate(() => window.savedDraft());
+const saved = page => page.evaluate(() => window.readCommittedDraft());
 const undo = async page => { await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z'); };
 const field = async (panel, name, value) => {
   const input = panel.getByRole('spinbutton', { name, exact: true });
   await input.fill(String(value)); await input.press('Enter');
 };
 async function failStorage(page, fail) {
-  await page.evaluate(fail => {
-    if (!fail) { Storage.prototype.setItem = window.savedSetItem; return; }
-    window.savedSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full');
-      return window.savedSetItem.call(this, key, value);
-    };
-  }, fail);
+  await page.evaluate(fail => window.failWorkbenchWrites(fail), fail);
 }
 async function drag(page, handle, dx, dy) {
   const box = await handle.boundingBox();
@@ -38,7 +31,7 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountToolDockFixture(page, { shapes: true, shapeGrain: .65 });
-    assert.deepEqual(await page.getByRole('tablist', { name: 'Artwork tools' }).getByRole('tab').evaluateAll(nodes => nodes.map(node => node.dataset.toolTab || node.textContent)), ['Layers', 'Library', 'Inspector']);
+    assert.deepEqual(await page.getByRole('tablist', { name: 'Artwork tools' }).getByRole('tab').evaluateAll(nodes => nodes.map(node => node.dataset.toolTab || node.textContent)), ['Layers', 'Inspector']);
     await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
     let panel = await openSharedTool(page, 'Shape');
     const original = await saved(page);
@@ -155,9 +148,9 @@ test('Grid and texture settings retain their behavior in a narrow dock, includin
     await writeFile(`${output}/shape-keyboard-burst.json`, JSON.stringify(rapid, null, 2));
     assert.deepEqual(rapid, [
       { key: 'End', target: 'Layers', focus: 'Inspector' },
-      { key: 'ArrowLeft', target: 'Inspector', focus: 'Library' },
-      { key: 'ArrowLeft', target: 'Library', focus: 'Layers' },
-      { key: 'Home', target: 'Layers', focus: 'Layers' },
+      { key: 'ArrowLeft', target: 'Inspector', focus: 'Layers' },
+      { key: 'ArrowLeft', target: 'Layers', focus: 'Inspector' },
+      { key: 'Home', target: 'Inspector', focus: 'Layers' },
       { key: 'ArrowLeft', target: 'Layers', focus: 'Inspector' },
       { key: 'ArrowRight', target: 'Inspector', focus: 'Layers' },
     ]);

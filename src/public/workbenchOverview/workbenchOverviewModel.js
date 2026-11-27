@@ -7,7 +7,7 @@ import { workbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
 // Saved content is the only input. Browsing never needs a camera, editor scope,
 // module registry or a second persisted preview document.
 export function workbenchOverviewModel(draft) {
-  const composition = draft.composition;
+  const composition = draft.composition || (Array.isArray(draft.cells) ? draft : null);
   if (composition) draft = composition;
   const presentation = draft.workbench || createDefaultWorkbenchPresentation();
   const area = workbenchArea(presentation), artwork = new Map();

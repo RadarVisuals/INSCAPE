@@ -69,7 +69,8 @@ test('resize saves once, reloads and undoes without changing module content or e
   const before = store.getDraft(), generation = store.getGeneration();
   assert.ok(resize(store, { width: 600, height: 500 }));
   const after = store.getDraft(), { area, ...layout } = after.workbench;
-  assert.deepEqual(layout, before.workbench); assert.deepEqual(after.shapes, before.shapes); assert.deepEqual(after.workbenchGroups, before.workbenchGroups);
+  const { area: previousArea, ...previousLayout } = before.workbench;
+  assert.deepEqual(layout, previousLayout); assert.deepEqual(after.shapes, before.shapes); assert.deepEqual(after.workbenchGroups, before.workbenchGroups);
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), after);
   assert.equal(store.getHistory().undo, 'Resize canvas');
   assert.equal(store.getGeneration(), generation + 1);

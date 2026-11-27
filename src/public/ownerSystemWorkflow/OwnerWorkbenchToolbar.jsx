@@ -10,7 +10,6 @@ import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreat
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import { artworkModuleId, artworkRecords } from '../../systemWorkflow/domain/artworkLayers.js';
 import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
-import { createCompositionCellDrawGesture } from '../../composition/compositionCellDrawing.js';
 import { compositionLayoutCountRange } from '../../composition/compositionLayoutGenerator.js';
 import { useEditorCells, isEditorCellSurface } from '../../composition/EditorCellsContext.jsx';
 
@@ -24,14 +23,14 @@ const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 
 // Adapts Workbench commands to the toolbar. It does not own module content,
 // camera state, tool windows, or a second command/persistence implementation.
-export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePreference, commands, onCommand, onOpenLibrary, libraryOpen,
+export default function OwnerWorkbenchToolbar({ hostRef, shapePreference, commands, onCommand, onOpenLibrary, libraryOpen,
   preferences, onPreferencesChange, hidden, onRevealCreationTools, exiting = false, onHistory, history, historyBlocked, onNotice, artworkLayersOpen, onToggleArtworkLayers, onOpenSharedTool, showIdentity = true, searchRequest, searchEnabled = true }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera(), tools = useSharedDisplayTools();
   const cells = useEditorCells();
   const [ghost, setGhost] = useState(null);
   const gesture = useRef(null), space = useRef(false), latest = useRef(null), suppressedPointer = useRef(null);
-  latest.current = { view, camera, hidden, onCommand, onNotice, areaBounds, cells, beginFirstCell, preferences, historyBlocked };
+  latest.current = { view, camera, hidden, onCommand, onNotice, areaBounds, cells, preferences, historyBlocked };
   const cancel = useCallback(() => {
     const active = gesture.current;
     gesture.current = null;
@@ -62,7 +61,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       if (event.code === 'Space' && !event.ctrlKey && !event.metaKey && !event.altKey) { space.current = true; cancel(); return; }
       if (event.defaultPrevented) return;
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.repeat) return;
-      const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape', ...(latest.current.cells || latest.current.beginFirstCell ? { c: 'cell' } : {}) }[event.key.toLowerCase()];
+      const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape', ...(latest.current.cells ? { c: 'cell' } : {}) }[event.key.toLowerCase()];
       if (tool || event.key === 'Escape' && latest.current.view.interactionTool !== 'select') {
         event.preventDefault(); event.stopPropagation(); cancel();
         if (tool === 'cell') latest.current.cells?.leaveCell(false);
@@ -74,7 +73,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
     const visibility = () => { if (document.hidden) blur(); };
     const down = event => {
       const current = latest.current, tool = current.view.interactionTool;
-      if ((tool === 'cell' && (!current.beginFirstCell || current.historyBlocked)) || gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
+      if (tool === 'cell' || gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
         || host.hasAttribute('data-workbench-pan-ready') || event.button !== 0 || event.isPrimary === false
         || event.ctrlKey || event.metaKey || (event.altKey && tool !== 'cell') || event.target.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       const point = { x: event.clientX, y: event.clientY };
@@ -82,18 +81,6 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       if (!background) return;
       event.preventDefault(); event.stopPropagation();
       gesture.current = { tool, start: point, pointerId: event.pointerId, host, camera: current.camera.getCamera(), cellId: current.cells?.editingCellId };
-      if (tool === 'cell') {
-        const active = gesture.current, { scale, offset } = active.camera;
-        try {
-          const first = current.beginFirstCell(current.view.getPresentation());
-          const start = { x: (point.x - offset.x) / scale, y: (point.y - offset.y) / scale };
-          const draw = createCompositionCellDrawGesture(first.composition, 'shape:' + crypto.randomUUID(), start,
-            scale, undefined, current.preferences.gridSpacing);
-          active.propose = pointer => draw({ x: pointer.clientX - point.x, y: pointer.clientY - point.y },
-            current.preferences.shortcutSnap === pointer.altKey);
-          active.place = first.place;
-        } catch (error) { cancel(); current.onNotice(error.message); return; }
-      }
       suppressedPointer.current = event.pointerId;
       host.setPointerCapture(event.pointerId);
       host.focus({ preventScroll: true });
@@ -103,15 +90,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       if (!active || active.pointerId !== event.pointerId) return;
       if (!(event.buttons & 1) || !sameCreationCamera(active.camera, latest.current.camera.getCamera())) { cancel(); return; }
       event.preventDefault(); event.stopPropagation();
-      if (active.propose) {
-        try {
-          const proposal = active.propose(event);
-          if (!proposal) { setGhost(null); return; }
-          const frame = proposal.args[1], { scale, offset } = active.camera;
-          setGhost({ left: frame.left * scale + offset.x, top: frame.top * scale + offset.y,
-            width: frame.width * scale, height: frame.height * scale });
-        } catch (error) { cancel(); latest.current.onNotice(error.message); }
-      } else if (isShapeCommand(active.tool)) setGhost({ left: Math.min(active.start.x, event.clientX), top: Math.min(active.start.y, event.clientY),
+      if (isShapeCommand(active.tool)) setGhost({ left: Math.min(active.start.x, event.clientX), top: Math.min(active.start.y, event.clientY),
         width: Math.abs(event.clientX - active.start.x), height: Math.abs(event.clientY - active.start.y) });
     };
     const finish = event => {
@@ -121,16 +100,6 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       const current = latest.current;
       if (current.hidden || current.camera.locked || active.tool !== current.view.interactionTool || active.cellId !== current.cells?.editingCellId || !sameCreationCamera(active.camera, current.camera.getCamera())) return;
       const point = { x: event.clientX, y: event.clientY }, hit = document.elementFromPoint(point.x, point.y);
-      if (active.propose) {
-        if (!current.beginFirstCell || current.historyBlocked || !host.contains(hit) || hit.closest(OVERLAYS)) return;
-        try {
-          const proposal = active.propose(event);
-          if (!proposal) return;
-          if (!active.place(proposal.next)) throw Error('Could not save the cell. Draw it again.');
-          current.view.setInteractionTool('select');
-        } catch (error) { current.onNotice(error.message); }
-        return;
-      }
       const placed = workbenchCreationPlacement(active.start, point, active.camera, isShapeCommand(active.tool), current.areaBounds);
       if (!placed || !host.contains(hit) || hit?.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       if (active.tool === 'text' && !isWorkbenchBackground(hit, host) && !isEditorCellSurface(hit, current.cells)) return;
@@ -178,8 +147,8 @@ export default function OwnerWorkbenchToolbar({ hostRef, beginFirstCell, shapePr
       if (isCreationTool(command.id)) chooseTool(command.id);
       else { chooseTool('select'); onCommand(command.id); }
     } });
-  const addCommands = [...(cells || beginFirstCell ? [{ id: 'cell', label: 'Cell', shortcut: 'C',
-    disabled: cells ? cells.cells.length >= compositionLayoutCountRange(cells.store.getComposition()).max : Boolean(historyBlocked) }] : []), ...commands].map(adapt);
+  const addCommands = [...(cells ? [{ id: 'cell', label: 'Cell', shortcut: 'C',
+    disabled: cells.cells.length >= compositionLayoutCountRange(cells.store.getComposition()).max || Boolean(historyBlocked) }] : []), ...commands].map(adapt);
   const shapeCommands = addCommands.filter(command => isShapeCommand(command.id))
     .map(command => command.id === 'shape' ? { ...command, shortcut: 'R' } : command);
   const selectedId = view.selection.length === 1 ? artworkModuleId(view.content, view.selection[0]) : null;

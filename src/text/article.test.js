@@ -172,10 +172,11 @@ test('selection size and tracking preserve old articles and survive save, undo, 
     assert.throws(() => assertArticle({ ...article, appearance: { ...article.appearance, titleLetterSpacing } }));
 });
 
-test('Text creation saves its requested Workbench position atomically and retains old default placement', () => {
+test('Text creation saves default and requested Workbench positions atomically', () => {
   const f = fixture(), first = addTextModule(f.store, profile);
   const before = f.store.getDraft();
-  assert.equal(before.workbench?.texts?.length || 0, 0, 'older callers retain the existing default');
+  assert.deepEqual(before.workbench.texts, [createTextPresentation(first)], 'default placement is part of the saved document');
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().workbench, before.workbench);
   const workbench = createDefaultWorkbenchPresentation();
   workbench.texts = [{ ...createTextPresentation(first), window: { left: 350, top: 400, width: 500, height: 300 } }];
   const id = addTextModule(f.store, profile, { position: { left: 1300.5, top: 930.25 }, workbench });
@@ -309,7 +310,7 @@ test('unsupported blocks, unsafe links, unknown fonts and malformed structures f
   assert.equal(validTextModules([null]), false);
 });
 test('old draft stays unchanged; text edits save, reopen, undo and reject stale or failed writes', () => {
-  const f = fixture(), old = f.store.getDraft(); assert.equal(f.entries.size, 0); assert.equal(Object.hasOwn(build(old), 'texts'), false);
+  const f = fixture(), old = f.store.getDraft(); assert.equal(f.entries.size, 0); assert.deepEqual(build(old).texts, []);
   addTextModule(f.store, profile); const original = f.store.getDraft().texts[0];
   const next = { ...original, article: articleWithText('First edition', 'Essay') };
   assert.ok(saveTextModule(f.store, profile, original, next));

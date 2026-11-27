@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
-export const OWNER_SYSTEM_WORKFLOW_PANEL_IDS = Object.freeze(['activity', 'backup', 'docs', 'profile', 'settings']);
+export const OWNER_SYSTEM_WORKFLOW_PANEL_IDS = Object.freeze(['activity', 'backup', 'profile', 'settings']);
 
 const reducedMotionPreferred = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
@@ -47,10 +47,9 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
   const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
   const activity = useOwnerSystemWorkflowPanelPresence(activePanel === 'activity');
   const backup = useOwnerSystemWorkflowPanelPresence(activePanel === 'backup');
-  const docs = useOwnerSystemWorkflowPanelPresence(activePanel === 'docs');
   const profile = useOwnerSystemWorkflowPanelPresence(activePanel === 'profile');
   const settings = useOwnerSystemWorkflowPanelPresence(activePanel === 'settings');
-  const presence = useMemo(() => ({ activity, backup, docs, profile, settings }), [activity, backup, docs, profile, settings]);
+  const presence = useMemo(() => ({ activity, backup, profile, settings }), [activity, backup, profile, settings]);
 
   const closePanel = useCallback(({ panelId = null, returnFocus = true } = {}) => {
     const focused = document.activeElement;

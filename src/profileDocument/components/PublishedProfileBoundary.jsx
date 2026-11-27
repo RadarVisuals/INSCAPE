@@ -73,9 +73,9 @@ function UnpublishedProfilePage({ address, account, state, entry, onRetry, onRev
   return <div className={unpublished ? 'visitor-publication' : 'published-status-page'}>
     <PublicWorkspaceHeader model={model} account={account} current={current} {...header} />
     {unpublished ? <Suspense fallback={<p role="status">Opening {current}.</p>}>
-      <StartupDestinationReady />
+      {current !== 'Profile' && <StartupDestinationReady />}
       {current === 'Profile' && <>
-        <VisitorProfile model={model} />
+        <VisitorProfile model={model} identityStatus={identity?.status} />
         <p className="visitor-notice">{own ? 'You have no published work on Inscape yet.' : 'This artist has no published work on Inscape yet.'}</p>
       </>}
       {current === 'Gallery' && <PublishedCanvasGallery entries={emptyEntries} snapshot={emptySnapshot}
@@ -85,8 +85,9 @@ function UnpublishedProfilePage({ address, account, state, entry, onRetry, onRev
   </div>;
 }
 
-function OwnerGallery({ resolution, getWalletPublicationContext, onRetry, onPublicationConfirmed, ...preview }) {
+function ResolvedPublication({ editableGallery, resolution, getWalletPublicationContext, onRetry, onPublicationConfirmed, ...preview }) {
   const [removal, setRemoval] = useState(null);
+  if (removal && !editableGallery) setRemoval(null);
   const { restoreFocus } = useDeferredFocusReturn();
   const verified = resolution.status === PUBLISHED_PROFILE_STATUS.RESOLVED && !resolution.busy;
   const close = () => {
@@ -98,8 +99,8 @@ function OwnerGallery({ resolution, getWalletPublicationContext, onRetry, onPubl
     if (ids.length) setRemoval({ ids, trigger, document: resolution.document });
   };
   return <><PublishedProfileDocumentPreview {...preview} document={resolution.document}
-    onRemoveFromGallery={verified ? reviewRemoval : undefined} />
-    {removal && <Suspense fallback={<span role="status">Opening publication review.</span>}>
+    onRemoveFromGallery={editableGallery && verified ? reviewRemoval : undefined} />
+    {editableGallery && removal && <Suspense fallback={<span role="status">Opening publication review.</span>}>
       <GalleryRemovalReview removal={removal} onRetry={onRetry} getWalletPublicationContext={getWalletPublicationContext}
         onClose={close} onPublished={(result, context) => { close(); onPublicationConfirmed(result, context); }} />
     </Suspense>}
@@ -128,9 +129,8 @@ export default function PublishedProfileBoundary({
     ownerDestinations={ownerDestinations} onConnect={onConnect} onDisconnect={onDisconnect} />;
   const editableGallery = returnToWorkbench && connectedProfile?.address?.toLowerCase() === address.toLowerCase()
     && entry?.surface === 'canvas' && !entry.target && getWalletPublicationContext && onPublicationConfirmed && onRetry;
-  return <>{editableGallery ? <OwnerGallery key={address} resolution={resolution} entry={entry} onReturn={returnHome} {...navigation}
+  return <><ResolvedPublication key={address} editableGallery={editableGallery} resolution={resolution} entry={entry} onReturn={returnHome} {...navigation}
     getWalletPublicationContext={getWalletPublicationContext} onPublicationConfirmed={onPublicationConfirmed} onRetry={onRetry} />
-    : <PublishedProfileDocumentPreview document={visibleDocument} entry={entry} onReturn={returnHome} {...navigation} />}
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
   </>;
 }

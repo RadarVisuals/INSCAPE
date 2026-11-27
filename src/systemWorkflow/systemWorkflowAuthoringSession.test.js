@@ -1,3 +1,4 @@
+import { currentStudioDraft } from './domain/studioComposition.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveIdentityCard } from '../profileIdentity/domain/identityCard.js';
@@ -54,7 +55,8 @@ test('drafts written with the removed subtitle still open and save without losin
   const storage = memoryStorage({ [systemWorkflowDraftKey(PROFILE_A)]: raw });
   const store = createStore(storage);
   assert.equal(store.getRecordState().status, SYSTEM_WORKFLOW_RECORD_STATUS.VALID);
-  const expected = structuredClone(original); delete expected.identityPresentation.card.subtitle;
+  const clean = structuredClone(original); delete clean.identityPresentation.card.subtitle;
+  const expected = currentStudioDraft(clean);
   assert.deepEqual(store.getDraft(), expected);
   assert.equal(storage.getItem(systemWorkflowDraftKey(PROFILE_A)), raw);
   assert.equal(storage.activity.writes, 0);

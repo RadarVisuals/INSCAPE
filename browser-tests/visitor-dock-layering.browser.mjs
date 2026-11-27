@@ -29,7 +29,7 @@ test('Visitor and Preview dock stays visible and clickable above overlapping Tex
       await mountTextToolsFixture(page, origin, { visitor: !preview });
       if (preview) await editorCommand(page, 'Canvas', 'Preview');
       const visitor = page.locator('.visitor-grid-world').first();
-      const article = visitor.locator('.text-window').first();
+      const article = visitor.locator('aside.text-window').first();
       const dock = visitor.locator('.visitor-grid-world__dock');
       await article.getByText('Overlapping article', { exact: true }).waitFor();
       await dock.waitFor();

@@ -1,4 +1,4 @@
-import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
+import { buildProfileDocumentV9Candidate } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
 
 export function buildOwnerSystemWorkflowPreviewDocument({
@@ -11,7 +11,7 @@ export function buildOwnerSystemWorkflowPreviewDocument({
   systemWorkflowDraft,
   workbench,
 }) {
-  return buildProfileDocumentV9({
+  return buildProfileDocumentV9Candidate({
     assetRecords,
     createdAt,
     exportedAt,
@@ -29,10 +29,10 @@ export function buildOwnerSystemWorkflowPublicationDocument({ previousDocument =
     throw new TypeError('The previous publication belongs to a different profile');
   }
   const exportedAt = input.exportedAt ?? new Date();
-  return buildOwnerSystemWorkflowPreviewDocument({
+  return assertValidProfileDocumentV9(buildOwnerSystemWorkflowPreviewDocument({
     ...input,
     createdAt: previous?.createdAt ?? exportedAt,
     exportedAt,
     revision: previous ? previous.revision + 1 : 1,
-  });
+  }));
 }

@@ -10,7 +10,7 @@ import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-artwork-layers';
-const saved = page => page.evaluate(() => window.savedDraft());
+const saved = page => page.evaluate(() => window.readCommittedDraft());
 const rows = page => page.locator('.workbench-layer-row').evaluateAll(nodes => nodes.map(node => node.dataset.layerId));
 const artworkPoint = (page, id) => page.locator(`[data-workbench-artwork][data-workbench-view-id="${id}"]`).evaluate((node, id) => {
   const rect = node.getBoundingClientRect();
@@ -32,7 +32,6 @@ async function fixture(page, options = {}) {
   await editorMenu(page, 'Canvas').waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
-    const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     const draft = layersDraft();
     if (options.selectionOnly) { draft.texts = []; draft.workbench.texts = []; draft.artworkLayers = draft.artworkLayers.filter(id => id !== 'text:mist'); }
     if (options.closed) draft.workbench.imageModules[0].open = false;
@@ -45,7 +44,8 @@ async function fixture(page, options = {}) {
       draft.workbench.shapes.push({ ...draft.workbench.shapes[0], id, open: false }); draft.artworkLayers.push(id);
     }
     if (options.grouped) draft.artworkLayers = ['shape:landscape', 'text:mist', { id: 'composition:person', name: 'Person', children: ['image:body', 'image:eyes'] }];
-    window.leaveEditor(); localStorage.setItem(systemWorkflowDraftKey(window.fixtureProfile), JSON.stringify(draft));
+    await window.seedWorkbenchDraft(draft);
+    window.leaveEditor();
   }, options);
   await page.reload();
   await separateLayers(page);
@@ -322,7 +322,7 @@ test('canvas block selection, atomic drag/Undo, explicit entry and Escape preser
     const group = page.getByRole('group', { name: '2 selected Workbench modules', exact: true }), box = await group.boundingBox();
     await group.dblclick({ position: { x: point.x - box.x, y: point.y - box.y } });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    assert.equal(await workbenchCommandDisabled(page, 'back'), false);
+    await page.locator('.workbench-layers-context').getByText('Person › Body').waitFor();
     assert.deepEqual((await saved(page)).artworkLayers, before.artworkLayers);
   } finally { await browser.close(); }
 });
@@ -412,9 +412,7 @@ test('closed Image recovery, inline cancel, storage failure and visitor order', 
     assert.equal(await page.getByRole('button', { name: 'Confirm layer deletion' }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Delete Body', exact: true }).evaluate(node => document.activeElement === node), true);
     await openSharedTool(page, 'Inspector');
-    await page.evaluate(() => { window.normalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) {
-      if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.normalSetItem.call(this, key, value);
-    }; });
+    await page.evaluate(() => window.failWorkbenchWrites(true));
     await selectWorkbenchLayer(page, 'Body', );
     const before = await saved(page);
     await page.getByRole('button', { name: 'Delete Body', exact: true }).click(); await page.getByRole('button', { name: 'Confirm layer deletion' }).click();
@@ -423,7 +421,7 @@ test('closed Image recovery, inline cancel, storage failure and visitor order', 
     assert.equal(await page.getByRole('button', { name: 'Select Body', exact: true }).count(), 0, 'failed deletion keeps its inline recovery');
     assert.equal(await page.locator('.workbench-layer-row[data-layer-id="image:body"]').getAttribute('data-selected'), 'true');
     assert.equal(await page.locator('[data-workbench-inspection-target]:visible').getAttribute('data-workbench-inspection-target'), 'image:body', 'failed save retains the selected tool target');
-    await page.evaluate(() => { Storage.prototype.setItem = window.normalSetItem; });
+    await page.evaluate(() => window.failWorkbenchWrites(false));
     await page.getByRole('button', { name: 'Cancel layer deletion' }).click();
     await selectWorkbenchLayer(page, 'Landscape', );
     await page.getByRole('button', { name: 'Bring layers to front' }).click();

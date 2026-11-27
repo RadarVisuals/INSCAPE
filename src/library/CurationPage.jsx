@@ -1,3 +1,4 @@
+import { useStartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import WorkspaceBoundary from '../workspace/WorkspaceBoundary.jsx';
 import { saveMissingSnapshots } from './curatedSnapshots.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -43,6 +44,7 @@ export default function CurationPage(props) {
 }
 
 function CurationWorkspace({ profileAddress, destinations, onBack }) {
+  useStartupDestinationReady();
   const bounds = useRef(null), trigger = useRef(null);
   const [active, setActive] = useState('source');
   useLayoutEffect(() => { useLibraryStore.getState().setProfileAddress(profileAddress); }, [profileAddress]);

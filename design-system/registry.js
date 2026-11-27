@@ -51,7 +51,7 @@ export const designDecisions = [
 export const themes = ['dark', 'light'];
 export const tokenSources = [
   { path: 'src/composition/compositionDocument.css', role: 'Composition viewer', purpose: 'Composition cells, responsive artwork and linked content.' },
-  { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs and Profile.' },
+  { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive publication and profile panels.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchGroups.css', role: 'Groups', purpose: 'Compact Folio cards and group navigation using shared Editor materials.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchIndex.css', role: 'Index', purpose: 'Saved-view rows, compact navigation and shared Editor fields.' },
   { path: 'src/public/ownerLatticePublicationRack.css', role: 'Publication', purpose: 'Publication review, progress, recovery and support within the shared flat shell.' },
@@ -156,7 +156,7 @@ export const typography = [
 ];
 const owner = 'src/public/ownerSystemWorkflow/';
 export const components = [
-  { id: 'destinations', name: 'Docs and Profile', kind: 'Sidebar destinations', material: 'Flat Carbon / Mist',
+  { id: 'destinations', name: 'Publish and Profile', kind: 'Sidebar destinations', material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchDestinationPanel.jsx', evidence: 'browser-tests/destination-panels.browser.mjs',
     contract: 'The existing panels share window chrome, navigation clearance, contained scrolling and visible keyboard focus. Their existing controllers retain content, access and actions.' },
   { id: 'groups', name: 'Groups', kind: 'Navigation tool', material: 'Flat Carbon / Mist',

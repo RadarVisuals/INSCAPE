@@ -12,9 +12,9 @@ const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/composition-native-editor';
 const snapshot = page => page.evaluate(() => window.nativeCompositionFixture.root.getDraft());
 const otherDraft = page => page.evaluate(() => window.nativeCompositionFixture.root.readWorkbench('workbench:main').draft);
-const composition = async page => (await snapshot(page)).composition;
+const composition = async page => (await snapshot(page));
 const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-id="${id}"]`);
-const withoutComposition = ({ composition: _composition, ...draft }) => draft;
+const profileFields = ({ profileAddress, draftVersion, identityPresentation, keeperDocks }) => ({ profileAddress, draftVersion, identityPresentation, keeperDocks });
 const cellFrame = (value, id) => value.workbench.shapes.find(item => item.id === id).window;
 
 for (const width of [1440, 900]) test(`Composition preview resizes with the browser and returns without editing (${width})`, async () => {
@@ -107,7 +107,7 @@ test('mixed marquee moves free artwork and cells from either surface', async () 
     await page.locator('[data-editor-cell-surface]').first().waitFor();
     await page.evaluate(() => {
       const root = window.nativeCompositionFixture.root, draft = root.getDraft();
-      draft.composition.cells = draft.composition.cells.filter(cell => !cell.members.includes(draft.composition.imageModules[0].id));
+      draft.cells = draft.cells.filter(cell => !cell.members.includes(draft.imageModules[0].id));
       root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() });
     });
     const original = await composition(page);
@@ -160,7 +160,7 @@ test('free image drops directly onto the canvas cell with Undo', async () => {
     await page.locator('[data-editor-cell-surface]').first().waitFor();
     await page.evaluate(() => {
       const root = window.nativeCompositionFixture.root, draft = root.getDraft();
-      draft.composition.cells = draft.composition.cells.filter(cell => !cell.members.includes(draft.composition.imageModules[0].id));
+      draft.cells = draft.cells.filter(cell => !cell.members.includes(draft.imageModules[0].id));
       root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() });
     });
     const before = await composition(page), image = before.imageModules[0].id;
@@ -264,9 +264,9 @@ for (const width of [1440, 900]) test(`Composition cell fill survives late windo
     for (const gap of [0, 12]) {
       await page.evaluate(gap => {
         const { root } = window.nativeCompositionFixture, draft = root.getDraft();
-        draft.composition.bento.gap = gap;
-        draft.composition.cells.forEach((cell, index) => Object.assign(
-          draft.composition.shapes.find(record => record.id === cell.id),
+        draft.bento.gap = gap;
+        draft.cells.forEach((cell, index) => Object.assign(
+          draft.shapes.find(record => record.id === cell.id),
           { color: index ? '#000000' : '#cc2222', opacity: index ? 0.25 : 1 },
         ));
         if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Cannot save cell colours');
@@ -331,7 +331,7 @@ test('deleting the edited cell then Undo leaves a consistent mode and explicit r
     await bentoCell(page, id).dblclick({ position: { x: 60, y: 120 } });
     await page.getByRole('button', { name: 'Back to cells', exact: true }).waitFor();
     await rectangle(page, undefined, undefined, id);
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.shapes.length === 2);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().shapes.length === 2);
     const after = await composition(page);
     assert.deepEqual(after.cells[0].members, [after.shapes.find(item => item.id !== id).id]);
     assert.deepEqual(errors, []);
@@ -349,7 +349,7 @@ test('Preview renders new Light Text with its authored contrast after theme chan
     await bentoCell(page, id).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
     await page.getByRole('textbox', { name: 'Article text', exact: true }).fill('Readable new text on the light cell.');
     await page.locator('main[data-composition-editor]').focus();
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.texts[0]?.article.content.content.length > 0);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().texts[0]?.article.content.content.length > 0);
     const appearance = (await composition(page)).texts[0].article.appearance;
     assert.equal(appearance.color, '#000000'); assert.equal(appearance.background, null);
     await editorCommand(page, 'Canvas', 'Preview');
@@ -613,7 +613,7 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Composition
     }
     const initial = await composition(page), [source, target] = initial.cells.map(cell => cell.id);
     await page.evaluate(source => {
-      const root = window.nativeCompositionFixture.root, draft = root.getDraft(), value = draft.composition;
+      const root = window.nativeCompositionFixture.root, draft = root.getDraft(), value = draft;
       const box = value.workbench.shapes.find(item => item.id === source).window;
       for (const [index, name] of ['Transfer A', 'Transfer B'].entries()) {
         const id = `shape:transfer-${index}`;
@@ -669,7 +669,7 @@ test('Cell numeric fields preserve untouched precision and recover saved values 
     const initial = await composition(page), id = initial.cells[0].id;
     await page.evaluate(id => {
       const root = window.nativeCompositionFixture.root, draft = root.getDraft();
-      draft.composition.cells.find(cell => cell.id === id).radius = 12.345678;
+      draft.cells.find(cell => cell.id === id).radius = 12.345678;
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Fixture radius could not be saved');
     }, id);
     await bentoCell(page, id).click();
@@ -735,7 +735,7 @@ for (const width of [1440, 900]) test(`invalid Composition numeric input explain
     await radius.fill('24'); await radius.press('Enter');
     assert.equal(await radius.getAttribute('aria-invalid'), null);
     assert.equal((await composition(page)).cells.find(cell => cell.id === id).radius, 24);
-    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await composition(page), original.composition);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await composition(page), original);
     await editorCommand(page, 'Edit', 'Redo');
     assert.equal((await composition(page)).cells.find(cell => cell.id === id).radius, 24);
     await page.reload(); await bentoCell(page, id).waitFor();
@@ -795,7 +795,7 @@ test('Composition layout generator previews without saving, applies native cells
     await page.evaluate(() => window.nativeCompositionFixture.fail(true));
     await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
     await dialog.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
-    assert.deepEqual(await composition(page), original.composition);
+    assert.deepEqual(await composition(page), original);
     await page.evaluate(() => window.nativeCompositionFixture.fail(false));
     await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
     await dialog.getByRole('button', { name: 'Close Bento', exact: true }).click();
@@ -805,11 +805,11 @@ test('Composition layout generator previews without saving, applies native cells
       assert.equal(cell.radius, 0);
       assert.deepEqual(saved.workbench.shapes.find(item => item.id === cell.id).window, proposal[index]);
     });
-    assert.deepEqual(withoutComposition(await snapshot(page)), withoutComposition(original));
+    assert.deepEqual(profileFields(await snapshot(page)), profileFields(original));
     await shape(page, saved.cells[0].id).waitFor({ state: 'visible' });
     await page.screenshot({ path: `${output}/layout-applied-900-light.png` });
     await editorCommand(page, 'Edit', 'Undo');
-    assert.deepEqual(await composition(page), original.composition);
+    assert.deepEqual(await composition(page), original);
     await editorCommand(page, 'Edit', 'Redo');
     assert.deepEqual(await composition(page), saved);
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
@@ -1126,7 +1126,7 @@ for (const width of [1440, 900]) test(`Bento merges preserve artwork, history an
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     }
     const ids = await alignFourCells(page);
-    const [first, , below] = ids, canvas = withoutComposition(await snapshot(page));
+    const [first, , below] = ids, canvas = profileFields(await snapshot(page));
     await bentoCell(page, first).click();
     await page.getByRole('button', { name: '+ Image', exact: true }).click();
     const picker = page.locator('.composition-library-window');
@@ -1138,7 +1138,7 @@ for (const width of [1440, 900]) test(`Bento merges preserve artwork, history an
     await page.getByRole('button', { name: '+ Text', exact: true }).click();
     await page.getByRole('textbox', { name: 'Article text', exact: true }).fill('MERGED ARTWORK');
     await page.locator('main[data-composition-editor]').focus();
-    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().composition.texts).includes('MERGED ARTWORK'));
+    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().texts).includes('MERGED ARTWORK'));
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click(); await closeTools();
     const before = await composition(page);
     assert.equal(before.cells.length, 4);
@@ -1174,7 +1174,7 @@ for (const width of [1440, 900]) test(`Bento merges preserve artwork, history an
     await page.evaluate(() => window.nativeCompositionFixture.fail(false));
     await command(first, 'Merge cell', 'Right');
     const saved = await composition(page);
-    assert.deepEqual(withoutComposition(await snapshot(page)), canvas);
+    assert.deepEqual(profileFields(await snapshot(page)), canvas);
     await editorCommand(page, 'Canvas', 'Preview');
     const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
     await preview.getByText('MERGED ARTWORK', { exact: true }).waitFor();
@@ -1280,7 +1280,7 @@ test('Bento cell buttons add native Image and Text directly, retain content when
     const text = page.getByRole('textbox', { name: 'Article text', exact: true });
     await text.fill('BENTO INSCAPE');
     await page.locator('main[data-composition-editor]').focus();
-    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().composition.texts).includes('BENTO INSCAPE'));
+    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().texts).includes('BENTO INSCAPE'));
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click();
     value = await composition(page);
     assert.equal(value.texts[0].visibility, 'PUBLIC');
@@ -1391,7 +1391,7 @@ test('generated arrangements carry existing artwork visibly and retain it when r
     const cellId = await rectangle(page, { x: 240, y: 180 }, { x: 1050, y: 850 });
     await cellMenu(page, cellId, 'Turn into cell');
     await dropArtwork(page, { x: 600, y: 410 });
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 1);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 1);
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     const before = await composition(page), imageId = before.imageModules[0].id;
     for (const count of [6, 1]) {
@@ -1435,7 +1435,7 @@ test('direct Composition entry accepts pointer clicks on controls outside the ca
       await openEditorMenu(page, 'Tools');
       const tools = page.getByRole('menu', { name: 'Tools options' });
       await tools.waitFor();
-      assert.equal(await tools.getByRole('menuitem', { name: 'Groups', exact: true }).count(), 0);
+      assert.equal(await tools.getByRole('menuitem', { name: 'Groups', exact: true }).count(), 1);
       await page.keyboard.press('Escape');
       const indicator = await documentLabel.boundingBox();
       assert.ok(indicator.x >= 0 && indicator.x + indicator.width <= width, 'the active document remains visible at desktop widths');
@@ -1444,7 +1444,7 @@ test('direct Composition entry accepts pointer clicks on controls outside the ca
         const rect = node.getBoundingClientRect();
         return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
       }), true, `the document controls receive the pointer at ${width}px`);
-      await editorCommand(page, 'Canvas', 'Cell settings');
+      await editorCommand(page, 'Tools', 'Bento settings');
       await page.getByRole('dialog', { name: 'Bento settings', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Close Bento', exact: true }).click();
       await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
@@ -1482,7 +1482,7 @@ async function rectangle(page, from = { x: 300, y: 230 }, to = { x: 780, y: 610 
   await page.keyboard.press('r');
   await page.mouse.move(from.x, from.y); await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 8 }); await page.mouse.up();
-  await page.waitForFunction(ids => window.nativeCompositionFixture.root.getDraft().composition.shapes.some(item => !ids.includes(item.id)), before);
+  await page.waitForFunction(ids => window.nativeCompositionFixture.root.getDraft().shapes.some(item => !ids.includes(item.id)), before);
   return (await composition(page)).shapes.find(item => !before.includes(item.id)).id;
 }
 async function cellMenu(page, id, action, child) {
@@ -1527,14 +1527,14 @@ for (const width of [1440, 900]) test(`Library fills an unselected Bento cell an
   };
   try {
     await mkdir(output, { recursive: true }); await generateBento(page, 4);
-    const [first, right, , deleted] = await alignFourCells(page), canvas = withoutComposition(await snapshot(page));
+    const [first, right, , deleted] = await alignFourCells(page), canvas = profileFields(await snapshot(page));
     await closeTools(); await bentoCell(page, first).click({ position: { x: 16, y: 30 } });
     // The selected left cell must not take a drop aimed at its right neighbour.
     const target = await bentoCell(page, right).boundingBox();
     await dropArtwork(page, { x: target.x + 20, y: target.y + target.height / 2 }, async () => {
       await page.screenshot({ path: `${output}/bento-library-preview-${width}.png` });
     });
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 1);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 1);
     await assertImageFits(right);
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click(); await closeTools();
     await bentoCell(page, right).click();
@@ -1550,7 +1550,7 @@ for (const width of [1440, 900]) test(`Library fills an unselected Bento cell an
     const name = beforeDelete.shapes.find(item => item.id === deleted).name;
     await page.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
     await page.getByRole('button', { name: 'Confirm layer deletion', exact: true }).click();
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.cells.length === 3);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().cells.length === 3);
     const filled = await composition(page); await assertImageFits(right);
     assert.equal(cellFrame(filled, right).top, cellFrame(beforeDelete, right).top);
     assert.equal(cellFrame(filled, right).height, cellFrame(beforeDelete, right).height);
@@ -1565,7 +1565,7 @@ for (const width of [1440, 900]) test(`Library fills an unselected Bento cell an
     await editorCommand(page, 'Edit', 'Redo'); await assertImageFits(right);
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual((await composition(page)).cells, filled.cells); await assertImageFits(right);
-    assert.deepEqual(withoutComposition(await snapshot(page)), canvas); assert.deepEqual(errors, []);
+    assert.deepEqual(profileFields(await snapshot(page)), canvas); assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
@@ -1577,7 +1577,7 @@ test('Library drops directly into a selected cell and onto its existing artwork 
     await page.mouse.click(600, 410);
     assert.equal(await page.locator(`[data-editor-cell-surface="${id}"]`).count(), 1, 'the first drop hits the actual cell selection overlay');
     await dropArtwork(page, { x: 600, y: 410 });
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 1);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 1);
     let document = await composition(page);
     assert.deepEqual(document.cells[0].members, [document.imageModules[0].id]);
     assert.equal(await page.getByRole('button', { name: 'Back to cells', exact: true }).count(), 0, 'drop keeps the current cell-level editing scope');
@@ -1589,16 +1589,16 @@ test('Library drops directly into a selected cell and onto its existing artwork 
     assert.deepEqual(await composition(page), before, 'a failed drop creates neither an Image nor membership');
     await page.evaluate(() => window.nativeCompositionFixture.fail(false));
     await dropArtwork(page, { x: 600, y: 410 });
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 2);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 2);
     document = await composition(page);
     assert.deepEqual(document.cells[0].members, document.imageModules.map(item => item.id));
     assert.deepEqual(document.imageModules[0], before.imageModules[0], 'dropping at cell level adds a layer rather than altering an existing Image');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await page.locator('main[data-composition-editor]').focus(); await page.keyboard.press('Control+z');
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 1);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 1);
     assert.deepEqual((await composition(page)).cells, before.cells, 'one undo removes both the new Image and its membership');
     await page.keyboard.press('Control+Shift+z');
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 2);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 2);
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual((await composition(page)).cells, document.cells);
     assert.deepEqual(errors, []);
@@ -1618,10 +1618,10 @@ test('Composition uses native Rectangle drawing and cell conversion with undo, r
     assert.deepEqual(converted.shapes, drawn.shapes, 'conversion keeps shape appearance and identity');
     assert.deepEqual(converted.workbench.shapes, drawn.workbench.shapes, 'conversion keeps drawn geometry');
     await page.keyboard.press('Control+z');
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.cells.length === 0);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().cells.length === 0);
     assert.deepEqual((await composition(page)).shapes, drawn.shapes, 'undo converts back without deleting the rectangle');
     await page.keyboard.press('Control+Shift+z');
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.cells.length === 1);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().cells.length === 1);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual((await composition(page)).cells, converted.cells);
@@ -1716,16 +1716,16 @@ test('one Editor switches Composition and canvas documents and reopens Compositi
     await selectEditorDocument(page, canvasId);
     await shape(page, originalCanvas.shapes[0].id).waitFor();
     assert.equal(await activeEditorDocument(page), canvasId);
-    assert.equal(await page.locator('main[data-composition-editor]').count(), 0);
+    assert.equal(await page.locator('main[data-composition-editor]').count(), 1);
     assert.equal(await shape(page, cellId).count(), 0);
-    assert.deepEqual(withoutComposition(await snapshot(page)), originalCanvas, 'selecting the ordinary canvas preserves its original records');
+    assert.deepEqual(await snapshot(page), originalCanvas, 'selecting the ordinary canvas preserves its original records');
     const beforeIds = (await snapshot(page)).shapes.map(item => item.id);
-    await page.locator('main[data-canvas-context="canvas"]').focus();
+    await page.locator('main[data-canvas-context="composition"]').focus();
     await page.keyboard.press('r');
     await page.mouse.move(300, 700); await page.mouse.down();
     await page.mouse.move(600, 830, { steps: 8 }); await page.mouse.up();
     await page.waitForFunction(ids => window.nativeCompositionFixture.root.getDraft().shapes.some(item => !ids.includes(item.id)), beforeIds);
-    const authoredCanvas = withoutComposition(await snapshot(page));
+    const authoredCanvas = await snapshot(page);
     const canvasShape = authoredCanvas.shapes.find(item => !beforeIds.includes(item.id));
 
     await selectEditorDocument(page, 'workbench:cell-study');
@@ -1785,7 +1785,7 @@ test('native cell contents remain editable independently and travel with their p
     const box = await node.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 48, box.y + box.height / 2 + 24, { steps: 8 }); await page.mouse.up();
-    await page.waitForFunction(({ id, left }) => window.nativeCompositionFixture.root.getDraft().composition.workbench.shapes.find(item => item.id === id).window.left !== left, { id: inner, left: original.left });
+    await page.waitForFunction(({ id, left }) => window.nativeCompositionFixture.root.getDraft().workbench.shapes.find(item => item.id === id).window.left !== left, { id: inner, left: original.left });
     document = await composition(page);
     assert.deepEqual(document.workbench.shapes.find(item => item.id === id).window, outside, 'moving a child leaves its cell in place');
     assert.notDeepEqual(document.workbench.shapes.find(item => item.id === inner).window, original);
@@ -1837,7 +1837,7 @@ test('native Library Image and Text belong to the cell and render across preview
       await page.screenshot({ path: `${output}/native-drop-debug.png`, fullPage: true }); throw error;
     });
     await page.mouse.up();
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.imageModules.length === 1);
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().imageModules.length === 1);
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     const closeTools = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
     while (await closeTools.count()) await closeTools.first().click();
@@ -1861,7 +1861,7 @@ test('native Library Image and Text belong to the cell and render across preview
     }
     await closeSharedTool(page, 'Inspector');
     await page.locator('main[data-composition-editor]').focus();
-    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().composition.texts).includes('Welcome to my Composition.'));
+    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().texts).includes('Welcome to my Composition.'));
     const document = await composition(page), imageId = document.imageModules[0].id, textId = document.texts[0].id;
     assert.deepEqual(new Set(document.cells[0].members), new Set([imageId, textId]));
     assert.match(document.imageModules[0].artwork.asset.media.url, /abyssal_eye/);
@@ -1900,7 +1900,7 @@ test('new Composition Text appears above its Shape in preview while explicitly p
     await page.mouse.click(cell.x + cell.width * .4, cell.y + cell.height * .4);
     const body = page.getByRole('textbox', { name: 'Article text', exact: true }); await body.fill('NOMAD');
     await page.locator('main[data-composition-editor]').focus();
-    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().composition.texts).includes('NOMAD'));
+    await page.waitForFunction(() => JSON.stringify(window.nativeCompositionFixture.root.getDraft().texts).includes('NOMAD'));
     const textId = (await composition(page)).texts[0].id;
     assert.equal((await composition(page)).texts[0].visibility, 'PUBLIC', 'plain T then typing includes new Composition Text');
     const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
@@ -1927,7 +1927,7 @@ test('new Composition Text appears above its Shape in preview while explicitly p
     const include = page.getByRole('checkbox', { name: 'Include in publication', exact: true });
     assert.equal(await include.isChecked(), true);
     await include.focus(); await page.keyboard.press('Space');
-    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().composition.texts[0].visibility === 'PRIVATE');
+    await page.waitForFunction(() => window.nativeCompositionFixture.root.getDraft().texts[0].visibility === 'PRIVATE');
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).focus(); await page.keyboard.press('Enter');
     await editorCommand(page, 'Canvas', 'Preview');
     preview = page.getByRole('dialog', { name: 'Composition preview', exact: true }); await preview.waitFor();
@@ -1982,7 +1982,7 @@ test('Bento keeps proposal count separate, preserves mixed cell style and scales
     // Deliberately exercise the fully inset case. The generator and the default
     // text size can otherwise place this layer across the rounded boundary.
     await page.evaluate(id => {
-      const { root } = window.nativeCompositionFixture, draft = root.getDraft(), value = draft.composition;
+      const { root } = window.nativeCompositionFixture, draft = root.getDraft(), value = draft;
       const owner = value.workbench.shapes.find(item => item.id === id).window;
       const cell = value.cells.find(item => item.id === id);
       value.workbench.texts.find(item => item.id === cell.members[0]).window = {
@@ -2073,7 +2073,7 @@ test('cropped preview fills aligned cells as the browser resizes', { timeout: 90
     await page.goto(origin + '/browser-tests/composition-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
     await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
     const ids = await page.evaluate(() => {
-      const { root } = window.nativeCompositionFixture, draft = root.getDraft(), value = draft.composition;
+      const { root } = window.nativeCompositionFixture, draft = root.getDraft(), value = draft;
       const image = value.imageModules[0], cell = value.cells.find(cell => cell.members.includes(image.id));
       const frame = value.workbench.shapes.find(item => item.id === cell.id).window;
       image.width = frame.width; image.height = frame.height; image.artwork.crop = { x: .6, y: .4, zoom: 1.2 };
@@ -2241,7 +2241,7 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`new cell Te
       await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     }
-    const cell = (await composition(page)).cells[0].id, other = withoutComposition(await snapshot(page));
+    const cell = (await composition(page)).cells[0].id, other = profileFields(await snapshot(page));
     await bentoCell(page, cell).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
     const text = page.getByRole('textbox', { name: 'Article text', exact: true }); await text.waitFor();
     await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
@@ -2265,9 +2265,9 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`new cell Te
     await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/text-start-${width}-${theme}.png` });
     const words = 'I feel out of place here. I cannot remember being anywhere else. '.repeat(3);
     await page.keyboard.insertText(words);
-    await page.waitForFunction(words => window.nativeCompositionFixture.root.getDraft().composition.texts.some(t => JSON.stringify(t.article.content).includes(words)), words);
+    await page.waitForFunction(words => window.nativeCompositionFixture.root.getDraft().texts.some(t => JSON.stringify(t.article.content).includes(words)), words);
     assert.deepEqual((await composition(page)).workbench.texts.find(x => x.id === record.id).window, frame, 'typing keeps the useful line width');
-    assert.deepEqual(withoutComposition(await snapshot(page)), other);
+    assert.deepEqual(profileFields(await snapshot(page)), other);
     await editorCommand(page, 'Edit', 'Undo');
     assert.equal(JSON.stringify((await composition(page)).texts.find(x => x.id === record.id).article.content).includes(words), false);
     await editorCommand(page, 'Edit', 'Redo');
@@ -2337,7 +2337,7 @@ test('deleting populated cells removes their rendered contents and restores them
   try {
     await page.goto(origin + '/browser-tests/composition-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
     await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
-    const original = await composition(page), canvas = withoutComposition(await snapshot(page));
+    const original = await composition(page), canvas = profileFields(await snapshot(page));
     const cells = [original.cells.find(cell => cell.members.includes(original.imageModules[0].id)), original.cells.find(cell => cell.members.includes(original.texts[0].id))];
     for (const [index, cell] of cells.entries()) {
       const layers = await openSharedTool(page, 'Layers');
@@ -2350,7 +2350,7 @@ test('deleting populated cells removes their rendered contents and restores them
         assert.equal(after.workbench[key].some(item => removed.includes(item.id)), false);
       }
       for (const id of removed) assert.equal(await page.locator('[data-workbench-view-id="' + id + '"]').count(), 0);
-      assert.deepEqual(withoutComposition(await snapshot(page)), canvas);
+      assert.deepEqual(profileFields(await snapshot(page)), canvas);
       await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await composition(page), original);
       await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await composition(page), after);
       if (index === 0) { await editorCommand(page, 'Edit', 'Undo'); }
@@ -2401,6 +2401,73 @@ test('Bento sliders preview live, commit once, cancel safely and retain exact va
     await panel.getByRole('alert').waitFor(); assert.deepEqual(await composition(page), accepted);
     await page.evaluate(() => window.nativeCompositionFixture.fail(false));
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor(); assert.deepEqual(await composition(page), accepted);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const [width, cellFirst] of [[1440, false], [900, true]]) test(`one Studio document keeps linked text, pages, Keeper and groups with cells at ${width}`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    const ids = await page.evaluate(async cellFirst => {
+      const root = window.nativeCompositionFixture.root, profile = root.getProfileAddress();
+      const { addShape } = await import('/src/shapes/shapeSession.js');
+      const { addTextModule, changeTextFrames } = await import('/src/text/textSession.js');
+      const { addKeeperDock } = await import('/src/keeper/keeperSession.js');
+      const { openWorkbenchIndex } = await import('/src/systemWorkflow/workbenchIndexSession.js');
+      const { editWorkbenchGroups } = await import('/src/systemWorkflow/workbenchGroupSession.js');
+      const cell = addShape(root, profile, { position: { left: 1100, top: 32 }, size: { width: 280, height: 240 } });
+      const makeCell = () => {
+        const next = root.getDraft(); next.cells = [{ id: cell, members: [], mobile: { columns: 2, height: 240 } }];
+        if (!root.commitCompletedOperation(next, { expectedGeneration: root.getGeneration() })) throw Error('First cell failed');
+      };
+      if (cellFirst) makeCell();
+      const linked = addTextModule(root, profile, { window: { left: 32, top: 32, width: 320, height: 360 } });
+      const pages = addTextModule(root, profile, { window: { left: 744, top: 32, width: 320, height: 360 } });
+      let draft = root.getDraft(); draft.workbench.area = { left: 0, top: 0, width: 1440, height: 900 };
+      draft.shapes.find(item => item.id === cell).visibility = 'PUBLIC';
+      for (const record of draft.texts) {
+        record.visibility = 'PUBLIC'; record.article.title = record.id === linked ? 'Linked story' : 'Paged story';
+        record.article.appearance = { ...record.article.appearance, compact: true, fontSize: 18 };
+        record.article.content = { type: 'doc', content: Array.from({ length: 28 }, (_, i) => ({ type: 'paragraph', content: [
+          { type: 'text', text: `Paragraph ${i + 1}. These words continue across the authored frames while the artwork keeps its position.` }
+        ] })) };
+      }
+      draft.texts.find(item => item.id === pages).pagination = 'pages';
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Text fixture failed');
+      draft = root.getDraft();
+      changeTextFrames(root, profile, draft.texts.find(item => item.id === linked), draft.workbench.texts.find(item => item.id === linked),
+        [{ id: 'text-frame:continued', window: { left: 388, top: 32, width: 320, height: 360 } }]);
+      addKeeperDock(root, profile); openWorkbenchIndex(root, profile);
+      editWorkbenchGroups(root, profile, { type: 'create', name: 'Mixed layers', memberIds: [cell, linked] });
+      if (!cellFirst) makeCell();
+      return { linked, pages, cell };
+    }, cellFirst);
+    await page.getByRole('complementary', { name: 'Index — Destinations', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Keeper settings', exact: true }).waitFor();
+    await page.locator(`[data-text-id="${ids.linked}"]`).getByRole('button', { name: 'Add linked Text frame', exact: true }).waitFor();
+    const before = await snapshot(page);
+    assert.equal(before.workbenchGroups[0].name, 'Mixed layers');
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('dialog', { name: 'Composition preview', exact: true });
+    await page.waitForFunction(() => document.querySelector('dialog[open] [data-layer-id="text-frame:continued"] .text-flow-visible')?.textContent.trim().length > 0);
+    const linked = preview.locator(`[data-layer-id="${ids.linked}"] .text-flow-visible`);
+    const continued = preview.locator('[data-layer-id="text-frame:continued"] .text-flow-visible');
+    assert.match(await linked.innerText(), /Linked story/);
+    assert.doesNotMatch(await continued.innerText(), /Linked story/);
+    const paginated = preview.locator(`[data-layer-id="${ids.pages}"]`);
+    await paginated.getByRole('button', { name: 'Next text page', exact: true }).click();
+    assert.match(await paginated.getByRole('navigation', { name: 'Text pages' }).innerText(), /2\s*\//);
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/studio-unified-reading-${width}.png` });
+    await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    assert.deepEqual(await snapshot(page), before);
+    await page.evaluate(() => { const root = window.nativeCompositionFixture.root, next = root.getDraft(); next.cells = [];
+      if (!root.commitCompletedOperation(next, { expectedGeneration: root.getGeneration(), historyLabel: 'Remove last cell' })) throw Error('Cell removal failed'); });
+    await page.locator(`[data-text-id="${ids.linked}"]`).getByRole('button', { name: 'Add linked Text frame', exact: true }).waitFor();
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual(await snapshot(page), before);
+    await page.reload(); await editorMenu(page).waitFor();
+    assert.deepEqual(await snapshot(page), before);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

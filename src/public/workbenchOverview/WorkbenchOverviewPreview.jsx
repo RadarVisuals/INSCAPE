@@ -36,7 +36,7 @@ function TextPreview({ item, scale, area }) {
   </div>);
 }
 
-export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, sidePreview = false, measureLayout = false, thumbnail = false, crop = null, viewport = null, camera = null, emptyHint = 'Open this Workbench to begin.' }) {
+export default function WorkbenchOverviewPreview({ mountStyle, model, name, region = model.area, highlights = [], presenting = false, sidePreview = false, measureLayout = false, thumbnail = false, crop = null, viewport = null, camera = null, emptyHint = 'Open this Workbench to begin.' }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     // An animated preview supplies its paint viewport. Measuring its changing
@@ -67,12 +67,12 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
   const density = globalThis.devicePixelRatio || 1, paintScale = scale * density;
   const native = model.composition;
   const interactive = native && presenting && !thumbnail && !sidePreview;
-  return <div className="workbench-overview-preview" ref={host} role={interactive ? 'group' : 'img'} aria-label={`${presenting ? 'Canvas' : 'Preview'} of ${name}`} data-presenting={presenting || undefined}>
+  return <div className="workbench-overview-preview" style={mountStyle} ref={host} role={interactive ? 'group' : 'img'} aria-label={`${presenting ? 'Canvas' : 'Preview'} of ${name}`} data-presenting={presenting || undefined}>
     <div className="workbench-overview-canvas" data-world-width={area.width} data-native-interactive={interactive || undefined}
       aria-hidden={interactive ? undefined : true} inert={interactive ? undefined : ''} style={{ width: area.width * paintScale, height: area.height * paintScale,
       transform: `matrix(${1 / density},0,0,${1 / density},${left},${top})`, background: 'var(--thumbnail-background, var(--interface-environment))' }}>
         {scale > 0 && native && <div className="workbench-native-preview" style={{ width: area.width, height: area.height, transform: `scale(${paintScale})` }}>
-          <Suspense fallback={null}><NativeComposition composition={native} interactive={interactive} /></Suspense>
+          <Suspense fallback={<span hidden data-artwork-module-pending />}><NativeComposition composition={native} interactive={interactive} /></Suspense>
         </div>}
         {scale > 0 && !native && items.map(item => {
           const frame = projectFrame(item.frame, area, paintScale);

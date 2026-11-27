@@ -11,7 +11,6 @@ const positions = value => isRecord(value) && Object.keys(value).length <= 16
   && Object.entries(value).every(([id, frame]) => id.length <= 128 && position(frame));
 const validators = {
   lastShape: value => value == null || ['shape', 'shape-grid'].includes(value),
-  lastCanvasId: value => value == null || typeof value === 'string' && value.length <= 128,
   creationBar: value => value == null || typeof value === 'boolean',
   colourPickers: value => value == null || Array.isArray(value) && value.length <= 16 && value.every(label => typeof label === 'string' && label.length <= 40) && new Set(value).size === value.length,
   library: validBrowserPreferences, docks: validToolDockLayout,
@@ -30,7 +29,7 @@ const defaults = width => {
       { id: `tools:${inspector.id}`, side: 'right', height: inspector.frame.height },
     ],
   };
-  return { lastShape: null, lastCanvasId: null, creationBar: true, colourPickers: [], library: defaultBrowserPreferences(), docks,
+  return { lastShape: null, creationBar: true, colourPickers: [], library: defaultBrowserPreferences(), docks,
     textOpen: null, navigator: null, keeper: {}, sideDock };
 };
 
@@ -49,7 +48,7 @@ export function createEditorPreferencesStore({ profile, storage, canSave = () =>
       const libraryGroup = docks.groups.find(group => group.panes.some(pane => pane.tabs.includes('Library')));
       const sideDock = value.sideDock ? { ...value.sideDock, items: value.sideDock.items.map(item => docks !== saved.value.docks && item.id === 'Library'
         ? { ...item, id: `tools:${libraryGroup.id}` } : item).filter((item, index, items) => items.findIndex(other => other.id === item.id) === index) } : emptySideDock();
-      return { ...value, lastShape: value.lastShape ?? null, lastCanvasId: value.lastCanvasId ?? null,
+      return { ...value, lastShape: value.lastShape ?? null,
         colourPickers: value.colourPickers ?? [], sideDock, creationBar: value.creationBar ?? true, docks: { ...docks, activeGroup: null, focusRequest: undefined } };
     },
   });

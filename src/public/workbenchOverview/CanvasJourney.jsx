@@ -1,9 +1,15 @@
+import { observeInitialArtwork } from '../../navigation/initialArtworkPaint.js';
 import { useLayoutEffect, useRef, useState } from 'react';
 import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
 
+const bareMount = { backgroundColor: 'transparent', clipPath: 'inset(0px round 0px)' };
+
 // Both Studio's draft manager and the published Gallery paint the same measured flight.
-export default function CanvasJourney({ journey, hostRef, surface, duration = 650, targetReady = true, resolveTarget, revealLayers, onComplete }) {
+export default function CanvasJourney({ journey, hostRef, surface, duration = 650, targetReady = true, resolveTarget, revealLayers, onSourceReady, onComplete }) {
   const [plan, setPlan] = useState(null);
+  useLayoutEffect(() => {
+    if (journey && onSourceReady && surface.current) return observeInitialArtwork(surface.current, onSourceReady);
+  }, [journey, onSourceReady, surface]);
   const latest = useRef(null); latest.current = { onComplete, resolveTarget, revealLayers };
   useLayoutEffect(() => {
     setPlan(null);
@@ -28,23 +34,34 @@ export default function CanvasJourney({ journey, hostRef, surface, duration = 65
     const node = surface.current, canvas = node.querySelector('.workbench-overview-canvas');
     const density = devicePixelRatio || 1;
     const frame = value => ({ left: `${value.frame.left}px`, top: `${value.frame.top}px`, width: `${value.frame.width}px`,
-      height: `${value.frame.height}px`, borderRadius: `${value.radius}px`, backgroundColor: plan.blend === 'overview' ? 'transparent' : value.background });
+      height: `${value.frame.height}px`, borderRadius: `${value.radius}px`, boxShadow: value.shadow || 'none',
+      backgroundColor: plan.blend === 'overview' && value === plan.from ? 'transparent' : value.background });
     const paint = value => ({ transform: `translate(${value.paint.left}px, ${value.paint.top}px) scale(${value.paint.scale / (plan.scale * density)})` });
     const options = { duration, fill: 'both' };
     const ease = 'cubic-bezier(.4,0,.2,1)';
     // Hold the frame still at the Studio end while the two versions exchange paint.
+    const manager = journey.direction === 'overview' && !journey.address
+      ? hostRef.current?.querySelector('.owner-works[data-workspace-entering]') : null;
     const move = project => {
       const from = project(plan.from), to = project(plan.to);
+      if (manager) return [from, { ...from, offset: .34, easing: ease }, { ...to, offset: .8 }, to];
       if (plan.blend === 'overview') return [from, { ...from, offset: .22, easing: ease }, to];
       if (plan.blend === 'editor') return [{ ...from, easing: ease }, { ...to, offset: .76 }, to];
       return [{ ...from, easing: ease }, to];
     };
     const animations = [node.animate(move(frame), options), canvas.animate(move(paint), options)];
-    if (journey.direction === 'grid') {
-      const tiles = hostRef.current?.querySelector('.workbench-overview-grid-host');
-      if (tiles) animations.push(tiles.animate([
-        { opacity: 0 }, { opacity: 0, offset: .3 }, { opacity: 1, easing: 'ease-out' },
-      ], options));
+    animations.push(canvas.parentElement.animate(move(value => value.mount || bareMount), options));
+    // Keep the landing surface measurable. Reveal it underneath the stationary
+    // artwork only after the outgoing tools have faded and the artwork has landed.
+    if (manager) animations.push(manager.animate([
+      { opacity: 0 }, { opacity: 0, offset: .8, easing: 'ease-out' }, { opacity: 1 },
+    ], options));
+    if (journey.direction === 'grid' || journey.direction === 'list' || plan.from.fadeIn) {
+      const selector = hostRef.current?.dataset.layout === 'grid' ? '.workbench-overview-grid-host'
+        : '.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls, .gallery-rail-toggle';
+      for (const control of hostRef.current?.querySelectorAll(selector) || []) {
+        animations.push(control.animate([{ opacity: 0, easing: 'ease-in-out' }, { opacity: 1 }], options));
+      }
     }
     if (plan.blend === 'editor') {
       // Dissolve one opaque frame over the fully painted draft. Its backing also
@@ -79,8 +96,8 @@ export default function CanvasJourney({ journey, hostRef, surface, duration = 65
   const source = journey.source, { model, name } = source;
   const scale = plan?.scale || source.paint.scale;
   return <div className="owner-canvas-journey" ref={surface} aria-hidden="true" inert="" data-direction={journey.direction} data-canvas-id={source.id}
-    style={{ opacity: source.fadeIn ? 0 : undefined, left: source.frame.left, top: source.frame.top, width: source.frame.width, height: source.frame.height, borderRadius: source.radius, background: journey.address && journey.direction === 'overview' ? 'transparent' : source.background }}>
+    style={{ opacity: source.fadeIn ? 0 : undefined, left: source.frame.left, top: source.frame.top, width: source.frame.width, height: source.frame.height, borderRadius: source.radius, boxShadow: source.shadow, background: journey.address && journey.direction === 'overview' ? 'transparent' : source.background }}>
     <WorkbenchOverviewPreview model={model} name={name} viewport={plan?.to.frame || source.frame}
-      camera={{ scale, offset: { x: source.paint.left - model.area.left * scale, y: source.paint.top - model.area.top * scale } }} presenting />
+      mountStyle={source.mount} camera={{ scale, offset: { x: source.paint.left - model.area.left * scale, y: source.paint.top - model.area.top * scale } }} presenting />
   </div>;
 }

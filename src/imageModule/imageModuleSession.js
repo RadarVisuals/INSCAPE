@@ -21,15 +21,14 @@ export function addImageModule(store, profile, placed = null) {
     width: placed?.size.width ?? 360, height: placed?.size.height ?? 360,
     artwork: placed?.artwork ?? null, visibility: placed ? 'PUBLIC' : 'PRIVATE' };
   const next = { ...draft, imageModules: [...(draft.imageModules || []), record] };
-  if (placed) {
-    const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
-    next.workbench = { ...workbench, imageModules: [...(workbench.imageModules || []),
-      { id: record.id, open: true, position: placed.position }] };
-  }
+  const workbench = placed?.workbench || draft.workbench || createDefaultWorkbenchPresentation();
+  const presentation = createImagePresentation(record.id, draft.imageModules?.length || 0);
+  next.workbench = { ...workbench, imageModules: [...(workbench.imageModules || []),
+    placed ? { ...presentation, position: placed.position } : presentation] };
   if (!validEditingImages(store, next.imageModules, record.id, placed?.cellId)) throw new Error('The Image could not be created from this artwork.');
   if (placed?.groupId) {
     const group = draft.workbenchGroups?.find(item => item.id === placed.groupId);
-    if (!group?.position || placed.cellId || store.getCells) throw new Error('This stack is no longer available.');
+    if (!group?.position || placed.cellId) throw new Error('This stack is no longer available.');
     if (group.memberIds.length >= MAX_WORKBENCH_GROUP_MEMBERS) throw new Error('This group is full.');
     next.workbenchGroups = draft.workbenchGroups.map(item => item === group
       ? { ...item, memberIds: [...item.memberIds, record.id] } : item);

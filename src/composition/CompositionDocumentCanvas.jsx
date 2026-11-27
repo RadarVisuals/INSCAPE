@@ -4,6 +4,7 @@ import { compositionFluidText } from './compositionFluidText.js';
 import { lazy, memo, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { TextContentPage } from '../text/TextContentPage.jsx';
+import { useArticleFlow } from '../text/TextFrame.jsx';
 import { textAppearance, textOutputStyle, textWindowStyle } from '../text/domain/article.js';
 import ShapeSurface from '../shapes/ShapeSurface.jsx';
 import CompositionCellGrain from './CompositionCellGrain.jsx';
@@ -18,7 +19,7 @@ import './compositionDocument.css';
 
 const CompositionLinkedContent = lazy(() => import('./CompositionLinkedContent.jsx'));
 
-const LayerContent = memo(function LayerContent({ id, item, cell, background, rect, composition, reportOverflow }) {
+const LayerContent = memo(function LayerContent({ id, item, cell, background, rect, composition, reportOverflow, flow, flowIndex }) {
   if (!item) return null;
   if (id.startsWith('shape:')) return <ShapeSurface record={item} hideGrain={Boolean(background && cell.grainOverContent !== false)} continuousFill={Boolean(background && composition.bento?.gap > 0)} radius={background ? cell.radius : undefined}
     hideOutline={Boolean(background && visibleCompositionInnerLines(composition.innerLines))} />;
@@ -29,7 +30,7 @@ const LayerContent = memo(function LayerContent({ id, item, cell, background, re
   const article = cell ? compositionFluidText(item.article, rect.width, compositionModuleWindow(composition, id).width) : item.article;
   const appearance = textAppearance(article);
   const transform = item.article.appearance?.transform;
-  const excerpt = cell && !transform?.quarterTurns && !transform?.mirrorX && !transform?.mirrorY;
+  const excerpt = cell && !flow && !item.pagination && !transform?.quarterTurns && !transform?.mirrorX && !transform?.mirrorY;
   return <>
     {appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
     {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 1px ${appearance.color}` }} />}
@@ -37,10 +38,26 @@ const LayerContent = memo(function LayerContent({ id, item, cell, background, re
       clipBounds={cell.clipContent === false ? undefined : { left: cell.window.left - rect.left, top: cell.window.top - rect.top,
         right: cell.window.left + cell.window.width - rect.left, bottom: cell.window.top + cell.window.height - rect.top }} />
     : <div className="text-module-body" style={textOutputStyle(article, rect)}>
-      <TextContentPage article={article} defaultOverflow="clip" />
+      <TextContentPage article={article} paginated={!flow && item.pagination === 'pages'} flow={flow} flowIndex={flowIndex} defaultOverflow={cell ? 'clip' : 'scroll'} />
     </div>}
   </>;
 });
+
+// Continuations share one article and the same measured flow as Studio. Their
+// authored frames remain separate windows; the public reader stores no copies.
+function TextLayers({ record, composition, rect, render }) {
+  const presentation = composition.workbench.texts.find(item => item.id === record.id);
+  const frames = presentation.frames || [];
+  const flow = useArticleFlow(record.article, [record.id, ...frames.map(frame => frame.id)]);
+  if (!rect) return null;
+  const scale = rect.width / presentation.window.width;
+  return <>{render(rect, record.id, frames.length ? flow : undefined, 0)}
+    {frames.map(({ id, window }, index) => render({
+      left: rect.left + (window.left - presentation.window.left) * scale,
+      top: rect.top + (window.top - presentation.window.top) * scale,
+      width: window.width * scale, height: window.height * scale,
+    }, id, flow, index + 1))}</>;
+}
 
 // Read-only paint over the same native module records edited by the Editor.
 // Layout is derived at the viewport width; no second saved composition exists.
@@ -99,8 +116,7 @@ export default function CompositionDocumentCanvas({ composition, width, onOpenSo
   const records = useMemo(() => new Map([...composition.imageModules, ...composition.texts, ...composition.shapes]
     .map(item => [item.id, item])), [composition]);
   const record = id => records.get(id);
-  const renderLayer = (id, cell, slide = null, inactive = false) => {
-    const original = layout.windows[id];
+  const paintLayer = (id, cell, slide = null, inactive = false, original = layout.windows[id], frameId = id, flow, flowIndex) => {
     if (!original) return null;
     const parent = cell?.window, text = id.startsWith('text:');
     const article = text && record(id)?.article;
@@ -112,13 +128,17 @@ export default function CompositionDocumentCanvas({ composition, width, onOpenSo
       && rect.left + rect.width <= parent.left + parent.width - corner
       && rect.top + rect.height <= parent.top + parent.height - corner;
     const local = parent ? { ...rect, left: rect.left - parent.left, top: rect.top - parent.top } : rect;
-    return <div key={id} className={`composition-document-layer${text ? ' text-window' : ''}`} data-layer-id={id} data-cell-member={cell?.id} inert={inactive ? '' : undefined}
+    return <div key={frameId} className={`composition-document-layer${text ? ' text-window' : ''}`} data-layer-id={frameId} data-cell-member={cell?.id} inert={inactive ? '' : undefined}
       data-text={text || undefined}
       style={{ ...(article ? textWindowStyle(article) : {}), ...local, zIndex: layerOrder.get(id),
         ...(slide != null && { '--layer-slide': slide }),
         '--workbench-content-width': `${rect.width}px`, '--workbench-paint-width': `${rect.width}px`, '--workbench-paint-height': `${rect.height}px`, '--workbench-content-scale': 1,
-        clipPath: parent && !inside && (slide != null || cell.clipContent !== false) ? editorCellClip(parent, rect, corner) : undefined }}><LayerContent id={id} item={record(id)} cell={cell} rect={rect} composition={composition} reportOverflow={reportOverflow} /></div>;
+        clipPath: parent && !inside && (slide != null || cell.clipContent !== false) ? editorCellClip(parent, rect, corner) : undefined }}><LayerContent id={id} item={record(id)} cell={cell} rect={rect} composition={composition} reportOverflow={reportOverflow} flow={flow} flowIndex={flowIndex} /></div>;
   };
+  const renderLayer = (id, cell, slide, inactive) => id.startsWith('text:')
+    ? <TextLayers key={id} record={record(id)} composition={composition} rect={layout.windows[id]}
+      render={(rect, frameId, flow, flowIndex) => paintLayer(id, cell, slide, inactive, rect, frameId, flow, flowIndex)} />
+    : paintLayer(id, cell, slide, inactive);
   return <div className="composition-document-viewport" ref={host} style={width ? { width } : undefined}>
     <section ref={canvas} className="composition-document-canvas" aria-label="Composition layout" data-mobile={layout?.mobile || undefined}
       data-show-frame={composition.showFrame !== false || undefined}

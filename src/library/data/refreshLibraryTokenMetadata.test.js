@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { refreshLibraryTokenMetadata } from './refreshLibraryTokenMetadata.js';
+import { encodeDataSourceWithHash } from '@erc725/erc725.js';
+import { keccak256, toBytes } from 'viem';
+import { createLsp8CollectionMetadataResolver } from './lsp8TokenMetadataResolver.js';
 import { metadataImages } from './metadataImages.js';
 import { normalizeEnvioHolding } from './luksoEnvioProfileRepository.js';
 
@@ -88,4 +91,28 @@ test('a confirmed empty image list removes stale attachments rather than merging
     assert.equal(batch.assets[0].imageUrl, null);
     assert.equal(batch.assets[0].metadataStatus, 'partial');
   }
+});
+
+test('opening token details again rechecks the contract and revalidates metadata at the same URL', async () => {
+  const asset = token(1);
+  let description = 'Arrival';
+  let contractReads = 0;
+  const body = () => JSON.stringify({ LSP4Metadata: { description, attributes: [{ key: 'Chapter', value: description }] } });
+  const resolver = createLsp8CollectionMetadataResolver({
+    client: { async readContract({ functionName }) {
+      if (functionName === 'getData') { contractReads++; return '0x'; }
+      return encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(toBytes(body())) }, 'https://example.test/token.json');
+    } },
+    fetchImpl: async (_url, options) => {
+      assert.equal(options.cache, 'no-cache');
+      return new Response(body(), { headers: { 'Content-Type': 'application/json' } });
+    },
+  });
+  for (const title of ['Arrival', 'Lunar Desert']) {
+    description = title;
+    const records = await resolver.resolve(contract, [asset], { strict: true, refreshContract: true });
+    assert.equal(records.get(asset.tokenId).description, title);
+    assert.equal(records.get(asset.tokenId).attributes[0].value, title);
+  }
+  assert.equal(contractReads, 4);
 });

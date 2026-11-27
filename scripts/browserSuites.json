@@ -475,7 +475,7 @@
     {
       "name": "destination-panels",
       "category": "release",
-      "rationale": "Release: Publish, Docs, Profile, Groups en Index gebruiken nieuwe gedeelde vensterchrome; close, focus, interne scroll en acties moeten bereikbaar blijven."
+      "rationale": "Release: Publish, Profile, Groups en Index gebruiken nieuwe gedeelde vensterchrome; close, focus, interne scroll en acties moeten bereikbaar blijven."
     },
     {
       "name": "activity-recovery",
@@ -1031,15 +1031,6 @@
       "name": "workbench-destinations",
       "category": "release",
       "rationale": "Release: expliciete camera-bestemmingen, onderbroken Back, late doelwijziging en zoomindicatie vullen de nieuwe Navigator- en bestemmingspanelencontroles aan."
-    },
-    {
-      "name": "workbench-docs",
-      "category": "targeted",
-      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: Docs tabs explain the current modules and remain usable at wide and narrow widths.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
-      ]
     },
     {
       "name": "workbench-explore",
