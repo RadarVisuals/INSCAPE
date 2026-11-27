@@ -1,0 +1,246 @@
+{
+  "privateCellDeletion": {
+    "deleted": true,
+    "textId": "text:a45e2096-f1a7-455c-847b-0d0f9891bc98",
+    "publicTextCountBefore": 0,
+    "publicTextCountAfter": 1,
+    "retainedVisibility": "PUBLIC",
+    "undoRestores": true,
+    "before": {
+      "version": 3,
+      "branding": {
+        "name": "",
+        "logo": null
+      },
+      "workbench": {
+        "version": 1,
+        "display": {
+          "name": "DISPLAY MODULE",
+          "open": false,
+          "window": {
+            "left": 32,
+            "top": 64,
+            "width": 960,
+            "height": 572
+          },
+          "shortcut": {
+            "position": {
+              "left": 24,
+              "top": 72
+            },
+            "visible": false,
+            "icon": null,
+            "iconPresentation": {
+              "labelSize": 8,
+              "offsetX": 0,
+              "offsetY": 0,
+              "scale": 1,
+              "size": 60
+            }
+          }
+        },
+        "identity": {
+          "open": false,
+          "window": {
+            "left": 28,
+            "top": 72,
+            "width": 840
+          }
+        },
+        "area": {
+          "left": 0,
+          "top": 0,
+          "width": 1440,
+          "height": 900
+        },
+        "shapes": [
+          {
+            "id": "shape:10f5dc20-dea3-400e-86cb-292111dcd8d5",
+            "open": true,
+            "window": {
+              "left": 8,
+              "top": 8,
+              "width": 700,
+              "height": 500
+            }
+          }
+        ],
+        "imageModules": [],
+        "texts": [
+          {
+            "id": "text:a45e2096-f1a7-455c-847b-0d0f9891bc98",
+            "open": true,
+            "window": {
+              "left": 20,
+              "top": 20,
+              "width": 600,
+              "height": 400
+            }
+          }
+        ]
+      },
+      "imageModules": [],
+      "texts": [
+        {
+          "id": "text:a45e2096-f1a7-455c-847b-0d0f9891bc98",
+          "article": {
+            "documentType": "INSCAPEArticle",
+            "version": 1,
+            "title": "",
+            "font": "sora",
+            "content": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph"
+                }
+              ]
+            },
+            "appearance": {
+              "background": "#101111",
+              "opacity": 1,
+              "frame": false,
+              "scale": 1,
+              "fontSize": 16,
+              "color": "#ffffff"
+            }
+          },
+          "visibility": "PUBLIC"
+        }
+      ],
+      "shapes": [
+        {
+          "name": "Shape 1",
+          "color": "#101111",
+          "opacity": 1,
+          "visibility": "PRIVATE",
+          "id": "shape:10f5dc20-dea3-400e-86cb-292111dcd8d5"
+        }
+      ],
+      "artworkLayers": [
+        "shape:10f5dc20-dea3-400e-86cb-292111dcd8d5",
+        "text:a45e2096-f1a7-455c-847b-0d0f9891bc98"
+      ],
+      "cells": [
+        {
+          "id": "shape:10f5dc20-dea3-400e-86cb-292111dcd8d5",
+          "members": [
+            "text:a45e2096-f1a7-455c-847b-0d0f9891bc98"
+          ],
+          "mobile": {
+            "columns": 2,
+            "height": 500
+          }
+        }
+      ]
+    },
+    "after": {
+      "version": 3,
+      "branding": {
+        "name": "",
+        "logo": null
+      },
+      "workbench": {
+        "version": 1,
+        "display": {
+          "name": "DISPLAY MODULE",
+          "open": false,
+          "window": {
+            "left": 32,
+            "top": 64,
+            "width": 960,
+            "height": 572
+          },
+          "shortcut": {
+            "position": {
+              "left": 24,
+              "top": 72
+            },
+            "visible": false,
+            "icon": null,
+            "iconPresentation": {
+              "labelSize": 8,
+              "offsetX": 0,
+              "offsetY": 0,
+              "scale": 1,
+              "size": 60
+            }
+          }
+        },
+        "identity": {
+          "open": false,
+          "window": {
+            "left": 28,
+            "top": 72,
+            "width": 840
+          }
+        },
+        "area": {
+          "left": 0,
+          "top": 0,
+          "width": 1440,
+          "height": 900
+        },
+        "shapes": [],
+        "imageModules": [],
+        "texts": [
+          {
+            "id": "text:a45e2096-f1a7-455c-847b-0d0f9891bc98",
+            "open": true,
+            "window": {
+              "left": 20,
+              "top": 20,
+              "width": 600,
+              "height": 400
+            }
+          }
+        ]
+      },
+      "imageModules": [],
+      "texts": [
+        {
+          "id": "text:a45e2096-f1a7-455c-847b-0d0f9891bc98",
+          "article": {
+            "documentType": "INSCAPEArticle",
+            "version": 1,
+            "title": "",
+            "font": "sora",
+            "content": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph"
+                }
+              ]
+            },
+            "appearance": {
+              "background": "#101111",
+              "opacity": 1,
+              "frame": false,
+              "scale": 1,
+              "fontSize": 16,
+              "color": "#ffffff"
+            }
+          },
+          "visibility": "PUBLIC"
+        }
+      ],
+      "shapes": [],
+      "artworkLayers": [
+        "text:a45e2096-f1a7-455c-847b-0d0f9891bc98"
+      ],
+      "cells": []
+    }
+  },
+  "minimumBound": {
+    "successfulAdditions": 12,
+    "error": "This row is too full. Add a row below, use less gutter or make the bento wider.",
+    "finalTextFrame": {
+      "left": 16,
+      "top": 16,
+      "width": 180,
+      "height": 574
+    },
+    "finalCellCount": 14
+  }
+}

@@ -1,0 +1,234 @@
+import { hasAllowedKeys as exact } from '../../recordValidation.js';
+import { validateProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
+import { validModuleEdges, moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
+
+export const ARTICLE_TYPE = 'INSCAPEArticle';
+export const ARTICLE_MAX_BYTES = 192 * 1024;
+export const MAX_TEXT_MODULES = 16;
+export const ARTICLE_FONT_SIZE = Object.freeze({ min: 8, max: 300, step: 1 });
+export const ARTICLE_TRACKING = Object.freeze({ min: -.1, max: 1, step: .01 });
+export const ARTICLE_BLOCK_SPACING = Object.freeze({ min: 0, max: 512, step: 1 });
+export const ARTICLE_LINE_HEIGHT = Object.freeze({ min: 1, max: 3, step: .05 });
+export const validArticleLineHeight = value => Number.isFinite(value) && value >= ARTICLE_LINE_HEIGHT.min && value <= ARTICLE_LINE_HEIGHT.max;
+export const validArticleFontSize = value => Number.isFinite(value) && value >= ARTICLE_FONT_SIZE.min && value <= ARTICLE_FONT_SIZE.max;
+export const validArticleTracking = value => Number.isFinite(value) && value >= ARTICLE_TRACKING.min && value <= ARTICLE_TRACKING.max;
+export const validArticleSpacing = value => Number.isFinite(value) && value >= ARTICLE_BLOCK_SPACING.min && value <= ARTICLE_BLOCK_SPACING.max;
+export const ARTICLE_STYLE_ROLES = Object.freeze([
+  { id: 'h1', label: 'Heading 1', size: 1.65 },
+  { id: 'h2', label: 'Heading 2', size: 1.35 },
+  { id: 'h3', label: 'Heading 3', size: 1.15 },
+  { id: 'caption', label: 'Artwork caption', size: .85 },
+]);
+// Article-owned role defaults. Explicit inline/block formatting takes precedence.
+// Missing roles and properties retain the stylesheet's existing appearance.
+export function articleRoleVariables(styles = {}) {
+  return Object.fromEntries(ARTICLE_STYLE_ROLES.flatMap(({ id }) => Object.entries(styles[id] || {}).map(([key, value]) => [
+    `--text-${id}-${key}`, key === 'fontSize' ? `${value}px` : key === 'letterSpacing' ? `${value}em` : value,
+  ])));
+}
+export function articleSpacingStyle(attrs = {}) {
+  // Explicit spacing belongs to the block, avoiding collapsed sibling margins.
+  // Omitted sides retain the existing stylesheet defaults, including compact Text.
+  return { ...(attrs?.spaceBefore != null ? { marginTop: 0, paddingTop: attrs.spaceBefore } : {}),
+    ...(attrs?.spaceAfter != null ? { marginBottom: 0, paddingBottom: attrs.spaceAfter } : {}),
+    ...(attrs?.lineHeight != null ? { lineHeight: attrs.lineHeight } : {}) };
+}
+export function articleTextStyle(attrs) {
+  return { fontFamily: attrs.fontFamily || undefined, color: attrs.color || undefined,
+    fontSize: attrs.fontSize ?? undefined, letterSpacing: attrs.letterSpacing == null ? undefined : `${attrs.letterSpacing}em` };
+}
+export const defaultTextAppearance = () => ({ background: '#101111', opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
+export const textAppearance = article => article.appearance || { ...defaultTextAppearance(), background: '#101111', frame: true };
+export function textContentStyle(article, { containerOwned = false } = {}) {
+  const appearance = textAppearance(article);
+  const padding = containerOwned ? { top: 0, right: 0, bottom: 0, left: 0 } : article.appearance?.padding;
+  return { fontFamily: ARTICLE_FONTS.find(f => f.id === article.font).family, fontSize: appearance.fontSize,
+    color: article.appearance ? appearance.color : 'inherit', zoom: appearance.scale,
+    '--text-columns': appearance.columns > 1 ? appearance.columns : 'auto', '--text-column-gap': `${appearance.columnGap ?? 24}px`,
+    '--text-line-height': appearance.lineHeight ?? undefined,
+    ...articleRoleVariables(appearance.textStyles),
+    ...(padding ? { padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`, maxWidth: 'none' } : {}) };
+}
+export function textTitleStyle(article) {
+  const appearance = textAppearance(article);
+  return { fontSize: appearance.titleFontSize ?? 28, textAlign: appearance.titleAlignment ?? 'left',
+    marginBottom: appearance.titleGap ?? undefined,
+    color: appearance.titleColor || 'inherit', letterSpacing: appearance.titleLetterSpacing == null ? undefined : `${appearance.titleLetterSpacing}em` };
+}
+export function textSurfaceStyle(article, scale = 1) {
+  if (!article.appearance) return { background: 'var(--workflow-panel)', color: 'var(--workflow-ink)', boxShadow: `inset 0 0 0 ${scale}px var(--workflow-border)` };
+  const appearance = textAppearance(article);
+  const hex = appearance.background;
+  const background = hex ? `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${appearance.opacity})` : 'transparent';
+  return { background, color: appearance.color, ...moduleEdgeStyle(appearance.edges, scale), boxShadow: [appearance.frame ? `inset 0 0 0 ${scale}px ${appearance.color}` : '', appearance.edges?.shadow ? 'var(--workflow-window-chrome-shadow)' : ''].filter(Boolean).join(', ') || 'none' };
+}
+// Standalone Text paints its background once, on the Workbench pixel surface.
+// Its transformed/scrolling content never owns a second background or frame.
+export function textWindowStyle(article, scale = 1) {
+  const style = textSurfaceStyle(article, scale);
+  return { ...style, borderRadius: style['--module-corners'] || 0,
+    boxShadow: article.appearance?.edges?.shadow ? 'var(--workflow-window-chrome-shadow)' : 'none' };
+}
+export function textOutputStyle(article, window) {
+  const transform = article.appearance?.transform;
+  if (!transform) return {};
+  const rotated = transform.quarterTurns % 2 === 1;
+  return { position: 'absolute', left: '50%', top: '50%',
+    '--workbench-content-width': `${rotated ? window.height : window.width}px`,
+    width: rotated ? 'var(--workbench-paint-height)' : 'var(--workbench-paint-width)',
+    height: rotated ? 'var(--workbench-paint-width)' : 'var(--workbench-paint-height)',
+    transform: `translate(-50%, -50%) rotate(${transform.quarterTurns * 90}deg) scale(${transform.mirrorX ? -1 : 1}, ${transform.mirrorY ? -1 : 1})` };
+}
+export const TEXT_ID = /^text:[A-Za-z0-9_-]{1,80}$/u;
+export const ARTICLE_ALIGNMENTS = Object.freeze(['left', 'center', 'right', 'justify-left', 'justify-center', 'justify-right', 'justify-all']);
+export function articleAlignmentStyle(alignment) {
+  if (!ARTICLE_ALIGNMENTS.includes(alignment)) return {};
+  if (!alignment.startsWith('justify-')) return { textAlign: alignment, textAlignLast: 'auto' };
+  return { textAlign: 'justify', textAlignLast: alignment === 'justify-all' ? 'justify' : alignment.slice(8) };
+}
+export const ARTICLE_FONTS = Object.freeze([
+  { id: 'sora', label: 'Sora', family: 'Inscape Sora' },
+  { id: 'plex', label: 'IBM Plex Sans Condensed', family: 'Inscape IBM Plex Sans Condensed' },
+  { id: 'literata', label: 'Literata', family: 'Inscape Article Literata' },
+  { id: 'cormorant', label: 'Cormorant Garamond', family: 'Inscape Article Cormorant' },
+  { id: 'mono', label: 'IBM Plex Mono', family: 'Inscape Article Mono' },
+]);
+const string = (v, max) => typeof v === 'string' && v.length <= max;
+export function safeArticleLink(value) {
+  if (!string(value, 2048) || /[\u0000-\u0020\u007f]/u.test(value)) return false;
+  try { const u = new URL(value); return ['https:', 'mailto:'].includes(u.protocol) && !u.username && !u.password; } catch { return false; }
+}
+const blocks = ['paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'horizontalRule', 'artwork', 'pageBreak'];
+function validMark(mark) {
+  if (['bold', 'italic', 'strike', 'underline', 'code'].includes(mark?.type)) return exact(mark, ['type']);
+  if (mark?.type === 'textStyle') return exact(mark, ['type', 'attrs']) && exact(mark.attrs, [], ['fontFamily', 'color', 'fontSize', 'letterSpacing'])
+    && Object.values(mark.attrs).some(value => value != null)
+    && (mark.attrs.fontFamily == null || ARTICLE_FONTS.some(font => font.family === mark.attrs.fontFamily))
+    && (mark.attrs.color == null || /^#[\da-f]{6}$/iu.test(mark.attrs.color))
+    && (mark.attrs.fontSize == null || validArticleFontSize(mark.attrs.fontSize))
+    && (mark.attrs.letterSpacing == null || validArticleTracking(mark.attrs.letterSpacing));
+  return mark?.type === 'link' && exact(mark, ['type', 'attrs']) && exact(mark.attrs, ['href'], ['target', 'rel', 'class', 'title'])
+    && safeArticleLink(mark.attrs.href) && [undefined, null, '_blank', '_self'].includes(mark.attrs.target)
+    && [undefined, null, 'noopener noreferrer nofollow', 'noopener noreferrer'].includes(mark.attrs.rel)
+    && [undefined, null].includes(mark.attrs.class) && [undefined, null].includes(mark.attrs.title);
+}
+// Only successfully validated, recursively immutable data can reuse a result.
+// A frozen outer object with mutable children or accessors is deliberately not
+// eligible. Weak ownership retains neither discarded drafts nor another value.
+const validatedImmutableArticles = new WeakSet();
+function deeplyFrozenData(value, seen = new WeakSet()) {
+  if (!value || typeof value !== 'object') return true;
+  if (!Object.isFrozen(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== null && prototype !== Object.prototype && prototype !== Array.prototype) return false;
+  if (seen.has(value)) return true;
+  seen.add(value);
+  return Reflect.ownKeys(value).every(key => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return Object.hasOwn(descriptor, 'value') && deeplyFrozenData(descriptor.value, seen);
+  });
+}
+export function assertArticle(article) {
+  if (validatedImmutableArticles.has(article)) return article;
+  if (!exact(article, ['documentType', 'version', 'title', 'font', 'content'], ['appearance']) || article.documentType !== ARTICLE_TYPE
+    || article.version !== 1 || !string(article.title, 160) || !ARTICLE_FONTS.some(f => f.id === article.font)) throw new Error('Unsupported article format. The source has not been changed.');
+  if (article.appearance !== undefined) {
+    const a = article.appearance;
+    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize', 'titleLetterSpacing', 'titleGap', 'titleAlignment', 'titleColor', 'columns', 'columnGap', 'lineHeight', 'textStyles', 'verticalAlign', 'writingDirection', 'overflow'])
+      || !(a.background === null || /^#[\da-f]{6}$/iu.test(a.background)) || !/^#[\da-f]{6}$/iu.test(a.color)
+      || !Number.isFinite(a.opacity) || a.opacity < 0 || a.opacity > 1 || typeof a.frame !== 'boolean'
+      || !Number.isFinite(a.scale) || a.scale < .01 || a.scale > 100
+      || !validArticleFontSize(a.fontSize)
+      || (a.titleFontSize !== undefined && !validArticleFontSize(a.titleFontSize))) throw new Error('Unsupported Text appearance.');
+    if (a.titleLetterSpacing !== undefined && !validArticleTracking(a.titleLetterSpacing)) throw new Error('Unsupported title tracking.');
+    if (a.lineHeight !== undefined && !validArticleLineHeight(a.lineHeight)) throw new Error('Unsupported line spacing.');
+    if (a.textStyles !== undefined) {
+      if (!exact(a.textStyles, [], ARTICLE_STYLE_ROLES.map(role => role.id))) throw new Error('Unsupported article styles.');
+      for (const style of Object.values(a.textStyles)) {
+        if (!exact(style, [], ['fontFamily', 'fontSize', 'color', 'lineHeight', 'letterSpacing'])
+          || (style.fontFamily !== undefined && !ARTICLE_FONTS.some(font => font.family === style.fontFamily))
+          || (style.fontSize !== undefined && !validArticleFontSize(style.fontSize))
+          || (style.color !== undefined && !/^#[\da-f]{6}$/iu.test(style.color))
+          || (style.lineHeight !== undefined && !validArticleLineHeight(style.lineHeight))
+          || (style.letterSpacing !== undefined && !validArticleTracking(style.letterSpacing))) throw new Error('Unsupported article style.');
+      }
+    }
+    if (a.titleGap !== undefined && !validArticleSpacing(a.titleGap)) throw new Error('Unsupported title spacing.');
+    if (a.titleAlignment !== undefined && !['left', 'center', 'right'].includes(a.titleAlignment)) throw new Error('Unsupported title alignment.');
+    if (a.titleColor !== undefined && !/^#[\da-f]{6}$/iu.test(a.titleColor)) throw new Error('Unsupported title colour.');
+    if (a.columns !== undefined && ![1, 2, 3].includes(a.columns)) throw new Error('Unsupported Text columns.');
+    if (a.columnGap !== undefined && (!Number.isFinite(a.columnGap) || a.columnGap < 0 || a.columnGap > 128)) throw new Error('Unsupported Text column spacing.');
+    if (a.edges !== undefined && !validModuleEdges(a.edges)) throw new Error('Unsupported Text edges.');
+    if (a.compact !== undefined && typeof a.compact !== 'boolean') throw new Error('Unsupported Text spacing.');
+    if (a.verticalAlign !== undefined && !['top', 'center', 'bottom'].includes(a.verticalAlign)) throw new Error('Unsupported Text vertical alignment.');
+    if (a.writingDirection !== undefined && !['horizontal', 'stacked'].includes(a.writingDirection)) throw new Error('Unsupported Text writing direction.');
+    if (a.overflow !== undefined && !['clip', 'scroll'].includes(a.overflow)) throw new Error('Unsupported Text overflow.');
+    if (a.padding !== undefined && (!exact(a.padding, ['top', 'right', 'bottom', 'left'])
+      || Object.values(a.padding).some(value => !Number.isFinite(value) || value < 0 || value > 512))) throw new Error('Unsupported Text inner spacing.');
+    if (a.transform !== undefined && (!exact(a.transform, ['quarterTurns', 'mirrorX', 'mirrorY']) || ![0, 1, 2, 3].includes(a.transform.quarterTurns)
+      || typeof a.transform.mirrorX !== 'boolean' || typeof a.transform.mirrorY !== 'boolean')) throw new Error('Unsupported Text transform.');
+  }
+  let count = 0;
+  function visit(node, parent, depth) {
+    if (++count > 6000 || depth > 16 || !exact(node, ['type'], ['attrs', 'content', 'text', 'marks'])) throw new Error('Article structure exceeds supported limits.');
+    const type = node.type;
+    const allowed = parent === null ? ['doc'] : ['paragraph', 'heading'].includes(parent) ? ['text', 'hardBreak']
+      : ['bulletList', 'orderedList'].includes(parent) ? ['listItem'] : blocks;
+    if (!allowed.includes(type)) throw new Error(`Unsupported article block: ${String(type).slice(0, 40)}.`);
+    if (type === 'text') {
+      if (!string(node.text, ARTICLE_MAX_BYTES) || !node.text.length || node.content || node.attrs
+        || node.marks && (!Array.isArray(node.marks) || node.marks.length > 7 || !node.marks.every(validMark))) throw new Error('Unsupported text formatting.');
+      return;
+    }
+    if (node.text !== undefined || node.marks !== undefined) throw new Error('Invalid article block.');
+    if (['paragraph', 'heading'].includes(type)) {
+      if (type === 'heading' && (!exact(node.attrs, ['level'], ['textAlign', 'spaceBefore', 'spaceAfter', 'lineHeight']) || ![1, 2, 3].includes(node.attrs.level))) throw new Error('Unsupported heading.');
+      if (type === 'paragraph' && node.attrs && !exact(node.attrs, [], ['textAlign', 'spaceBefore', 'spaceAfter', 'lineHeight'])) throw new Error('Unsupported paragraph attributes.');
+      if (node.attrs?.lineHeight != null && !validArticleLineHeight(node.attrs.lineHeight)) throw new Error('Unsupported paragraph line spacing.');
+      if (node.attrs?.textAlign != null && !ARTICLE_ALIGNMENTS.includes(node.attrs.textAlign)) throw new Error('Unsupported paragraph alignment.');
+      if (['spaceBefore', 'spaceAfter'].some(key => node.attrs?.[key] != null && !validArticleSpacing(node.attrs[key]))) throw new Error('Unsupported paragraph spacing.');
+    }
+    else if (type === 'orderedList') { if (node.attrs && (!exact(node.attrs, ['start'], ['type']) || !Number.isSafeInteger(node.attrs.start)
+      || node.attrs.start < 1 || node.attrs.start > 9999 || ![undefined, null].includes(node.attrs.type))) throw new Error('Unsupported list.'); }
+    else if (type === 'artwork') {
+      if (!exact(node.attrs, ['asset', 'alt', 'caption']) || !validateProfileDocumentV9Asset(node.attrs.asset)
+        || node.attrs.asset.media.type !== 'image' || typeof node.attrs.asset.media.url !== 'string'
+        || !string(node.attrs.alt, 1000) || !string(node.attrs.caption, 2000)) throw new Error('Invalid artwork reference.');
+    } else if (node.attrs && Object.keys(node.attrs).length) throw new Error('Unsupported block attributes.');
+    if (['hardBreak', 'horizontalRule', 'artwork', 'pageBreak'].includes(type)) { if (node.content !== undefined) throw new Error('Invalid leaf block.'); return; }
+    if (node.content !== undefined && !Array.isArray(node.content)) throw new Error('Invalid article content.');
+    if (['doc', 'blockquote', 'listItem', 'bulletList', 'orderedList'].includes(type) && !node.content?.length) throw new Error('Empty article structure.');
+    if (type === 'listItem' && node.content[0].type !== 'paragraph') throw new Error('A list item must start with a paragraph.');
+    for (const child of node.content || []) visit(child, type, depth + 1);
+  }
+  visit(article.content, null, 0);
+  if (new TextEncoder().encode(JSON.stringify(article)).length > ARTICLE_MAX_BYTES) throw new Error('Article exceeds 192 KiB.');
+  if (deeplyFrozenData(article)) validatedImmutableArticles.add(article);
+  return article;
+}
+export function createArticle(title = '') {
+  return { documentType: ARTICLE_TYPE, version: 1, title, font: 'sora', content: { type: 'doc', content: [{ type: 'paragraph' }] }, appearance: defaultTextAppearance() };
+}
+export function validTextModules(items, published = false) {
+  try {
+    if (!Array.isArray(items) || items.length > MAX_TEXT_MODULES) return false;
+    const ids = new Set();
+    return items.every(item => {
+      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], ['pagination']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
+      ids.add(item.id); assertArticle(item.article);
+      if (item.pagination !== undefined && item.pagination !== 'pages') return false;
+      return published || ['PRIVATE', 'PUBLIC'].includes(item.visibility);
+    });
+  } catch { return false; }
+}
+export function projectTextModules(items) {
+  return items.filter(item => item.visibility === 'PUBLIC')
+    .map(({ id, article, pagination }) => ({ id, article: structuredClone(article), ...(pagination && { pagination }) }));
+}
+
+export const restoreTextModules = (published = [], local = []) => [
+  ...published.map(item => ({ ...structuredClone(item), visibility: 'PUBLIC' })),
+  ...local.filter(item => !published.some(record => record.id === item.id)).map(item => ({ ...structuredClone(item), visibility: 'PRIVATE' })),
+];
+
+export { exact };

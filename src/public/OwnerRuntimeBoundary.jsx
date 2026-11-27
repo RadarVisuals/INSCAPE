@@ -1,6 +1,10 @@
+import { developmentErrorDetails } from '../support/developmentErrorDetails.js';
 import { Component, lazy, Suspense } from 'react';
+import { StartupDestinationFailure } from '../startveil/StartupDestinationContext.jsx';
 import { normalizeProfileAddress } from '../library/config.js';
 import { loadOwnerRuntime } from './ownerRuntimeLoader.js';
+import AlphaSupportPanel from '../support/AlphaSupportPanel.jsx';
+import { ALPHA_SUPPORT_CODES } from '../support/alphaSupport.js';
 
 const SelectedOwnerRuntime = lazy(loadOwnerRuntime);
 
@@ -8,19 +12,23 @@ function OwnerRuntimeLoadingFallback() {
   return <div className="mode-loading" role="status">Opening owner workspace…</div>;
 }
 
-class OwnerRuntimeErrorBoundary extends Component {
+export class OwnerRuntimeErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { failed: false };
+    this.state = { error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error) {
+    return { error };
   }
 
   render() {
-    if (this.state.failed) {
-      return <div className="mode-loading" role="alert">The owner workspace could not be loaded.</div>;
+    if (this.state.error) {
+      return <StartupDestinationFailure title="The owner workspace could not be loaded.">
+        <AlphaSupportPanel compact code={ALPHA_SUPPORT_CODES.UNEXPECTED_APPLICATION_ERROR}
+          phase="OWNER_RUNTIME" routeClass="OWNER" error={this.state.error}
+          developmentDetails={import.meta.env.DEV ? developmentErrorDetails(this.state.error) : undefined} />
+      </StartupDestinationFailure>;
     }
     return this.props.children;
   }

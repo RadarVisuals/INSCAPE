@@ -1,0 +1,7 @@
+.workbench-backup { display: grid; gap: 10px; min-width: 0; color: var(--workflow-ink, var(--lattice-menu-ink)); font: 400 11px/1.5 var(--font-interface); }
+.workbench-backup.workbench-backup p { margin: 0; padding: 0; color: inherit; font: inherit; letter-spacing: normal; overflow-wrap: anywhere; }
+.workbench-backup label, .workbench-backup__preview { display: grid; gap: 10px; min-width: 0; }
+.workbench-backup input[type="file"] { width: 100%; min-width: 0; font: inherit; }
+.workbench-backup button, .workbench-backup input::file-selector-button { appearance: none; border: 1px solid var(--workflow-border-strong, var(--lattice-menu-line-strong)); background: var(--workflow-panel, var(--lattice-menu-panel)); color: inherit; font: inherit; cursor: pointer; white-space: normal; min-height: 32px; padding: 6px 10px; text-align: left; }
+.workbench-backup button:focus-visible, .workbench-backup input:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.workbench-backup button:disabled { opacity: .5; cursor: default; }

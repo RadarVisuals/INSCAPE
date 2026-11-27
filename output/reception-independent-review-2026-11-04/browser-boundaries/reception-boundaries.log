@@ -1,0 +1,90 @@
+TAP version 13
+# Subtest: local Reception survives every public failure; visitors never see owner drafts
+ok 1 - local Reception survives every public failure; visitors never see owner drafts
+  ---
+  duration_ms: 1760.4411
+  type: 'test'
+  ...
+# Subtest: another tab refreshes its reader after legal editing; editor lease and authority remain isolated
+not ok 2 - another tab refreshes its reader after legal editing; editor lease and authority remain isolated
+  ---
+  duration_ms: 33264.181
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\reception-boundaries.browser.mjs:47:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.click: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('complementary', { name: 'Workspace sidebar' }).getByRole('button', { name: 'Reception', exact: true })[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    viewReception (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\reception-boundaries.browser.mjs:25:128)
+    TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\reception-boundaries.browser.mjs:64:11)
+  ...
+# Subtest: successful private recovery immediately renders the restored local Reception
+ok 3 - successful private recovery immediately renders the restored local Reception
+  ---
+  duration_ms: 1830.0851
+  type: 'test'
+  ...
+# Subtest: backup recovery from an open editor retains the document target and refreshes the public reader
+not ok 4 - backup recovery from an open editor retains the document target and refreshes the public reader
+  ---
+  duration_ms: 32038.3376
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\reception-boundaries.browser.mjs:88:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.setInputFiles: Timeout 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByLabel('Open Workbench backup', { exact: true })[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\reception-boundaries.browser.mjs:94:5)
+  ...
+# Subtest: authored Text typography survives native Editor preview and return to Reception
+ok 5 - authored Text typography survives native Editor preview and return to Reception
+  ---
+  duration_ms: 2268.3863
+  type: 'test'
+  ...
+# Subtest: public Edit Reception and My Inscape use one Editor document selector through reload and history
+not ok 6 - public Edit Reception and My Inscape use one Editor document selector through reload and history
+  ---
+  duration_ms: 3004.9476
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\reception-boundaries.browser.mjs:125:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading '0')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-boundaries.browser.mjs:138:30)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: StrictMode public-to-Editor entry preserves eight saved Reception layers in a single draft
+ok 7 - StrictMode public-to-Editor entry preserves eight saved Reception layers in a single draft
+  ---
+  duration_ms: 2945.798
+  type: 'test'
+  ...
+# Subtest: StrictMode public-to-Editor entry preserves eight saved Reception layers in a collection
+ok 8 - StrictMode public-to-Editor entry preserves eight saved Reception layers in a collection
+  ---
+  duration_ms: 3216.474
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 5
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 80648.7029

@@ -1,0 +1,24 @@
+.artwork-info { min-width: 0; color: var(--tactile-ink); font: 11px/1.65 var(--font-interface); overflow-wrap: anywhere; }
+.artwork-info > header { padding-bottom: 12px; }
+.artwork-info h3 { margin: 0; font: 500 13px/1.5 var(--font-interface); }
+.artwork-info h4 { margin: 0 0 6px; font: 500 11px/1.5 var(--font-interface); }
+.artwork-info p { margin: 0; white-space: pre-wrap; }
+.artwork-info > header p { margin-top: 3px; color: var(--tactile-muted); }
+.artwork-info > section, .artwork-info > details { padding-block: 12px; border-top: 1px solid var(--tactile-edge); }
+.artwork-info dl { display: grid; gap: 10px; margin: 0; }
+.artwork-info dt { color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
+.artwork-info dd { margin: 0; white-space: pre-wrap; }
+.artwork-info dd small { display: block; color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
+.artwork-info a { color: inherit; text-underline-offset: 3px; }
+.artwork-info a:focus-visible, .artwork-info summary:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 2px; }
+.artwork-info :focus:not(:focus-visible) { outline: none; }
+.artwork-info-creators > :is(a, div) { display: flex; align-items: center; gap: 8px; padding-block: 4px; text-decoration: none; }
+.artwork-info-creators i { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); overflow: hidden; }
+.artwork-info-creators i img { width: 100%; height: 100%; object-fit: cover; }
+.artwork-info-creators svg { width: 14px; height: 14px; flex: none; stroke-width: 1.6; }
+.artwork-info-creators span { display: grid; min-width: 0; flex: 1; }
+.artwork-info-creators strong { font-weight: 400; }
+.artwork-info-creators small { color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
+.artwork-info-sources summary { cursor: pointer; font-weight: 500; }
+.artwork-info-sources[open] summary { margin-bottom: 12px; }
+.artwork-info-source-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; }

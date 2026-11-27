@@ -1,0 +1,168 @@
+{
+  "checkedAt": "2026-10-20T11:37:10.961Z",
+  "baseCommit": "85c68261e3aabce80949b13d37a8807c136371fe",
+  "nodePassed": 1265,
+  "browserPassed": 43,
+  "browserSuites": 12,
+  "results": [
+    {
+      "name": "workbench-canvas-crop",
+      "code": 0,
+      "seconds": 20.139,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-overlay-final"
+    },
+    {
+      "name": "camera-controls",
+      "code": 0,
+      "seconds": 43.656,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-first"
+    },
+    {
+      "name": "workbench-area-navigation",
+      "code": 0,
+      "seconds": 12.679,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-first"
+    },
+    {
+      "name": "workbench-groups",
+      "code": 0,
+      "seconds": 7.283,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-first"
+    },
+    {
+      "name": "workbench-stacks",
+      "code": 0,
+      "seconds": 18.573,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-first"
+    },
+    {
+      "name": "published-workbench-groups",
+      "code": 0,
+      "seconds": 8.956,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-first"
+    },
+    {
+      "name": "production-startup",
+      "code": 0,
+      "seconds": 4.248,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-built"
+    },
+    {
+      "name": "keeper",
+      "code": 0,
+      "seconds": 24.41,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-overlay-final"
+    },
+    {
+      "name": "keeper-dialogue",
+      "code": 0,
+      "seconds": 12.181,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-overlay-final"
+    },
+    {
+      "name": "keeper-selection",
+      "code": 0,
+      "seconds": 4.282,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-overlay-final"
+    },
+    {
+      "name": "mini-apps",
+      "code": 0,
+      "seconds": 16.463,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-overlay-final"
+    },
+    {
+      "name": "context-action-bars",
+      "code": 0,
+      "seconds": 43.863,
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "sourceRun": "browser-overlay-final"
+    }
+  ],
+  "initialJavaScriptBytes": 823811,
+  "exactFit": {
+    "left": 60,
+    "top": 60,
+    "width": 720,
+    "height": 484
+  },
+  "gesturesPerViewport": 16,
+  "viewportWidths": [
+    1440,
+    390
+  ],
+  "userCompositionModified": false,
+  "realWalletOrUpload": false,
+  "hostedCI": "new revision not yet pushed"
+}

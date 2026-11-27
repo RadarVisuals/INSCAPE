@@ -1,0 +1,98 @@
+TAP version 13
+# Subtest: grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening
+not ok 1 - grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening
+  ---
+  duration_ms: 45772.1672
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:47:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.goto: Timeout 45000ms exceeded.
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:11407/browser-tests/workbench-storage-fixture.html?seed=1&shell=1", waiting until "domcontentloaded"[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    open (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:13:14)
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:52:5)
+  ...
+# Subtest: touch grid handles a single canvas, creation, details and opening without changing saved geometry
+not ok 2 - touch grid handles a single canvas, creation, details and opening without changing saved geometry
+  ---
+  duration_ms: 35530.965
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:134:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.tap: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Open Workbench 1', exact: true })[22m
+    [2m    - locator resolved to <button tabindex="0" type="button" data-previewed="false" aria-label="Open Workbench 1" data-workbench-id="workbench:main" class="workbench-overview-card-open">…</button>[22m
+    [2m  - attempting tap action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - performing tap action[22m
+    [2m      - <button type="button" tabindex="-1" data-previewed="false" aria-label="Open Workbench 1" data-workbench-id="workbench:main" class="workbench-overview-card-open">…</button> from <div aria-hidden="true" data-gallery-cycle="1" class="workbench-overview-cycle">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying tap action[22m
+    [2m    - waiting 20ms[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m    - element is visible, enabled and stable[22m
+    [2m    - scrolling into view if needed[22m
+    [2m    - done scrolling[22m
+    [2m    - performing tap action[22m
+    [2m    2 × <button type="button" tabindex="-1" data-previewed="false" aria-label="Open Workbench 1" data-workbench-id="workbench:main" class="workbench-overview-card-open">…</button> from <div aria-hidden="true" data-gallery-cycle="1" class="workbench-overview-cycle">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying tap action[22m
+    [2m      - waiting 100ms[22m
+    [2m      - waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m    6 × performing tap action[22m
+    [2m      - <button type="button" tabindex="-1" data-previewed="false" aria-label="Open Workbench 1" data-workbench-id="workbench:main" class="workbench-overview-card-open">…</button> from <div aria-hidden="true" data-gallery-cycle="1" class="workbench-overview-cycle">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying tap action[22m
+    [2m      - waiting 500ms[22m
+    [2m      - waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m    - performing tap action[22m
+    [2m    - <button type="button" tabindex="-1" data-previewed="false" aria-label="Open Workbench 1" data-workbench-id="workbench:main" class="workbench-overview-card-open">…</button> from <div aria-hidden="true" data-gallery-cycle="1" class="workbench-overview-cycle">…</div> subtree intercepts pointer events[22m
+    [2m  - retrying tap action[22m
+    [2m    - waiting 500ms[22m
+    [2m  - element was detached from the DOM, retrying[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:159:79)
+  ...
+# Subtest: overview browses without activation, saves optional details, and opens only the chosen canvas
+ok 3 - overview browses without activation, saves optional details, and opens only the chosen canvas
+  ---
+  duration_ms: 3733.1652
+  type: 'test'
+  ...
+# Subtest: touch opens a row directly and long names and details stay usable on a narrow screen
+ok 4 - touch opens a row directly and long names and details stay usable on a narrow screen
+  ---
+  duration_ms: 2195.6039
+  type: 'test'
+  ...
+# Subtest: failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+ok 5 - failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+  ---
+  duration_ms: 2972.2617
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 90535.7145

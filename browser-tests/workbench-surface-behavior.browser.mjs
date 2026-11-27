@@ -1,0 +1,76 @@
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
+﻿import assert from 'node:assert/strict';
+import test from 'node:test';
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright-core';
+import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
+import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+
+const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
+const settle = p => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+const near = (a, b, tolerance, message) => assert.ok(Math.abs(a - b) <= tolerance, message + ': ' + a + ' versus ' + b);
+for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
+  test((visitor ? 'Visitor' : 'Owner') + ' physical surfaces preserve Text alpha, rotation, wrapping and input at DPR ' + density, { timeout: 90000 }, async () => {
+    await mkdir('.browser-test-runtime', { recursive: true });
+    const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1600, height: 1100 }, deviceScaleFactor: density, reducedMotion: 'reduce' });
+      const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await mountGridMotionFixture(page, { origin, visitor, textModes: true, count: 3,
+        adjoiningModules: { textTransform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
+          textAppearance: { opacity: .5, edges: { corners: [0, 16, 24, 8], shadow: false, grain: 0 } } } });
+      const text = page.locator('aside.text-window'); await text.waitFor();
+      if (!visitor) {
+        await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
+        await sharedToolPanel(page).waitFor({ state: 'detached' });
+      }
+      await page.addStyleTag({ content: '.system-workflow,.visitor-grid-world,.system-workflow__workbench{background:#00ff00!important;background-image:none!important}' });
+      await page.evaluate(async () => { document.activeElement?.blur(); await document.fonts.ready; });
+      await page.mouse.move(1500, 950);
+      await page.mouse.click(1500, 950);
+      const measure = () => text.evaluate(n => {
+        const paragraph = n.querySelector('.text-document p'), range = document.createRange(); range.selectNodeContents(paragraph);
+        return { box: n.getBoundingClientRect().toJSON(), body: n.querySelector('.text-module-body').getBoundingClientRect().toJSON(),
+          width: parseFloat(getComputedStyle(n.querySelector('.text-module-content')).width), lines: range.getClientRects().length };
+      });
+      const before = await measure();
+      for (const zoom of [.413, .67, 1.371, 2]) {
+        await setWorkbenchZoom(page, zoom); await settle(page);
+        const after = await measure();
+        near(after.box.width, before.box.width * zoom, 1.6, 'Text screen width');
+        near(after.body.width, after.box.width, .02, 'rotated body width reaches paint frame');
+        near(after.body.height, after.box.height, .02, 'rotated body height reaches paint frame');
+        near(after.width, before.width, .1, 'authored wrapping width');
+        assert.equal(after.lines, before.lines, 'rotation and camera zoom retain line breaks');
+      }
+      await setWorkbenchZoom(page, .67); await settle(page);
+      const png = await page.screenshot({ path: '.browser-test-runtime/surface-' + visitor + '-' + density + '-wide.png' });
+      const colors = await page.evaluate(async b64 => {
+        const image = new Image(); image.src = 'data:image/png;base64,' + b64; await image.decode();
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
+        const r = document.querySelector('.text-window').getBoundingClientRect();
+        const pixel = (x, y) => [...ctx.getImageData(Math.floor(x * devicePixelRatio), Math.floor(y * devicePixelRatio), 1, 1).data];
+        return { interior: pixel(r.left + r.width * .7, r.top + r.height * .7),
+          square: pixel(r.left + 1, r.top + 1), rounded: pixel(r.right - 1, r.top + 1) };
+      }, png.toString('base64'));
+      for (const name of ['interior', 'square']) {
+        near(colors[name][0], 128, 2, name + ' retains single alpha contribution');
+        near(colors[name][1], 127, 2, name + ' exposes Workbench through Text');
+      }
+      assert.deepEqual(colors.rounded, [0, 255, 0, 255], 'authored rounded corner stays transparent');
+      if (!visitor) {
+        await text.getByLabel('Move Text window', { exact: true }).focus();
+        const start = await text.boundingBox();
+        const handle = await page.getByRole('separator', { name: 'Resize Text window', exact: true }).boundingBox();
+        await page.keyboard.down('Alt'); await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2); await page.mouse.down();
+        await page.mouse.move(handle.x + handle.width / 2 + 37, handle.y + handle.height / 2 + 23, { steps: 5 });
+        await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
+        const resized = await text.boundingBox();
+        near(resized.width - start.width, 37, 1.6, 'Text resize converts screen delta to authored width');
+        near(resized.height - start.height, 23, 1.6, 'Text resize converts screen delta to authored height');
+      }
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); }
+  });
+}

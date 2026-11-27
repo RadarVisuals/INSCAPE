@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-11-04T11:13:19.817Z",
+  "runs": [
+    {
+      "head_sha": "82837f1d76debe98f1597cf69d5bd95aac5f2659",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/RadarVisuals/INSCAPE/actions/runs/41333804853",
+      "updated_at": "2026-11-01T18:09:49Z"
+    }
+  ]
+}

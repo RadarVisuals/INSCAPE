@@ -1,0 +1,97 @@
+SVG-bewaarpool — 30 oktober 2026
+
+Verzoek
+De founder wil meer dan vier animated SVGs uit beeld en terug kunnen pannen
+zonder de gezamenlijke herlaadpiek. Pauzeren buiten beeld is toegestaan;
+een zichtbaar label "Loading artwork" is ongewenst.
+
+Wijziging
+- De bestaande pool bewaart maximaal 24 geladen, buiten beeld geraakte
+  SVG-documenten gedurende maximaal 120 seconden (voorheen 4 / 30 seconden).
+- Terugkomst hergebruikt hetzelfde iframe/document. De bestaande module blijft
+  eigenaar; bronwijziging, verwijderen en Workbench verlaten ruimen het op.
+- Het bestaande zichtbaarheidssignaal blijft verantwoordelijk voor pauzeren.
+  Geen nieuwe animatiemotor, snapshotvervanging of wijziging van artworkbronnen.
+- Laadstatus blijft in de toegankelijke DOM maar wordt visueel verborgen,
+  inclusief de Image-portals en inspectie. Fouten en Retry blijven zichtbaar.
+- De bestaande verantwoordelijkheidsscheiding volstond. Dit is een beperkte
+  lifecycle-/presentatiewijziging, geen renderer- of architectuurvervanging.
+
+Voor/na
+Een echte Owner- en Visitor-Workbench met twaalf afzonderlijke Image-modules
+werd driemaal helemaal uit beeld en terug gepand. Breedtes 1440 en 390 CSS px,
+hoogte 1000; smal DPR 3. Pannen via Space + muis; geen fysieke touchtelefoon.
+
+De nulmeting met de oude pool behield 4 van 12 documenten. Per terugkomst
+werden 8 documenten opnieuw geladen: 24 extra bronverzoeken na drie cycli.
+De gewijzigde versie behield alle 12, zonder extra bronverzoeken of zichtbare
+laadlabels. De volledige opgeslagen compositie bleef ongewijzigd.
+
+Daarnaast dezelfde vier gevallen met twaalf exemplaren van de lokale
+output/nomad-retention/compact.svg (910391 bytes). Alleen de in de test geserveerde
+kopie kreeg meettellers; de SVG op schijf en zijn animatielogica bleven intact.
+Alle 12 renderden daadwerkelijk met WebGL. Per geval 24 initiële textureuploads;
+geen extra uploads en geen contextverlies tijdens de drie pan-cycli. Alle
+documenten pauzeerden buiten beeld en hervatten met dezelfde identiteit.
+Canvas verlaten verwijderde alle geprojecteerde SVG-documenten.
+Een aanvullende run vergrootte de twaalf desktopmodules naar 240x240 CSS px
+en verdubbelde de pan-afstand om de hele compositie buiten beeld te brengen.
+Ook deze run slaagde in beide modes: 12 behouden documenten, nul nieuwe
+bronverzoeken/textureuploads/contextverliezen/laadlabels en correct pauze/hervat.
+
+Bewijs, relatief aan de applicatiecheckout
+output/svg-retention-2026-10-30/
+  baseline/                 twaalf Keeper-SVGs, oude pool, JSON en screenshots
+  candidate-recheck/        twaalf Keeper-SVGs, nieuwe pool
+  nomad/                    twaalf echte Nomads, JSON en screenshots per geval
+  nomad-browser/            geslaagde browser-run inclusief bevestigde opruiming
+  nomad-large/              aanvullende grote desktopcompositie, JSON/screenshots
+  nomad-large-browser/      geslaagde aanvullende run, opruiming bevestigd
+  candidate-browser-recheck/ lifecycle-test 8/8; Keeper-test inhoudelijk 4/4
+  candidate-browser-final/  geslaagde herstel-, flip-, inspectie- en rastertests
+  before.json               relevante bestandsinhoud voor deze wijziging
+  unit-tests.log, lint.log, typecheck.log, build.log, build-check.log
+
+Controle
+- Volledige unit-suite: 1587/1587 geslaagd.
+- Lint: geslaagd; 527 bronbestanden, bestaande ledger van 87 observaties gelijk.
+- Typecontracten: geslaagd; 39 ongeldige calls en 9 productiemutaties afgewezen.
+- Productiebuild en budgetcontrole: geslaagd; initiële JS 801129 bytes.
+- Nomad pan-retentie: 4/4 compact en 4/4 groot/smal; image-flip 1/1,
+  inclusief bevestigde procesopruiming in beide runs.
+- SVG lifecycle: 8/8. Image-load-recovery: 2/2. Image-recovery-owner: 2/2.
+  SVG-artwork-lift: 1/1. Image-flip: 1/1. Animated-raster: 1/1.
+- Brede en smalle screenshots gecontroleerd; twaalf werken renderen,
+  geen laadlabels. Owner-panelen kunnen delen van de compositie bedekken.
+  Expiratie, capaciteit en annulering door terugkomst/disposal
+  zijn tevens met de bestaande timer-unit-tests gecontroleerd.
+- Eerste kandidaat had een timeout en een fout in een nieuwe testselector
+  (twee statusvelden). Selector aangescherpt; herhaling inhoudelijk geslaagd.
+  De Keeper-herhaling bleef als totale run rood omdat de Windows-procesinventaris
+  tweemaal zijn 3s-deadline miste. Geen achtergebleven PIDs gerapporteerd; dat
+  is niet hetzelfde als bevestigde opruiming. De latere Nomad-run is geheel groen.
+
+Grenzen
+- 24 is een aantalgrens, geen RAM-/GPU-geheugenbudget. Boven de poolgrens of
+  na twee minuten buiten beeld kan opnieuw laden nodig zijn.
+- Willekeurige SVG-scripts die het zichtbaarheidssignaal negeren zijn niet
+  automatisch gepauzeerd. De geteste Nomad ondersteunt het bestaande protocol.
+- Chromium 156 headless op Windows, hardware-WebGL via ANGLE D3D11 voor Nomad.
+  Geen fysieke Android/iPhone of Safari getest. De modules zijn 72x90 CSS px
+  in de compacte/smalle gevallen en 240x240 in de aanvullende desktoptest.
+  Dit bewijst lifecyclebehoud bij twaalf documenten, geen universeel FPS- of
+  geheugenbudget voor twaalf afzonderlijk schermvullende werken.
+- Herbouw en heruploads zijn in de gemeten terugkomsten weg. Dit bewijst niet
+  dat iedere mogelijke framepiek verdwijnt: opnieuw tekenen/rasteriseren kan
+  nog werk vragen. returnMs omvat de panbeweging en meetwachttijd en is geen
+  zuivere laadtijd. Geen FPS-claim afgeleid uit die waarde.
+- De volledige release-browsersuite is niet opnieuw gedraaid voor deze wijziging.
+
+Staat
+Lokaal op codex/static-reception-bento-2026-10-26, basiscommit
+5c5a00e8cff831f97987042be24d071c9aab2052 met reeds aanwezige wijzigingen.
+Eerdere camera- en overige lokale wijzigingen behouden. Niets gecommit,
+gepusht of gedeployed. De bestaande remote preview bewijst deze lokale wijziging
+niet. De browserbewijzen bevatten hun bronmanifest; na de laatste test zijn
+alleen deze rapportage bijgewerkt; runtime en testbron komen overeen met
+het manifest van nomad-large-browser.

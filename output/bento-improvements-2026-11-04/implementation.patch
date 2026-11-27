@@ -1,0 +1,1832 @@
+diff --git a/design-system/tokens.generated.json b/design-system/tokens.generated.json
+index 5266740..a82bced 100644
+--- a/design-system/tokens.generated.json
++++ b/design-system/tokens.generated.json
+@@ -4,7 +4,7 @@
+   "systemVersion": "1.0.0",
+   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
+   "counts": {
+-    "files": 97,
++    "files": 98,
+     "definitions": 556,
+     "names": 318
+   },
+@@ -6926,12 +6926,11 @@
+     {
+       "path": "src/reception/editorCells.css",
+       "role": "Local",
+-      "sha256": "3a22b8336580e0578c803486cd7aac34b18381862bb7f2d3e48f7d5b4e45e807",
++      "sha256": "2700541c9dbe18b1c85c6bf417b1f7e4d81769a842e6e61b77249a68b1ff23ba",
+       "definitions": [],
+       "references": [
+         "--tactile-edge",
+         "--tactile-ink",
+-        "--tactile-muted",
+         "--workbench-content-scale",
+         "--workflow-ink",
+         "--workflow-type-control"
+@@ -7031,10 +7030,24 @@
+         "--workflow-type-control"
+       ]
+     },
++    {
++      "path": "src/reception/receptionBento.css",
++      "role": "Local",
++      "sha256": "97ca51517c8321dfbdd5e32fe20463aafc377115fa5ce32321eef596496fa44e",
++      "definitions": [],
++      "references": [
++        "--control-radius",
++        "--interface-environment",
++        "--workflow-border",
++        "--workflow-ink",
++        "--workflow-panel",
++        "--workflow-type-control"
++      ]
++    },
+     {
+       "path": "src/reception/receptionDocument.css",
+       "role": "Local",
+-      "sha256": "91a7a745330509718f53fe862142ac235b3566fc18348eb02f85c75133041049",
++      "sha256": "286e3e4de8475bc7a929c89b9dcfb1d3fab016d59710bdbf5ca1ae0cc53f3b91",
+       "definitions": [],
+       "references": [
+         "--interface-environment",
+@@ -7048,22 +7061,11 @@
+       ]
+     },
+     {
+-      "path": "src/reception/receptionLayoutDialog.css",
++      "path": "src/reception/receptionInnerLines.css",
+       "role": "Local",
+-      "sha256": "921c2af85505256578573d07ee21560f1438011082ae21f19cdc3234330894ed",
++      "sha256": "6b2783c05ee654a817b2bbe43ce5a764120e1aff96459289015b729bfe5e5de7",
+       "definitions": [],
+-      "references": [
+-        "--control-radius",
+-        "--control-shell-radius",
+-        "--font-interface",
+-        "--interface-environment",
+-        "--workflow-border",
+-        "--workflow-hover",
+-        "--workflow-ink",
+-        "--workflow-panel",
+-        "--workflow-type-control",
+-        "--workflow-type-panel-heading"
+-      ]
++      "references": []
+     },
+     {
+       "path": "src/reception/receptionScene.css",
+@@ -7085,7 +7087,7 @@
+     {
+       "path": "src/shapes/shapes.css",
+       "role": "Local",
+-      "sha256": "09bf02481e1530511ed550cbf217d9809559f0d452d2b97051c18744c5db851f",
++      "sha256": "915080197c2d690f1c47f30f159c0282285d58d9c3f03b7d27bcd55bc1317d7b",
+       "definitions": [
+         {
+           "name": "--detached-window-gutter",
+@@ -7102,7 +7104,7 @@
+           "scope": [
+             ".shape-window > .system-workflow__instrument-content > .shape-grid-border"
+           ],
+-          "line": 32,
++          "line": 33,
+           "references": [
+             "--workbench-density"
+           ]
+diff --git a/scripts/productionBuild.test.js b/scripts/productionBuild.test.js
+index e8848c1..945aad3 100644
+--- a/scripts/productionBuild.test.js
++++ b/scripts/productionBuild.test.js
+@@ -163,7 +163,7 @@ test('measured production allowances retain exact budget boundaries with the laz
+     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
+     initialCss: { raw: 51_807, gzip: 10_301 },
+     ownerCss: { raw: 143_870, gzip: 21_140 },
+-    coreJavaScript: { raw: 2_739_000, gzip: 907_000 },
++    coreJavaScript: { raw: 2_744_000, gzip: 909_000 },
+     publicAssets: { raw: 17_960_000 },
+     largestPublicAsset: { raw: 2_700_000 },
+   });
+diff --git a/scripts/productionBuild.js b/scripts/productionBuild.js
+index 0b1f8a9..5e5a55f 100644
+--- a/scripts/productionBuild.js
++++ b/scripts/productionBuild.js
+@@ -292,7 +292,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
+   // 2,730,002 / 903,194 before versus 2,737,346 / 905,189 raw/gzip bytes.
+   // Bound this feature's aggregate growth by +8/+3 kB; initial bytes, owner,
+   // wallet, CSS, assets and runtime-isolation requirements stay unchanged.
+-  coreJavaScript: Object.freeze({ raw: 2_739_000, gzip: 907_000 }),
++  // Bento review fixes add native-content size bounds, independent proposal
++  // drafts and scoped styling. Initial measurement: 2,742,972 / 907,080 raw/gzip
++  // versus 2,737,346 / 905,189 before. Bound aggregate growth; startup, owner,
++  // wallet, CSS, asset and runtime-isolation ceilings remain unchanged.
++  coreJavaScript: Object.freeze({ raw: 2_744_000, gzip: 909_000 }),
+   // Approved local article fonts plus the creation bar's Inter variable face.
+   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
+   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
+diff --git a/scripts/browserSuites.json b/scripts/browserSuites.json
+index 08c5122..aa7066c 100644
+--- a/scripts/browserSuites.json
++++ b/scripts/browserSuites.json
+@@ -1921,7 +1921,7 @@
+     {
+       "name": "reception-cell-interaction",
+       "category": "release",
+-      "rationale": "Native Reception cell entry from actual double-clicks, image-covered cells, direct shared Shape settings and row/column coupling spacing."
++      "rationale": "Native Reception cell entry from actual double-clicks, image-covered cells, scoped Bento settings, shared split/merge actions and selected-cell styling."
+     },
+     {
+       "name": "reception-layer-order",
+diff --git a/src/contracts/workbench.d.ts b/src/contracts/workbench.d.ts
+index f13fb4c..f915da1 100644
+--- a/src/contracts/workbench.d.ts
++++ b/src/contracts/workbench.d.ts
+@@ -306,7 +306,7 @@ export interface GestureMoveInput {
+   previewDrop(event: PointerEvent): void;
+   commitDrop(event: PointerEvent): boolean;
+ }
+-export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'preview' | 'commit'>;
++export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'preview' | 'commit'> & { onFinish?(): void };
+ export interface GestureMarqueeInput<Selection> {
+   beforeSelection: Selection;
+   previousSelection: WindowId[];
+@@ -315,11 +315,11 @@ export interface GestureMarqueeInput<Selection> {
+ export interface WorkbenchGestureInput<Selection> {
+   getHost(): HTMLElement | null;
+   restoreTransforms(transforms: WorkbenchTransforms): void;
+-  replaceSelection(ids: WindowId[]): void;
+-  restoreSelection(selection: Selection): void;
+-  previewMarquee(rectangle: Frame | null): void;
+-  finishSnap(): void;
+-  cancelDrop(): void;
++  replaceSelection?(ids: WindowId[]): void;
++  restoreSelection?(selection: Selection): void;
++  previewMarquee?(rectangle: Frame | null): void;
++  finishSnap?(): void;
++  cancelDrop?(): void;
+   events?: Pick<Window, 'addEventListener' | 'removeEventListener'>;
+   visibility?: Document;
+ }
+diff --git a/src/imageModule/imageModule.js b/src/imageModule/imageModule.js
+index 1d74ca9..b4c381a 100644
+--- a/src/imageModule/imageModule.js
++++ b/src/imageModule/imageModule.js
+@@ -8,7 +8,8 @@ export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
+ const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
+ const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
+ const validCrop = (crop, minimumZoom) => crop === null || exact(crop, ['x', 'y', 'zoom']) && number(crop.x, 0, 1) && number(crop.y, 0, 1) && number(crop.zoom, minimumZoom, 4);
+-export const imageSize = v => Number.isInteger(v) && number(v, 32, 4096);
++export const IMAGE_SIZE_LIMITS = Object.freeze({ minimumWidth: 32, minimumHeight: 32, maximumWidth: 4096, maximumHeight: 4096 });
++export const imageSize = v => Number.isInteger(v) && number(v, IMAGE_SIZE_LIMITS.minimumWidth, IMAGE_SIZE_LIMITS.maximumWidth);
+ export function validImageModules(items, published = false, { minimumCropZoom = 1 } = {}) {
+   if (!Array.isArray(items) || items.length > MAX_IMAGE_MODULES) return false;
+   const ids = new Set();
+diff --git a/src/text/textSession.js b/src/text/textSession.js
+index 6762723..df594fd 100644
+--- a/src/text/textSession.js
++++ b/src/text/textSession.js
+@@ -1,6 +1,6 @@
+ import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
+ import { createArticle, MAX_TEXT_MODULES } from './domain/article.js';
+-import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
++import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
+ import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
+ 
+ export function prepareTextResize(draft, { expected }) {
+@@ -48,15 +48,22 @@ export function unlinkTextModuleResult(store, profile, expected) {
+       : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
+   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
+ }
+-export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE' } = {}) {
++export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance } = {}) {
+   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
+   const draft = store.getDraft(), generation = store.getGeneration();
+   if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
+   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility };
++  if (appearance) item.article.appearance = { ...item.article.appearance, ...appearance };
+   const next = { ...draft, texts: [...(draft.texts || []), item] };
+   if (placed) {
+     const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
+-    presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
++    if (placed.window) {
++      const { width, height } = placed.window, limits = TEXT_WINDOW_LIMITS;
++      if (!Number.isFinite(width) || !Number.isFinite(height) || width < limits.minimumWidth || height < limits.minimumHeight
++        || width > limits.maximumWidth || height > limits.maximumHeight)
++        throw new Error(`Text needs at least ${limits.minimumWidth} × ${limits.minimumHeight} px. Enlarge the cell before adding Text.`);
++      presentation.window = { ...placed.window };
++    } else presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
+     const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
+     next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
+   }
+diff --git a/src/reception/editorCellGeometry.js b/src/reception/editorCellGeometry.js
+index 9beb3b7..b7b38ba 100644
+--- a/src/reception/editorCellGeometry.js
++++ b/src/reception/editorCellGeometry.js
+@@ -1,3 +1,9 @@
++export const projectReceptionMember = (before, after, member) => ({
++  left: after.left + (member.left - before.left) * after.width / before.width,
++  top: after.top + (member.top - before.top) * after.height / before.height,
++  width: member.width * after.width / before.width, height: member.height * after.height / before.height,
++});
++
+ // Cells reuse native Editor windows. These are temporary interaction/paint
+ // projections; persisted geometry remains in the Reception document's workbench.
+ export const editorCellForModule = (cells, id) => cells.find(cell => cell.id === id || cell.members.includes(id));
+@@ -28,11 +34,6 @@ export function transformedCellWindow(frame, transform = {}) {
+ 
+ export function editorCellPreviewTransforms(cells, transforms, presentation, content) {
+   let result = transforms;
+-  const project = (child, source, target) => ({
+-    left: target.left + (child.left - source.left) * target.width / source.width,
+-    top: target.top + (child.top - source.top) * target.height / source.height,
+-    width: child.width * target.width / source.width, height: child.height * target.height / source.height,
+-  });
+   for (const cell of cells) {
+     const transform = result[cell.id], source = editorCellWindow(presentation, cell.id, content);
+     if (!transform || !source) continue;
+@@ -43,7 +44,7 @@ export function editorCellPreviewTransforms(cells, transforms, presentation, con
+       const child = editorCellWindow(presentation, id, content);
+       if (!child) continue;
+       if (result === transforms) result = { ...transforms };
+-      result[id] = { scale: 1, x: 0, y: 0, frame: project(child, source, target) };
++      result[id] = { scale: 1, x: 0, y: 0, frame: projectReceptionMember(source, target, child) };
+     }
+   }
+   return result;
+diff --git a/src/reception/receptionBento.css b/src/reception/receptionBento.css
+index fd5bee3..3ac9f59 100644
+--- a/src/reception/receptionBento.css
++++ b/src/reception/receptionBento.css
+@@ -5,16 +5,18 @@
+ .reception-bento-cell[data-swap-target] { outline: 2px dashed var(--workflow-ink); outline-offset: -5px; }
+ .reception-bento-cell:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: 2px; }
+ .reception-bento-overlay[data-previewing] .reception-bento-cell { cursor: default; }
+-.reception-bento-cell-actions { position: absolute; top: 6px; left: 6px; display: flex; flex-wrap: wrap; gap: 3px; max-width: calc(100% - 12px); padding: 3px; border: 1px solid var(--workflow-border); border-radius: var(--control-radius); background: var(--workflow-panel); cursor: default; }
+-.reception-bento-cell-actions button, .reception-bento-settings button, .reception-bento-error button { min-height: 26px; padding: 4px 7px; border: 1px solid var(--workflow-border); border-radius: var(--control-radius); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); cursor: pointer; }
+-.reception-bento-cell-actions button:hover, .reception-bento-settings button:hover { background: var(--workflow-hover); }
+-.reception-bento-cell-actions button:disabled, .reception-bento-settings button:disabled { opacity: .45; cursor: default; }
++.reception-bento-cell-actions { position: absolute; display: flex; gap: 3px; width: max-content; max-width: calc(100vw - 16px); padding: 3px; border: 1px solid var(--workflow-border); border-radius: var(--control-radius); background: var(--workflow-panel); cursor: default; pointer-events: auto; font: var(--workflow-type-control); }
+ .reception-bento-divider { position: absolute; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; cursor: row-resize; }
+ .reception-bento-divider[data-axis="x"] { cursor: col-resize; }
+ .reception-bento-divider::after { content: ''; position: absolute; top: calc(50% - 1px); left: calc(50% - 16px); width: 32px; height: 2px; background: var(--workflow-ink); opacity: 0; }
+ .reception-bento-divider[data-axis="x"]::after { top: calc(50% - 16px); left: calc(50% - 1px); width: 2px; height: 32px; }
+ .reception-bento-divider:hover::after, .reception-bento-divider:focus-visible::after { opacity: 1; }
+-.reception-bento-settings { display: grid; gap: 16px; padding: 12px; box-sizing: border-box; width: 100%; overflow: auto; }
++.reception-bento-panel .workbench-tool-panel-content { display: flex; flex-direction: column; overflow: hidden; }
++.reception-bento-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--workflow-border); }
++.reception-bento-settings { display: flex; flex: 1; flex-direction: column; min-height: 0; width: 100%; }
++.reception-bento-scroll { display: grid; gap: 16px; padding: 12px; overflow: auto; min-height: 0; }
++.reception-bento-footer { display: grid; gap: 8px; margin-top: auto; padding: 12px; border-top: 1px solid var(--workflow-border); flex-shrink: 0; }
++.reception-bento-footer [role=alert] { max-height: 5em; overflow: auto; }
+ .reception-bento-settings fieldset { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 10px 0 0; border: 0; border-top: 1px solid var(--workflow-border); }
+ .reception-bento-settings legend { padding: 0 8px 0 0; }
+ .reception-bento-settings p { margin: 0; font: var(--workflow-type-control); }
+@@ -23,9 +25,7 @@
+ .reception-bento-check input { accent-color: var(--workflow-ink); }
+ .reception-bento-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+ .reception-bento-formats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+-.reception-bento-formats button { padding-inline: 3px; }
+-.reception-bento-formats button[aria-pressed="true"] { background: var(--workflow-ink); color: var(--workflow-panel); }
+-.reception-bento-settings input[type="number"] { width: 100%; min-width: 0; box-sizing: border-box; min-height: 28px; color: var(--workflow-ink); background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: var(--control-radius); padding: 4px 6px; font: var(--workflow-type-control); }
++.reception-bento-settings input[type="number"] { width: 100%; }
+ .reception-bento-preview { display: block; width: 100%; max-height: 160px; background: var(--interface-environment); }
+ .reception-bento-preview rect { fill: var(--workflow-ink); fill-opacity: .22; }
+ .reception-bento-error { position: fixed; z-index: 90; bottom: 24px; left: 24px; max-width: min(480px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
+diff --git a/src/reception/receptionBento.test.js b/src/reception/receptionBento.test.js
+index fd6f239..33c1806 100644
+--- a/src/reception/receptionBento.test.js
++++ b/src/reception/receptionBento.test.js
+@@ -393,3 +393,65 @@ test('row/cell insertion rejects insufficient space, failed storage and stale au
+   }
+   scope.release(); assert.throws(() => edit('appendRow'), /no longer active/u);
+ });
++
++test('Bento preserves mixed radii through geometry, replacement and explicit per-cell styling', () => {
++  const { scope, edit } = fixture(2);
++  const [a, b] = scope.getCells();
++  edit('cellRadius', a.id, 12); edit('cellRadius', b.id, 64);
++  assert.equal(receptionBentoSettings(scope.getReception()).radius, null);
++  edit('settings', { width: 1600, gap: 30 });
++  assert.deepEqual(scope.getCells().map(cell => cell.radius), [12, 64]);
++  scope.generateCellLayout({ ...RECEPTION_LAYOUT_DEFAULTS, count: 2, radius: 0 }, 8, scope.getGeneration());
++  assert.deepEqual(scope.getCells().map(cell => cell.radius), [12, 64]);
++  edit('settings', { radius: 28 });
++  assert.deepEqual(scope.getCells().map(cell => cell.radius), [28, 28]);
++  scope.undo(); assert.deepEqual(scope.getCells().map(cell => cell.radius), [12, 64]);
++  scope.release();
++});
++
++test('Text creation owns explicit transparent frames and split refuses a half below the native minimum', () => {
++  const { scope, edit } = fixture(1);
++  edit('settings', { width: 320, height: 320 });
++  const cell = scope.getCells()[0].id, frame = receptionModuleWindow(scope.getReception(), cell);
++  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(cell, candidate, options) };
++  const text = addTextModule(target, profile, { window: frame }, { visibility: 'PUBLIC', appearance: { background: null } });
++  assert.deepEqual(receptionModuleWindow(scope.getReception(), text), frame);
++  assert.equal(scope.getReception().texts[0].article.appearance.background, null);
++  const before = structuredClone(scope.getReception());
++  assert.match(receptionCellSplit(before, cell, 'vertical').reason, /Text needs a frame/);
++  assert.throws(() => edit('split', cell, 'vertical'), /Text needs a frame/);
++  assert.deepEqual(scope.getReception(), before);
++  scope.undo(); edit('split', cell, 'vertical');
++  const small = receptionModuleWindow(scope.getReception(), cell);
++  assert.throws(() => addTextModule(target, profile, { window: small }), /Enlarge the cell/);
++  assert.equal(scope.getReception().texts.length, 0);
++  scope.release();
++});
++
++test('divider clamps to actual Text proportions; settings, swaps and proposals cannot shrink native content below its limits', () => {
++  const { scope, edit } = fixture(1);
++  const cell = scope.getCells()[0].id;
++  edit('split', cell, 'vertical', 'shape:other');
++  const frame = receptionModuleWindow(scope.getReception(), cell);
++  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(cell, candidate, options) };
++  const text = addTextModule(target, profile, { window: frame });
++  const edge = receptionBentoDividers(scope.getReception()).find(edge => edge.axis === 'x');
++  edit('resize', edge.id, -1000);
++  assert.equal(receptionModuleWindow(scope.getReception(), text).width, 180);
++  assert.ok(validReceptionEditorDocument(scope.getReception()));
++  const before = structuredClone(scope.getReception());
++  assert.throws(() => edit('settings', { width: 1200 }), /Text needs/);
++  assert.deepEqual(scope.getReception(), before);
++  scope.release();
++});
++
++test('minimum Image content rejects proportional shrink with a useful error and no history or data loss', () => {
++  const { scope, edit } = fixture(1), cell = scope.getCells()[0].id;
++  const frame = receptionModuleWindow(scope.getReception(), cell);
++  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(cell, candidate, options) };
++  addImageModule(target, profile, { side: createReceptionExample().imageModules[0].sides[0], position: { left: frame.left, top: frame.top }, size: { width: 32, height: 32 } });
++  const before = structuredClone(scope.getReception()), history = structuredClone(scope.getHistory());
++  assert.throws(() => edit('settings', { width: 720, height: 450 }), /Image needs a frame/);
++  assert.deepEqual(scope.getReception(), before); assert.deepEqual(scope.getHistory(), history);
++  scope.release();
++});
+diff --git a/src/reception/receptionBento.js b/src/reception/receptionBento.js
+index 879d30e..c02b9c1 100644
+--- a/src/reception/receptionBento.js
++++ b/src/reception/receptionBento.js
+@@ -1,5 +1,5 @@
+ import { workbenchArea, validWorkbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
+-import { receptionModuleWindow, withReceptionModuleWindow } from './receptionEditorDocument.js';
++import { receptionModuleWindow, withReceptionModuleWindow, receptionCellResizeReason, receptionCellSizeLimits, MIN_RECEPTION_CELL_SIZE } from './receptionEditorDocument.js';
+ import { receptionLayoutCountRange } from './receptionLayoutGenerator.js';
+ import { inferredCellGap, partitionDividers } from './receptionPartition.js';
+ import { validShapeOutline } from '../shapes/shapes.js';
+@@ -8,18 +8,38 @@ export function receptionBentoSettings(value) {
+   const area = workbenchArea(value.workbench), frames = value.cells.map(cell => receptionModuleWindow(value, cell.id));
+   const padding = Math.round(Math.max(0, Math.min(256, ...frames.flatMap(r => [r.left - area.left, r.top - area.top,
+     area.left + area.width - r.left - r.width, area.top + area.height - r.top - r.height]))));
+-  return { width: area.width, height: area.height, count: value.cells.length, radius: value.cells[0]?.radius || 0, showFrame: value.showFrame !== false, innerLines: value.innerLines ?? null,
++  const radii = new Set(value.cells.map(cell => cell.radius || 0));
++  return { width: area.width, height: area.height, count: value.cells.length, radius: radii.size > 1 ? null : value.cells[0]?.radius || 0, showFrame: value.showFrame !== false, innerLines: value.innerLines ?? null,
+     gap: value.bento?.gap ?? Math.round(inferredCellGap(frames)), padding: value.bento?.padding ?? padding };
+ }
+ const tiles = (value, gap) => value.cells.map(cell => {
+   const frame = receptionModuleWindow(value, cell.id);
+   return { id: cell.id, x: frame.left, y: frame.top, width: frame.width + gap, height: frame.height + gap };
+ });
+-const applyTiles = (value, regions, gap) => regions.reduce((next, r) => withReceptionModuleWindow(next, r.id,
+-  { left: r.x, top: r.y, width: r.width - gap, height: r.height - gap }), value);
++const applyTiles = (value, regions, gap) => regions.reduce((next, r) => {
++  const frame = { left: r.x, top: r.y, width: r.width - gap, height: r.height - gap };
++  const reason = receptionModuleWindow(value, r.id) && receptionCellResizeReason(value, r.id, frame);
++  if (reason) throw new Error(reason);
++  return withReceptionModuleWindow(next, r.id, frame);
++}, value);
+ export function receptionBentoDividers(value) {
+   const { gap } = receptionBentoSettings(value);
+-  return partitionDividers(tiles(value, gap), { x: 80 + gap, y: 80 + gap }).filter(d => d.min <= d.max);
++  return partitionDividers(tiles(value, gap), { x: MIN_RECEPTION_CELL_SIZE + gap, y: MIN_RECEPTION_CELL_SIZE + gap }).map(d => {
++    const axis = d.axis === 'x' ? 'left' : 'top', size = d.axis === 'x' ? 'width' : 'height';
++    const minKey = d.axis === 'x' ? 'minimumWidth' : 'minimumHeight', maxKey = d.axis === 'x' ? 'maximumWidth' : 'maximumHeight';
++    let min = d.min, max = d.max;
++    for (const id of d.before) {
++      const frame = receptionModuleWindow(value, id), limits = receptionCellSizeLimits(value, id);
++      min = Math.max(min, frame[axis] + limits[minKey] + gap);
++      max = Math.min(max, frame[axis] + limits[maxKey] + gap);
++    }
++    for (const id of d.after) {
++      const frame = receptionModuleWindow(value, id), limits = receptionCellSizeLimits(value, id);
++      min = Math.max(min, frame[axis] + frame[size] - limits[maxKey]);
++      max = Math.min(max, frame[axis] + frame[size] - limits[minKey]);
++    }
++    return { ...d, min: Math.ceil(min), max: Math.floor(max) };
++  }).filter(d => d.min <= d.max);
+ }
+ export function resizeReceptionBento(value, id, position) {
+   const d = receptionBentoDividers(value).find(item => item.id === id);
+@@ -32,6 +52,10 @@ export function resizeReceptionBento(value, id, position) {
+ export function swapReceptionBentoCells(value, first, second) {
+   if (first === second) return value;
+   if (![first, second].every(id => value.cells.some(cell => cell.id === id))) throw new Error('Choose two available cells.');
++  for (const [id, target] of [[first, second], [second, first]]) {
++    const reason = receptionCellResizeReason(value, id, receptionModuleWindow(value, target));
++    if (reason) throw new Error(reason);
++  }
+   let next = withReceptionModuleWindow(value, first, receptionModuleWindow(value, second));
+   next = withReceptionModuleWindow(next, second, receptionModuleWindow(value, first));
+   return { ...next, cells: value.cells.map(cell => cell.id === first ? value.cells.find(c => c.id === second)
+@@ -51,11 +75,11 @@ export function addReceptionBentoCell(value, id, newId = `shape:${crypto.randomU
+     top = Math.min(...row.map(r => r.y)); bottom = Math.max(...row.map(r => r.y + r.height));
+   } while (previous !== `${top}:${bottom}`);
+   const left = Math.min(...row.map(r => r.x)), right = Math.max(...row.map(r => r.x + r.width));
+-  const width = right - left, minimum = 80 + gap;
++  const width = right - left, minimum = MIN_RECEPTION_CELL_SIZE + gap;
+   const edges = [...new Set(row.flatMap(r => [r.x, r.x + r.width]))].sort((a, b) => a - b);
+   const offsets = new Map([[left, 0]]);
+   for (let i = 1; i < edges.length; i++) offsets.set(edges[i], Math.max(offsets.get(edges[i - 1]),
+-    ...row.filter(r => r.x + r.width === edges[i]).map(r => offsets.get(r.x) + minimum)));
++    ...row.filter(r => r.x + r.width === edges[i]).map(r => offsets.get(r.x) + Math.ceil(receptionCellSizeLimits(value, r.id).minimumWidth) + gap)));
+   const available = width - offsets.get(right);
+   if (available < minimum) throw new Error('This row is too full. Add a row below, use less gutter or make the bento wider.');
+   const addedWidth = Math.max(minimum, Math.min(available, Math.round(width * (frame.width + gap) / (width + frame.width + gap))));
+@@ -63,7 +87,7 @@ export function addReceptionBentoCell(value, id, newId = `shape:${crypto.randomU
+   const map = x => left + offsets.get(x) + Math.round((x - left) * extra / width);
+   const resized = row.map(r => ({ ...r, x: map(r.x), width: map(r.x + r.width) - map(r.x) }));
+   const added = { id: newId, x: right - addedWidth, y: top, width: addedWidth, height: bottom - top };
+-  if ([...resized, added].some(r => r.width - gap < 80 || r.height - gap < 80))
++  if ([...resized, added].some(r => r.width - gap < MIN_RECEPTION_CELL_SIZE || r.height - gap < MIN_RECEPTION_CELL_SIZE))
+     throw new Error('This row is too full. Add a row below, use less gutter or make the bento wider.');
+   const after = Math.max(...row.map(r => value.cells.findIndex(item => item.id === r.id)));
+   const next = { ...value, shapes: [...value.shapes, { id: newId, name: `Cell ${value.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' }],
+@@ -78,22 +102,23 @@ export function appendReceptionBentoRow(value, newId = `shape:${crypto.randomUUI
+   const frames = value.cells.map(cell => receptionModuleWindow(value, cell.id));
+   const bottom = Math.max(...frames.map(r => r.top + r.height));
+   const lastRow = frames.filter(r => r.top + r.height === bottom);
+-  const height = Math.round(Math.max(80, Math.min(...lastRow.map(r => r.height))));
++  const height = Math.round(Math.max(MIN_RECEPTION_CELL_SIZE, Math.min(...lastRow.map(r => r.height))));
+   const top = Math.max(area.top + area.height - padding, bottom) + gap;
+   const targetArea = { ...area, height: Math.ceil(top + height + padding - area.top) };
+   if (!validWorkbenchArea(targetArea)) throw new Error('There is no room for another row within the canvas editing limits.');
+   const width = area.width - 2 * padding;
+-  if (width < 80) throw new Error('Use a wider bento or less outer margin before adding a row.');
++  if (width < MIN_RECEPTION_CELL_SIZE) throw new Error('Use a wider bento or less outer margin before adding a row.');
+   const next = { ...value, bento: { gap, padding }, workbench: { ...value.workbench, area: targetArea },
+     shapes: [...value.shapes, { id: newId, name: `Cell ${value.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' }],
+-    cells: [...value.cells, { id: newId, members: [], radius, mobile: { columns: 2, height: Math.min(1200, height) } }] };
++    cells: [...value.cells, { id: newId, members: [], radius: radius ?? 0, mobile: { columns: 2, height: Math.min(1200, height) } }] };
+   return withReceptionModuleWindow(next, newId, { left: area.left + padding, top, width, height });
+ }
+ export function setReceptionBentoSettings(value, settings) {
+   const old = receptionBentoSettings(value), next = { ...old, ...settings }, area = workbenchArea(value.workbench);
++  const changeRadius = Object.hasOwn(settings, 'radius');
+   if (![next.width, next.height].every(n => Number.isInteger(n) && n >= 320 && n <= 16384)
+     || ![next.gap, next.padding].every(n => Number.isInteger(n) && n >= 0 && n <= 256)
+-    || !Number.isFinite(next.radius) || next.radius < 0 || next.radius > 160 || typeof next.showFrame !== 'boolean')
++    || changeRadius && (!Number.isFinite(next.radius) || next.radius < 0 || next.radius > 160) || typeof next.showFrame !== 'boolean')
+     throw new Error('Choose a valid size, spacing and corner radius.');
+   if (next.innerLines !== null && !validShapeOutline(next.innerLines)) throw new Error('Choose valid Outline settings for the inner lines.');
+   const appearance = { showFrame: next.showFrame, ...(Object.hasOwn(settings, 'innerLines') ? { innerLines: next.innerLines } : {}) };
+@@ -101,15 +126,21 @@ export function setReceptionBentoSettings(value, settings) {
+   if (!validWorkbenchArea(targetArea)) throw new Error('This size extends beyond the canvas editing limits.');
+   // Appearance changes do not round or relayout authored rectangles.
+   if (['width', 'height', 'gap', 'padding'].every(key => next[key] === old[key])) return { ...value, ...appearance,
+-    cells: next.radius === old.radius ? value.cells : value.cells.map(cell => ({ ...cell, radius: next.radius })) };
++    cells: changeRadius ? value.cells.map(cell => ({ ...cell, radius: next.radius })) : value.cells };
+   const scale = axis => (next[axis] - 2 * next.padding + next.gap) / (old[axis] - 2 * old.padding + old.gap);
+   const map = (position, axis, size) => area[axis] + next.padding + Math.round((position - area[axis] - old.padding) * scale(size));
+   const regions = tiles(value, old.gap).map(r => {
+     const x = map(r.x, 'left', 'width'), y = map(r.y, 'top', 'height');
+     return { ...r, x, y, width: map(r.x + r.width, 'left', 'width') - x, height: map(r.y + r.height, 'top', 'height') - y };
+   });
+-  if (regions.some(r => r.width - next.gap < 80 || r.height - next.gap < 80))
++  if (regions.some(r => r.width - next.gap < MIN_RECEPTION_CELL_SIZE || r.height - next.gap < MIN_RECEPTION_CELL_SIZE))
+     throw new Error('Use a larger bento or less spacing. Each cell needs at least 80 × 80 pixels.');
+   return applyTiles({ ...value, ...appearance, bento: { gap: next.gap, padding: next.padding }, workbench: { ...value.workbench, area: targetArea },
+-    cells: value.cells.map(cell => ({ ...cell, radius: next.radius })) }, regions, next.gap);
++    cells: changeRadius ? value.cells.map(cell => ({ ...cell, radius: next.radius })) : value.cells }, regions, next.gap);
++}
++
++export function setReceptionCellRadius(value, id, radius) {
++  if (!value.cells.some(cell => cell.id === id)) throw new Error('Select an available cell.');
++  if (!Number.isFinite(radius) || radius < 0 || radius > 160) throw new Error('Choose a corner radius between 0 and 160 pixels.');
++  return { ...value, cells: value.cells.map(cell => cell.id === id ? { ...cell, radius } : cell) };
+ }
+diff --git a/src/reception/ReceptionBentoPanel.jsx b/src/reception/ReceptionBentoPanel.jsx
+index 8d61675..cc395d0 100644
+--- a/src/reception/ReceptionBentoPanel.jsx
++++ b/src/reception/ReceptionBentoPanel.jsx
+@@ -1,96 +1,142 @@
+ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+ import ToolPanel from '../public/ownerSystemWorkflow/WorkbenchToolPanel.jsx';
+-import { generateReceptionLayout, receptionLayoutCountRange, RECEPTION_LAYOUT_DEFAULTS } from './receptionLayoutGenerator.js';
++import { applyReceptionLayout, generateReceptionLayout, receptionLayoutCountRange, RECEPTION_LAYOUT_DEFAULTS } from './receptionLayoutGenerator.js';
+ import { receptionBentoSettings } from './receptionBento.js';
+ import { useInterfaceTheme } from '../interfaceTheme.js';
+ 
+-export default function ReceptionBentoPanel({ reception, onClose, run, generate, blocked, navigationTop, previewSettings, cancelPreview, revision }) {
+-  const panel = useRef(null);
++const Control = props => <button className="workflow-tactile-control" type="button" {...props} />;
++const Field = ({ label, value, onChange, min, max, placeholder }) => <label>{label}<input type="number" min={min} max={max} step="1"
++  placeholder={placeholder} value={value === null || Number.isNaN(value) ? '' : value}
++  onChange={event => onChange(event.target.valueAsNumber)} /></label>;
++function GeometryFields({ settings, change }) {
++  return <>
++    <div className="reception-bento-formats" role="group" aria-label="Start format">
++      {[['Landscape', 1440, 900], ['Square', 1080, 1080], ['Portrait', 900, 1440]].map(([label, width, height]) =>
++        <Control key={label} aria-pressed={settings.width === width && settings.height === height}
++          title={`${width} × ${height} px`} onClick={() => change({ width, height })}>{label}</Control>)}
++    </div>
++    <div className="reception-bento-fields">
++      {[['width', 'Width (px)', 320, 16384], ['height', 'Height (px)', 320, 16384], ['gap', 'Gutter (px)', 0, 256], ['padding', 'Outer margin (px)', 0, 256]]
++        .map(([key, label, min, max]) => <Field key={key} {...{ label, min, max }} value={settings[key]} onChange={value => change({ [key]: value })} />)}
++    </div>
++  </>;
++}
++
++export default function ReceptionBentoPanel({ reception, onClose, run, generate, blocked, navigationTop, previewSettings, cancelPreview, revision, selectedId, structureActions }) {
++  const panel = useRef(null), empty = !reception.cells.length;
++  const [mode, setMode] = useState(empty ? 'new' : 'current');
+   const [firstSeed] = useState(() => Math.floor(Math.random() * 4294967296));
+   const [variant, setVariant] = useState(0);
++  // The proposal survives changes to the current grid. It is revalidated against
++  // the latest contents below; only Generate can turn it into authored state.
++  const [proposalSettings, setProposalSettings] = useState(() => empty ? RECEPTION_LAYOUT_DEFAULTS
++    : { ...receptionBentoSettings(reception), radius: 0 });
+   useLayoutEffect(() => cancelPreview, [cancelPreview]);
+   useLayoutEffect(() => {
+     const returnFocus = document.activeElement;
+     panel.current?.querySelector('input')?.focus({ preventScroll: true });
+     return () => { if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true }); };
+   }, []);
+-  const [frame, setFrame] = useState(() => ({ left: innerWidth - 324, top: navigationTop + 16, width: 308, height: Math.min(860, innerHeight - navigationTop - 32) }));
++  const [frame, setFrame] = useState(() => ({ left: innerWidth - 340, top: navigationTop + 16, width: 324, height: Math.min(760, innerHeight - navigationTop - 32) }));
+   return <ToolPanel title="Bento" label="Bento settings" closeLabel="Close Bento" chrome="flat"
+     frame={frame} onFrameChange={setFrame} onClose={onClose} navigationTop={navigationTop}
+-    minimumWidth={270} minimumHeight={320} className="reception-bento-panel workbench-tool-controls"
++    minimumWidth={290} minimumHeight={360} className="reception-bento-panel workbench-tool-controls"
+     role="dialog" panelRef={panel} data-workflow-material="tactile" data-workflow-finish="flat" data-workbench-selection-tools data-system-workflow-overlay
+     onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
+-    <BentoSettings key={revision} {...{ reception, run, generate, blocked, previewSettings, cancelPreview, variant, setVariant }} seed={(firstSeed + variant) >>> 0} />
++    <div className="reception-bento-modes" role="group" aria-label="Bento task">
++      <Control disabled={empty} aria-pressed={mode === 'current'} onClick={() => { cancelPreview(); setMode('current'); }}>Current grid</Control>
++      <Control aria-pressed={mode === 'new'} onClick={() => { cancelPreview(); setMode('new'); }}>New layout</Control>
++    </div>
++    {mode === 'current' && !empty ? <CurrentGrid key={revision} {...{ reception, run, blocked, previewSettings, cancelPreview, selectedId, structureActions }} />
++      : <NewLayout {...{ reception, blocked, variant, setVariant }} settings={proposalSettings} setSettings={setProposalSettings} seed={(firstSeed + variant) >>> 0}
++        generate={(settings, seed) => { generate(settings, seed); setMode('current'); }} />}
+   </ToolPanel>;
+ }
+-function BentoSettings({ reception, run, generate, blocked, previewSettings, cancelPreview, variant, setVariant, seed }) {
+-  const { mode } = useInterfaceTheme();
+-  const range = receptionLayoutCountRange(reception);
+-  const [settings, setSettings] = useState(() => reception.cells.length ? receptionBentoSettings(reception) : { ...RECEPTION_LAYOUT_DEFAULTS, showFrame: reception.showFrame !== false, innerLines: reception.innerLines ?? null });
+-  const [error, setError] = useState('');
+-  const change = patch => {
+-    const next = { ...settings, ...patch }; setSettings(next); setError('');
+-    if (reception.cells.length && ('gap' in patch || 'radius' in patch)) {
+-      try { previewSettings({ gap: next.gap, radius: next.radius }); }
+-      catch (failure) { cancelPreview(); setError(failure.message); }
++function CurrentGrid({ reception, run, blocked, previewSettings, cancelPreview, selectedId, structureActions }) {
++  const { mode } = useInterfaceTheme(), saved = receptionBentoSettings(reception);
++  const [patch, setPatch] = useState({}), [error, setError] = useState('');
++  const settings = { ...saved, ...patch };
++  const change = update => {
++    const next = { ...patch, ...update }; setPatch(next); setError('');
++    if ('gap' in update || 'radius' in update) {
++      const preview = Object.fromEntries(['gap', 'radius'].filter(key => Object.hasOwn(next, key)).map(key => [key, next[key]]));
++      try { previewSettings(preview); } catch (failure) { cancelPreview(); setError(failure.message); }
+     }
+   };
+-  const saved = receptionBentoSettings(reception);
+-  const pending = ['width', 'height', 'gap', 'padding', 'radius', 'showFrame'].some(key => settings[key] !== saved[key])
+-    || JSON.stringify(settings.innerLines) !== JSON.stringify(saved.innerLines);
++  const perform = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
++  const pending = Object.entries(patch).some(([key, value]) => JSON.stringify(value) !== JSON.stringify(saved[key]));
++  const selected = reception.cells.find(cell => cell.id === selectedId);
++  return <form className="reception-bento-settings" onSubmit={event => { event.preventDefault(); perform(() => run('settings', [patch])); }}>
++    <div className="reception-bento-scroll">
++      <fieldset disabled={blocked}><legend>Whole Bento</legend>
++        <GeometryFields {...{ settings, change }} />
++        <Field label="Corner radius (px)" min={0} max={160} value={settings.radius} placeholder="Mixed" onChange={radius => change({ radius })} />
++        {saved.radius === null && <p>Cells have different radii. Enter a value to change all cells.</p>}
++        <label className="reception-bento-check"><input type="checkbox" checked={settings.showFrame}
++          onChange={event => change({ showFrame: event.target.checked })} />Show outer frame</label>
++        <label className="reception-bento-check"><input type="checkbox" checked={Boolean(settings.innerLines)}
++          onChange={event => change({ innerLines: event.target.checked ? { width: 1, color: mode === 'light' ? '#171717' : '#ebece7', opacity: 1 } : null })} />Show inner lines</label>
++        {settings.innerLines && <p>Select a cell, then choose Color → Bento inner lines for the shared outline.</p>}
++        <p>Gutter and radius preview live. Apply to save; closing discards the preview.</p>
++      </fieldset>
++      {selected && <SelectedCell key={selected.id} {...{ selected, reception, run, perform, structureActions }} blocked={blocked || pending} />}
++      <fieldset disabled={blocked || pending}><legend>Extend this grid</legend>
++        <Control disabled={reception.cells.length >= receptionLayoutCountRange(reception).max} onClick={() => perform(() => run('appendRow', []))}>Add row below</Control>
++        <p>Adds one full-width cell below. Existing cells keep their size.</p>
++      </fieldset>
++      <p>Drag cells to swap; drag shared edges to resize. Double-click a cell to edit its contents.</p>
++      <p>Text wraps at smaller preview widths. Check Canvas → Preview before publishing.</p>
++    </div>
++    <footer className="reception-bento-footer">
++      {error && <p role="alert">{error}</p>}
++      <Control type="submit" disabled={blocked || !pending}>Apply settings</Control>
++    </footer>
++  </form>;
++}
++function SelectedCell({ selected, reception, run, perform, blocked, structureActions }) {
++  const [radius, setRadius] = useState(selected.radius || 0);
++  return <fieldset disabled={blocked}><legend>Selected cell · {reception.shapes.find(shape => shape.id === selected.id)?.name || 'Cell'}</legend>
++    <Field label="Selected cell radius (px)" min={0} max={160} value={radius} onChange={setRadius} />
++    <Control disabled={radius === (selected.radius || 0)} onClick={() => perform(() => run('cellRadius', [selected.id, radius]))}>Apply cell radius</Control>
++    <p>Color edits this cell’s fill and outline; Shape edits its name. Whole Bento settings above affect every cell.</p>
++    <details><summary>Split or merge this cell</summary><div className="reception-bento-fields">
++      {structureActions.map(action => <Control key={action.id} disabled={action.disabled} title={action.reason} onClick={() => perform(action.run)}>{action.label}</Control>)}
++    </div></details>
++  </fieldset>;
++}
++function NewLayout({ reception, settings, setSettings, seed, variant, setVariant, generate, blocked }) {
++  const empty = !reception.cells.length, range = receptionLayoutCountRange(reception);
++  const [error, setError] = useState('');
++  const change = patch => { setSettings(current => ({ ...current, ...patch })); setError(''); };
+   const proposal = useMemo(() => {
+     try {
+       if (settings.count < range.min || settings.count > range.max) throw new Error(`Choose ${range.min}–${range.max} cells to retain existing content.`);
++      // Validate the actual placement of existing content, not just empty tiles.
++      applyReceptionLayout(reception, settings, seed);
+       return { layout: generateReceptionLayout(settings, seed) };
+     } catch (failure) { return { error: failure.message }; }
+-  }, [settings, seed, range.min, range.max]);
+-  const field = (key, label, min, max) => <label>{label}<input type="number" min={min} max={max} step="1"
+-    value={Number.isNaN(settings[key]) ? '' : settings[key]}
+-    onChange={event => change({ [key]: event.target.valueAsNumber })} /></label>;
+-  const perform = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
+-  return <div className="reception-bento-settings">
+-    <form onSubmit={event => { event.preventDefault(); perform(() => run('settings', [settings])); }}>
+-      <fieldset disabled={blocked}><legend>Layout & frame</legend>
+-        <div className="reception-bento-formats" role="group" aria-label="Start format">
+-          {[['Landscape', 1440, 900], ['Square', 1080, 1080], ['Portrait', 900, 1440]].map(([label, width, height]) =>
+-            <button key={label} type="button" aria-pressed={settings.width === width && settings.height === height}
+-              title={`${width} × ${height} px`} onClick={() => change({ width, height })}>{label}</button>)}
+-        </div>
++  }, [reception, settings, seed, range.min, range.max]);
++  return <form className="reception-bento-settings" onSubmit={event => {
++    event.preventDefault(); try { generate(settings, seed); setError(''); } catch (failure) { setError(failure.message); }
++  }}>
++    <div className="reception-bento-scroll">
++      <fieldset disabled={blocked}><legend>{empty ? 'Create your Bento' : 'Replace the arrangement'}</legend>
++        <p>{empty ? 'Start with one cell and split it yourself, or choose a generated layout.' : 'Existing cells keep their contents and style. Undo restores the previous layout.'}</p>
++        <Field label="Number of cells" min={range.min} max={range.max} value={settings.count} onChange={count => change({ count })} />
++        <GeometryFields {...{ settings, change }} />
++        <Field label="New cell radius (px)" min={0} max={160} value={settings.radius} onChange={radius => change({ radius })} />
++        {proposal.layout && <svg className="reception-bento-preview" role="img" aria-label={`${settings.count} cells preview`} viewBox={`0 0 ${settings.width} ${settings.height}`}>
++          {proposal.layout.rectangles.map((r, index) => <rect key={index} x={r.left} y={r.top} width={r.width} height={r.height} rx={settings.radius} />)}
++        </svg>}
+         <div className="reception-bento-fields">
+-          {field('width', 'Width (px)', 320, 16384)}{field('height', 'Height (px)', 320, 16384)}
+-          {field('gap', 'Gutter (px)', 0, 256)}{field('padding', 'Outer margin (px)', 0, 256)}
++          <Control disabled={variant === 0} onClick={() => setVariant(value => value - 1)}>Previous layout</Control>
++          <Control onClick={() => setVariant(value => value + 1)}>Another layout</Control>
+         </div>
+-        {field('radius', 'Corner radius (px)', 0, 160)}
+-        <label className="reception-bento-check"><input type="checkbox" checked={settings.showFrame}
+-          onChange={event => change({ showFrame: event.target.checked })} />Show outer frame</label>
+-        <label className="reception-bento-check"><input type="checkbox" checked={Boolean(settings.innerLines)}
+-          onChange={event => change({ innerLines: event.target.checked ? { width: 1, color: mode === 'light' ? '#171717' : '#ebece7', opacity: 1 } : null })} />Show inner lines</label>
+-        {settings.innerLines && <p>Select a cell, then choose Color → Bento inner lines to edit its shared outline. Hide the outer frame for an open grid.</p>}
+-        <p>Gutter and radius preview on your bento. Apply to save; closing discards the preview.</p>
+-        <button type="submit">Apply settings</button>
+       </fieldset>
+-    </form>
+-    <fieldset disabled={blocked}><legend>Add a row</legend>
+-      <button type="button" disabled={!reception.cells.length || reception.cells.length >= range.max || pending}
+-        title={pending ? 'Apply settings before adding a row' : undefined}
+-        onClick={() => perform(() => run('appendRow', []))}>Add row below</button>
+-      <p>Adds one full-width cell below. The bento gets taller; existing cells keep their size.</p>
+-    </fieldset>
+-    <fieldset disabled={blocked}><legend>Randomizer</legend>
+-      {field('count', 'Number of cells', range.min, range.max)}
+-      {proposal.layout && <svg className="reception-bento-preview" role="img" aria-label={`${settings.count} cells preview`}
+-        viewBox={`0 0 ${settings.width} ${settings.height}`}>
+-        {proposal.layout.rectangles.map((r, index) => <rect key={index} x={r.left} y={r.top} width={r.width} height={r.height} rx={settings.radius} />)}
+-      </svg>}
+-      <div className="reception-bento-fields">
+-        <button type="button" disabled={variant === 0} onClick={() => setVariant(value => value - 1)}>Previous layout</button>
+-        <button type="button" onClick={() => setVariant(value => value + 1)}>Another layout</button>
+-      </div>
+-      <button type="button" disabled={!proposal.layout} onClick={() => perform(() => generate(settings, seed))}>Use layout</button>
+-      <p>Existing content moves with its cell. Undo restores the previous layout.</p>
+-    </fieldset>
+-    <p>+ Cell adds to the right of its row and shares that row’s width. Drag cells to swap; drag shared edges to resize.</p>
+-    <p>Right-click a cell to merge with its neighbours or split it. Merging keeps the selected cell’s appearance and all artwork in place. Splitting fits its contents into the top or left half and adds an empty half.</p>
+-    {(error || proposal.error) && <p role="alert">{error || proposal.error}</p>}
+-  </div>;
+-}
++    </div>
++    <footer className="reception-bento-footer">
++      {(error || proposal.error) && <p role="alert">{error || proposal.error}</p>}
++      <Control type="submit" disabled={blocked || !proposal.layout}>{empty ? 'Create Bento' : 'Replace layout'}</Control>
++    </footer>
++  </form>;
++}
+diff --git a/src/reception/ReceptionBentoEditor.jsx b/src/reception/ReceptionBentoEditor.jsx
+index 6c14321..d149a57 100644
+--- a/src/reception/ReceptionBentoEditor.jsx
++++ b/src/reception/ReceptionBentoEditor.jsx
+@@ -4,9 +4,9 @@ import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamer
+ import { addImageModule } from '../imageModule/imageModuleSession.js';
+ import { resolveImageLibrarySide } from '../imageModule/imageLibrarySide.js';
+ import { addTextModule } from '../text/textSession.js';
+-import { defaultTextAppearance } from '../text/domain/article.js';
+-import { useEditorCells } from './EditorCellsContext.jsx';
+-import { receptionModuleWindow } from './receptionEditorDocument.js';
++import { createWorkbenchGestures } from '../public/ownerSystemWorkflow/workbenchGestures.js';
++import { useEditorCells, editorCellStructureActions } from './EditorCellsContext.jsx';
++import { receptionModuleWindow, receptionModuleSizeReason } from './receptionEditorDocument.js';
+ import { receptionBentoSettings, receptionBentoDividers, resizeReceptionBento, swapReceptionBentoCells, setReceptionBentoSettings } from './receptionBento.js';
+ import { receptionLayoutCountRange } from './receptionLayoutGenerator.js';
+ import ReceptionBentoPanel from './ReceptionBentoPanel.jsx';
+@@ -21,11 +21,15 @@ export default function ReceptionBentoEditor(props) {
+ }
+ function BentoEditor({ context, disabled, navigation, flushLayout, library, libraryPreferences }) {
+   const view = useWorkbenchView(), camera = useWorkbenchCamera(), store = context.store;
+-  const reception = store.getReception(), gesture = useRef(null), live = useRef(null), imageRequest = useRef(null);
++  const reception = store.getReception(), gestureHost = useRef(null), live = useRef(null), imageRequest = useRef(null);
+   const [dragging, setDragging] = useState(null), [error, setError] = useState(''), [imageCell, setImageCell] = useState(null);
+   const imageTarget = useRef(null), preview = useRef(null);
+   const [previewing, setPreviewing] = useState(false);
+   live.current = { view, context, disabled, flushLayout };
++  const [gestures] = useState(() => createWorkbenchGestures({
++    getHost: () => gestureHost.current,
++    restoreTransforms: transforms => live.current.view.setTransforms(transforms),
++  }));
+   const cancelPreview = useCallback(() => {
+     if (!preview.current) return;
+     const { previous } = preview.current; preview.current = null;
+@@ -50,75 +54,71 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
+     }
+   };
+   const perform = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
+-  const cancel = () => gesture.current?.finish(false);
++  const cancel = useCallback(() => gestures.cancel(), [gestures]);
+   useEffect(() => {
+-    const blur = () => { cancel(); cancelPreview(); }, visibility = () => { if (document.hidden) blur(); };
+-    const key = event => { if (event.key === 'Escape' && gesture.current) { event.preventDefault(); event.stopPropagation(); cancel(); } };
+-    window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility); window.addEventListener('keydown', key, true);
++    const blur = cancelPreview, visibility = () => { if (document.hidden) blur(); };
++    window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility);
+     const unsubscribe = store.subscribe(() => {
+-      if (gesture.current?.generation !== store.getGeneration()) cancel();
++      if (gestures.isActive()) cancel();
+       if (preview.current?.generation !== store.getGeneration()) cancelPreview();
+     });
+-    const unguard = store.guardWorkbenchTransition(() => { cancelPreview(); return gesture.current ? 'Finish or cancel the bento gesture before leaving Reception.' : null; });
+-    return () => { cancel(); cancelPreview(); imageRequest.current = null; unsubscribe(); unguard(); window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('keydown', key, true); };
+-  }, [store, cancelPreview]);
+-  useEffect(() => { if (disabled) { cancel(); cancelPreview(); imageRequest.current = null; setImageCell(null); } }, [disabled, cancelPreview]);
++    const unguard = store.guardWorkbenchTransition(() => { cancelPreview(); return gestures.isActive() ? 'Finish or cancel the bento gesture before leaving Reception.' : null; });
++    return () => { cancel(); cancelPreview(); imageRequest.current = null; unsubscribe(); unguard(); window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', visibility); };
++  }, [store, cancelPreview, gestures, cancel]);
++  useEffect(() => { if (disabled) { cancel(); cancelPreview(); imageRequest.current = null; setImageCell(null); } }, [disabled, cancelPreview, cancel]);
+   const start = (event, cellId, divider) => {
+-    if (event.button !== 0 || disabled || camera.locked || gesture.current || preview.current) return;
++    if (event.button !== 0 || disabled || camera.locked || gestures.isActive() || preview.current) return;
+     event.preventDefault(); event.stopPropagation();
+     perform(() => {
+       flush();
+-      const origin = store.getReception(), generation = store.getGeneration(), initial = { x: event.clientX, y: event.clientY };
+-      const { scale, offset } = camera.getCamera(), target = event.currentTarget, pointerId = event.pointerId;
+-      const previous = view.transforms, unlock = camera.lock();
+-      let destination = null, position = divider?.position, moved = false;
++      const origin = store.getReception(), generation = store.getGeneration();
++      const { scale, offset } = camera.getCamera(), target = event.currentTarget;
++      const initial = { x: event.clientX, y: event.clientY }, previous = view.transforms;
++      let destination = null, position = divider?.position, moved = false, unlock;
+       if (cellId) { context.leaveCell(false); view.selectArtwork(cellId); }
+-      target.focus({ preventScroll: true }); target.setPointerCapture(pointerId);
++      target.focus({ preventScroll: true }); gestureHost.current = target;
+       const paint = next => view.setTransforms({ ...previous, ...Object.fromEntries(origin.cells.map(cell => [cell.id,
+         { scale: 1, x: 0, y: 0, frame: receptionModuleWindow(next, cell.id) }])) });
+-      const move = pointer => {
+-        if (pointer.pointerId !== pointerId) return;
+-        moved ||= Math.hypot(pointer.clientX - initial.x, pointer.clientY - initial.y) > 4;
+-        if (!moved) return;
+-        if (divider) {
+-          position = divider.position + (divider.axis === 'x' ? pointer.clientX - initial.x : pointer.clientY - initial.y) / scale;
+-          paint(resizeReceptionBento(origin, divider.id, position));
+-        } else {
+-          const x = (pointer.clientX - offset.x) / scale, y = (pointer.clientY - offset.y) / scale;
+-          destination = origin.cells.find(cell => {
+-            const r = receptionModuleWindow(origin, cell.id);
+-            return cell.id !== cellId && x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height;
+-          })?.id || null;
+-          paint(destination ? swapReceptionBentoCells(origin, cellId, destination) : origin);
+-          setDragging({ id: cellId, target: destination });
+-        }
+-      };
+-      const finish = commit => {
+-        if (!gesture.current) return;
+-        gesture.current = null;
+-        target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up); target.removeEventListener('pointercancel', abort); target.removeEventListener('lostpointercapture', abort);
+-        if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
+-        view.setTransforms(previous); unlock(); setDragging(null);
+-        if (commit && moved && (divider || destination)) perform(() => store.editBento(divider ? 'resize' : 'swap',
+-          divider ? [divider.id, position] : [cellId, destination], generation));
+-      };
+-      const up = pointer => { if (pointer.pointerId === pointerId) finish(true); }, abort = () => finish(false);
+-      gesture.current = { generation, finish };
+-      target.addEventListener('pointermove', move); target.addEventListener('pointerup', up); target.addEventListener('pointercancel', abort); target.addEventListener('lostpointercapture', abort);
++      const started = gestures.beginResize(event, {
++        beforeTransforms: previous,
++        valid: () => target.isConnected && store.isCurrent() && store.hasWriteAccess()
++          && store.getGeneration() === generation && !live.current.disabled,
++        preview: delta => {
++          moved ||= Math.hypot(delta.x, delta.y) > 4;
++          if (!moved) return;
++          try {
++            if (divider) {
++              position = divider.position + (divider.axis === 'x' ? delta.x : delta.y) / scale;
++              paint(resizeReceptionBento(origin, divider.id, position));
++            } else {
++              const x = (initial.x + delta.x - offset.x) / scale, y = (initial.y + delta.y - offset.y) / scale;
++              destination = origin.cells.find(cell => {
++                const r = receptionModuleWindow(origin, cell.id);
++                return cell.id !== cellId && x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height;
++              })?.id || null;
++              paint(destination ? swapReceptionBentoCells(origin, cellId, destination) : origin);
++              setDragging({ id: cellId, target: destination });
++            }
++            setError('');
++          } catch (failure) { setError(failure.message); gestures.cancel(); }
++        },
++        commit: () => {
++          view.setTransforms(previous);
++          if (!moved || !divider && !destination) return true;
++          try {
++            store.editBento(divider ? 'resize' : 'swap', divider ? [divider.id, position] : [cellId, destination], generation);
++            setError(''); return true;
++          } catch (failure) { setError(failure.message); return false; }
++        },
++        onFinish: () => { unlock?.(); setDragging(null); },
++      });
++      if (started) unlock = camera.lock();
+     });
+   };
+-  const cellStore = (cellId, textFrame) => ({ ...store, commitCompletedOperation: (candidate, options) => {
+-    if (textFrame) {
+-      const added = candidate.texts.find(item => !store.getSnapshot().texts.some(old => old.id === item.id));
+-      if (added) candidate = { ...candidate, texts: candidate.texts.map(item => item.id === added.id
+-        ? { ...item, article: { ...item.article, appearance: { ...defaultTextAppearance(), background: null } } } : item), workbench: { ...candidate.workbench,
+-        texts: candidate.workbench.texts.map(item => item.id === added.id ? { ...item, window: textFrame } : item) } };
+-    }
+-    return store.commitInCell(cellId, candidate, options);
+-  } });
++  const cellStore = cellId => ({ ...store, commitCompletedOperation: (candidate, options) => store.commitInCell(cellId, candidate, options) });
+   const addText = cellId => perform(() => {
+     flush(); const r = receptionModuleWindow(store.getReception(), cellId);
+-    const id = addTextModule(cellStore(cellId, r), view.profileAddress, { position: { left: r.left, top: r.top } }, { visibility: 'PUBLIC' });
++    const id = addTextModule(cellStore(cellId), view.profileAddress, { window: r }, { visibility: 'PUBLIC', appearance: { background: null } });
+     context.enterCell(cellId); view.selectArtwork(id);
+   });
+   const closeImage = () => { imageRequest.current = null; setImageCell(null); };
+@@ -151,6 +151,14 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
+     width: r.width * view.scale, height: r.height * view.scale });
+   const selected = context.cells.find(cell => view.selection.length === 1 && view.selection[0] === cell.id);
+   const blocked = disabled || camera.locked;
++  const selectedFrame = selected && receptionModuleWindow(painted, selected.id);
++  const screen = selectedFrame && project(selectedFrame);
++  const actionPosition = screen ? {
++    left: Math.max(8, Math.min(screen.left, innerWidth - 372)),
++    top: Math.max(view.navigationTop + 8, Math.min(screen.top >= view.navigationTop + 52 ? screen.top - 44 : screen.top + screen.height + 8, innerHeight - 48)),
++  } : undefined;
++  const textReason = selectedFrame && receptionModuleSizeReason('text:new', selectedFrame);
++  const imageReason = selectedFrame && receptionModuleSizeReason('image:new', selectedFrame);
+   return <>
+     <div className="reception-bento-line-layer" style={{ clipPath: `inset(${view.navigationTop}px 0 0 0)` }}>
+       <ReceptionInnerLines frames={lineFrames} gap={preview.current?.next.bento?.gap ?? settings.gap}
+@@ -164,7 +172,7 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
+           data-editor-cell-surface={cell.id} style={{ ...project(r), borderRadius: (cell.radius || 0) * view.scale }} tabIndex={0}
+           role="group" aria-label={`${reception.shapes.find(item => item.id === cell.id)?.name || 'Cell'} bento cell`}
+           onPointerDown={event => { if (event.target === event.currentTarget) start(event, cell.id); }}
+-          onClick={event => { if (event.target === event.currentTarget && !gesture.current) view.selectArtwork(cell.id); }}
++          onClick={event => { if (event.target === event.currentTarget && !gestures.isActive()) view.selectArtwork(cell.id); }}
+           onDoubleClick={() => { if (!previewing) context.enterCell(cell.id); }}
+           onKeyDown={event => {
+             if (event.target !== event.currentTarget || previewing) return;
+@@ -175,13 +183,6 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
+               if (next) perform(() => run('swap', [cell.id, next.id]));
+             }
+           }}>
+-          {active && !dragging && <div className="reception-bento-cell-actions" onPointerDown={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
+-            <button type="button" disabled={blocked || previewing || reception.cells.length >= receptionLayoutCountRange(reception).max}
+-              title="Add a cell on the right of this row; the row keeps its total width" onClick={() => perform(() => run('addCell', [cell.id]))}>+ Cell</button>
+-            <button type="button" disabled={blocked || previewing} onClick={() => openImage(cell.id)}>+ Image</button>
+-            <button type="button" disabled={blocked || previewing} onClick={() => addText(cell.id)}>+ Text</button>
+-            <button type="button" disabled={blocked} onClick={() => context.openSettings(cell.id)}>Bento size</button>
+-          </div>}
+         </div>;
+       })}
+       {!context.editingCellId && !previewing && dividers.map(d => {
+@@ -203,8 +204,15 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
+             perform(() => run('resize', [d.id, d.position + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1) * (event.shiftKey ? 10 : 1)]));
+           }} />;
+       })}
++          {selected && !context.editingCellId && !dragging && <div className="reception-bento-cell-actions workbench-tool-controls" data-workflow-material="tactile" data-workflow-finish="flat" data-window-chrome="flat" role="toolbar" aria-label="Selected cell actions" style={actionPosition} onPointerDown={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
++            <button className="workflow-tactile-control" type="button" disabled={blocked || previewing || reception.cells.length >= receptionLayoutCountRange(reception).max}
++              title="Add a cell on the right of this row; the row keeps its total width" onClick={() => perform(() => run('addCell', [selected.id]))}>+ Cell</button>
++            <button className="workflow-tactile-control" type="button" disabled={blocked || previewing || Boolean(imageReason)} title={imageReason || undefined} onClick={() => openImage(selected.id)}>+ Image</button>
++            <button className="workflow-tactile-control" type="button" disabled={blocked || previewing || Boolean(textReason)} title={textReason || undefined} onClick={() => addText(selected.id)}>+ Text</button>
++            <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={() => context.openSettings(selected.id)}>Bento settings</button>
++          </div>}
+     </div>}
+-    {context.bentoOpen && !disabled && <ReceptionBentoPanel {...{ reception, blocked, run, previewSettings, cancelPreview }} revision={store.getGeneration()} navigationTop={view.navigationTop}
++    {context.bentoOpen && !disabled && <ReceptionBentoPanel {...{ reception, blocked, run, previewSettings, cancelPreview }} selectedId={selected?.id} structureActions={selected ? editorCellStructureActions(store, selected.id, view) : []} revision={store.getGeneration()} navigationTop={view.navigationTop}
+       onClose={() => context.setBentoOpen(false)} generate={(settings, seed) => {
+         cancelPreview(); flush(); store.generateCellLayout(settings, seed, store.getGeneration()); context.leaveCell(false); view.setSelection([]);
+         requestAnimationFrame(() => { if (store.isCurrent()) navigation.navigatorHome(); });
+diff --git a/src/shapes/ShapeWorkbench.jsx b/src/shapes/ShapeWorkbench.jsx
+index e362fb4..97a691b 100644
+--- a/src/shapes/ShapeWorkbench.jsx
++++ b/src/shapes/ShapeWorkbench.jsx
+@@ -101,7 +101,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
+       run: () => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)) },
+     items: cellContext && kind === 'rectangle' ? cell ? [
+       { id: 'edit-cell', label: 'Edit cell contents', run: () => cellContext.enterCell(record.id) },
+-      { id: 'cell-settings', label: 'Cell settings', run: () => cellContext.openSettings(record.id) },
++      { id: 'cell-settings', label: 'Bento settings', run: () => cellContext.openSettings(record.id) },
+       ...editorCellStructureActions(store, record.id, view),
+     ] : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= RECEPTION_CELL_LIMIT,
+       run: () => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); } }] : [],
+diff --git a/src/profileDocument/domain/workbenchPresentation.js b/src/profileDocument/domain/workbenchPresentation.js
+index db5e928..4e94a11 100644
+--- a/src/profileDocument/domain/workbenchPresentation.js
++++ b/src/profileDocument/domain/workbenchPresentation.js
+@@ -11,9 +11,11 @@ const exact = (value, keys) => value && typeof value === 'object' && !Array.isAr
+   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+ const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
+ const maximumWindowSize = 16384;
++export const TEXT_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 100, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
++export const SHAPE_WINDOW_LIMITS = Object.freeze({ minimumWidth: 8, minimumHeight: 8, maximumWidth: 7992, maximumHeight: 7992 });
+ export const DISPLAY_WINDOW_LIMITS = Object.freeze({ minimumWidth: .01, minimumHeight: .01, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
+ const position = value => exact(value, ['left', 'top']) && number(value.left, -16384, 16384) && number(value.top, -16384, 16384);
+-const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
++const windowFrame = (value, height, minimumWidth = TEXT_WINDOW_LIMITS.minimumWidth, minimumHeight = TEXT_WINDOW_LIMITS.minimumHeight) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
+   && number(value.left, -16384, 16384) && number(value.top, -16384, 16384) && number(value.width, minimumWidth, maximumWindowSize)
+   && (!height || number(value.height, minimumHeight, maximumWindowSize));
+ 
+@@ -37,7 +39,9 @@ export function isValidWorkbenchPresentation(value) {
+       const frame = item?.window;
+       if (!exact(item, ['id', 'open', 'window']) || !SHAPE_ID.test(item.id) || ids.has(item.id)
+         || typeof item.open !== 'boolean' || !exact(frame, ['left', 'top', 'width', 'height'])
+-        || !position({ left: frame.left, top: frame.top }) || !number(frame.width, 8, 7992) || !number(frame.height, 8, 7992)) return false;
++        || !position({ left: frame.left, top: frame.top })
++        || !number(frame.width, SHAPE_WINDOW_LIMITS.minimumWidth, SHAPE_WINDOW_LIMITS.maximumWidth)
++        || !number(frame.height, SHAPE_WINDOW_LIMITS.minimumHeight, SHAPE_WINDOW_LIMITS.maximumHeight)) return false;
+       ids.add(item.id);
+     }
+   }
+diff --git a/src/reception/receptionEditorScope.js b/src/reception/receptionEditorScope.js
+index 26f97cc..98fc290 100644
+--- a/src/reception/receptionEditorScope.js
++++ b/src/reception/receptionEditorScope.js
+@@ -1,13 +1,14 @@
++import { projectReceptionMember } from './editorCellGeometry.js';
+ import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
+ import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
+ import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+ import { createShapePresentation } from '../shapes/shapes.js';
+ import { createImagePresentation } from '../imageModule/imageModule.js';
+ import { applyReceptionLayout } from './receptionLayoutGenerator.js';
+-import { resizeReceptionBento, swapReceptionBentoCells, addReceptionBentoCell, appendReceptionBentoRow, setReceptionBentoSettings } from './receptionBento.js';
++import { resizeReceptionBento, swapReceptionBentoCells, addReceptionBentoCell, appendReceptionBentoRow, setReceptionBentoSettings, setReceptionCellRadius } from './receptionBento.js';
+ import { mergeReceptionCells, splitReceptionCell } from './receptionCellStructure.js';
+ import { fillDeletedReceptionCells } from './receptionCellDeletion.js';
+-import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells,
++import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells, receptionModuleLimits,
+   RECEPTION_CELL_LIMIT } from './receptionEditorDocument.js';
+ 
+ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+@@ -83,7 +84,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
+         const window = receptionModuleWindow(next, id);
+         if (!window || window.left < cell.left + cell.width && window.left + window.width > cell.left
+           && window.top < cell.top + cell.height && window.top + window.height > cell.top) continue;
+-        const minimum = id.startsWith('text:') ? { width: 180, height: 100 } : { width: id.startsWith('image:') ? 32 : 8, height: id.startsWith('image:') ? 32 : 8 };
++        const limits = receptionModuleLimits(id), minimum = { width: limits.minimumWidth, height: limits.minimumHeight };
+         const scale = Math.min(1, cell.width / window.width, cell.height / window.height);
+         const width = Math.max(minimum.width, Math.min(cell.width, window.width * scale)), height = Math.max(minimum.height, Math.min(cell.height, window.height * scale));
+         next = withReceptionModuleWindow(next, id, { left: cell.left + (cell.width - width) / 2, top: cell.top + (cell.height - height) / 2, width, height });
+@@ -158,9 +159,9 @@ export function createReceptionEditorScope(rootStore, options = {}) {
+       if (expectedGeneration !== underlying.getGeneration()) throw new Error('Reception changed. Try the change again.');
+       if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+       const operations = { resize: resizeReceptionBento, swap: swapReceptionBentoCells, addCell: addReceptionBentoCell, appendRow: appendReceptionBentoRow,
+-        settings: setReceptionBentoSettings, merge: mergeReceptionCells, split: splitReceptionCell };
++        settings: setReceptionBentoSettings, cellRadius: setReceptionCellRadius, merge: mergeReceptionCells, split: splitReceptionCell };
+       const labels = { resize: 'Resize Reception cells', swap: 'Swap Reception cells', addCell: 'Add Reception cell', appendRow: 'Add Reception row',
+-        settings: 'Change bento settings', merge: 'Merge Reception cells', split: 'Split Reception cell' };
++        settings: 'Change bento settings', cellRadius: 'Change cell radius', merge: 'Merge Reception cells', split: 'Split Reception cell' };
+       if (!operations[action]) throw new Error('Choose an available bento action.');
+       return mutate(value => operations[action](value, ...args), labels[action], presentation, { resizeContents: action !== 'merge' });
+     },
+@@ -215,9 +216,7 @@ function assertLockedLayersUnchanged(before, next) {
+     if (same(oldFrame, newFrame)) continue;
+     const oldCell = receptionModuleWindow(before, cell.id), newCell = receptionModuleWindow(next, cell.id);
+     if (!oldCell || !newCell || same(oldCell, newCell)) throw new Error('Unlock this layer before moving it.');
+-    const expected = { left: newCell.left + (oldFrame.left - oldCell.left) * newCell.width / oldCell.width,
+-      top: newCell.top + (oldFrame.top - oldCell.top) * newCell.height / oldCell.height,
+-      width: oldFrame.width * newCell.width / oldCell.width, height: oldFrame.height * newCell.height / oldCell.height };
++    const expected = projectReceptionMember(oldCell, newCell, oldFrame);
+     if (!newFrame || Object.keys(expected).some(key => Math.abs(newFrame[key] - expected[key]) > 1)) throw new Error('Unlock this layer before moving it.');
+   }
+ }
+diff --git a/src/reception/receptionEditorDocument.js b/src/reception/receptionEditorDocument.js
+index b7ed904..7ef99db 100644
+--- a/src/reception/receptionEditorDocument.js
++++ b/src/reception/receptionEditorDocument.js
+@@ -1,7 +1,8 @@
++import { projectReceptionMember } from './editorCellGeometry.js';
+ import { validShapes, validShapeOutline, projectShapes, restoreShapes, MAX_SHAPES } from '../shapes/shapes.js';
+-import { validImageModules, projectImageModules, restoreImageModules } from '../imageModule/imageModule.js';
++import { validImageModules, projectImageModules, restoreImageModules, IMAGE_SIZE_LIMITS } from '../imageModule/imageModule.js';
+ import { validTextModules, projectTextModules, restoreTextModules } from '../text/domain/article.js';
+-import { createDefaultWorkbenchPresentation, isValidWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
++import { createDefaultWorkbenchPresentation, isValidWorkbenchPresentation, TEXT_WINDOW_LIMITS, SHAPE_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
+ import { validReceptionLinks } from '../profileDocument/domain/receptionLinks.js';
+ import { artworkLayers, layerIds, validArtworkLayers, reconcileArtworkLayers } from '../systemWorkflow/domain/artworkLayers.js';
+ import { workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
+@@ -9,6 +10,43 @@ import { validReceptionArrangement, pruneReceptionArrangement } from './receptio
+ import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
+ 
+ export const RECEPTION_CELL_LIMIT = 16;
++export const MIN_RECEPTION_CELL_SIZE = 80;
++export const receptionModuleLimits = id => id.startsWith('image:') ? IMAGE_SIZE_LIMITS
++  : id.startsWith('text:') ? TEXT_WINDOW_LIMITS : SHAPE_WINDOW_LIMITS;
++export function receptionModuleSizeReason(id, frame) {
++  const limits = receptionModuleLimits(id);
++  const name = id.startsWith('image:') ? 'Image' : id.startsWith('text:') ? 'Text' : 'Shape';
++  return ['width', 'height'].some(axis => !Number.isFinite(frame[axis])
++    || frame[axis] < limits[axis === 'width' ? 'minimumWidth' : 'minimumHeight']
++    || frame[axis] > limits[axis === 'width' ? 'maximumWidth' : 'maximumHeight'])
++    ? `${name} needs a frame between ${limits.minimumWidth} × ${limits.minimumHeight} and ${limits.maximumWidth} × ${limits.maximumHeight} px. Enlarge the cell or resize its contents first.` : null;
++}
++
++// Bound the cell by the proportional size of every native member. Empty cells
++// retain their smaller minimum; native Text/Image validators remain authoritative.
++export function receptionCellSizeLimits(value, id) {
++  const frame = receptionModuleWindow(value, id);
++  const limits = { ...SHAPE_WINDOW_LIMITS, minimumWidth: MIN_RECEPTION_CELL_SIZE, minimumHeight: MIN_RECEPTION_CELL_SIZE };
++  for (const member of value.cells.find(cell => cell.id === id)?.members || []) {
++    const content = receptionModuleWindow(value, member), native = receptionModuleLimits(member);
++    if (!content) continue;
++    for (const [axis, minimum, maximum] of [['width', 'minimumWidth', 'maximumWidth'], ['height', 'minimumHeight', 'maximumHeight']]) {
++      limits[minimum] = Math.max(limits[minimum], native[minimum] * frame[axis] / content[axis]);
++      limits[maximum] = Math.min(limits[maximum], native[maximum] * frame[axis] / content[axis]);
++    }
++  }
++  return limits;
++}
++export function receptionCellResizeReason(value, id, nextFrame) {
++  const frame = receptionModuleWindow(value, id);
++  for (const member of value.cells.find(cell => cell.id === id)?.members || []) {
++    const content = receptionModuleWindow(value, member);
++    if (!content) continue;
++    const reason = receptionModuleSizeReason(member, projectReceptionMember(frame, nextFrame, content));
++    if (reason) return reason;
++  }
++  return receptionModuleSizeReason(id, nextFrame);
++}
+ const keys = ['shapes', 'imageModules', 'texts'];
+ const builtins = new Set(['profile', 'links', 'introduction', 'details']);
+ const exact = (v, required, optional = []) => v && typeof v === 'object' && !Array.isArray(v)
+@@ -31,6 +69,8 @@ export function receptionModuleWindow(value, id) {
+ }
+ export function withReceptionModuleWindow(value, id, window) {
+   if (!validWindow(window)) throw new Error('Choose a valid layer position and size.');
++  const reason = receptionModuleSizeReason(id, window);
++  if (reason) throw new Error(reason);
+   const key = keys.find(key => value[key]?.some(item => item.id === id));
+   if (!key) throw new Error('This layer is no longer available.');
+   const image = key === 'imageModules';
+@@ -185,8 +225,7 @@ export function reconcileReceptionCells(previous, candidate, { resizeContents =
+     for (const id of cell.members) {
+       const old = receptionModuleWindow(previous, id), current = receptionModuleWindow(next, id);
+       if (!old || !same(old, current)) continue;
+-      next = withReceptionModuleWindow(next, id, { left: after.left + (old.left - before.left) * after.width / before.width,
+-        top: after.top + (old.top - before.top) * after.height / before.height, width: old.width * after.width / before.width, height: old.height * after.height / before.height });
++      next = withReceptionModuleWindow(next, id, projectReceptionMember(before, after, old));
+     }
+   }
+   if (!available.has(next.branding.logo)) next.branding = { ...next.branding, logo: null };
+@@ -228,7 +267,7 @@ export function receptionResponsiveLayout(value, viewportWidth) {
+             width: rect.width / original.width * window.width, height: rect.height / original.height * window.height };
+       }
+     }
+-    return { ...cell, window };
++    return { ...cell, radius: (cell.radius || 0) * (mobile ? 1 : scale), window };
+   });
+   const contained = new Set(value.cells.flatMap(cell => [cell.id, ...cell.members]));
+   const freeBottom = Math.max(0, ...Object.entries(windows).filter(([id]) => !contained.has(id)).map(([, rect]) => rect.top + rect.height));
+diff --git a/src/reception/ReceptionDocumentCanvas.jsx b/src/reception/ReceptionDocumentCanvas.jsx
+index dc65aab..5d24d7b 100644
+--- a/src/reception/ReceptionDocumentCanvas.jsx
++++ b/src/reception/ReceptionDocumentCanvas.jsx
+@@ -25,7 +25,7 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
+   const layout = useMemo(() => viewportWidth > 0 ? receptionResponsiveLayout(reception, viewportWidth) : null, [reception, viewportWidth]);
+   useLayoutEffect(() => { if (layout) onLayout?.(layout); }, [layout, onLayout]);
+   const order = layerIds(reception.artworkLayers);
+-  const owners = new Map(reception.cells.flatMap(cell => cell.members.map(id => [id, cell])));
++  const owners = new Map((layout?.cells || []).flatMap(cell => cell.members.map(id => [id, cell])));
+   const record = id => reception.imageModules.find(item => item.id === id)
+     || reception.texts.find(item => item.id === id) || reception.shapes.find(item => item.id === id);
+   const paint = (id, radius = 0) => {
+diff --git a/src/reception/receptionLayoutGenerator.js b/src/reception/receptionLayoutGenerator.js
+index cdb06a7..d244414 100644
+--- a/src/reception/receptionLayoutGenerator.js
++++ b/src/reception/receptionLayoutGenerator.js
+@@ -1,9 +1,9 @@
+ import { MAX_SHAPES, validShapeOutline } from '../shapes/shapes.js';
+ import { validWorkbenchArea, workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
+-import { RECEPTION_CELL_LIMIT, withReceptionModuleWindow } from './receptionEditorDocument.js';
++import { RECEPTION_CELL_LIMIT, MIN_RECEPTION_CELL_SIZE, withReceptionModuleWindow, receptionCellResizeReason } from './receptionEditorDocument.js';
+ 
+ export const RECEPTION_LAYOUT_DEFAULTS = Object.freeze({ width: 1440, height: 900, count: 6, gap: 24, padding: 24, radius: 0 });
+-const MIN_CELL_SIZE = 80;
++const MIN_CELL_SIZE = MIN_RECEPTION_CELL_SIZE;
+ const occupied = cell => cell.members.length > 0 || Boolean(cell.content);
+ export const receptionLayoutCountRange = value => ({
+   min: Math.max(1, value.cells.filter(occupied).length),
+@@ -93,8 +93,10 @@ export function applyReceptionLayout(value, settings, seed) {
+   }
+   const placedCells = next.cells.map((cell, index) => {
+     const frame = layout.rectangles[index];
++    const reason = value.cells.some(old => old.id === cell.id) && receptionCellResizeReason(value, cell.id, frame);
++    if (reason) throw new Error(reason);
+     next = withReceptionModuleWindow(next, cell.id, { ...frame, left: area.left + frame.left, top: area.top + frame.top });
+-    return { ...cell, radius: layout.radius };
++    return { ...cell, radius: value.cells.some(old => old.id === cell.id) ? cell.radius || 0 : layout.radius };
+   });
+   return { ...next, cells: placedCells };
+ }
+diff --git a/src/reception/receptionCellStructure.js b/src/reception/receptionCellStructure.js
+index ba34135..c4381a7 100644
+--- a/src/reception/receptionCellStructure.js
++++ b/src/reception/receptionCellStructure.js
+@@ -1,6 +1,6 @@
+ import { receptionBentoSettings } from './receptionBento.js';
+ import { receptionLayoutCountRange } from './receptionLayoutGenerator.js';
+-import { receptionModuleWindow, withReceptionModuleWindow } from './receptionEditorDocument.js';
++import { receptionModuleWindow, withReceptionModuleWindow, receptionCellResizeReason, receptionModuleSizeReason, MIN_RECEPTION_CELL_SIZE } from './receptionEditorDocument.js';
+ 
+ const near = (a, b) => Math.abs(a - b) < 0.001;
+ const directions = { above: ['top', 'height', 'left', 'width', -1], below: ['top', 'height', 'left', 'width', 1],
+@@ -33,8 +33,9 @@ export function receptionCellMerge(value, id, direction) {
+     return { reason: 'Cells must have the same publication visibility before merging.' };
+   if (cells.filter(cell => cell.content).length > 1)
+     return { reason: 'These cells contain separate profile or linked-canvas content. Keep them in separate cells.' };
+-  return { cells, frame: { ...frame, [axis]: sign > 0 ? frame[axis] : neighbours[0].frame[axis],
+-    [size]: frame[size] + gap + neighbours[0].frame[size] } };
++  const mergedFrame = { ...frame, [axis]: sign > 0 ? frame[axis] : neighbours[0].frame[axis], [size]: frame[size] + gap + neighbours[0].frame[size] };
++  const reason = receptionModuleSizeReason(id, mergedFrame);
++  return reason ? { reason } : { cells, frame: mergedFrame };
+ }
+ 
+ export function mergeReceptionCells(value, id, direction) {
+@@ -85,8 +86,10 @@ export function receptionCellSplit(value, id, direction) {
+   if (value.cells.length >= receptionLayoutCountRange(value).max) return { reason: 'There is no room for another cell.' };
+   const axis = direction === 'horizontal' ? 'top' : 'left', size = direction === 'horizontal' ? 'height' : 'width';
+   const { gap } = receptionBentoSettings(value), firstSize = Math.floor((frame[size] - gap) / 2);
+-  if (firstSize < 80) return { reason: 'Each half needs at least 80 pixels. Enlarge this cell or reduce the gutter.' };
+-  return { first: { ...frame, [size]: firstSize }, second: { ...frame,
++  if (firstSize < MIN_RECEPTION_CELL_SIZE) return { reason: 'Each half needs at least 80 pixels. Enlarge this cell or reduce the gutter.' };
++  const first = { ...frame, [size]: firstSize }, reason = receptionCellResizeReason(value, id, first);
++  if (reason) return { reason };
++  return { first, second: { ...frame,
+     [axis]: frame[axis] + firstSize + gap, [size]: frame[size] - firstSize - gap } };
+ }
+ 
+diff --git a/src/reception/receptionCellDeletion.js b/src/reception/receptionCellDeletion.js
+index 3673d3a..53fa6b0 100644
+--- a/src/reception/receptionCellDeletion.js
++++ b/src/reception/receptionCellDeletion.js
+@@ -1,5 +1,5 @@
+ import { receptionBentoSettings } from './receptionBento.js';
+-import { receptionModuleWindow, withReceptionModuleWindow } from './receptionEditorDocument.js';
++import { receptionModuleWindow, withReceptionModuleWindow, MIN_RECEPTION_CELL_SIZE } from './receptionEditorDocument.js';
+ 
+ const near = (a, b) => Math.abs(a - b) < 0.001;
+ const overlaps = (a, b) => a.left < b.left + b.width - 0.001 && b.left < a.left + a.width - 0.001
+@@ -80,7 +80,7 @@ export function fillDeletedReceptionCells(previous, candidate) {
+     progress = false;
+     for (const hole of tiles.filter(r => r.removed)) if (tiles.includes(hole) && absorb(tiles, hole)) progress = true;
+   } while (progress && tiles.some(r => r.removed));
+-  for (const hole of tiles.filter(r => r.removed)) if (tiles.includes(hole)) repackBand(tiles, hole, 80 + gap);
++  for (const hole of tiles.filter(r => r.removed)) if (tiles.includes(hole)) repackBand(tiles, hole, MIN_RECEPTION_CELL_SIZE + gap);
+   return tiles.filter(r => !r.removed).reduce((next, r) => withReceptionModuleWindow(next, r.id,
+     { left: r.left, top: r.top, width: r.width - gap, height: r.height - gap }), candidate);
+ }
+diff --git a/browser-tests/reception-layer-order.browser.mjs b/browser-tests/reception-layer-order.browser.mjs
+index d24c664..7f5fb50 100644
+--- a/browser-tests/reception-layer-order.browser.mjs
++++ b/browser-tests/reception-layer-order.browser.mjs
+@@ -1,4 +1,4 @@
+-import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
++import { editorCommand, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { mkdir } from 'node:fs/promises';
+@@ -50,7 +50,7 @@ test('Reception canvas follows the theme through transparent artwork without cha
+     await checkTheme('light', 'rgb(222, 219, 211)', 'preview');
+     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+     await editorOverview(page);
+-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
++    await editorDestination(page, 'Reception');
+     await canvas.waitFor();
+     for (const width of [1600, 390]) {
+       await page.setViewportSize({ width, height: 1000 });
+@@ -120,7 +120,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
+     assert.deepEqual(await readCamera(), initial, 'Home returns to the canvas rather than world origin');
+     await page.screenshot({ path: `${output}/centred-editor.png` });
+     await editorOverview(page);
+-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
++    await editorDestination(page, 'Reception');
+     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
+     const published = await assertDocumentCentered(page, '.reception-window-main');
+     assert.equal(published.width, 947); assert.equal(published.height, 575);
+@@ -146,7 +146,7 @@ async function assertPaint(page, native) {
+     const rect = owner.getBoundingClientRect(), scale = rect.width / 1040;
+     return probes.map(([x, y]) => {
+       const point = { x: rect.left + (x - 160) * scale, y: rect.top + (y - 150) * scale };
+-      const node = document.elementFromPoint(point.x, point.y)?.closest(native ? '[data-workbench-view-id]' : '[data-layer-id], [data-cell-id]');
++      const node = document.elementsFromPoint(point.x, point.y).map(hit => hit.closest(native ? '[data-workbench-view-id]' : '[data-layer-id], [data-cell-id]')).find(Boolean);
+       return native ? node?.dataset.workbenchViewId : node?.dataset.layerId || node?.dataset.cellId;
+     });
+   }, { probes, native });
+@@ -159,7 +159,13 @@ async function textPaint(page, native, id = 'text:nomad') {
+   return page.locator(native ? `[data-workbench-view-id="${id}"]` : `.reception-document-canvas [data-layer-id="${id}"]`).evaluate(node => {
+     const article = node.querySelector('.text-editor-page, .text-document');
+     const style = getComputedStyle(article), surface = getComputedStyle(node), body = getComputedStyle(node.querySelector('.text-module-body'));
+-    return { padding: style.padding, fontSize: style.fontSize, lineHeight: style.lineHeight, background: surface.backgroundColor, transform: body.transform };
++    const matrix = body.transform === 'none' ? null : new DOMMatrixReadOnly(body.transform);
++    // Native camera zoom changes the paint dimensions. Compare the quarter-turn
++    // and proportional centering, rather than unscaled translation pixels.
++    const transform = matrix ? [matrix.a, matrix.b, matrix.c, matrix.d,
++      Math.round(matrix.e / parseFloat(body.width) * 1000) / 1000,
++      Math.round(matrix.f / parseFloat(body.height) * 1000) / 1000] : 'none';
++    return { padding: style.padding, fontSize: style.fontSize, lineHeight: style.lineHeight, background: surface.backgroundColor, transform };
+   });
+ }
+ 
+@@ -193,7 +199,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
+     await page.screenshot({ path: `${output}/preview.png` });
+     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+     await editorOverview(page);
+-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
++    await editorDestination(page, 'Reception');
+     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
+     await assertPaint(page, false);
+     assert.deepEqual(await textPaint(page, false), nativeText);
+diff --git a/browser-tests/reception-cell-interaction.browser.mjs b/browser-tests/reception-cell-interaction.browser.mjs
+index 558611b..488c755 100644
+--- a/browser-tests/reception-cell-interaction.browser.mjs
++++ b/browser-tests/reception-cell-interaction.browser.mjs
+@@ -66,7 +66,7 @@ test('image-covered cells enter on double-click and expose the owning cell setti
+       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
+       const { createProfileDocumentV9AssetResolver } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');
+       const asset = createProfileDocumentV9AssetResolver(assets)(assets[0].id), frame = value.workbench.shapes.find(item => item.id === id).window;
+-      value.imageModules = [{ id: 'image:covered-cell', name: 'Cover', width: frame.width, height: frame.height, visibility: 'PUBLIC',
++      value.imageModules = [{ id: 'image:covered-cell', name: 'Cover', width: Math.round(frame.width), height: Math.round(frame.height), visibility: 'PUBLIC',
+         sides: [{ id: 'side:cover', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
+       value.workbench.imageModules = [{ id: 'image:covered-cell', open: true, position: { left: frame.left, top: frame.top } }];
+       value.cells[0].members = ['image:covered-cell']; value.artworkLayers = [id, 'image:covered-cell'];
+@@ -77,38 +77,32 @@ test('image-covered cells enter on double-click and expose the owning cell setti
+     assert.equal(await page.locator(`[data-editor-cell="${id}"]`).count(), 1);
+     await back(page).click(); await page.mouse.click(1100, 800);
+     await page.mouse.click(540, 420, { button: 'right' });
+-    await page.getByRole('menuitem', { name: 'Cell settings', exact: true }).click();
+-    await page.getByRole('button', { name: 'Edit contents', exact: true }).waitFor();
+-    assert.equal(await page.getByRole('combobox', { name: 'Selected shape', exact: true }).inputValue(), id);
++    await page.getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
++    await page.getByRole('dialog', { name: 'Bento settings', exact: true }).waitFor();
++    await page.getByLabel('Selected cell radius (px)', { exact: true }).waitFor();
+     assert.deepEqual(errors, []);
+   } finally { await browser.close(); }
+ });
+ 
+-test('Cell settings opens the shared Shape panel with reachable coupling and spacing controls', async () => {
+-  const { browser, page, errors } = await setup();
+-  try {
+-    const first = await cell(page, { x: 200, y: 250 }, { x: 500, y: 550 });
+-    const second = await cell(page, { x: 600, y: 250 }, { x: 900, y: 550 });
+-    await page.mouse.click(1100, 800); await shape(page, first).click({ button: 'right' });
+-    await page.getByRole('menuitem', { name: 'Cell settings', exact: true }).click();
+-    const name = (await reception(page)).shapes.find(item => item.id === second).name;
+-    await page.getByRole('checkbox', { name: `Couple with ${name}`, exact: true }).check();
+-    await page.getByRole('button', { name: 'Couple as row', exact: true }).click();
+-    const horizontal = page.getByRole('slider', { name: 'Horizontal cell spacing', exact: true }); await horizontal.waitFor();
+-    assert.deepEqual((await reception(page)).arrangement.groups[0].members, [first, second]);
+-    assert.equal(await page.locator('.workbench-tool-dock .shape-tools').count(), 1, 'Cell controls belong to the existing Shape tool source');
+-    const rowGap = (await reception(page)).arrangement.groups[0].gapX;
+-    await horizontal.press('ArrowRight');
+-    assert.equal((await reception(page)).arrangement.groups[0].gapX, rowGap + 1);
+-    await mkdir(output, { recursive: true });
+-    await page.screenshot({ path: `${output}/cell-settings-row.png`, fullPage: true });
+-    await page.getByRole('button', { name: 'Couple as column', exact: true }).click();
+-    const vertical = page.getByRole('slider', { name: 'Vertical cell spacing', exact: true }); await vertical.waitFor();
+-    const columnGap = (await reception(page)).arrangement.groups[0].gapY;
+-    await vertical.press('ArrowRight');
+-    assert.equal((await reception(page)).arrangement.groups[0].gapY, columnGap + 1);
+-    await page.getByRole('button', { name: 'Unlink cells', exact: true }).click();
+-    assert.equal((await reception(page)).arrangement.groups.length, 0);
+-    assert.deepEqual(errors, []);
+-  } finally { await browser.close(); }
+-});
++test('Bento settings reuses split and merge actions and saves selected-cell styling', async () => {
++  const { browser, page, errors } = await setup();
++  try {
++    const first = await cell(page);
++    await page.mouse.click(540, 420, { button: 'right' });
++    await page.getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
++    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
++    await panel.getByLabel('Selected cell radius (px)', { exact: true }).fill('32');
++    await panel.getByRole('button', { name: 'Apply cell radius', exact: true }).click();
++    await panel.getByText('Split or merge this cell', { exact: true }).click();
++    await panel.getByRole('button', { name: 'Split vertically', exact: true }).click();
++    assert.equal((await reception(page)).cells.length, 2);
++    assert.equal((await reception(page)).cells[0].id, first);
++    await panel.getByText('Split or merge this cell', { exact: true }).click();
++    await panel.getByRole('button', { name: 'Merge right', exact: true }).click();
++    assert.equal((await reception(page)).cells.length, 1);
++    assert.equal((await reception(page)).cells[0].radius, 32);
++    await mkdir(output, { recursive: true });
++    await page.screenshot({ path: output + '/cell-settings-structure.png', fullPage: true });
++    assert.deepEqual(errors, []);
++  } finally { await browser.close(); }
++});
+diff --git a/browser-tests/reception-native-editor.browser.mjs b/browser-tests/reception-native-editor.browser.mjs
+index 8a3f75a..82857e1 100644
+--- a/browser-tests/reception-native-editor.browser.mjs
++++ b/browser-tests/reception-native-editor.browser.mjs
+@@ -208,8 +208,10 @@ test('Wireframe outlines and the optional outer frame save through native contro
+ async function generateBento(page, count = 6) {
+   await editorMenu(page, 'Bento').click();
+   const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
++  await panel.getByRole('button', { name: 'New layout', exact: true }).click();
++
+   await panel.getByLabel('Number of cells', { exact: true }).fill(String(count));
+-  await panel.getByRole('button', { name: 'Use layout', exact: true }).click();
++  await panel.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
+   await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
+   const sidebar = page.getByRole('button', { name: 'Inscape sidebar', exact: true });
+   if (await sidebar.getAttribute('aria-expanded') === 'true') await sidebar.click();
+@@ -249,6 +251,8 @@ test('Reception layout generator previews without saving, applies native cells a
+     assert.equal(await dialog.getByLabel('Width (px)', { exact: true }).inputValue(), '1440');
+     assert.equal(await dialog.getByLabel('Height (px)', { exact: true }).inputValue(), '900');
+     assert.equal(await dialog.evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(8, 8, 8)');
++    await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+     await dialog.getByLabel('Number of cells', { exact: true }).fill('10');
+     const first = await dialog.locator('svg[role="img"]').innerHTML();
+     await dialog.getByRole('button', { name: 'Another layout', exact: true }).click();
+@@ -264,8 +268,10 @@ test('Reception layout generator previews without saving, applies native cells a
+     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+     await page.setViewportSize({ width: 900, height: 800 });
+     await editorMenu(page, 'Bento').click();
++    await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+     await dialog.getByLabel('Number of cells', { exact: true }).fill('10');
+-    await dialog.getByLabel('Corner radius (px)', { exact: true }).fill('24');
++    await dialog.getByLabel('New cell radius (px)', { exact: true }).fill('24');
+     assert.equal(await dialog.evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(235, 236, 231)');
+     const proposal = await dialog.locator('svg[role="img"] rect').evaluateAll(nodes => nodes.map(node => ({
+       left: Number(node.getAttribute('x')), top: Number(node.getAttribute('y')), width: Number(node.getAttribute('width')), height: Number(node.getAttribute('height')),
+@@ -275,15 +281,19 @@ test('Reception layout generator previews without saving, applies native cells a
+       const r = node.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === node;
+     }), true, 'Bento opens in front of the other tools');
+     await page.screenshot({ path: `${output}/layout-generator-900-light.png` });
++    await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+     await dialog.getByLabel('Number of cells', { exact: true }).fill('0');
+-    assert.equal(await dialog.getByRole('button', { name: 'Use layout', exact: true }).isDisabled(), true);
++    assert.equal(await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).isDisabled(), true);
++    await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+     await dialog.getByLabel('Number of cells', { exact: true }).fill('10');
+     await page.evaluate(() => window.nativeReceptionFixture.fail(true));
+-    await dialog.getByRole('button', { name: 'Use layout', exact: true }).click();
++    await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
+     await dialog.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
+     assert.deepEqual(await reception(page), original.reception);
+     await page.evaluate(() => window.nativeReceptionFixture.fail(false));
+-    await dialog.getByRole('button', { name: 'Use layout', exact: true }).click();
++    await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
+     await dialog.getByRole('button', { name: 'Close Bento', exact: true }).click();
+     const saved = await reception(page);
+     assert.equal(saved.cells.length, 10);
+@@ -301,8 +311,10 @@ test('Reception layout generator previews without saving, applies native cells a
+     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+     assert.deepEqual(await reception(page), saved);
+     await editorMenu(page, 'Bento').click();
++    await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+     await dialog.getByLabel('Number of cells', { exact: true }).fill('4');
+-    await dialog.getByRole('button', { name: 'Use layout', exact: true }).click();
++    await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
+     await dialog.getByRole('button', { name: 'Close Bento', exact: true }).click();
+     assert.equal((await reception(page)).cells.length, 4);
+     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), saved);
+@@ -325,6 +337,7 @@ test('Bento previous variants and start formats remain temporary and restore the
+     const before = await reception(page);
+     await editorMenu(page, 'Bento').click();
+     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
++    await panel.getByRole('button', { name: 'New layout', exact: true }).click();
+     const previous = panel.getByRole('button', { name: 'Previous layout', exact: true });
+     assert.equal(await previous.isDisabled(), true);
+     const first = await panel.locator('svg[role="img"]').innerHTML();
+@@ -339,10 +352,12 @@ test('Bento previous variants and start formats remain temporary and restore the
+       assert.equal(await panel.getByLabel('Height (px)', { exact: true }).inputValue(), height);
+       assert.deepEqual(await reception(page), before);
+     }
+-    await panel.getByRole('button', { name: 'Square', exact: true }).click();
++    await panel.getByRole('button', { name: 'Current grid', exact: true }).click();
++    await panel.getByRole('button', { name: 'Square', exact: true }).click();
+     await panel.getByRole('button', { name: 'Apply settings', exact: true }).click();
+     assert.equal((await reception(page)).workbench.area.width, 1080);
+     assert.equal((await reception(page)).workbench.area.height, 1080);
++    await panel.getByRole('button', { name: 'New layout', exact: true }).click();
+     assert.equal(await previous.isDisabled(), false, 'applying size does not lose previous variants');
+     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
+     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before);
+@@ -436,7 +451,8 @@ test('Bento adds cells across a fixed row and grows a new bottom row with unchan
+     await page.setViewportSize({ width: 900, height: 800 });
+     await editorMenu(page, 'Bento').click();
+     assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth && node.getBoundingClientRect().bottom <= innerHeight), true);
+-    for (const label of ['Add row below', 'Previous layout', 'Use layout']) {
++    for (const label of ['Add row below', 'Previous layout', 'Replace layout']) {
++      await panel.getByRole('button', { name: label === 'Add row below' ? 'Current grid' : 'New layout', exact: true }).click();
+       const button = panel.getByRole('button', { name: label, exact: true });
+       await button.scrollIntoViewIfNeeded();
+       assert.equal(await button.evaluate(node => {
+@@ -745,9 +761,13 @@ test('generated arrangements carry existing artwork visibly and retain it when r
+     for (const count of [6, 1]) {
+       await editorMenu(page, 'Bento').click();
+       const dialog = page.getByRole('dialog', { name: 'Bento settings', exact: true });
++      await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+       assert.equal(await dialog.getByLabel('Number of cells', { exact: true }).getAttribute('min'), '1');
++      await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
++
+       await dialog.getByLabel('Number of cells', { exact: true }).fill(String(count));
+-      await dialog.getByRole('button', { name: 'Use layout', exact: true }).click();
++      await dialog.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
+       await dialog.getByRole('button', { name: 'Close Bento', exact: true }).click();
+       const saved = await reception(page);
+       assert.equal(saved.cells.length, count);
+@@ -783,7 +803,7 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
+         const rect = node.getBoundingClientRect();
+         return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+       }), true, `the document controls receive the pointer at ${width}px`);
+-      await editorCommand(page, 'Canvas', 'Bento size');
++      await editorCommand(page, 'Canvas', 'Bento settings');
+       await page.getByRole('dialog', { name: 'Bento settings', exact: true }).waitFor();
+       await page.getByRole('button', { name: 'Close Bento', exact: true }).click();
+       await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+@@ -969,7 +989,7 @@ test('Cell settings save rounded corners with undo, clipping and reload at wide
+       await cellMenu(page, id, 'Edit cell contents');
+       const child = await rectangle(page, { x: 230, y: 210 }, { x: 390, y: 370 });
+       await page.getByRole('button', { name: 'Back to cells', exact: true }).click();
+-      await cellMenu(page, id, 'Cell settings');
++      await cellMenu(page, id, 'Bento settings');
+       const radius = page.getByRole('spinbutton', { name: 'Corner radius (px)', exact: true });
+       const before = await reception(page);
+       await radius.fill('48'); await radius.press('Enter');
+@@ -1005,7 +1025,7 @@ test('Cell settings save rounded corners with undo, clipping and reload at wide
+       await page.screenshot({ path: `${output}/cell-radius-preview-${width}.png`, fullPage: true });
+       await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
+       await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+-      await cellMenu(page, id, 'Cell settings');
++      await cellMenu(page, id, 'Bento settings');
+       assert.equal(await radius.inputValue(), '48');
+       assert.deepEqual(withoutReception(await snapshot(page)), otherCanvas, 'Reception radius leaves the ordinary canvas untouched');
+       assert.deepEqual(errors, []);
+@@ -1261,3 +1281,115 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
+     assert.deepEqual(errors, []);
+   } finally { await browser.close(); }
+ });
++
++test('Bento keeps proposal count separate, preserves mixed cell style and scales desktop radius with its clip', { timeout: 90000 }, async () => {
++  const { browser, page, errors } = await setup({ width: 1280, height: 800 });
++  try {
++    await editorMenu(page, 'Bento').click();
++    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
++    const create = panel.getByRole('button', { name: 'Create Bento', exact: true });
++    assert.equal(await create.evaluate(node => {
++      const r = node.getBoundingClientRect(); return r.bottom <= innerHeight && node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
++    }), true, 'creation stays visible without scrolling on a laptop');
++    await panel.getByLabel('Number of cells', { exact: true }).fill('2'); await create.click();
++    await panel.getByRole('button', { name: 'New layout', exact: true }).click();
++    await panel.getByLabel('Number of cells', { exact: true }).fill('8');
++    await panel.getByRole('button', { name: 'Current grid', exact: true }).click();
++    await panel.getByLabel('Width (px)', { exact: true }).fill('1600');
++    await panel.getByRole('button', { name: 'Apply settings', exact: true }).click();
++    assert.equal((await reception(page)).cells.length, 2);
++    await panel.getByRole('button', { name: 'New layout', exact: true }).click();
++    assert.equal(await panel.getByLabel('Number of cells', { exact: true }).inputValue(), '8');
++    await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
++    const tools = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
++    if (await tools.isVisible()) await tools.click();
++    const ids = (await reception(page)).cells.map(cell => cell.id);
++    for (const [index, radius] of [12, 64].entries()) {
++      for (let i = 0; i < 7 && await tools.isVisible(); i++) await tools.click();
++      await bentoCell(page, ids[index]).click(); await editorMenu(page, 'Bento').click();
++      await panel.getByLabel('Selected cell radius (px)', { exact: true }).fill(String(radius));
++      await panel.getByRole('button', { name: 'Apply cell radius', exact: true }).click();
++      await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
++    }
++    await editorMenu(page, 'Bento').click();
++    assert.equal(await panel.getByLabel('Corner radius (px)', { exact: true }).getAttribute('placeholder'), 'Mixed');
++    assert.equal(await panel.getByLabel('Corner radius (px)', { exact: true }).inputValue(), '');
++    await panel.getByLabel('Width (px)', { exact: true }).fill('1440');
++    await panel.getByRole('button', { name: 'Apply settings', exact: true }).click();
++    assert.deepEqual((await reception(page)).cells.map(cell => cell.radius), [12, 64]);
++    await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
++    for (let i = 0; i < 7 && await tools.isVisible(); i++) await tools.click();
++    await bentoCell(page, ids[1]).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
++    await backToCells(page);
++    await editorCommand(page, 'Canvas', 'Preview');
++    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
++    await preview.getByRole('slider', { name: 'Preview width', exact: true }).fill('900');
++    const cell = preview.locator(`[data-cell-id="${ids[1]}"]`);
++    assert.equal(await cell.evaluate(node => getComputedStyle(node).borderRadius), '40px');
++    assert.equal(await cell.locator('.shape-fill').evaluate(node => getComputedStyle(node).borderRadius), '40px');
++    const member = (await reception(page)).cells[1].members[0];
++    const clip = await preview.locator(`[data-layer-id="${member}"]`).evaluate(node => node.style.clipPath);
++    assert.match(clip, /^path\(/u);
++    await mkdir(output, { recursive: true });
++    await page.screenshot({ path: `${output}/mixed-radius-900.png` });
++    assert.deepEqual(errors, []);
++  } finally { await browser.close(); }
++});
++async function backToCells(page) {
++  await page.getByRole('button', { name: 'Back to cells', exact: true }).click();
++}
++
++test('Bento released buttons and failed capture restore preview and leave the next gesture usable', { timeout: 60000 }, async () => {
++  const { browser, page, errors } = await setup();
++  try {
++    await generateBento(page, 2);
++    const before = await reception(page);
++    const edge = page.getByRole('separator').first(), original = await edge.boundingBox();
++    await page.evaluate(() => window.addEventListener('pointerdown', event => { window.bentoTestPointer = event.pointerId; }, { once: true, capture: true }));
++    await page.mouse.move(original.x + original.width / 2, original.y + original.height / 2); await page.mouse.down();
++    assert.equal(await page.evaluate(() => Number.isInteger(window.bentoTestPointer)), true);
++    await page.mouse.move(original.x + original.width / 2 + 35, original.y + original.height / 2 + 35, { steps: 4 });
++    await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointermove', { pointerId: window.bentoTestPointer, buttons: 0, clientX: 900, clientY: 600, bubbles: true })));
++    await page.mouse.up();
++    assert.deepEqual(await reception(page), before);
++    assert.deepEqual(await edge.boundingBox(), original);
++    await edge.evaluate(node => { node.setPointerCapture = () => { throw Error('Simulated capture failure'); }; });
++    await edge.click();
++    assert.deepEqual(await reception(page), before);
++    await edge.evaluate(node => { delete node.setPointerCapture; });
++    await edge.focus(); await edge.press('ArrowRight');
++    assert.notDeepEqual(await reception(page), before);
++    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before);
++    assert.deepEqual(errors, []);
++  } finally { await browser.close(); }
++});
++
++test('small empty cells explain Text limits and content-aware split is disabled before saving', { timeout: 60000 }, async () => {
++  const { browser, page, errors } = await setup();
++  try {
++    await generateBento(page, 1);
++    await editorMenu(page, 'Bento').click();
++    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
++    for (const label of ['Width (px)', 'Height (px)']) await panel.getByLabel(label, { exact: true }).fill('320');
++    await panel.getByRole('button', { name: 'Apply settings', exact: true }).click();
++    await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
++    const cell = (await reception(page)).cells[0].id;
++    await bentoCell(page, cell).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
++    await backToCells(page); await editorMenu(page, 'Bento').click();
++    await panel.getByText('Split or merge this cell', { exact: true }).click();
++    const split = panel.getByRole('button', { name: 'Split vertically', exact: true });
++    assert.equal(await split.isDisabled(), true); assert.match(await split.getAttribute('title'), /Text needs a frame/);
++    await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
++    await editorCommand(page, 'Edit', 'Undo');
++    await cellMenu(page, cell, 'Split vertically');
++    await bentoCell(page, cell).click();
++    const text = page.getByRole('button', { name: '+ Text', exact: true });
++    assert.equal(await text.isDisabled(), true); assert.match(await text.getAttribute('title'), /180 × 100/);
++    const toolbar = page.getByRole('toolbar', { name: 'Selected cell actions', exact: true });
++    const r = await bentoCell(page, cell).boundingBox(), t = await toolbar.boundingBox();
++    assert.ok(t.y + t.height <= r.y || t.y >= r.y + r.height, 'small cell keeps its contents free of action buttons');
++    await mkdir(output, { recursive: true });
++    await page.screenshot({ path: `${output}/small-cell-limits.png` });
++    assert.deepEqual(errors, []);
++  } finally { await browser.close(); }
++});
+diff --git a/browser-tests/shape-corner-resize.browser.mjs b/browser-tests/shape-corner-resize.browser.mjs
+index 7ba4ebf..4ecb152 100644
+--- a/browser-tests/shape-corner-resize.browser.mjs
++++ b/browser-tests/shape-corner-resize.browser.mjs
+@@ -42,7 +42,8 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
+         }
+       }
+       const b = await surface.boundingBox(), x = edge.includes('w') ? b.x : b.x + b.width, y = edge.includes('n') ? b.y : b.y + b.height;
+-      const before = await saved();
++      const before = await saved();
++      const scale = await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraScale));
+       const hit = await page.evaluate(({ x, y }) => { const n = document.elementFromPoint(x, y); return { className: n?.className, label: n?.getAttribute('aria-label'), html: n?.outerHTML.slice(0, 240) }; }, { x, y });
+       if (!hit.className?.includes(`is-${edge}`)) {
+         await page.screenshot({ path: `${output}/blocked-${width}-${edge}.png` });
+@@ -51,8 +52,8 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
+       await page.keyboard.down('Alt'); await page.mouse.move(x, y); await page.mouse.down();
+       await page.mouse.move(x + dx, y + dy, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
+       const after = await saved(); evidence.push({ edge, dx, dy, selected, before, after });
+-      near(after.width, before.width + (edge.includes('w') ? -dx : dx), 'width follows horizontal input');
+-      near(after.height, before.height + (edge.includes('n') ? -dy : dy), 'height follows vertical input');
++      near(after.width, before.width + (edge.includes('w') ? -dx : dx) / scale, 'width follows horizontal input');
++      near(after.height, before.height + (edge.includes('n') ? -dy : dy) / scale, 'height follows vertical input');
+       near(after.left + (edge.includes('w') ? after.width : 0), before.left + (edge.includes('w') ? before.width : 0), 'opposite x');
+       near(after.top + (edge.includes('n') ? after.height : 0), before.top + (edge.includes('n') ? before.height : 0), 'opposite y');
+       return after;
+@@ -100,10 +101,11 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
+     if (!await page.locator('.workbench-selection').count()) {
+       await grid.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
+     }
++    const scale = await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraScale));
+     for (const [dx, dy, w, h] of [[24, 0, 216, 144], [0, 24, 216, 168], [-24, 24, 192, 192]]) {
+       const b = await page.locator('.workbench-selection').boundingBox();
+       await page.keyboard.down('Alt'); await page.mouse.move(b.x + b.width, b.y + b.height); await page.mouse.down();
+-      await page.mouse.move(b.x + b.width + dx, b.y + b.height + dy, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
++      await page.mouse.move(b.x + b.width + dx * scale, b.y + b.height + dy * scale, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
+       const state = await page.evaluate(id => ({ window: window.savedDraft().workbench.shapes.find(s => s.id === id).window,
+         spacing: window.savedDraft().shapes.find(s => s.id === id).grid.spacing }), gridId);
+       near(state.window.width, w, 'Grid width'); near(state.window.height, h, 'Grid height'); assert.equal(state.spacing, 24);
+diff --git a/browser-tests/workbench-input-recovery.browser.mjs b/browser-tests/workbench-input-recovery.browser.mjs
+index 576ea64..33ca15b 100644
+--- a/browser-tests/workbench-input-recovery.browser.mjs
++++ b/browser-tests/workbench-input-recovery.browser.mjs
+@@ -9,7 +9,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
+ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
+ const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+ const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+-const state = page => page.locator('main.system-workflow').evaluate(n => ({ x: n.style.getPropertyValue('--workbench-pan-x'), y: n.style.getPropertyValue('--workbench-pan-y'),
++const state = page => page.locator('main.system-workflow').evaluate(n => ({ x: Number(n.dataset.workbenchCameraX), y: Number(n.dataset.workbenchCameraY),
+   zoom: n.querySelector('.navigator-zoom output')?.textContent }));
+ 
+ async function prepareNavigation(page) {
+@@ -63,10 +63,11 @@ test('Workbench pan and zoom recover from a missing selection release after edit
+     await resetCameraTestView(page, false);
+     assert.ok(await page.evaluate(p => document.elementFromPoint(p.x, p.y).matches('main.system-workflow'), point));
+     await host.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, clientX: point.x, clientY: point.y });
++    const panStart = await state(page);
+     await host.focus(); await page.keyboard.down('Space');
+     await page.mouse.move(point.x, point.y); await page.mouse.down();
+     await page.mouse.move(point.x - 100, point.y - 50, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space'); await settle(page);
+-    assert.equal((await state(page)).x, '-100px'); assert.equal((await state(page)).y, '-50px');
++    assert.equal((await state(page)).x, panStart.x - 100); assert.equal((await state(page)).y, panStart.y - 50);
+     assert.deepEqual(errors, []);
+   } finally { await browser.close(); }
+ });
+diff --git a/src/public/ownerSystemWorkflow/OwnerEditorMenuBar.jsx b/src/public/ownerSystemWorkflow/OwnerEditorMenuBar.jsx
+index 0833bc6..8276ab7 100644
+--- a/src/public/ownerSystemWorkflow/OwnerEditorMenuBar.jsx
++++ b/src/public/ownerSystemWorkflow/OwnerEditorMenuBar.jsx
+@@ -88,7 +88,7 @@ export default function OwnerEditorMenuBar({ store, projection, flushLayout, bus
+       ...items.map(item => check(`canvas:${item.id}`, item.name, activeId === item.id, () => (documentNavigation?.select || actions.switchTo)(item.id))),
+       command('new', items.length >= MAX_WORKBENCHES ? `New canvas (${MAX_WORKBENCHES}/${MAX_WORKBENCHES} used)` : 'New canvas', () => startForm('new'), { disabled: reception || blocked || items.length >= MAX_WORKBENCHES }),
+       command('rename', 'Rename', () => startForm('rename'), { disabled: reception || blocked }),
+-      command('size', reception ? 'Bento size' : 'Canvas size', () => reception ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),
++      command('size', reception ? 'Bento settings' : 'Canvas size', () => reception ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),
+       command('preview', 'Preview', () => onPreview(triggers.current.Canvas), { disabled: blocked }),
+     ],
+     Edit: [
+diff --git a/src/public/ownerSystemWorkflow/workbenchGestures.test.js b/src/public/ownerSystemWorkflow/workbenchGestures.test.js
+index afaa177..68bd31b 100644
+--- a/src/public/ownerSystemWorkflow/workbenchGestures.test.js
++++ b/src/public/ownerSystemWorkflow/workbenchGestures.test.js
+@@ -146,3 +146,19 @@ test('busy start is rejected; late callbacks of a cancelled gesture cannot affec
+   f.gestures.cancel();f.move();stale({pointerId:1});assert.equal(f.gestures.isActive(),true);assert.equal(f.state.attempts,0);
+   f.gestures.cancel();f.clean();
+ });
++
++test('resize completion releases operation resources once on commit, failure, cancellation and failed capture', () => {
++  for (const reason of ['commit', 'failed save', 'released buttons', 'failed capture', 'throw']) {
++    const f = fixture(); let finished = 0;
++    if (reason === 'failed capture') f.host.setPointerCapture = () => { throw Error('No capture'); };
++    f.gestures.beginResize(f.event, { beforeTransforms: f.original, valid: () => true,
++      preview: () => { f.state.transforms = {}; },
++      commit: () => { if (reason === 'throw') throw Error('Save failed'); return reason !== 'failed save'; },
++      onFinish: () => { finished++; },
++    });
++    if (reason === 'released buttons') f.events.emit('pointermove', { buttons: 0 });
++    else if (reason === 'throw') assert.throws(() => f.events.emit('pointerup'), /Save failed/);
++    else f.events.emit('pointerup');
++    f.gestures.cancel(); assert.equal(finished, 1, reason); f.clean();
++  }
++});
+diff --git a/src/public/ownerSystemWorkflow/workbenchGestures.js b/src/public/ownerSystemWorkflow/workbenchGestures.js
+index 554b34f..c17ab4e 100644
+--- a/src/public/ownerSystemWorkflow/workbenchGestures.js
++++ b/src/public/ownerSystemWorkflow/workbenchGestures.js
+@@ -5,7 +5,7 @@
+ /**
+  * @template Selection
+  * @typedef {{beforeTransforms?: WorkbenchTransforms, beforeSelection?: Selection,
+- * valid(): boolean, preview(pointer: PointerEvent): void, commit(pointer: PointerEvent): boolean}} GestureOperation
++ * valid(): boolean, preview(pointer: PointerEvent): void, commit(pointer: PointerEvent): boolean, onFinish?(): void}} GestureOperation
+  */
+ /**
+  * @template Selection
+@@ -20,7 +20,7 @@
+  * @returns {import('../../contracts/workbench.js').WorkbenchGestures<Selection>}
+  */
+ export function createWorkbenchGestures({
+-  getHost, restoreTransforms, replaceSelection, restoreSelection, previewMarquee, finishSnap, cancelDrop,
++  getHost, restoreTransforms, replaceSelection = () => {}, restoreSelection = () => {}, previewMarquee = () => {}, finishSnap = () => {}, cancelDrop = () => {},
+   events = globalThis, visibility = globalThis.document,
+ }) {
+   /** @type {ActiveGesture<Selection> | null} */ let active = null;
+@@ -43,11 +43,12 @@ export function createWorkbenchGestures({
+     if (current.beforeTransforms) restoreTransforms(current.beforeTransforms);
+     if (current.beforeSelection) restoreSelection(current.beforeSelection);
+   };
+-  const clean = () => { finishSnap(); cancelDrop(); previewMarquee(null); };
++  /** @param {ActiveGesture<Selection>} current */
++  const clean = current => { try { finishSnap(); cancelDrop(); previewMarquee(null); } finally { current.onFinish?.(); } };
+   const cancel = (rollback = true) => {
+     const current = active;
+     if (!current || !detach(current)) return;
+-    try { if (rollback) restore(current); } finally { clean(); }
++    try { if (rollback) restore(current); } finally { clean(current); }
+   };
+   /**
+    * @param {import('../../contracts/workbench.js').GestureStartEvent} event
+@@ -77,7 +78,7 @@ export function createWorkbenchGestures({
+       try {
+         if (operation.commit(pointer) === false) restore(current);
+       } catch (error) { restore(current); throw error; }
+-      finally { clean(); }
++      finally { clean(current); }
+     };
+     current.cancel = () => { if (active === current) cancel(); };
+     current.pointerCancel = pointer => { if (owns(pointer)) cancel(); };
+@@ -124,9 +125,9 @@ export function createWorkbenchGestures({
+         },
+       });
+     },
+-    beginResize(event, { beforeTransforms, valid, preview, commit }) {
++    beginResize(event, { beforeTransforms, valid, preview, commit, onFinish }) {
+       const origin = { x: event.clientX, y: event.clientY };
+-      return start(event, { beforeTransforms, valid, commit,
++      return start(event, { beforeTransforms, valid, commit, onFinish,
+         preview: pointer => preview({ x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey),
+       });
+     },
+diff --git a/package.json b/package.json
+index b22fc5c..f85271f 100644
+--- a/package.json
++++ b/package.json
+@@ -23,7 +23,7 @@
+     "test:browser:design-system": "node --test browser-tests/design-system.browser.mjs browser-tests/design-system-workspace.browser.mjs browser-tests/design-system-library.browser.mjs browser-tests/design-system-colour.browser.mjs browser-tests/design-system-interactions.browser.mjs",
+     "build": "vite build",
+     "build:check": "node scripts/checkProductionBuild.js",
+-    "test": "node --test --test-concurrency=4",
++    "test": "node --test --test-concurrency=4 \"src/**/*.test.js\" \"scripts/**/*.test.{js,mjs}\" \"browser-tests/**/*.test.{js,mjs}\" \"design-system/**/*.test.js\" \"prototypes/**/*.test.js\"",
+     "test:lukso-standards": "node --test scripts/luksoStandards.audit.test.js",
+     "test:browser": "node scripts/runBrowserTests.mjs",
+     "verify": "node scripts/verifyRelease.mjs",
+diff --git a/docs/INSCAPE_ACTIVE_CONTRACT.md b/docs/INSCAPE_ACTIVE_CONTRACT.md
+index 5629619..65db280 100644
+--- a/docs/INSCAPE_ACTIVE_CONTRACT.md
++++ b/docs/INSCAPE_ACTIVE_CONTRACT.md
+@@ -233,7 +233,7 @@ Completed swaps, cell/row additions and shared-edge resizes each form one Undo o
+ Alt+arrow swaps a focused cell with its previous/next cell; focused shared edges
+ also accept arrows, with Shift for larger steps.
+ 
+-The selected cell exposes **+ Cell**, **+ Image**, **+ Text** and **Bento size**.
++The selected cell exposes **+ Cell**, **+ Image**, **+ Text** and **Bento settings**.
+ + Cell adds an empty cell at the right end of the selected cell's row. The row
+ shares its existing width across its cells; the bento's width stays unchanged.
+ Cells spanning multiple rows keep that band together during redistribution.
+@@ -259,6 +259,32 @@ Existing public document readers retain their required arrangement support.
+ This supersedes the free outer-cell movement and snapping in the dated section
+ below; ordinary artwork and content inside a cell retain native module editing.
+ 
++## Bento review refinements (2026-11-04)
++
++The founder approved the deep-review improvements. The same Bento tool separates
++**Current grid** from **New layout**. Empty Reception starts with **Create your
++Bento**; the create/replace/apply action remains visible in the panel footer.
++The replacement proposal retains its chosen count and dimensions while the
++current grid is edited, and is revalidated against current contents before use.
++
++Existing cells retain individual radii through size, spacing and replacement
++layout changes. A mixed radius is shown as Mixed. An explicit whole-Bento radius
++applies to all cells; Selected cell exposes its own radius and the existing
++split/merge commands. Color and Shape remain the owners of fill, outline and
++name. The single selection action strip sits outside the selected artwork,
++bounded by the workspace, and uses the shared flat control recipe.
++
++Cell operations respect native Text, Image and Shape size limits as well as
++the 80-pixel empty-cell minimum. Shared edges stop at content-aware bounds;
++invalid splits or layout changes explain the constraint before saving.
++Text creation receives an explicit native frame and transparent appearance.
++Bento uses the shared Workbench gesture lifecycle for cancellation and cleanup.
++
++On the scaled desktop public projection, cell radius scales with geometry for
++both background and member clipping. Existing phone reflow retains its radius
++behavior. Text keeps its readable font size and wraps as before; the tool points
++authors to Preview to inspect narrower presentations.
++
+ ## Reception cell merge and split (2026-11-04)
+ 
+ The founder approved directional **Merge above/below/left/right** and **Split

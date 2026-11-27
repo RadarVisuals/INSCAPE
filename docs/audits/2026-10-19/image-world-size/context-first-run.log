@@ -1,0 +1,80 @@
+TAP version 13
+# Subtest: Display, Image and Shape actions follow the active module and retain undo
+ok 1 - Display, Image and Shape actions follow the active module and retain undo
+  ---
+  duration_ms: 3932.557
+  type: 'test'
+  ...
+# Subtest: crop moves into the inspection row, cancels without saving and commits one undoable edit
+ok 2 - crop moves into the inspection row, cancels without saving and commits one undoable edit
+  ---
+  duration_ms: 3443.5156
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 1440×1000 carbon
+ok 3 - context rows and keyboard access fit 1440×1000 carbon
+  ---
+  duration_ms: 2809.1143
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 1440×1000 mist
+ok 4 - context rows and keyboard access fit 1440×1000 mist
+  ---
+  duration_ms: 2661.4446
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 390×844 carbon
+ok 5 - context rows and keyboard access fit 390×844 carbon
+  ---
+  duration_ms: 2574.6052
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 320×568 mist
+ok 6 - context rows and keyboard access fit 320×568 mist
+  ---
+  duration_ms: 2582.1183
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 844×390 carbon
+ok 7 - context rows and keyboard access fit 844×390 carbon
+  ---
+  duration_ms: 3370.7499
+  type: 'test'
+  ...
+# Subtest: Inspect button and I honour the selected Display mode (1440px)
+ok 8 - Inspect button and I honour the selected Display mode (1440px)
+  ---
+  duration_ms: 9787.7637
+  type: 'test'
+  ...
+# Subtest: Inspect button and I honour the selected Display mode (390px)
+not ok 9 - Inspect button and I honour the selected Display mode (390px)
+  ---
+  duration_ms: 3792.7721
+  type: 'test'
+  location: '<user>\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\context-action-bars.browser.mjs:154:34'
+  failureType: 'testCodeFailure'
+  error: |-
+    Escape restores source focus
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/context-action-bars.browser.mjs:199:16)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 8
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 35559.2336

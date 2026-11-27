@@ -1,7 +1,6 @@
 import {
   Activity as ActivityIcon,
   ChevronRight,
-  Compass,
   FolderTree,
   Images,
   PanelLeftClose,
@@ -14,7 +13,6 @@ const ENTRY_ICONS = Object.freeze({
   categories: FolderTree,
   creations: Images,
   activity: ActivityIcon,
-  discover: Compass,
 });
 
 function OfficialIdentitySummary({ identity, active, collapsed, disabled, expanded, identityControlRef, onActivate, sourceHidden }) {
@@ -40,6 +38,7 @@ function OfficialIdentitySummary({ identity, active, collapsed, disabled, expand
       {identity?.avatarUrl
         ? <img src={identity.avatarUrl} alt="" />
         : <UserRound />}
+      <svg aria-hidden="true" className="inscape-profile-avatar-ring" focusable="false" viewBox="0 0 36 36"><circle cx="18" cy="18" fill="none" r="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" /></svg>
     </span>
     {!collapsed && <span className="lattice-profile-rail__identity-copy">
       <strong>{displayName}{identity?.hash && <small>{identity.hash}</small>}</strong>
@@ -58,13 +57,14 @@ export default function LatticeProfileRail({
   identityControlRef,
   identityDisabled = false,
   identityExpanded = false,
+  identityOnly = false,
   identitySourceHidden = false,
   onEntryActivate,
   onIdentityActivate,
   onCollapsedChange,
   onEscape,
 }) {
-  const visuallyCollapsed = collapsed || compact;
+  const visuallyCollapsed = identityOnly ? false : collapsed || compact;
   const handleKeyDown = (event) => {
     if (event.key !== 'Escape') return;
     event.preventDefault();
@@ -75,12 +75,15 @@ export default function LatticeProfileRail({
   return <aside
     className="lattice-profile-rail"
     data-collapsed={visuallyCollapsed || undefined}
+    data-compact={compact || undefined}
+    data-identity-only={identityOnly || undefined}
+    data-identity-source-hidden={identitySourceHidden || undefined}
     data-blocked={blocked || undefined}
     inert={blocked ? '' : undefined}
     aria-label="Profile navigation"
     onKeyDown={handleKeyDown}
   >
-    {!visuallyCollapsed && <header><span>PROFILE / NAVIGATION</span><b>01</b></header>}
+    {!identityOnly && !visuallyCollapsed && <header><span>PROFILE / NAVIGATION</span><b>01</b></header>}
     <OfficialIdentitySummary
       identity={officialIdentity}
       active={identityExpanded || activeEntryId === 'identity'}
@@ -91,7 +94,7 @@ export default function LatticeProfileRail({
       sourceHidden={identitySourceHidden}
       onActivate={onIdentityActivate}
     />
-    <nav aria-label="Public profile areas">
+    {!identityOnly && <nav aria-label="Public profile areas">
       {entries.map((entry) => {
         const Icon = ENTRY_ICONS[entry.id];
         const active = activeEntryId === entry.id;
@@ -109,8 +112,8 @@ export default function LatticeProfileRail({
           {!visuallyCollapsed && <><strong>{entry.label}</strong><small>{entry.note}</small><ChevronRight className="lattice-profile-rail__row-chevron" aria-hidden="true" /></>}
         </button>;
       })}
-    </nav>
-    {!compact && <button
+    </nav>}
+    {!identityOnly && !compact && <button
       type="button"
       className="lattice-profile-rail__collapse"
       aria-label={collapsed ? 'Expand profile navigation' : 'Collapse profile navigation'}
@@ -119,6 +122,6 @@ export default function LatticeProfileRail({
     >
       {collapsed ? <PanelLeftOpen aria-hidden="true" /> : <><PanelLeftClose aria-hidden="true" /><span>COLLAPSE</span></>}
     </button>}
-    {!visuallyCollapsed && <footer><span>INSCAPE</span><span>PUBLIC PROFILE</span></footer>}
+    {!identityOnly && !visuallyCollapsed && <footer><span>INSCAPE</span><span>PUBLIC PROFILE</span></footer>}
   </aside>;
 }

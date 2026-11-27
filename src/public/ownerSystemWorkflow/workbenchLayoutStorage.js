@@ -1,0 +1,37 @@
+import { validSharedTools } from './sharedDisplayToolsState.js';
+import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
+
+// A local view of existing modules, not authored content. An explicit restore of
+// draft.workbench invalidates it; deleted module IDs cannot be resurrected by it.
+export function loadWorkbenchLayout(profile, draft, storage, workbenchId, cells) {
+  try {
+    const raw = storage?.getItem(workbenchLayoutKey(profile, workbenchId));
+    if (!raw) return { layout: null, views: {} };
+    const value = JSON.parse(raw);
+    if (value.version !== 1 || typeof value.baseline !== 'string' || !value.views || typeof value.views !== 'object' || Array.isArray(value.views)) throw Error('invalid');
+    if (value.baseline !== JSON.stringify(draft.workbench || null)) return { layout: null, views: {} };
+    if (!isValidWorkbenchPresentation(value.layout, cells)) throw Error('invalid');
+    const layout = { ...value.layout,
+      texts: value.layout.texts?.filter(item => draft.texts?.some(text => text.id === item.id)),
+      shapes: value.layout.shapes?.filter(item => draft.shapes?.some(shape => shape.id === item.id)),
+      imageModules: value.layout.imageModules?.filter(item => draft.imageModules?.some(image => image.id === item.id)),
+    };
+    delete layout.keeperDocks;
+    for (const name of ['texts', 'imageModules', 'shapes']) if (layout[name] === undefined) delete layout[name];
+    const views = Object.fromEntries(Object.entries(value.views).flatMap(([id, view]) => {
+      if (id === 'workbench:tools' && validSharedTools(view)) return [[id, view]];
+      if (draft.texts?.some(text => text.id === id) && view && ['read', 'write'].includes(view.mode)) return [[id, { mode: view.mode }]];
+      return [];
+    }));
+    return { layout, views };
+  } catch { return { layout: null, views: {}, error: 'The previous workspace layout could not be read. Its stored copy has been kept.', blocked: true }; }
+}
+export function saveWorkbenchLayout(profile, draft, layout, views, storage, workbenchId, cells) {
+  if (!isValidWorkbenchPresentation(layout, cells)) return false;
+  try {
+    if (!storage?.setItem) return false;
+    storage.setItem(workbenchLayoutKey(profile, workbenchId), JSON.stringify({ version: 1, baseline: JSON.stringify(draft.workbench || null), layout, views }));
+    return true;
+  } catch { return false; }
+}

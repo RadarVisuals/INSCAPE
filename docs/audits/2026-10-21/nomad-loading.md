@@ -1,0 +1,41 @@
+De grootste lange taak in de artworkdocumenten daalt bij dezelfde gevulde Workbench van mediaan **268 naar 79 ms**: circa 71%. Dit is winst in het laden van Nomad. De zwaarste canvaspauze is hiermee **niet opgelost**: het grootste beeldinterval stijgt in deze drie nametingen van mediaan 128,1 naar 152 ms. Het totale werk op de hoofdthread blijft vrijwel gelijk.
+
+De afzonderlijke [Nomad-export](../../../output/nomad-loading-2026-10-21/NOMAD-incremental-loading.svg) is lokaal klaar en getest. Het oorspronkelijke artwork en alle bestaande applicatiewijzigingen zijn behouden. Bestaande composities verwijzen nog naar hun bestaande bronnen; deze export is niet automatisch in gebruikerscontent vervangen. Niets is gecommit, gepusht, geüpload of gedeployd.
+
+**Oorzaak en wijziging.** Nieuwe metingen onderscheiden het decoderen, opladen van iedere laag, de volledige laadlus en het aanpassen van de tekenbuffer. De [tijdcorrelatie](nomad-loading/loading-correlation.json) koppelt de oorspronkelijke lange taken van 276 en 218 ms rechtstreeks aan twee volledige `renderer.load`-aanroepen van 275,7 en 216,9 ms. Deze laadlus zette alle 39 lagen achter elkaar klaar. Dit werk is eigendom van het artwork, niet van de Workbench-camera.
+
+De nieuwe export decodeert elke laag opnieuw vlak vóór de texture-upload. Eerdere decodes kunnen tijdens het voorbereiden van alle grote lagen uit de browsercache verdwijnen; opnieuw decoderen vóór gebruik vermijdt dat dit werk onbedoeld in de synchrone upload terechtkomt. Na een batch van minstens 8 ms geeft de lus de browser een nieuwe taak. Dit is een batchbudget, geen harde bovengrens voor een individuele upload. De totale laadduur hoeft niet korter te worden: in de diagnostische vergelijking duurt de opgesplitste laadfase nog 232–276 ms, maar niet meer als één lange taak. Eén upload kan nog tientallen milliseconden kosten.
+
+Decode-wachten blijft begrensd op 15 seconden. Na ieder wachten controleert de renderer of hij nog beschikbaar is. Sluiten, contextverlies en een decodefout voorkomen verdere uploads en geven reeds gemaakte GPU-lagen vrij. Het SVG-posterbeeld blijft staan totdat alle lagen klaar zijn. Er is geen nieuwe renderer, camera, gedeelde texturecache, dependency of tweede eigenaar van geometrie toegevoegd.
+
+Alle 39 image-elementen zijn bytegelijk, inclusief de ingesloten lossless WebP-data, uitsneden en laagvolgorde. Rig, transparantie, bediening, standaard hover-modus, animatieklok, metadata en resolutielimieten blijven gelijk. De levering bevat geen meetprobes en verandert de oorspronkelijke frameratelogica niet. Dit is een beperkte laadrevision van de bestaande Nomad-export; er is geen nieuwe instellingen-API toegevoegd. De algemene SVG-host en de Keeper-proef zijn in deze ronde niet gewijzigd.
+
+**Vergelijking.** Drie verse [voormetingen](nomad-loading/before.json) en drie [nametingen](nomad-loading/after.json), zonder CPU-profiler of trace. Beide gebruiken de huidige, eerder geoptimaliseerde applicatie. Alleen het Nomad-bronbestand verschilt. Chrome 155.0.8059.85, Windows, i5-12600KF, circa 32 GiB RAM, 1440 × 1000, DPR 1. Geen gelijktijdige builds of andere browsertests tijdens deze metingen.
+
+De bestaande `nomad-4-60`-fixture bevat 16 Images waarvan vier bewegende Nomads, 12 Text-modules met samen 144 alinea's, 24 vormen, twee stilstaande HTML-panelen en Keeper. Eén van acht opgeslagen Workbenches is actief. De fixture begrenst alleen het tekenen op 60 Hz; de geleverde export neemt die testinstelling niet over. Dezelfde zoom-, Hand-, typ-, wissel-, herlaad- en opslaghandelingen worden uitgevoerd.
+
+| Zoom en Hand, mediaan van drie runs | Originele Nomad | Nieuwe export |
+| --- | ---: | ---: |
+| Grootste artworktaak | 268 ms | 79 ms |
+| Spreiding grootste artworktaak | 219–272 ms | 65–81 ms |
+| Grootste canvasbeeldinterval | 128,1 ms | 152 ms |
+| Spreiding grootste canvasbeeldinterval | 80–144,1 ms | 136,3–152 ms |
+| Beeldinterval, 95e percentiel | 24,5 ms | 24,1 ms |
+| Totale hoofdthreadtijd | 2.086,6 ms | 2.086,5 ms |
+| Stijlberekening op de hoofdthread | 1.007,4 ms | 1.009,1 ms |
+
+Een bovenliggend frame kan dezelfde lange taak als zijn kind rapporteren. Daarom vergelijken we de grootste gemelde duur; de meldingen worden niet als unieke taken opgeteld. Diagnostische traces tellen niet mee in de tabel. De oorspronkelijke laadtrace en de eerste opgesplitste proef staan lokaal onder `.browser-test-runtime/workbench-startup-investigation`; de laatste proef voegde daarna alleen de decode-timeout toe. Alle zes normale runs en de uiteindelijke kwaliteitscontroles gebruiken de definitieve export met timeout. Bronhashes staan in de meetresultaten en het [buildmanifest](../../../output/nomad-loading-2026-10-21/build.json).
+
+**Overblijvende camera-oorzaak.** De extra [lange-framegegevens](nomad-loading/camera-long-frames.json) vinden onder andere 96,5 en 90,2 ms in de renderfase. Deze twee gebeurtenissen bevatten geen toegewezen script boven de rapportagedrempel; een andere gebeurtenis bevat 33,9 ms geforceerde stijl/layout binnen een script van 48,1 ms. Dit bewijst niet dat één bepaalde camera-functie of de GPU alle resterende tijd veroorzaakt. De huidige trace onderscheidt dat onvoldoende. Verdere winst voor de grootste canvaspauze vereist een aparte vergelijking van browserrendering, bufferwissels en layout; de Nomad-laadwinst mag daar niet als oplossing voor worden gepresenteerd.
+
+**Verificatie.** De [kwaliteitsproef](nomad-loading/quality.json) vergelijkt een vaste pose op 120 px/DPR 1, 800 px/DPR 1 en 320 px/DPR 2. In de definitieve run verschillen nul pixelkanalen. Ook echte beweging, pauze, zichtbaarheid, reduced motion, bufferlimieten, geen nieuwe uploads bij zoom, twee onafhankelijke exemplaren, unmount en de scriptvrije afbeelding zijn gecontroleerd. [Breed](nomad-loading/nomad-wide.png), [smal](nomad-loading/nomad-narrow.png), [twee exemplaren](nomad-loading/independent-copies.png) en [image-only](nomad-loading/image-only.png) zijn bewaard. Dit is bewijs voor de geteste poses en browser, geen belofte over iedere viewer.
+
+De eerste screenshots na contextverlies bleken te vroeg genomen: de DOM meldde al het vangnetbeeld terwijl de screenshot nog leeg was. De controle wacht nu twee tekenmomenten en vereist aantoonbare karakterpixels buiten de foutdialoog. Daarna zijn het [brede](nomad-loading/fallback-wide.png) en [smalle](nomad-loading/fallback-narrow.png) vangnetbeeld visueel geïnspecteerd. Alleen een zichtbare DOM-groep telt dus niet meer als geslaagde fallbacktest.
+
+Vier [laad-/lifecycle-tests](nomad-loading/lifecycle.log) slagen: de werkelijke export zonder probes openen en herladen; disposal tijdens een uitgestelde decode; contextverlies tijdens laden; en een geforceerde decodefout. De drie onderbrekingsproeven laten drie echte texture-uploads plaatsvinden en onderbreken de vierde. Daarna ontstaan geen extra uploads en blijven geen voorbereide GPU-lagen achter. De bestaande animated-WebP- en verborgen-SVG-hosttests slagen eveneens. Build en `build:check` slagen, met 822.007 initiële JS-bytes en de bestaande chunkwaarschuwing. Er is geen volledige release-testsuite uitgevoerd.
+
+**Bewaring en reproduceerbaarheid.** De [bewaringscontrole](nomad-loading/preservation.json) vergelijkt 388 bestaande gewijzigde, verwijderde en ongetrackte paden: 385 zijn onveranderd; alleen drie bestaande meet-/kwaliteitsbestanden zijn bewust uitgebreid. Alle eerdere testscreenshots, applicatiecode en Keeper-bestanden zijn behouden. De oorspronkelijke Nomad behoudt SHA256 `5151866ee081a24c36e82f8a34547569fb3e6c0fb13651e2a32e2d088366b083`.
+
+De export wordt herbouwd met `node browser-tests/build-nomad-loading.mjs`; de begrensde brontransformatie staat in `browser-tests/fixtures/nomad-loading.mjs`. Voor de benchmark kiest `INSCAPE_PERF_NOMAD_SOURCE` de afzonderlijke export; zonder die variabele blijft de originele Nomad de standaard. `INSCAPE_NOMAD_LOADING=1` kiest de voor/na-kwaliteitsproef, met een eigen `INSCAPE_BROWSER_OUTPUT` om eerdere resultaten te behouden.
+
+Checkout: `codex/audit-checkpoint-2026-10-19`, HEAD `32d9418843d996afc2e5203afa4552a6cd2d459a`. [Verify Inscape](https://github.com/RadarVisuals/INSCAPE/actions/runs/39416407131) is opnieuw als geslaagd opgehaald voor die commit. Die CI-status betreft niet de lokale wijzigingen of deze nieuwe artwork-export.

@@ -1,11 +1,13 @@
 // src/store/useWalletStore.js
 import { create } from 'zustand';
 import { createClientUPProvider } from "@lukso/up-provider";
-import { createWalletClient, createPublicClient, custom, http, numberToHex, getAddress } from "viem";
+import { createPublicClient, custom, http, numberToHex, getAddress } from "viem";
 import { lukso } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' with { type: 'json' };
+import { selectProfileAvatar } from '../profileIdentity/domain/profileIdentity.js';
 import { createWalletProviderLifecycle } from './walletProviderLifecycle.js';
+import { createInscapeWalletClient } from './createInscapeWalletClient.js';
 import { developmentLog, installDevelopmentGlobal, reportControlledError } from '../diagnostics.js';
 
 const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
@@ -19,6 +21,11 @@ let providerLifecycleManager = null;
 
 const sameAddress = (left, right) => typeof left === 'string' && typeof right === 'string'
   && left.toLowerCase() === right.toLowerCase();
+
+export function getConnectedProfileAddress(state) {
+  if (!state.isWalletConnected || state.authorityLifecycleStatus !== 'complete') return null;
+  return state.loggedInUserUPAddress || state.accounts[0] || null;
+}
 
 export const normalizeWalletChainId = (chainId) => {
   if (chainId === null || chainId === undefined) return null;
@@ -73,6 +80,11 @@ export const useWalletStore = create((set, get) => ({
 
   disposeWallet: () => lifecycleManager(set, get).dispose(),
   scheduleWalletRelease: () => lifecycleManager(set, get).scheduleRelease(),
+  beginWalletTransition: () => {
+    const report = lifecycleManager(set, get).dispose();
+    set({ authorityLifecycleStatus: 'pending' });
+    return report;
+  },
   _recoverProviderContext: (reason) => lifecycleManager(set, get).recover(reason),
 
   _failClosedProviderContext: (initializationError = null) => {
@@ -158,10 +170,7 @@ export const useWalletStore = create((set, get) => ({
         };
 
         // Extract raw profile assets
-        let avatarUrl = "";
-        if (rawProfile.profileImage && rawProfile.profileImage.length > 0) {
-          avatarUrl = resolveIpfsLink(rawProfile.profileImage[0].url);
-        }
+        const avatarUrl = selectProfileAvatar(rawProfile.profileImage, { ipfsGateway: IPFS_GATEWAY }) || "";
 
         let backgroundUrl = "";
         if (rawProfile.backgroundImage && rawProfile.backgroundImage.length > 0) {
@@ -214,7 +223,7 @@ export const useWalletStore = create((set, get) => ({
 
     if (!initializationError && provider && accounts.length > 0) {
       try {
-        const walletClient = createWalletClient({
+        const walletClient = createInscapeWalletClient({
           chain: currentChain,
           transport: custom(provider),
           account: accounts[0]

@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: animated SVG and HTML release observers, subscriptions, listeners and attempt timers across repeated A/B/A activation
+ok 1 - animated SVG and HTML release observers, subscriptions, listeners and attempt timers across repeated A/B/A activation
+  ---
+  duration_ms: 2537.2091
+  type: 'test'
+  ...
+# Subtest: a disposed tool source cannot unregister its same-ID replacement or another activation
+ok 2 - a disposed tool source cannot unregister its same-ID replacement or another activation
+  ---
+  duration_ms: 799.4503
+  type: 'test'
+  ...
+# Subtest: real SVG host loads plain, projected and StrictMode documents and remounts cleanly
+ok 3 - real SVG host loads plain, projected and StrictMode documents and remounts cleanly
+  ---
+  duration_ms: 1165.5148
+  type: 'test'
+  ...
+# Subtest: projected artwork coalesces resize notifications and retains idle documents without measuring them
+ok 4 - projected artwork coalesces resize notifications and retains idle documents without measuring them
+  ---
+  duration_ms: 1233.8488
+  type: 'test'
+  ...
+# Subtest: a host navigation that never finishes offers bounded failure and a working retry
+ok 5 - a host navigation that never finishes offers bounded failure and a working retry
+  ---
+  duration_ms: 15859.6546
+  type: 'test'
+  ...
+# Subtest: a late ready message cannot clear a timed-out attempt; retry mounts a fresh host
+ok 6 - a late ready message cannot clear a timed-out attempt; retry mounts a fresh host
+  ---
+  duration_ms: 18265.3559
+  type: 'test'
+  ...
+# Subtest: an unavailable SVG source fails visibly and a new attempt recovers
+ok 7 - an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1009.8023
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 41135.7763

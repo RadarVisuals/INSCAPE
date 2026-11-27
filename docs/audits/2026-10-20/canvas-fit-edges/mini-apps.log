@@ -1,0 +1,30 @@
+TAP version 13
+# Bundling standard UP Provider fixture
+# Fixture bundled
+# Browser launched
+# Browser context created
+# Fake microphone permission configured
+# Test page created
+# Owner Workbench mounted
+# First app added
+# First app connected
+# Independent app grants verified
+# Close/reopen verified
+# Microphone delegation verified
+# Prepare Publication captured live window geometry and closed app state without an upload
+# PASS mini apps: standard client, independent grants, denied requests, account change, close/reopen, microphone delegation, window bounds, publication and visitor isolation
+# Subtest: browser-tests\\mini-apps.browser.mjs
+ok 1 - browser-tests\\mini-apps.browser.mjs
+  ---
+  duration_ms: 16379.6284
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16386.1513

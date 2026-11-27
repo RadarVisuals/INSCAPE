@@ -1,0 +1,58 @@
+[
+  {
+    "name": "workbench-overview",
+    "code": 1,
+    "seconds": 122.308,
+    "tests": 13,
+    "pass": 12,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "error": "Incomplete test run: {\"tests\":13,\"pass\":12,\"fail\":1,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+  },
+  {
+    "name": "local-workbenches",
+    "code": 0,
+    "seconds": 27.169,
+    "tests": 5,
+    "pass": 5,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "artwork-document",
+    "code": 0,
+    "seconds": 3.329,
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "svg-raster-quality",
+    "code": 0,
+    "seconds": 54.55,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-navigator",
+    "code": 0,
+    "seconds": 28.415,
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

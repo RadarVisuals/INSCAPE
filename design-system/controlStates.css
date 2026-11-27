@@ -1,0 +1,123 @@
+/* Shared control-state examples and the two-theme state sheet. */
+
+.ds-control-examples {
+  background: var(--tactile-face);
+  border-radius: var(--ds-shell-radius);
+  border-color: var(--tactile-edge);
+}
+.ds-control-examples > p,
+.ds-control-examples .ds-source {
+  color: var(--tactile-muted);
+}
+.ds-control-examples .workflow-tactile-control {
+  border-color: var(--tactile-edge);
+}
+.ds-control-examples
+  .workflow-tactile-control:where(
+    :not(:disabled):is([aria-pressed='true'], [aria-expanded='true'])
+  ) {
+  color: var(--tactile-ink);
+  background: color-mix(in srgb, var(--tactile-ink) 14%, var(--tactile-face));
+}
+.ds-control-examples .ds-primary-selection[aria-pressed='true'] {
+  color: var(--tactile-face);
+  background: var(--tactile-ink);
+}
+.ds-control-examples .ds-primary-selection::after {
+  display: none;
+}
+.ds-control-examples .workflow-tactile-control--quiet {
+  border-color: transparent;
+}
+.ds-control-examples .workflow-tactile-control:disabled {
+  border-color: transparent;
+}
+.ds-controls {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: var(--space-6) 0;
+}
+.ds-controls button {
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+}
+.ds-state-sheet {
+  margin-top: 36px;
+}
+
+.ds-state-themes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.ds-state-material {
+  padding: var(--space-5);
+  border: 1px solid var(--tactile-edge);
+}
+.ds-state-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px 14px;
+  margin-top: var(--space-5);
+}
+.ds-state-grid figure {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.ds-state-grid figcaption {
+  color: var(--tactile-muted);
+  font: var(--ds-text-base)/1.5 var(--font-technical);
+}
+.ds-state-grid button {
+  min-height: 40px;
+  padding: var(--space-2);
+}
+.ds-state-grid [data-example-state='hover'] {
+  background: var(--tactile-hover);
+}
+.ds-state-grid [data-example-state='pressed'] {
+  background: var(--tactile-well);
+}
+.ds-state-grid [data-example-state='focus'] {
+  outline: 2px solid var(--tactile-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 1000px) {
+  .ds-state-themes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-state-grid button {
+    min-height: var(--ds-target-touch);
+  }
+}
+@media (max-width: 520px) {
+  .ds-state-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ds-state-material {
+    padding: var(--space-4);
+  }
+}
+@media (max-width: 520px) {
+  .ds-controls button {
+    min-height: var(--ds-target-touch);
+  }
+}
+@media (pointer: coarse) {
+  .ds-controls button {
+    min-height: var(--ds-target-touch);
+  }
+}
+@media (forced-colors: active) {
+  .ds-control-examples .workflow-tactile-control:where([aria-pressed='true']),
+  .ds-control-examples .ds-primary-selection[aria-pressed='true'] {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}

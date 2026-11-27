@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-19",
+  "sourceSha256": "3f615036eff74ca64c4a0834ab6e42e7b111dfffaa66e0c6248ded372ece200f",
+  "artifactSha256": "5498729477fd9d8c017ad9fdb1318e4ef185a343d676e33cb459d5a12d84b0ec",
+  "lockfileSha256": "5fec815d2876c57da0cbe4f462aecee1614f2f5a37d62237230e61588ba26aac",
+  "observedHead": "adadd07a0f307b5677a65b755114540ba0031911",
+  "sourceWasDirty": true,
+  "node": "v24.20.0",
+  "platform": "win32",
+  "nodeTests": {
+    "tests": 1245,
+    "pass": 1245,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "browser": {
+    "suites": 48,
+    "tests": 191,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "standards": {
+    "tests": 5,
+    "pass": 5,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "productionStartup": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "viewports": [
+      {
+        "width": 1440,
+        "decodedJavaScriptBytes": 822709
+      },
+      {
+        "width": 390,
+        "decodedJavaScriptBytes": 822709
+      }
+    ]
+  },
+  "buildsAndBudgetsPassed": true,
+  "scope": "Historical local run immediately before checkpoint preparation. Logs only redact local workstation root paths. Hosted CI on this commit supplies independent checkout evidence.",
+  "packaging": "Untracked recovery media, artwork experiments and six dependent manual review fixtures are excluded. They are not part of the production build or maintained browser selection. Application implementation and maintained tests are unchanged.",
+  "freshInstall": false,
+  "liveWalletOrUploadTested": false
+}

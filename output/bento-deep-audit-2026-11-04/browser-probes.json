@@ -1,0 +1,122 @@
+[
+  {
+    "case": "empty initial panel",
+    "measurements": {
+      "panel": {
+        "x": 956,
+        "y": 56,
+        "width": 308,
+        "height": 728,
+        "top": 56,
+        "right": 1264,
+        "bottom": 784,
+        "left": 956
+      },
+      "scrollHeight": 957,
+      "clientHeight": 691,
+      "useLayoutTop": 837.4375,
+      "viewport": 800,
+      "controls": [
+        {
+          "label": "LandscapeSquarePortrait",
+          "height": 26,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "26px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "LandscapeSquarePortrait",
+          "height": 26,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "26px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "LandscapeSquarePortrait",
+          "height": 26,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "26px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "Width (px)",
+          "height": 28,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "28px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "Height (px)",
+          "height": 28,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "28px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "Gutter (px)",
+          "height": 28,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "28px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "Outer margin (px)",
+          "height": 28,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "28px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "Corner radius (px)",
+          "height": 28,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "28px",
+          "sharedControlHeight": "32px"
+        },
+        {
+          "label": "Number of cells",
+          "height": 28,
+          "font": "11px / 13.2px \"Inscape Sora\", sans-serif",
+          "minHeight": "28px",
+          "sharedControlHeight": "32px"
+        }
+      ]
+    }
+  },
+  {
+    "case": "split filled cell through UI",
+    "alerts": [
+      "The Reception cells or artwork are invalid. Your saved work is unchanged."
+    ],
+    "cells": 1
+  },
+  {
+    "case": "abandoned mouse gesture",
+    "before": {
+      "x": 131.484375,
+      "y": 385.609375,
+      "width": 1177,
+      "height": 32.28125
+    },
+    "afterReleasedButtons": {
+      "x": 131.484375,
+      "y": 465.9375,
+      "width": 1177,
+      "height": 32.28125
+    },
+    "afterEscape": {
+      "x": 131.484375,
+      "y": 385.609375,
+      "width": 1177,
+      "height": 32.28125
+    },
+    "savedUnchanged": true,
+    "cancelledOnButtonsZero": false
+  },
+  {
+    "case": "Apply settings after both size and count edits",
+    "shownCount": "6",
+    "savedCount": 6,
+    "savedWidth": 1600
+  }
+]

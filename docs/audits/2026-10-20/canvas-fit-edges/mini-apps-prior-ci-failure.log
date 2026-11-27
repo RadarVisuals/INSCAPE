@@ -1,0 +1,109 @@
+TAP version 13
+# Bundling standard UP Provider fixture
+# Fixture bundled
+# Browser launched
+# Browser context created
+# Fake microphone permission configured
+# Test page created
+# Owner Workbench mounted
+# Page: 100%
+# Groups
+# Meet Grid-naad
+# Select
+# MINI APP · MINI APP
+# Name
+# App URL
+# Transparent HTML artwork
+# Include in publication
+# The app runs from its own website. Including it in publication shares its name and URL with visitors.
+# Save
+# Cancel
+# Remove app
+# PROFILE
+# GRIDS
+# DISCOVER
+# ACTIVITY
+# PREVIEW
+# PUBLISH
+# Frames: [ 'http://127.0.0.1:34751/__mini_apps__' ]
+# node:internal/modules/run_main:107
+#     triggerUncaughtException(
+#     ^
+# locator.click: Timeout 15000ms exceeded.
+# Call log:
+#   - waiting for locator('.mini-app-settings').getByRole('button', { name: 'Save', exact: true })
+#     - locator resolved to <button type="submit">Save</button>
+#   - attempting click action
+#     2 × waiting for element to be visible, enabled and stable
+#       - element is visible, enabled and stable
+#       - scrolling into view if needed
+#       - done scrolling
+#       - <main tabindex="-1" data-layout="wide" data-surface="mist" data-chrome-noise="on" class="system-workflow" data-menu-surface="mist" data-reduced-motion="true" data-creation-tool="select" data-creation-toolbar="true" data-canvas-context="canvas" data-lattice-menu-surface="true" data-board-instance-state="window">…</main> intercepts pointer events
+#     - retrying click action
+#     - waiting 20ms
+#     2 × waiting for element to be visible, enabled and stable
+#       - element is visible, enabled and stable
+#       - scrolling into view if needed
+#       - done scrolling
+#       - <main tabindex="-1" data-layout="wide" data-surface="mist" data-chrome-noise="on" class="system-workflow" data-menu-surface="mist" data-reduced-motion="true" data-creation-tool="select" data-creation-toolbar="true" data-canvas-context="canvas" data-lattice-menu-surface="true" data-board-instance-state="window">…</main> intercepts pointer events
+#     - retrying click action
+#       - waiting 100ms
+#     28 × waiting for element to be visible, enabled and stable
+#        - element is visible, enabled and stable
+#        - scrolling into view if needed
+#        - done scrolling
+#        - <main tabindex="-1" data-layout="wide" data-surface="mist" data-chrome-noise="on" class="system-workflow" data-menu-surface="mist" data-reduced-motion="true" data-creation-tool="select" data-creation-toolbar="true" data-canvas-context="canvas" data-lattice-menu-surface="true" data-board-instance-state="window">…</main> intercepts pointer events
+#      - retrying click action
+#        - waiting 500ms
+#     at addApp (/home/runner/work/INSCAPE/INSCAPE/browser-tests/mini-apps.browser.mjs:75:71)
+#     at async file:///home/runner/work/INSCAPE/INSCAPE/browser-tests/mini-apps.browser.mjs:88:3 {
+#   log: [
+#     "  - waiting for locator('.mini-app-settings').getByRole('button', { name: 'Save', exact: true })",
+#     '    - locator resolved to <button type="submit">Save</button>',
+#     '  - attempting click action',
+#     '    2 × waiting for element to be visible, enabled and stable',
+#     '      - element is visible, enabled and stable',
+#     '      - scrolling into view if needed',
+#     '      - done scrolling',
+#     '      - <main tabindex="-1" data-layout="wide" data-surface="mist" data-chrome-noise="on" class="system-workflow" data-menu-surface="mist" data-reduced-motion="true" data-creation-tool="select" data-creation-toolbar="true" data-canvas-context="canvas" data-lattice-menu-surface="true" data-board-instance-state="window">…</main> intercepts pointer events',
+#     '    - retrying click action',
+#     '    - waiting 20ms',
+#     '    2 × waiting for element to be visible, enabled and stable',
+#     '      - element is visible, enabled and stable',
+#     '      - scrolling into view if needed',
+#     '      - done scrolling',
+#     '      - <main tabindex="-1" data-layout="wide" data-surface="mist" data-chrome-noise="on" class="system-workflow" data-menu-surface="mist" data-reduced-motion="true" data-creation-tool="select" data-creation-toolbar="true" data-canvas-context="canvas" data-lattice-menu-surface="true" data-board-instance-state="window">…</main> intercepts pointer events',
+#     '    - retrying click action',
+#     '      - waiting 100ms',
+#     '    28 × waiting for element to be visible, enabled and stable',
+#     '       - element is visible, enabled and stable',
+#     '       - scrolling into view if needed',
+#     '       - done scrolling',
+#     '       - <main tabindex="-1" data-layout="wide" data-surface="mist" data-chrome-noise="on" class="system-workflow" data-menu-surface="mist" data-reduced-motion="true" data-creation-tool="select" data-creation-toolbar="true" data-canvas-context="canvas" data-lattice-menu-surface="true" data-board-instance-state="window">…</main> intercepts pointer events',
+#     '     - retrying click action',
+#     '       - waiting 500ms'
+#   ],
+#   name: 'TimeoutError'
+# }
+# Node.js v24.20.0
+# Subtest: browser-tests/mini-apps.browser.mjs
+not ok 1 - browser-tests/mini-apps.browser.mjs
+  ---
+  duration_ms: 17720.67904
+  type: 'test'
+  location: '/home/runner/work/INSCAPE/INSCAPE/browser-tests/mini-apps.browser.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17727.141091

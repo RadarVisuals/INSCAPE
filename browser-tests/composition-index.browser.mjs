@@ -1,0 +1,200 @@
+import { editorCommand, editorOverview, editSelectedWork } from './fixtures/editor-menu.mjs';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+
+const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/composition-index';
+async function prepare(page, path = '/browser-tests/composition-index-fixture.html') {
+  page.setDefaultTimeout(15000);
+  await page.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    if (url.origin === origin) return route.continue();
+    const artwork = url.pathname.match(/^\/RadarVisuals\/INSCAPE\/[a-f0-9]{40}\/public(\/assets\/.*\.webp)$/);
+    if (url.hostname === 'raw.githubusercontent.com' && artwork) return route.fulfill({ response: await page.request.get(origin + artwork[1]) });
+    return route.abort();
+  });
+  await page.goto(origin + path, { waitUntil: 'domcontentloaded', timeout: 45000 });
+}
+const camera = page => page.locator('.composition-explorer-viewport').evaluate(node => ({
+  scale: Number(node.dataset.cameraScale), x: Number(node.dataset.cameraX), y: Number(node.dataset.cameraY), width: node.clientWidth, height: node.clientHeight,
+}));
+async function failWrites(page, fail) {
+  await page.evaluate(fail => window.failWorkbenchWrites(fail), fail);
+}
+const near = (a, b, message) => assert.ok(Math.abs(a - b) < .02, `${message}: ${a} / ${b}`);
+
+test('desktop index explores real artwork, retains each camera and never edits its input', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await prepare(page);
+    const host = page.locator('.composition-explorer-viewport'); await host.waitFor();
+    await page.waitForFunction(() => Number(document.querySelector('.composition-explorer-viewport')?.dataset.cameraScale) > 0);
+    const images = host.locator('svg image');
+    await images.first().waitFor();
+    assert.equal(await images.count(), 3);
+    await images.evaluateAll(nodes => Promise.all(nodes.map(node => {
+      const image = new Image(); image.src = node.href.baseVal; return image.decode();
+    })));
+    const saved = await page.evaluate(() => JSON.stringify(window.reviewEntries));
+    const first = await camera(page), bounds = await host.boundingBox();
+    await page.getByRole('button', { name: 'Open Abyssal Study', exact: true }).hover();
+    assert.equal(await page.locator('.composition-explorer-heading h1').innerText(), 'Lunar Desert', 'hover does not replace a work being explored');
+    await host.focus(); await page.keyboard.down('Space');
+    await page.mouse.move(bounds.x + 400, bounds.y + 200); await page.mouse.down();
+    await page.mouse.move(bounds.x + 490, bounds.y + 255, { steps: 6 }); await page.mouse.up(); await page.keyboard.up('Space');
+    const moved = await camera(page); near(moved.x, first.x + 90, 'Space drag x'); near(moved.y, first.y + 55, 'Space drag y');
+    const wheelX = Math.round(bounds.x + 300), wheelY = Math.round(bounds.y + 150), anchorX = wheelX - bounds.x;
+    await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: -110, clientX: wheelX, clientY: wheelY, bubbles: true, cancelable: true });
+    await page.waitForFunction(scale => Number(document.querySelector('.composition-explorer-viewport').dataset.cameraScale) > scale, moved.scale);
+    const zoomed = await camera(page); assert.ok(zoomed.scale > moved.scale);
+    near((anchorX - zoomed.x) / zoomed.scale, (anchorX - moved.x) / moved.scale, 'zoom remains under cursor');
+    await page.getByRole('button', { name: 'Open Abyssal Study', exact: true }).click();
+    await page.getByRole('button', { name: 'Open Lunar Desert', exact: true }).click();
+    assert.deepEqual(await camera(page), zoomed, 'switching works restores the camera');
+    await page.getByRole('button', { name: 'Expand canvas', exact: true }).click();
+    await page.waitForFunction(previous => {
+      const node = document.querySelector('.composition-explorer-viewport');
+      return Math.abs((node.clientWidth / 2 - Number(node.dataset.cameraX)) / Number(node.dataset.cameraScale) - (previous.width / 2 - previous.x) / previous.scale) < .02;
+    }, zoomed);
+    const expanded = await camera(page);
+    near((expanded.width / 2 - expanded.x) / expanded.scale, (zoomed.width / 2 - zoomed.x) / zoomed.scale, 'expansion preserves world centre');
+    assert.equal(await page.getByRole('navigation', { name: 'Canvases' }).isVisible(), false);
+    await page.keyboard.press('Escape'); await page.getByRole('navigation', { name: 'Canvases' }).waitFor();
+    const points = page.getByRole('navigation', { name: 'Camera points' });
+    const detail = points.getByRole('button', { name: 'A closer look', exact: true });
+    const whole = points.getByRole('button', { name: 'Complete canvas' });
+    assert.ok(await detail.evaluate(button => {
+      const dot = getComputedStyle(button, '::before');
+      return parseFloat(dot.width) > 0 && dot.width === dot.height;
+    }), 'The camera point renders as a circle');
+    await detail.click();
+    assert.equal(await detail.getAttribute('aria-pressed'), 'true');
+    assert.ok((await camera(page)).scale > first.scale, 'The dot opens the authored detail');
+    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    assert.equal(await detail.getAttribute('aria-pressed'), 'false', 'Free zoom clears the selected dot');
+    await whole.focus(); await page.keyboard.press('Space');
+    near((await camera(page)).scale, first.scale, 'The overview icon restores the complete canvas');
+    await detail.focus(); await page.keyboard.press('Enter');
+    await host.focus(); await page.keyboard.press('Home');
+    near((await camera(page)).scale, first.scale, 'Home returns to whole composition');
+    assert.equal(await whole.getAttribute('aria-pressed'), 'true');
+    await page.getByText('Artwork sources', { exact: false }).first().click();
+    await page.getByRole('combobox', { name: 'Artwork source', exact: true }).selectOption({ index: 1 });
+    await page.locator('.composition-explorer-dossier').waitFor();
+    assert.ok(await page.locator('.canvas-presentation-highlight').count());
+    assert.equal(await page.locator('.composition-explorer-viewport [contenteditable="true"], .composition-explorer-viewport iframe').count(), 0);
+    assert.equal(await page.evaluate(() => JSON.stringify(window.reviewEntries)), saved);
+    await page.getByRole('combobox', { name: 'Artwork source', exact: true }).selectOption('');
+    await page.getByText('Artwork sources', { exact: false }).first().click();
+    await mkdir(output, { recursive: true });
+    for (const width of [1920, 1440, 1024]) {
+      await page.setViewportSize({ width, height: 1080 }); await page.evaluate(() => document.fonts.ready);
+      await page.locator('.workbench-overview').evaluate(node => { node.scrollTop = 0; });
+      const [viewport, picker] = await Promise.all([host.boundingBox(), points.boundingBox()]);
+      assert.ok(picker.y >= viewport.y + viewport.height, 'Camera points are below the artwork');
+      assert.ok(Math.abs((picker.x + picker.width / 2) - (viewport.x + viewport.width / 2)) <= 1, 'Camera points are centered on the artwork');
+      await page.screenshot({ path: `${output}/index-${width}.png`, fullPage: true });
+      assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+    }
+    await page.getByRole('button', { name: 'Grid', exact: true }).click();
+    await page.locator('.workbench-overview-gallery').waitFor();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('desktop owner index keeps browsing separate from activation and save failures', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await prepare(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
+    await editorOverview(page);
+    await page.locator('.composition-explorer-viewport').waitFor();
+    const originalId = await page.evaluate(() => window.savedDraft().activeId);
+    await page.getByRole('button', { name: 'Edit details', exact: true }).click();
+    await page.getByLabel('Composition name', { exact: true }).fill('Lunar Desert');
+    await page.getByLabel(/Introduction/).fill('A saved description.');
+    await failWrites(page, true);
+    await page.getByRole('button', { name: 'Save details', exact: true }).click();
+    assert.match(await page.getByRole('alert').innerText(), /Could not save/);
+    assert.equal(await page.getByLabel(/Introduction/).inputValue(), 'A saved description.');
+    await failWrites(page, false);
+    await page.getByRole('button', { name: 'Save details', exact: true }).click();
+    await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Composition actions' }).click();
+    await page.getByRole('button', { name: 'New composition', exact: true }).click();
+    await page.getByLabel('Composition name', { exact: true }).fill('Studies');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
+    await editorOverview(page);
+    await page.getByRole('heading', { name: 'Studies', exact: true }).waitFor();
+    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    await page.getByRole('button', { name: 'Open Lunar Desert', exact: true }).click();
+    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'Description\nA saved description.');
+    await failWrites(page, true);
+    await editSelectedWork(page);
+    assert.match(await page.getByRole('alert').innerText(), /Could not save/);
+    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+    await failWrites(page, false);
+    await editSelectedWork(page);
+    await page.locator('aside.text-window').waitFor();
+    assert.equal(await page.evaluate(() => window.savedDraft().activeId), originalId);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await editorOverview(page);
+    await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
+    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'Description\nA saved description.');
+    await page.getByRole('button', { name: 'Edit details', exact: true }).click();
+    await page.getByLabel(/Introduction/).fill('');
+    await page.getByRole('button', { name: 'Save details', exact: true }).click();
+    await page.waitForFunction(() => document.activeElement?.textContent === 'Edit details');
+    assert.equal(await page.locator('.workbench-overview-introduction').count(), 0);
+    await page.getByRole('button', { name: 'Edit details', exact: true }).click();
+    await page.getByLabel('Composition name', { exact: true }).fill('Discard this name');
+    await page.getByLabel('Composition name', { exact: true }).press('Escape');
+    await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Profile', exact: true }).click();
+    await page.getByText('Published view requested', { exact: true }).waitFor();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('the Studio manager edits the selected composition and preserves the others', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await prepare(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
+    await editorOverview(page);
+    await page.locator('.composition-index').waitFor();
+    await page.getByRole('button', { name: 'Edit', exact: true }).waitFor();
+    const before = await page.evaluate(() => window.savedDraft());
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/works-composition-entry.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.locator('.editor-menu-bar[data-document]').waitFor();
+    await editorCommand(page, 'Edit', 'Settings');
+    await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    const saved = await page.evaluate(() => window.savedDraft());
+    assert.equal(saved.activeId, before.activeId, 'Opening the selected composition preserves the active document');
+    assert.deepEqual(saved.workbenches, before.workbenches, 'Opening Settings preserves all compositions');
+    await editorOverview(page);
+    await page.locator('.composition-index').waitFor();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.screenshot({ path: `${output}/works-composition-entry-390.png`, fullPage: true });
+    await page.locator('.editor-menu-bar[data-document]').waitFor();
+    assert.equal(await page.getByRole('alert').count(), 0, 'returning reacquires the selected composition without losing the editor lease');
+    await editorOverview(page);
+    await page.locator('.composition-index').waitFor();
+    assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches), before.workbenches);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});

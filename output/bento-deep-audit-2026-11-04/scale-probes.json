@@ -1,0 +1,44 @@
+[
+  {
+    "case": "16 cells, 16 real artwork Images using 7 distinct local WebPs, 8 filled Text modules; local dev build, headless Chrome, synthetic drag; indicative only",
+    "metrics": {
+      "samples": 292,
+      "p50": 7,
+      "p95": 20.90000000000009,
+      "max": 27.900000000000546,
+      "over33ms": 0
+    }
+  },
+  {
+    "case": "preview controls",
+    "text": [
+      "Back to editingReception preview"
+    ],
+    "widths": 1,
+    "inputs": [
+      {
+        "label": "Preview width",
+        "value": "1440",
+        "type": "range"
+      }
+    ]
+  },
+  {
+    "case": "public preview cell radius",
+    "viewportWidth": 1440,
+    "paint": {
+      "width": 330,
+      "radius": "64px",
+      "fillRadius": "64px"
+    }
+  },
+  {
+    "case": "public preview cell radius",
+    "viewportWidth": 900,
+    "paint": {
+      "width": 206.25,
+      "radius": "64px",
+      "fillRadius": "64px"
+    }
+  }
+]

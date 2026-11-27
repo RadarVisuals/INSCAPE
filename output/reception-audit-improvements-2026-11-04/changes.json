@@ -1,0 +1,211 @@
+{
+  "changes": [
+    {
+      "path": "src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx",
+      "group": "production",
+      "added": 1,
+      "removed": 1,
+      "before": "489fbd25777625df693ada1f7938faeb6f0a4019ca604c32d19c891a612122ff",
+      "after": "a904e9a8872c9946cfdc1aaaea42e87e86e15ed06494fe7ad89697c173f6a82e"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchCommands.js",
+      "group": "production",
+      "added": 4,
+      "removed": 1,
+      "before": "0f3137cbe4f3f19f3553831abf1ed8adc3359e8b2f91db9740f87a769f0ac562",
+      "after": "34ca7961df83000295c10d934e7e290d6605710eda0653ef8f89c77d987314ff"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/WorkbenchView.jsx",
+      "group": "production",
+      "added": 1,
+      "removed": 1,
+      "before": "a5da9bb8a80b0379b3a0ba6f4e4aa2cd5177a3d11d925e240fa3fd565d2ac6a0",
+      "after": "53d8d6abb66304add58bd15490263e1daf8c13df25a6056eeff794cd88260183"
+    },
+    {
+      "path": "src/reception/EditorCellsContext.jsx",
+      "group": "production",
+      "added": 16,
+      "removed": 17,
+      "before": "de5c853b49550609f8dc7d79b0bde46d9de2e354d9cc82abcc7ba70d97823f5f",
+      "after": "504ac95ee25367e7bef266b20274b050f6e7153d05fa2047b621ba7bd8a104bc"
+    },
+    {
+      "path": "src/reception/ReceptionBentoEditor.jsx",
+      "group": "production",
+      "added": 4,
+      "removed": 1,
+      "before": "c85996907e9c3254a41fe72dedf1361cfa809df7aaeb28d500c94c7fb4eb2de4",
+      "after": "e0589eb3836cb106c14d1400d15af169779e95abe3dfd1986fcf62e536cc6a96"
+    },
+    {
+      "path": "src/reception/receptionEditorDocument.js",
+      "group": "production",
+      "added": 15,
+      "removed": 8,
+      "before": "cfeb4109e12fe3dfe156c97eaa7f833202169196e63503359acbe4bc311161b3",
+      "after": "3e3d2bb351edd2ded52060e273bffed9fc16d64cb3c8668a4ff0b5ec53957b2d"
+    },
+    {
+      "path": "src/reception/receptionEditorDocument.test.js",
+      "group": "tests",
+      "added": 9,
+      "removed": 0,
+      "before": "b15fd8a019352898e4abc6e3ecaab7f57259a61de8921f0c3c61303797b38c9d",
+      "after": "add574734355a2fa98d27da310d131c408dd4f8a87a645190097c77ba4255fd8"
+    },
+    {
+      "path": "src/reception/ReceptionEditorPreview.jsx",
+      "group": "production",
+      "added": 11,
+      "removed": 7,
+      "before": "6d4a52870212dcb58f979b37b5e8faf8c69e5aef60ad65cad600d43e191004b6",
+      "after": "cb6022209ee9c619b48379c83ee13fc713c59c58f7db41b9f875587a0b74877e"
+    },
+    {
+      "path": "src/reception/receptionEditorScope.js",
+      "group": "production",
+      "added": 20,
+      "removed": 9,
+      "before": "32e2ec26fa067390011b8015c1bca36ae03377d3e071062591fada4796f77771",
+      "after": "b9596b31183b7aa233fe4f512518dc3f6403449882ab86705149abc9142ac67e"
+    },
+    {
+      "path": "src/reception/receptionEditorScope.test.js",
+      "group": "tests",
+      "added": 50,
+      "removed": 1,
+      "before": "5cbebd7f4f9388bf5b5c5bf772e2c027cd370efdb3136a3e160739b88edaa418",
+      "after": "b596ab95b47e32da78dc0242c68ea7fb712fcae035f2533b16af1d62987d014f"
+    },
+    {
+      "path": "src/reception/ReceptionViewportControls.jsx",
+      "group": "production",
+      "added": 4,
+      "removed": 3,
+      "before": "2c87c5513e35e2fdb135fb4593aab703e4f6fdbac6ed66171671e2778711da95",
+      "after": "06c208966a67460ddae4b4ed69b8f5359d8789a28822b9b187d2638f93c704bb"
+    },
+    {
+      "path": "src/text/ArticleFocusWriting.jsx",
+      "group": "production",
+      "added": 1,
+      "removed": 6,
+      "before": "ddd6a9e56230965ad3dda4a76a415f62738bd334951208d46c6797b87b724828",
+      "after": "32a451cb689ec11e46ebe96bcc391c93bf7970d010937a6002242ab90db6a153"
+    },
+    {
+      "path": "src/text/text.css",
+      "group": "production",
+      "added": 1,
+      "removed": 1,
+      "before": "36daed3fc7d81dbea3be72681756540da44294b6207aab0eaabddaf896fdda2b",
+      "after": "d6cc94367844937d822e945103abd58c67564f940a9b4b24b6dfc7d3a31db766"
+    },
+    {
+      "path": "src/text/TextWorkbench.jsx",
+      "group": "production",
+      "added": 7,
+      "removed": 3,
+      "before": "978c587b808d0c83d146729927ccfde65a6af48a142fdd4313b8fe8e66252b94",
+      "after": "306e076b6838c4b23ce29398314524eb87b7197d0013c08b18e83d59235cc756"
+    },
+    {
+      "path": "browser-tests/owner-profile-routing.browser.mjs",
+      "group": "tests",
+      "added": 38,
+      "removed": 35,
+      "before": "bb9590cc09d0ddf8937d5db3f151700133823a737c5d977755f83a600639ceed",
+      "after": "5975fe82500c53701e46a6e964c4ba597ec58f7d787608870789e76771cbf8b4"
+    },
+    {
+      "path": "browser-tests/playwright-browser-adapter.mjs",
+      "group": "tests",
+      "added": 1,
+      "removed": 0,
+      "before": "d10f98ec5a79152cf3c92ff36e57b0718ee16942eb5192fa8d18d35c67248a56",
+      "after": "1eef0c78348d25a680e76980ec9df493c5b172918f3557f4fd7a234fb2b267ca"
+    },
+    {
+      "path": "browser-tests/reception-boundaries-fixture.jsx",
+      "group": "tests",
+      "added": 11,
+      "removed": 1,
+      "before": "26d2b07b6c145b6a106ad0fd304c38e1591c4d59d29e7860e57777a99a59d7af",
+      "after": "c6efdd050369dd5b53e912a00d9d96ae63b6005e3f7ed279e14216af0e729710"
+    },
+    {
+      "path": "browser-tests/reception-boundaries.browser.mjs",
+      "group": "tests",
+      "added": 8,
+      "removed": 7,
+      "before": "867b1a28bc82f0a50dcdd55e56738954cfe7b18222f18dcee1e08299bceda7c3",
+      "after": "f6a69e70f434c5db5716ef188b49db826e4f813d546a6b56803ce478cff647b4"
+    },
+    {
+      "path": "browser-tests/reception-native-editor.browser.mjs",
+      "group": "tests",
+      "added": 58,
+      "removed": 0,
+      "before": "55006492271a5529c9f50ed3cea1395fd82e5ea3847e09bfd154f5afb55d2d23",
+      "after": "a289a1af0d094ab1fb17f19fb98d663a589281dd98e7bb252e1f4fc8f63e2954"
+    },
+    {
+      "path": "browser-tests/workbench-recovery.browser.mjs",
+      "group": "tests",
+      "added": 16,
+      "removed": 5,
+      "before": "686bf1198bc805a4e201ae281153d1eec4f9b08fcf5b6923855eeedc579f921d",
+      "after": "a8259ec91194d2cdc9ab609ba4f684b285db66e789866d02c8153ae36e0d3d80"
+    },
+    {
+      "path": "docs/INSCAPE_ACTIVE_CONTRACT.md",
+      "group": "docs",
+      "added": 14,
+      "removed": 0,
+      "before": "f3a0888ccd86cc3c10e1c20d57a2e7f841b8e6ea0ee52ec127865fac54b4d9f7",
+      "after": "4f410f635808281d0ea1092bd875672f3570d472d212bdeacc7b717397150774"
+    },
+    {
+      "path": "src/reception/receptionTextDefaults.js",
+      "group": "production",
+      "added": 11,
+      "removed": 0,
+      "before": null,
+      "after": "96b5fed3fa57ba679d1c77e3c867eed58b246d2df7d31dba00a0acb2c61429aa"
+    },
+    {
+      "path": "src/reception/receptionTextDefaults.test.js",
+      "group": "tests",
+      "added": 16,
+      "removed": 0,
+      "before": null,
+      "after": "8ceaad825a6c6579d3aadc230c724a36ef24f2a8d91fe733b367029e5ac24fba"
+    },
+    {
+      "path": "src/ui/colorContrast.js",
+      "group": "production",
+      "added": 5,
+      "removed": 0,
+      "before": null,
+      "after": "269aed1e4d4dcd66bf467ebfd04b4a0eeaa62ff7961ac1deb3280f1a0201ca28"
+    }
+  ],
+  "unchangedCount": 1335,
+  "totals": {
+    "production": {
+      "added": 101,
+      "removed": 58
+    },
+    "tests": {
+      "added": 207,
+      "removed": 49
+    },
+    "docs": {
+      "added": 14,
+      "removed": 0
+    }
+  }
+}

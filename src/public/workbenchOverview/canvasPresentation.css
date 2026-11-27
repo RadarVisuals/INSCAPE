@@ -1,0 +1,164 @@
+.canvas-presentation { --tactile-ink: var(--overview-glass-ink); --tactile-muted: color-mix(in srgb, var(--overview-glass-ink) 84%, var(--overview-glass)); position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; overflow: hidden; background: transparent; color: var(--tactile-ink); }
+.canvas-presentation::backdrop { background: transparent; }
+.canvas-presentation-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--tactile-face) 55%, transparent); backdrop-filter: blur(10px); pointer-events: none; }
+/* A steady surround keeps the underlying tile silhouettes out of published work. */
+.workbench-overview[data-visitor-header] .canvas-presentation-backdrop {
+  background: color-mix(in srgb, var(--card-material) 65%, var(--tactile-face));
+  backdrop-filter: none;
+}
+.workbench-overview[data-visitor-header] .canvas-presentation-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/assets/visitor/output-dither.png') repeat;
+  opacity: .012;
+}
+@property --canvas-matte-coverage {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+.canvas-presentation-backdrop[data-fading] { mask-image: var(--canvas-matte-mask); }
+.canvas-presentation-backdrop > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.canvas-presentation-backdrop pattern rect {
+  opacity: calc(round(down, var(--canvas-matte-coverage) * 16 + var(--sample-offset), 1) / 16);
+}
+.canvas-presentation-surface:not([data-ready]) { visibility: hidden; }
+.canvas-presentation:focus { outline: none; }
+.canvas-presentation-surface { --presentation-height: max(min(320px, 86dvh), min(86dvh, calc(88vw / var(--canvas-ratio)))); position: absolute; inset: 0; margin: auto; width: max(min(320px, 88vw), min(88vw, calc(86dvh * var(--canvas-ratio)))); height: var(--presentation-height); overflow: hidden; border-radius: var(--overview-radius); background: var(--tactile-face); transform-origin: center; }
+.canvas-presentation[data-expanded] .canvas-presentation-surface { --presentation-height: calc(100dvh - 16px); inset: var(--space-2); margin: 0; width: auto; height: auto; }
+.canvas-presentation-main { position: absolute; inset: 0; overflow: hidden; }
+.canvas-presentation-chrome { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 160ms ease, visibility 160ms; }
+.canvas-presentation[data-chrome-visible] .canvas-presentation-chrome { opacity: 1; visibility: visible; }
+.canvas-presentation[data-closing] .canvas-presentation-chrome { opacity: 0; visibility: hidden; pointer-events: none; transition: none; }
+.canvas-presentation-heading { position: absolute; z-index: 2; top: 12px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.canvas-presentation-heading > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; padding: 8px 12px; color: var(--tactile-muted); border-radius: var(--control-shell-radius); background: var(--tactile-face); }
+.canvas-presentation-heading > div { display: flex; flex: none; pointer-events: auto; border-radius: var(--control-shell-radius); background: var(--tactile-face); }
+.workbench-overview .canvas-presentation button { min-height: 36px; padding: 8px; gap: 8px; font-size: 11px; }
+.canvas-presentation button > svg { flex: none; }
+.canvas-presentation-stage { position: absolute; inset: 0; overflow: hidden; background: var(--tactile-well); }
+.canvas-presentation .workbench-overview-preview { height: 100%; margin: 0; }
+.canvas-presentation-highlight { display: none; position: absolute; outline: 2px solid var(--tactile-ink); outline-offset: 0; box-shadow: 0 0 0 1px var(--tactile-face); pointer-events: none; }
+.canvas-presentation:has(.canvas-presentation-reveal[data-panel="Artwork info"][data-open]) .canvas-presentation-highlight { display: block; }
+.canvas-presentation-footer { position: absolute; z-index: 2; bottom: 12px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: center; padding: 0 52px; }
+.workbench-overview .canvas-presentation-edit { position: absolute; left: 0; bottom: 0; color: var(--tactile-muted); background: var(--tactile-face); pointer-events: auto; }
+.canvas-presentation-controls { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; max-width: 100%; pointer-events: auto; }
+.canvas-presentation-tools { position: relative; isolation: isolate; display: flex; gap: 2px; padding: 2px; border: 1px solid var(--overview-glass-edge); border-radius: var(--control-shell-radius); background: transparent; }
+.canvas-presentation-reveal { display: flex; }
+.canvas-presentation button:is([aria-expanded="true"], [aria-pressed="true"], [aria-current]) { background: var(--tactile-hover); }
+.canvas-presentation-views { display: flex; max-width: 100%; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 2px; border-radius: var(--control-shell-radius); background: var(--tactile-face); }
+.workbench-overview .canvas-presentation-views button { flex: none; min-width: 32px; min-height: 28px; padding: 4px 8px; font: 11px/1.4 var(--font-technical); }
+.canvas-presentation-popover { opacity: 0; visibility: hidden; pointer-events: none; translate: 0 12px; clip-path: inset(100% 0 0 round 6px); transition: clip-path var(--overview-panel-duration) var(--overview-ease), translate var(--overview-panel-duration) var(--overview-ease), opacity 250ms ease, visibility 700ms; position: absolute; z-index: 2; left: 50%; bottom: calc(100% - 1px); transform: translateX(-50%); width: min(380px, 72vw); max-height: min(480px, calc(var(--presentation-height) - 172px)); overflow: auto; overscroll-behavior: contain; padding: 20px; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); text-align: left; }
+.canvas-presentation-popover h2 { font-size: 20px; }
+.canvas-presentation-popover p { margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.canvas-presentation-popover > dl { display: grid; gap: 12px; margin: 20px 0 0; font: 12px/1.5 var(--font-technical); }
+.canvas-presentation-popover > dl > div { display: flex; justify-content: space-between; gap: 16px; }
+.canvas-presentation-popover dt { color: var(--tactile-muted); }
+.canvas-presentation-popover dd { margin: 0; overflow-wrap: anywhere; }
+.canvas-presentation-source { display: grid; gap: 8px; margin-bottom: 16px; font-size: 12px; }
+.canvas-presentation-source select { width: 100%; min-width: 0; padding: 10px 6px; border: 1px solid var(--overview-glass-edge); border-radius: var(--control-radius); color: inherit; background: rgb(12 14 15); font: inherit; }
+.canvas-presentation-source select:focus-visible { outline: 2px solid var(--tactile-ink); }
+.canvas-presentation-index { position: absolute; z-index: 3; top: 60px; right: 12px; bottom: 104px; width: min(280px, calc(100% - 24px)); min-width: 0; padding: 12px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); }
+.canvas-presentation[data-chrome-visible] .canvas-presentation-index { pointer-events: auto; }
+.canvas-presentation-index header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 24px; }
+.canvas-presentation-index h2 { font-size: 20px; }
+.canvas-presentation-index nav { display: grid; gap: 8px; }
+.workbench-overview .canvas-presentation-index nav button { min-height: 44px; justify-content: start; text-align: left; overflow-wrap: anywhere; }
+.canvas-presentation-index small { flex: none; font: 11px/1.4 var(--font-technical); color: var(--tactile-muted); }
+.canvas-presentation-index p { font-size: 12px; color: var(--tactile-muted); }
+.canvas-presentation-error { position: absolute; bottom: 104px; left: 12px; right: 12px; background: var(--tactile-face); }
+.canvas-presentation :is(.canvas-presentation-heading > span, .canvas-presentation-heading > div, .canvas-presentation-views, .canvas-presentation-popover, .canvas-presentation-index),
+.workbench-overview .canvas-presentation-edit { background: var(--overview-glass); border: 1px solid var(--overview-glass-edge); box-shadow: var(--overview-glass-shadow); -webkit-backdrop-filter: var(--overview-glass-filter); backdrop-filter: var(--overview-glass-filter); }
+/* Keep the popover outside an ancestor backdrop root so its glass blurs the artwork. */
+.canvas-presentation-tools::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--overview-glass); box-shadow: var(--overview-glass-shadow); -webkit-backdrop-filter: var(--overview-glass-filter); backdrop-filter: var(--overview-glass-filter); pointer-events: none; }
+.workbench-overview .canvas-presentation button:is(:hover, [aria-expanded="true"], [aria-pressed="true"], [aria-current]) { background: color-mix(in srgb, var(--tactile-ink) 14%, transparent); }
+@media (max-width: 800px) {
+  .canvas-presentation-surface { --presentation-height: max(min(320px, 92dvh), min(92dvh, calc((100vw - 24px) / var(--canvas-ratio)))); width: calc(100% - 24px); }
+  .canvas-presentation-heading { top: 8px; left: 8px; right: 8px; }
+  .canvas-presentation-footer { left: 8px; right: 8px; bottom: 8px; padding-inline: 36px; }
+  .canvas-presentation-edit span { display: none; }
+  .canvas-presentation-popover { width: min(380px, calc(100vw - 64px)); padding: 16px; }
+  .canvas-presentation-source select { font-size: 16px; }
+}
+@media (pointer: coarse) {
+  .workbench-overview .canvas-presentation button { min-height: 44px; min-width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .canvas-presentation .workbench-overview-canvas, .canvas-presentation-chrome { transition: none; } }
+@media (forced-colors: active) { .canvas-presentation-highlight { outline-color: Highlight; } .canvas-presentation button[aria-pressed="true"] { border-color: Highlight; } }
+
+.canvas-presentation-reveal[data-open] .canvas-presentation-popover { opacity: 1; visibility: visible; pointer-events: auto; translate: 0 0; clip-path: inset(0 round 6px); }
+.canvas-presentation-popover > * { filter: blur(4px); transition: filter var(--overview-panel-duration) var(--overview-ease); }
+.canvas-presentation-reveal[data-open] .canvas-presentation-popover > * { filter: none; }
+.canvas-presentation-index { translate: 16px 0; clip-path: inset(0 0 0 100% round 6px); transition: translate var(--overview-panel-duration) var(--overview-ease), clip-path var(--overview-panel-duration) var(--overview-ease), opacity 200ms ease; }
+.canvas-presentation-index[data-open] { translate: 0 0; clip-path: inset(0 round 6px); }
+.canvas-presentation .canvas-presentation-index:not([data-open]) { opacity: 0; visibility: hidden; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .canvas-presentation-popover, .canvas-presentation-popover > *, .canvas-presentation-index, .canvas-presentation-surface:not([data-moving]) .workbench-overview-canvas { transition: none; } }
+
+@property --quick-progress { syntax: '<number>'; inherits: true; initial-value: 0; }
+.canvas-presentation[data-tile-viewer] {
+  --quick-peek: clamp(22px, 2.5vw, 48px);
+  --quick-shrink: .56;
+}
+.canvas-presentation[data-tile-viewer]::backdrop { backdrop-filter: blur(16px); }
+.canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor) {
+  --quick-height: min(86dvh, calc(88vw / var(--canvas-ratio)));
+  position: absolute; inset: 0; margin: auto;
+  width: calc(var(--quick-height) * var(--canvas-ratio)); height: var(--quick-height);
+  --edge-distance: calc(50vw + 50% * var(--quick-shrink) - var(--quick-peek));
+}
+.workbench-overview .canvas-presentation .quick-view-neighbor {
+  padding: 0; min-height: 0; overflow: hidden; border: 0; border-radius: var(--overview-radius); background: var(--tactile-face);
+  --remaining: 1;
+  transform: translateX(calc(var(--side) * var(--edge-distance) * var(--remaining))) scale(calc(1 - (1 - var(--quick-shrink)) * var(--remaining)));
+  opacity: calc(1 - .45 * var(--remaining));
+}
+.quick-view-neighbor[data-side='Previous'], .canvas-presentation[data-travel='Next'] { --side: -1; }
+.quick-view-neighbor[data-side='Next'], .canvas-presentation[data-travel='Previous'] { --side: 1; }
+.canvas-presentation[data-travel='Next'] .quick-view-neighbor[data-side='Next'],
+.canvas-presentation[data-travel='Previous'] .quick-view-neighbor[data-side='Previous'] { --remaining: calc(1 - var(--quick-progress)); z-index: 1; }
+.canvas-presentation[data-travel] .canvas-presentation-surface {
+  transform: translateX(calc(var(--side) * var(--edge-distance) * var(--quick-progress))) scale(calc(1 - (1 - var(--quick-shrink)) * var(--quick-progress)));
+  opacity: calc(1 - .45 * var(--quick-progress));
+}
+.canvas-presentation[data-travel][data-chrome-visible] .canvas-presentation-chrome {
+  opacity: max(0, calc(1 - 4 * var(--quick-progress))); pointer-events: none;
+}
+.canvas-presentation[data-tile-viewer] .canvas-presentation-surface[data-moving] .canvas-presentation-chrome {
+  visibility: hidden; opacity: 0; transition: none;
+}
+.workbench-overview .canvas-presentation button.quick-view-neighbor-action {
+  position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent;
+}
+.quick-view-neighbor-action:focus-visible { outline-offset: -3px; }
+.quick-view-neighbor .workbench-overview-preview { width: 100%; height: 100%; margin: 0; }
+.canvas-presentation[data-closing]:not([data-travel]) .quick-view-neighbor,
+.canvas-presentation[data-tile-viewer]:has(.canvas-presentation-surface[data-moving]) .quick-view-neighbor { opacity: 0; pointer-events: none; }
+.quick-view-neighbor { transition: opacity 140ms ease; }
+.canvas-presentation[data-travel] .quick-view-neighbor { transition: none; }
+@media (prefers-reduced-motion: reduce) { .quick-view-neighbor { transition: none; } }
+.canvas-presentation-stage[data-browsable] { cursor: grab; touch-action: pan-y; user-select: none; }
+.canvas-presentation-stage[data-browsable]:active { cursor: grabbing; }
+.workbench-overview[data-visitor-header] [data-tile-viewer] .canvas-presentation-backdrop {
+  background: rgb(16 17 18 / 58%); backdrop-filter: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .canvas-presentation[data-tile-viewer]::backdrop { backdrop-filter: none; }
+  .workbench-overview[data-visitor-header] [data-tile-viewer] .canvas-presentation-backdrop {
+    background: var(--tactile-face); backdrop-filter: none;
+  }
+}
+
+@media (max-width: 800px) and (max-aspect-ratio: 1/1) and (min-height: 480px) {
+  /* On a tall phone, use the space above and below wide artworks for controls. */
+  .canvas-presentation[data-wide-preview] .canvas-presentation-surface:not([data-moving]),
+  .canvas-presentation[data-wide-preview] .canvas-presentation-surface:not([data-moving]) .canvas-presentation-main {
+    overflow: visible; border-radius: var(--overview-radius);
+  }
+  .canvas-presentation[data-wide-preview] .canvas-presentation-stage { border-radius: var(--overview-radius); }
+  .canvas-presentation[data-wide-preview] .canvas-presentation-heading { top: auto; bottom: calc(100% + 8px); }
+  .canvas-presentation[data-wide-preview] .canvas-presentation-footer { bottom: auto; top: calc(100% + 8px); }
+  .canvas-presentation[data-wide-preview] .canvas-presentation-index {
+    inset: 0 8px auto auto; max-height: 100%;
+  }
+  .canvas-presentation[data-wide-preview] .canvas-presentation-popover { max-height: min(360px, 45dvh); }
+}

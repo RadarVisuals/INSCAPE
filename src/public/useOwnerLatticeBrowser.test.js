@@ -1,31 +1,25 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import useOwnerLatticeBrowser, { canOpenCreatorCollection } from './useOwnerLatticeBrowser.js';
 
-const source = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.url), 'utf8');
+const PROFILE = '0x84841412e9f66e360c6da5f9dba11b8e88d87ea8';
 
-test('owner Browser hook exposes adapted data and a narrow guarded category boundary', () => {
-  assert.match(source, /useLibraryStore/);
-  assert.match(source, /setProfileAddress\(profile\)/);
-  assert.match(source, /profileReady && status === 'idle'/);
-  assert.doesNotMatch(source, /open && profileReady/);
-  assert.match(source, /adaptLatticeProductionBrowserData/);
-  assert.match(source, /commitCategoryForProfile/);
-  assert.doesNotMatch(source, /toggleFavorite|createFolder\(|renameFolder\(|deleteFolder\(|replaceWorkspace/);
-  assert.doesNotMatch(source, /localStorage|sessionStorage|latticeProductionDraftStore|commitCompletedOperation/);
-  assert.doesNotMatch(source, /loadLibraryWorkspace|saveLibraryWorkspace|normalizeWorkspace|libraryWorkspaceKey/);
+test('root Library exposes collection opening before any collection is active or holdings load', () => {
+  let browser;
+  function Probe() {
+    browser = useOwnerLatticeBrowser(PROFILE, false);
+    return null;
+  }
+  renderToString(createElement(Probe));
+  assert.equal(browser.data.collectionContext, undefined);
+  assert.equal(typeof browser.data.onOpenCollection, 'function');
+  assert.equal(browser.data.onOpenCollection({ isCollection: false }), false);
 });
 
-test('owner asset loading is profile-runtime owned and never depends on opening Browser', () => {
-  const loadEffect = source.slice(source.indexOf("if (profileReady && status === 'idle')"), source.indexOf('const data = useMemo'));
-  assert.match(loadEffect, /load\(\)/);
-  assert.doesNotMatch(loadEffect, /\bopen\b/);
-});
-
-test('owner Browser data is gated by both active store and workspace profile', () => {
-  assert.match(source, /storeProfileAddress === profile/);
-  assert.match(source, /normalizeProfileAddress\(workspace\?\.profileAddress\) === profile/);
-  assert.match(source, /assets: profileReady \? assets : \[\]/);
-  assert.match(source, /workspace: profileReady \? workspace : null/);
-  assert.match(source, /commands: profileReady \? commands : null/);
+test('creator collection opening is not coupled to transient owned-inventory readiness', () => {
+  assert.equal(canOpenCreatorCollection(PROFILE, { isCollection: true }), true);
+  assert.equal(canOpenCreatorCollection(PROFILE, { isCollection: false }), false);
+  assert.equal(canOpenCreatorCollection('invalid', { isCollection: true }), false);
 });

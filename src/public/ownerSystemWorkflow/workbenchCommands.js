@@ -1,0 +1,98 @@
+import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
+import { addTextModule } from '../../text/textSession.js';
+import { interfaceTheme } from '../../interfaceTheme.js';
+import { compositionTextDefaults } from '../../composition/compositionTextDefaults.js';
+import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
+import { addImageModule } from '../../imageModule/imageModuleSession.js';
+import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
+import { MAX_SHAPES, isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
+import { addShape } from '../../shapes/shapeSession.js';
+import { MAX_KEEPER_DOCKS } from '../../keeper/keeper.js';
+import { addKeeperDock } from '../../keeper/keeperSession.js';
+
+// Receives the active composition's scoped writer and explicit host actions.
+// Module sessions keep validation, persistence and undo authority.
+export default function workbenchCommands({
+  store,
+  draft,
+  profileAddress,
+  workspaceRef,
+  setNotice,
+  activateArtwork,
+  setTextToolsOpen,
+  revealInstruments,
+  changeTool,
+  openLibrary,
+  openIdentity,
+  openPreview,
+  togglePublication,
+  setWorkspaceMenu,
+}) {
+  // One creation menu/dispatcher serves both the context menu and toolbar.
+  const addCommands = [
+    { id: 'workbench-index', label: draft.workbenchIndex ? 'OPEN INDEX' : 'INDEX' },
+    {
+      disabled: (draft.texts?.length || 0) >= MAX_TEXT_MODULES,
+      id: 'text',
+      label: 'TEXT',
+    },
+    {
+      disabled: (draft.imageModules?.length || 0) >= MAX_IMAGE_MODULES,
+      id: 'image',
+      label: 'IMAGE',
+    },
+    { disabled: (draft.shapes?.length || 0) >= MAX_SHAPES, id: 'shape', label: 'SHAPE' },
+    {
+      disabled: (draft.shapes?.length || 0) >= MAX_SHAPES,
+      id: 'shape-grid',
+      label: 'GRID SHAPE',
+    },
+    {
+      disabled: (draft.keeperDocks?.length || 0) >= MAX_KEEPER_DOCKS,
+      id: 'keeper',
+      label: 'KEEPER DOCK',
+    },
+  ];
+  const runCommand = (id, placement) => {
+    try {
+      switch (id) {
+        case 'workbench-index':
+          openWorkbenchIndex(store, profileAddress);
+          break;
+        case 'text':
+          activateArtwork(addTextModule(store, profileAddress, placement,
+            compositionTextDefaults(draft, store.getEditingCell?.(), interfaceTheme.getSnapshot().mode)));
+          setTextToolsOpen(true);
+          break;
+        case 'keeper':
+          addKeeperDock(store, profileAddress);
+          break;
+        case 'image':
+          activateArtwork(addImageModule(store, profileAddress));
+          break;
+        default:
+          if (isShapeCommand(id))
+            activateArtwork(
+              addShape(store, profileAddress, {
+                ...placement,
+                kind: SHAPE_COMMAND_KINDS[id],
+              })
+            );
+      }
+    } catch (error) {
+      setNotice(error.message);
+    }
+    if (id === 'tool-layers' || id === 'tool-metadata') {
+      revealInstruments();
+      changeTool({ type: 'open', tab: id === 'tool-metadata' ? 'Inspector' : 'Layers', ...(id === 'tool-metadata' ? { section: 'Info' } : {}) });
+    }
+    if (id === 'library') openLibrary();
+    if (id === 'identity') openIdentity(workspaceRef.current);
+    if (id === 'preview') openPreview(workspaceRef.current);
+    if (id === 'publish') togglePublication(workspaceRef.current);
+    if (id.startsWith('shape:')) activateArtwork(id);
+    setWorkspaceMenu(null);
+  };
+
+  return { addCommands, runCommand };
+}

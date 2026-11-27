@@ -1,0 +1,1395 @@
+{
+  "schemaVersion": 1,
+  "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
+  "suites": [
+    {
+      "name": "source-performance",
+      "category": "performance",
+      "rationale": "Synthetic cold launch, restored Studio picker, paged profile search and deep-scroll rendering with 3,000 source assets."
+    },
+    {
+      "name": "workspace-idb",
+      "category": "release",
+      "rationale": "Profile-scoped migration, committed revisions, reload, backup restore, quota recovery and stale hydration preserve authored work."
+    },
+    {
+      "name": "composition-text-cell-height",
+      "category": "release",
+      "rationale": "Shared cell edges crop stationary text; numeric height preserves its local inset while growing the Bento, with Undo, reload and matching public preview."
+    },
+    {
+      "name": "composition-local-editing",
+      "category": "release",
+      "rationale": "Local cell creation and numeric sizing preserve text placement across keyboard previews, cancellation, failed saves, Undo/Redo and reload at wide and narrow desktop sizes."
+    },
+    {
+      "name": "composition-single-line",
+      "category": "release",
+      "rationale": "An explicit single-line cell keeps its height, fades horizontally without a reading action, and persists through Composition Undo/Redo and reload."
+    },
+    {
+      "name": "interface-theme",
+      "category": "release",
+      "rationale": "One persistent Dark/Light preference across Settings, portal menus, Composition, canvas overview, and login without editing compositions.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}"
+      ]
+    },
+    {
+      "name": "composition-index",
+      "category": "release",
+      "rationale": "Desktop index camera gestures, per-composition navigation, read-only viewing, owner activation and persistence failures with actual artwork.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}"
+      ]
+    },
+    {
+      "name": "publication-local",
+      "category": "release",
+      "rationale": "Thirty canvases with overlapping Library/reference records prepare and upload from the local origin through the hosted publication service without an on-chain write."
+    },
+    {
+      "name": "svg-pan-retention",
+      "category": "release",
+      "rationale": "Twelve animated SVG documents survive repeated offscreen camera pans, pause/resume, preserve identity and avoid reload labels in Owner and Visitor at wide/narrow viewports."
+    },
+    {
+      "name": "composition-styling",
+      "category": "release",
+      "rationale": "Filled Composition typography across reader/editor, header editing, shared Colour and nested touch controls in Composition and Workbench. Also runs against dist with INSCAPE_STYLING_PRODUCTION=1."
+    },
+    {
+      "name": "mixed-composition",
+      "category": "release",
+      "rationale": "Published mixed compositions preserve free layers and Bento cells in Gallery and Profile, with owner-only editing."
+    },
+    {
+      "name": "published-gallery",
+      "category": "release",
+      "rationale": "Published-only mobile and desktop gallery, wrap, inspection and explicit publication scope."
+    },
+    {
+      "name": "published-works-editor",
+      "category": "release",
+      "rationale": "Studio creates and reopens local compositions while Gallery limits owners and visitors to published placements."
+    },
+    {
+      "name": "workbench-overview",
+      "category": "release",
+      "rationale": "Separate overview browsing, saved introductions, explicit opening, storage failures and responsive read-only previews."
+    },
+    {
+      "name": "owner-workflow-contracts",
+      "category": "release",
+      "rationale": "Stap 26 vervangt standaard bronpatroonchecks; dezelfde releasepoort bewaakt nu echte Library-retentie, ontoegankelijke verborgen bediening en berekende typografie."
+    },
+    {
+      "name": "artwork-document",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: the deployed artwork host runs SVG scripts with isolated storage, parent and network authority."
+    },
+    {
+      "name": "artwork-info",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image info follows the selected artwork, detaches and rejoins without editing content or history."
+    },
+    {
+      "name": "animated-raster",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: SVG raster preparation preserves animated WebP playback through density and inspection changes."
+    },
+    {
+      "name": "svg-lifecycle",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: real SVG host loads plain, projected and StrictMode documents and remounts cleanly."
+    },
+    {
+      "name": "camera-controls",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `flat camera and scrollable canvas menu fit ${theme} ${width}Ãƒâ€”${height}`."
+    },
+    {
+      "name": "context-action-bars",
+      "category": "release",
+      "rationale": "Image and Shape actions follow the active module and retain undo."
+    },
+    {
+      "name": "image-activation",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Image activation preserves pointer/keyboard focus, cancellation and empty-space clearing at ${width}px`."
+    },
+    {
+      "name": "image-click",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Image single click selects; double click zooms (${visitor ? 'Visitor' : 'owner'}, ${width}px)`."
+    },
+    {
+      "name": "image-duplicate",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image geometry-only history reaches a memoized module without replacing artwork or focus."
+    },
+    {
+      "name": "image-interaction",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image body distinguishes inspection, movement, cancellation, crop and Workbench selection."
+    },
+    {
+      "name": "image-load-recovery",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image first raster reports failure and recovers on reopen without authoring content."
+    },
+    {
+      "name": "image-recovery-owner",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Owner runtime keeps Image recovery reachable beside Properties on pointer and touch layouts."
+    },
+    {
+      "name": "image-resize-focus",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Image resize focus stays on the corner mark at ${width}px`."
+    },
+    {
+      "name": "resize-mark-pixels",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Image, Shape and Text marks stay pixel-aligned at density ${density}`."
+    },
+    {
+      "name": "image-corner-resize",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Image corners resize width and height freely without stretching artwork at ${width}px / DPR ${density}`."
+    },
+    {
+      "name": "image-large-resize",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `large Image corners keep responding on every axis and after reload at ${width}px`."
+    },
+    {
+      "name": "image-fit",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: captured native-fit seams can be filled without moving frames; Image resizing reaches the visible grid."
+    },
+    {
+      "name": "keeper",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Keeper dock accepts Library artwork, releases/returns, persists, undoes and shares the Visitor runtime."
+    },
+    {
+      "name": "keeper-dialogue",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: head opens the real dialogue, replies branch, swimming pauses and resumes, and publication shares the player."
+    },
+    {
+      "name": "keeper-selection",
+      "category": "release",
+      "rationale": "Keeper retains the selected Images and shares their current context with chat only when enabled."
+    },
+    {
+      "name": "library-drop-lifecycle",
+      "category": "release",
+      "rationale": "A pending Library drop stays tied to its original destination while the image dimensions load."
+    },
+    {
+      "name": "activity",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Activity and history share the window material and stay reachable (${theme} ${width}x${height})`."
+    },
+    {
+      "name": "settings",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Settings shares flat window chrome and keeps every section reachable (${theme} ${width}x${height})`."
+    },
+    {
+      "name": "editor-preferences",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Library preferences survive close, Workbench switching and reload without editing the composition."
+    },
+    {
+      "name": "library-filter-keyboard",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Library Filter consumes Escape before Library and restores focus (${width}px)`."
+    },
+    {
+      "name": "library-storage",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Library reports failed storage, preserves the form, saves before reload and rejects an external overwrite."
+    },
+    {
+      "name": "library-recovery",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Library Retry recovers ${mode} without losing retained cards (${width}px)`."
+    },
+    {
+      "name": "owner-profile-routing",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: pending implicit authority is neutral and makes no publication, owner graph, or owner storage request."
+    },
+    {
+      "name": "published-visitor",
+      "category": "release",
+      "rationale": "Published Image loads, opens inspection and returns focus. Public Identity, narrow navigation, storage isolation and media recovery remain available."
+    },
+    {
+      "name": "published-workbench-groups",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: published groups share browsing, reading and Back without owner tools or private membership."
+    },
+    {
+      "name": "shapes",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Shapes create at cursor, resize, layer beneath content, recover covered shapes, persist and preview."
+    },
+    {
+      "name": "shape-corner-resize",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Shape corners stay free after first resize and reselection at ${width}px`."
+    },
+    {
+      "name": "grid-resize-release",
+      "category": "release",
+      "rationale": "Bestaande release-default behouden: bouwt zelf een kleine productiefixture om een alleen-in-productie opgetreden resize/renderloop te vangen; kosten afzonderlijk meten."
+    },
+    {
+      "name": "text-focus-writing",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `focused writing preserves editor identity, history, article and geometry at ${width}px`."
+    },
+    {
+      "name": "text-hierarchy",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Text scopes preserve selection, article defaults, history and search (${width}px)`."
+    },
+    {
+      "name": "text-linked-frames",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: typing crosses a frame boundary, cross-frame selection edits one range, and Focus writing preserves the story."
+    },
+    {
+      "name": "text-recovery-position",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Text recovery remains visible and operable with ${touch ? 'touch' : 'pointer'} at ${width}px`."
+    },
+    {
+      "name": "text-window-edges",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Text surfaces meet at their saved window edges without hidden chrome gaps."
+    },
+    {
+      "name": "workbench-area-navigation",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: owner and Visitor have free camera movement without custom-frame controls, refitting or constrained Focus."
+    },
+    {
+      "name": "workbench-canvas-crop",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `canvas crops without loss; outside editing, restore and Visitor agree (${width}px)`."
+    },
+    {
+      "name": "workbench-groups",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: owner groups preserve the camera and artwork through editing, undo, movement, cancellation and reload."
+    },
+    {
+      "name": "workbench-index",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Index stays readable and follows the canvas at 25Ã¢â‚¬â€œ200% (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`."
+    },
+    {
+      "name": "workbench-inspection-lock",
+      "category": "release",
+      "rationale": "Returning from Image inspection restores the source, camera and input across viewport sizes."
+    },
+    {
+      "name": "workbench-layout-reload",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: owner module placement survives real reload after individual, zoomed and group moves."
+    },
+    {
+      "name": "workbench-navigation-boundary",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: navigation accumulates camera input without rendering or replacing an editing surface during pan."
+    },
+    {
+      "name": "workbench-focus-toggle",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `F focuses and returns after ${entry} (${visitor ? 'Visitor' : 'owner'}, ${width}px)`."
+    },
+    {
+      "name": "workbench-focus-motion",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `focus keeps painted geometry in sync without per-frame module style writes (${visitor ? 'Visitor' : 'owner'})`."
+    },
+    {
+      "name": "workbench-focus-start",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Focus keeps its gentle start after delayed preparation (${visitor ? 'Visitor' : 'owner'}, ${width}px)`."
+    },
+    {
+      "name": "workbench-recovery",
+      "category": "release",
+      "rationale": "Reload restores local arrangement. Native Text blocks stale preview while a save is pending and can retry failed saves."
+    },
+    {
+      "name": "workbench-stacks",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: compact groups move and cancel independently, open live members, return, undo and reload at wide/narrow sizes."
+    },
+    {
+      "name": "single-toolbar",
+      "category": "release",
+      "rationale": "Single-row Editor tools, contextual Actions, narrow-screen access, crop cancellation and undo."
+    },
+    {
+      "name": "workbench-toolbar",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Flat toolbar and menus remain usable at ${width}Ãƒâ€”${height}${touch ? ' touch' : ''}`."
+    },
+    {
+      "name": "entry-contrast",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: entry navigation has readable text, keyboard access and no narrow-screen overflow."
+    },
+    {
+      "name": "wallet-lazy-startup",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `${name} entry loads the wallet at the correct boundary and Connect uses one acquisition`."
+    },
+    {
+      "name": "workbench-storage",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: two real tabs have one editor, separate profiles remain independent, and closing releases access."
+    },
+    {
+      "name": "local-workbenches",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: named local Workbenches keep separate content and canvas geometry through UI switches, Undo and reload."
+    },
+    {
+      "name": "text-article-tools",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: a delayed backup read is discarded when Text tools switch articles."
+    },
+    {
+      "name": "workbench-activation",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: filled Workbench retargets tools and reserves camera/popup space through viewport changes without touching articles."
+    },
+    {
+      "name": "publication-upload-admission",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `publication upload ${scenario}, ${width}px`."
+    },
+    {
+      "name": "publication-confirmation",
+      "category": "release",
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `real App retains confirmed publication through owner refresh, ${width}px`."
+    },
+    {
+      "name": "alpha-support-preview",
+      "category": "targeted",
+      "rationale": "Gericht: productie-publicatiepaneel zonder technische supportdetails of externe mutatie; vereist bestaande preview en hardware-WebGL en past niet ongemerkt in de Linux devserverbatch.",
+      "prerequisites": [
+        "Host: external_production_preview.",
+        "INSCAPE_OWNER_PREVIEW_URL={productionPreviewOrigin} (niet gezet door huidige runner)",
+        "Lokale fixture-/assetbestanden: browser-tests/browser-test-lifecycle.mjs, browser-tests/fixture.html, browser-tests/owner-production-preview-harness.mjs, browser-tests/playwright-browser-adapter.mjs, browser-tests/published-visitor-fixture.jsx",
+        "Expliciete productiepreview op INSCAPE_OWNER_PREVIEW_URL (fallback 4173), up-provider/dist/server.global.js, browseradapter en hardware-WebGL/WebGL2.",
+        "Niet onbewezen op ubuntu-headless als gewone suite opnemen; rendererclassificatie hardware is een harde gate."
+      ]
+    },
+    {
+      "name": "audit-repairs",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: Settings follows the owner profile while Activity is closed.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "color-picker-zoom",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: Shape colour changes leave zoom and wheel pan available despite stale wheel buttons.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs, browser-tests/fixtures/text-tools-fixture.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "colour-focus",
+      "category": "release",
+      "rationale": "Release: gedeelde Color-bediening onderscheidt pointer- en toetsenbordfocus en behoudt Escape-annulering."
+    },
+    {
+      "name": "colour-eyedropper",
+      "category": "release",
+      "rationale": "Shared opt-in eyedropper lifecycle, target/version invalidation, focus return and unsupported-browser color chooser. Native sampling results are stubbed; this does not claim OS picker coverage."
+    },
+    {
+      "name": "companion-tool-viewport",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: `Companion tools reserve live camera controls through dock and viewport changes (${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "controller-hardening",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: controller scopes selection, failures and retained callbacks to the active editor.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/controller-hardening-fixture.html, browser-tests/controller-hardening-fixture.jsx"
+      ]
+    },
+    {
+      "name": "design-system-colour",
+      "category": "release",
+      "rationale": "Release: gedeelde ring/driehoek/hex, neutrale hue-memory, retarget, touch en keyboard zijn rechtstreeks hergebruikte Color-bediening."
+    },
+    {
+      "name": "design-system-interactions",
+      "category": "release",
+      "rationale": "Release: geÃƒÂ¯ntegreerde referentietabs, Color/Text-history, layer-dropvolgorde, zoom en scroll mogen selectie of geometrie niet verstoren."
+    },
+    {
+      "name": "design-system-library",
+      "category": "release",
+      "rationale": "Release: de gedeelde Library/sidebar-presentatie heeft eigen interactieve filters, categorieÃƒÂ«n, selectie en fouttoestanden."
+    },
+    {
+      "name": "design-system-workspace",
+      "category": "release",
+      "rationale": "Release: Layers, selectie, shared tabs, Navigator en Text in de afgesproken workspace-referentie moeten blijven functioneren naast de productiecontroles."
+    },
+    {
+      "name": "design-system",
+      "category": "release",
+      "rationale": "Release: controleert de levende referentie, tokens, themaÃ¢â‚¬â„¢s, bronviewer en componentcontrols; inventory --check voert deze browserinteracties niet uit."
+    },
+    {
+      "name": "destination-panels",
+      "category": "release",
+      "rationale": "Release: Publish, Profile, Groups en Index gebruiken nieuwe gedeelde vensterchrome; close, focus, interne scroll en acties moeten bereikbaar blijven."
+    },
+    {
+      "name": "activity-recovery",
+      "category": "targeted",
+      "rationale": "Afgewezen schrijfacties blijven zichtbaar en kunnen opnieuw worden opgeslagen. Beide Activity-weergaven tonen gedeeltelijke resultaten.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/support-recovery-fixture.jsx"
+      ]
+    },
+    {
+      "name": "profile-header",
+      "category": "release",
+      "rationale": "Release: profielheader en accountbediening op brede en smalle schermen."
+    },
+    {
+      "name": "artwork-pixels",
+      "category": "targeted",
+      "rationale": "Controleert beeldranden, transparantie en opnieuw laden na een onbereikbaar origineel.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}",
+        "Lokale fixture: browser-tests/artwork-pixels-fixture.html"
+      ]
+    },
+    {
+      "name": "hidden-svg-raster",
+      "category": "release",
+      "rationale": "Release: verborgen SVG-fallbacklagen mogen niet onnodig rasteriseren; originele pixels en vrijgave blijven noodzakelijk in het actieve artwork-hostpad."
+    },
+    {
+      "name": "identity-module",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: expansion preserves the cloud program, clock and top-anchored pattern.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixture.html, browser-tests/published-visitor-fixture.jsx"
+      ]
+    },
+    {
+      "name": "image-alignment",
+      "category": "targeted",
+      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: Image world joins survive repeated grabs, pan and continuous zoom.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg"
+      ]
+    },
+    {
+      "name": "image-audit-probes",
+      "category": "targeted",
+      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: Image audit: independent commits, unavailable media and minimum-size controls.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "image-paint-production",
+      "category": "targeted",
+      "rationale": "Gerichte post-buildcontrole van de werkelijke Image-worker onder productieheaders. Een verse dist/ van dezelfde bron is vereist; niet toevoegen aan de pre-build defaultset in deze begrensde integratie.",
+      "prerequisites": [
+        "Host: suite_owned_production_server.",
+        "Lokale fixture-/assetbestanden: public/assets/actors/abyssal_eye/full.webp",
+        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vÃƒÂ³ÃƒÂ³r de build.",
+        "Fase: post_build; huidige stap 03 krijgt geen multi-phase runner."
+      ]
+    },
+    {
+      "name": "image-pixels",
+      "category": "targeted",
+      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: Image paints all four edges, corners and source alpha at fractional camera scales and pixel densities.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "image-resize",
+      "category": "targeted",
+      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: `Image resize controls expose transparent, wide and thin canvases (${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "inspection-fade",
+      "category": "targeted",
+      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: Image dimming follows Lift progress when opening and returning.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/image-fit-fixture.html"
+      ]
+    },
+    {
+      "name": "keeper-layered",
+      "category": "targeted",
+      "rationale": "Gerichte Keeper-formaatregressie; de verschillende bestaande render- en bewegingsvormen zijn niet vervangen door de nieuwe dockchrome. Concreet: Right-button hold follows across windows, releases at the final point and preserves controls and draft state.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/keeper-layered.svg, browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "keeper-octopus",
+      "category": "targeted",
+      "rationale": "Gerichte Keeper-formaatregressie; de verschillende bestaande render- en bewegingsvormen zijn niet vervangen door de nieuwe dockchrome. Concreet: Uploaded SVG supplies octopus geometry, embedded pixels and colors; hostile/oversized data is rejected.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/keeper-octopus.svg, browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "keeper-panel",
+      "category": "release",
+      "rationale": "Release: actuele Keeper-dock/settings-pariteit met referentie, bereikbaarheid en focus zonder onbedoelde auteurswijziging."
+    },
+    {
+      "name": "keeper-screen",
+      "category": "release",
+      "rationale": "Release: Keeper is schermruimte, blijft onafhankelijk van camera en deelt ÃƒÂ©ÃƒÂ©n Keeper tussen named Workbenches."
+    },
+    {
+      "name": "layer-thumbnails",
+      "category": "targeted",
+      "rationale": "Controleert SVG- en rasterminiaturen van zelfstandige beeldlagen.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg"
+      ]
+    },
+    {
+      "name": "layers-window-recovery",
+      "category": "targeted",
+      "rationale": "Layers restores an offscreen saved window and stays reachable after viewport resize.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "library-images",
+      "category": "targeted",
+      "rationale": "Gerichte Library-regressie voor bronmateriaal, browsen of drop-targets naast de releasecontroles. Concreet: NFTs expand independently and retain chosen images through drag, reload and Preview.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/library-images-fixture.html, browser-tests/library-images-fixture.jsx, public/assets/actors/abyssal_eye/full.webp, public/assets/actors/skull_reaper/full.webp"
+      ]
+    },
+    {
+      "name": "library-loading",
+      "category": "targeted",
+      "rationale": "Gerichte Library-regressie voor bronmateriaal, browsen of drop-targets naast de releasecontroles. Concreet: Library retains cached cards after failed RPC discovery and Retry assets recovers through the actual presenter.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/library-storage-fixture.html, browser-tests/library-storage-fixture.jsx, public/assets/actors/abyssal_eye/full.webp"
+      ]
+    },
+    {
+      "name": "library-svg-attachments",
+      "category": "targeted",
+      "rationale": "Gerichte Library-regressie voor bronmateriaal, browsen of drop-targets naast de releasecontroles. Concreet: XML-labelled SVG attachments count, decode, place and persist with their source URLs.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/library-images-fixture.html, browser-tests/library-images-fixture.jsx, public/assets/actors/abyssal_eye/full.webp"
+      ]
+    },
+    {
+      "name": "module-surfaces",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: module edges, appearance, keyboard controls and public rendering.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tool-sections.mjs"
+      ]
+    },
+    {
+      "name": "nomad-loading-lifecycle",
+      "category": "targeted",
+      "rationale": "Gericht artworkdeliverable: controleert ÃƒÂ©ÃƒÂ©n gegenereerde Nomad-export en GPU-loading/disposal. De export in output/ is geen standaard CI-broninput; dit is geen bewijs dat de test historisch vervallen is.",
+      "prerequisites": [
+        "Host: file_export_and_intercepted_origin.",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/nomad-study.mjs",
+        "output/nomad-loading-2026-10-21/NOMAD-incremental-loading.svg moet expliciet aanwezig en geÃƒÂ¯dentificeerd zijn; bestand wordt op module-import gelezen.",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/nomad-study.mjs",
+        "Gegenereerd output/ valt buiten SOURCE_INPUTS en is niet git-tracked; vers gegenereerde CI-checkout heeft dit niet vanzelf."
+      ]
+    },
+    {
+      "name": "owner-lattice-identity",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: production owner Identity window owns focus, scrolling, details and responsive geometry.",
+      "prerequisites": [
+        "Host: suite_owned_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/browser-test-lifecycle.mjs, browser-tests/fixture.html, browser-tests/playwright-browser-adapter.mjs, browser-tests/published-visitor-fixture.jsx",
+        "Eigen loopbackserver, lifecycle/cleanup en ephemeral poort; de gedeelde runnerserver is hiervoor niet nodig."
+      ]
+    },
+    {
+      "name": "owner-library-resize",
+      "category": "targeted",
+      "rationale": "Gerichte Library-regressie voor bronmateriaal, browsen of drop-targets naast de releasecontroles. Concreet: Library resizes with inset scrolling, accessible controls, and retained state.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "owner-system-workflow-crop",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: crop Done, Cancel, outside completion and Native Fit remain distinct canonical outcomes.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "owner-system-workflow-library",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: Library workspace exposes accepted views, stable filters and one-commit placement.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "owner-system-workflow-panels",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: panel controller phases, dismisses and restores exact trigger focus.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_URL={origin}/development/owner/system-workflow (gezet door de gedeelde runner)",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/legacy-workflow-artwork.mjs",
+        "URL vereist ook /development/owner/system-workflow; de gedeelde runner levert de volledige URL."
+      ]
+    },
+    {
+      "name": "owner-system-workflow-phase3-completion",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: crop pan follows the pointer through transforms while crop handles reshape only the crop area.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_URL={origin}/development/owner/system-workflow (gezet door de gedeelde runner)",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/legacy-workflow-artwork.mjs",
+        "URL vereist ook /development/owner/system-workflow; de gedeelde runner levert de volledige URL."
+      ]
+    },
+    {
+      "name": "owner-system-workflow-production",
+      "category": "targeted",
+      "rationale": "Gericht: hardwarematige WebGL/authority-gate voor bestaande productiepreview; geen generieke headless dev-fixture.",
+      "prerequisites": [
+        "Host: external_production_preview.",
+        "INSCAPE_OWNER_PREVIEW_URL={productionPreviewOrigin} (niet gezet door huidige runner)",
+        "Lokale fixture-/assetbestanden: browser-tests/browser-test-lifecycle.mjs, browser-tests/fixture.html, browser-tests/owner-production-preview-harness.mjs, browser-tests/playwright-browser-adapter.mjs, browser-tests/published-visitor-fixture.jsx",
+        "Expliciete productiepreview op INSCAPE_OWNER_PREVIEW_URL (fallback 4173), up-provider/dist/server.global.js, browseradapter en hardware-WebGL/WebGL2.",
+        "Niet onbewezen op ubuntu-headless als gewone suite opnemen; rendererclassificatie hardware is een harde gate."
+      ]
+    },
+    {
+      "name": "owner-system-workflow-publication",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: System Workflow publication opens the canonical v9 rack without external mutation.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_URL={origin}/development/owner/system-workflow (gezet door de gedeelde runner)",
+        "URL vereist ook /development/owner/system-workflow; de gedeelde runner levert de volledige URL."
+      ]
+    },
+    {
+      "name": "prepared-image",
+      "category": "release",
+      "rationale": "Release: huidige rastervoorbereiding moet alpha/crop/transform, DPR, geanimeerde bronfallback, stale work en worker-disposal behouden."
+    },
+    {
+      "name": "production-startup",
+      "category": "targeted",
+      "rationale": "Al verplicht als afzonderlijke post-buildstap in verifyRelease.mjs. Catalogiseer als targeted voor exacte inventaris en expliciete CLI, maar behoud de bestaande verplichte verifydekking; niet nogmaals in de dev-defaults uitvoeren.",
+      "prerequisites": [
+        "Host: suite_owned_production_server.",
+        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vÃƒÂ³ÃƒÂ³r de build.",
+        "Bestaande mandatory verifyRelease-stap production-startup ongewijzigd na build behouden; targeted betekent hier uitsluitend buiten runner-defaults."
+      ]
+    },
+    {
+      "name": "publication-recovery",
+      "category": "release",
+      "rationale": "Release: herstel na reload, retries en profielwissel zonder nieuwe writes vult upload-admission en bevestiging in de bestaande defaults aan."
+    },
+    {
+      "name": "shared-module-tools",
+      "category": "targeted",
+      "rationale": "one Text tool follows selection, retains its position, scopes edits and preserves unsaved recovery.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "startup",
+      "category": "release",
+      "rationale": "Release: echte App-start, late of falende bestemmingscode, featured-publication en owner-entry vullen wallet-lazy en de productie-JS-smoke aan."
+    },
+    {
+      "name": "svg-artwork-lift",
+      "category": "targeted",
+      "rationale": "Opening and inspecting SVG artwork preserves its document and geometry.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "svg-raster-quality",
+      "category": "targeted",
+      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: embedded WebP thumbnails stay filtered while Inspect prepares original pixels for Lift.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs, browser-tests/fixtures/keeper-layered.svg, browser-tests/fixtures/keeper-octopus.svg"
+      ]
+    },
+    {
+      "name": "text-create",
+      "category": "targeted",
+      "rationale": "Add Text uses the context-menu invocation point through pan, zoom, undo and reload.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "text-empty-editor",
+      "category": "targeted",
+      "rationale": "empty writing area is discoverable without authoring placeholder content.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "text-frame-columns",
+      "category": "targeted",
+      "rationale": "frame height fills columns sequentially, preserves text and reports excess content through resize and reload.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "text-inspector",
+      "category": "targeted",
+      "rationale": "Text Inspector preserves editing, formatting, search and document appearance.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs, browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "text-interaction",
+      "category": "targeted",
+      "rationale": "Text body moves in Read, preserves selection in Write and cancels movement without saving previews.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "text-library-insertion",
+      "category": "targeted",
+      "rationale": "Library artwork is inserted at the drop point in Write. Read reports rejected drops in the Library.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "text-line-spacing",
+      "category": "targeted",
+      "rationale": "line spacing and long illustrated text remain editable and reachable.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "text-module",
+      "category": "targeted",
+      "rationale": "Text module authors, reloads, renders and contains content at wide/narrow widths.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tool-sections.mjs"
+      ]
+    },
+    {
+      "name": "text-panel",
+      "category": "release",
+      "rationale": "independent Text panel matches Layers and resizes without authoring (${theme}, ${width}px)."
+    },
+    {
+      "name": "text-parity",
+      "category": "targeted",
+      "rationale": "illustrated Text has matching title, glyph positions and line breaks in Write and Read.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs, browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "text-scroll-fit",
+      "category": "targeted",
+      "rationale": "Text scrolls only when content exceeds its viewport in Write and Read.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "text-search",
+      "category": "targeted",
+      "rationale": "article search and replacement preserve content and undo.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "text-toolbar-hover",
+      "category": "targeted",
+      "rationale": "Text toolbar stays reachable across its gap / DPR ${density}${below ? ' below' : ''}.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "text-tools-resize",
+      "category": "targeted",
+      "rationale": "content-sized fixed-width windows recover their width after a narrow viewport.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs, browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "text-transfer",
+      "category": "targeted",
+      "rationale": "Text controls respect composition clipping across viewport sizes and zoom levels.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs, browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/workbench-zoom.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "text-typography",
+      "category": "targeted",
+      "rationale": "clicking a small sub-label preserves the target and joined lines can be separated before spacing.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs, browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs",
+        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
+      ]
+    },
+    {
+      "name": "text-writing",
+      "category": "targeted",
+      "rationale": "writing, clipboard and artwork editing.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "visitor-dock-layering",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: Visitor and Preview dock stays visible and clickable above overlapping Text.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tools-fixture.mjs"
+      ]
+    },
+    {
+      "name": "visitor-mint",
+      "category": "targeted",
+      "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: visitor can cancel by keyboard, recover focus and confirm a simulated mint.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_MINT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: prototypes/visitor-mint/simulation.js"
+      ]
+    },
+    {
+      "name": "workbench-artwork-layers",
+      "category": "release",
+      "rationale": "Release: de echte Workbench-volgorde, compositieblokken, tijdelijke ogen, verwijderen/Undo en Visitor-projectie zijn nieuwe auteursgrenzen buiten de huidige defaults."
+    },
+    {
+      "name": "workbench-camera",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: cursor camera and grid stay aligned after pan, reverse smoothly, and ignore selection scope.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs, browser-tests/fixtures/workbench-camera-test.mjs",
+        "ASSERTION_REVIEW browser-tests/workbench-camera.browser.mjs:21: Verwacht een detached window onder data-context-tools; toetsen tegen de actuele shared-dock-host, zonder camera-/toolgeometriegaranties te verliezen."
+      ]
+    },
+    {
+      "name": "workbench-context-menu",
+      "category": "release",
+      "rationale": "Workbench menu checks keyboard interaction, submenu traversal, and sidebar reopening."
+    },
+    {
+      "name": "workbench-destinations",
+      "category": "release",
+      "rationale": "Release: expliciete camera-bestemmingen, onderbroken Back, late doelwijziging en zoomindicatie vullen de nieuwe Navigator- en bestemmingspanelencontroles aan."
+    },
+    {
+      "name": "workbench-explore",
+      "category": "performance",
+      "rationale": "Prestatie met gedragsdekking: meet React-commits tijdens gevuld Workbench-pan/coast en controleert geometry/reduced-motion/scroll; gericht draaien bij camera- of renderingwijzigingen.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs",
+        "Meet browser, hardware/renderer, viewport, inhoud, CPU/trace/record/measure-only-variabelen en duur; geen releasegroen afleiden uit observationele modus."
+      ]
+    },
+    {
+      "name": "workbench-focus",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `focus is centred, shared by F/double-click, and view-only (${visitor ? 'Visitor' : 'owner'}, ${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "workbench-fx-tools",
+      "category": "release",
+      "rationale": "Release: Shape-FX previewt zonder tussentijds opslaan, annuleert bij retarget/close en behoudt effectprojectie naar Visitor."
+    },
+    {
+      "name": "workbench-grab-stability",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: Workbench capture preserves exact Image grid positions across repeated grabs at fractional zoom.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "workbench-grid",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: Workbench grid paints viewport-sized canvases with correct world phase and 2000 by 4000 bounds.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "workbench-hand-joins",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `Hand keeps both Image joins opaque throughout release momentum (${width}px, DPR ${density})`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "workbench-hand",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `Hand preserves module geometry and focus (${visitor ? 'Visitor' : 'owner'}, ${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "workbench-image-drop",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `Library creates an Image at its preview, with undo, existing targets and cancellation (${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "workbench-image-joins",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: Image joins survive Workbench capture, repeated grabs, pan and continuous zoom.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_IMAGE_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg"
+      ]
+    },
+    {
+      "name": "workbench-image-tools",
+      "category": "release",
+      "rationale": "Release: de nieuwe Image-tab vervangt Properties; artwork replacement, publicatiekeuze en foutmelding blijven module-eigendom."
+    },
+    {
+      "name": "workbench-input-recovery",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: Workbench pan and zoom recover from a missing selection release after editing Text.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/text-tool-sections.mjs, browser-tests/fixtures/text-tools-fixture.mjs, browser-tests/fixtures/workbench-camera-test.mjs"
+      ]
+    },
+    {
+      "name": "workbench-inspect",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `Focus and authored inspection have independent return paths (${visitor ? 'Visitor' : 'owner'}, ${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "workbench-late-module-pan",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `Late Text registration preserves pan projection and cancellation (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "workbench-lifecycle",
+      "category": "targeted",
+      "rationale": "Workbench checks route recovery, rejection of stale previews, and current composition state.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "workbench-module-seams",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: (visitor ? 'Visitor' : 'Owner') + ' mixed module, artwork and moving Grid joins at DPR ' + density.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "workbench-navigator",
+      "category": "release",
+      "rationale": "Release: nieuwe minimap bedient dezelfde camera, annuleert gestures en volgt werkelijk modulemateriaal zonder editors te monteren of mediabomen te herbouwen."
+    },
+    {
+      "name": "workbench-pan",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: owner and Visitor pan all modules equally at native and zoomed sizes without saving.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs, browser-tests/fixtures/workbench-camera-test.mjs"
+      ]
+    },
+    {
+      "name": "workbench-panel-layers",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `Activity history remains operable above Workbench controls (${width}px)`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "workbench-publication",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: published Workbench restores new Identity content, module layout and session-only interaction.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixture.html, browser-tests/published-visitor-fixture.jsx"
+      ]
+    },
+    {
+      "name": "workbench-resize-handles",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `every resize grip can be grabbed at its actual corner or midpoint at ${width}px`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/workbench-resize-handles-fixture.jsx"
+      ]
+    },
+    {
+      "name": "workbench-scroll",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `wheel ownership and zoom reset ${visitor ? 'Visitor' : 'owner'} at ${width}px`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs, browser-tests/fixtures/workbench-camera-test.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "workbench-shape-tools",
+      "category": "release",
+      "rationale": "Release: de nieuwe Shape-tab vervangt Properties; Rectangle/Grid/retained Texture behouden eigen instellingen, herstel en zichtbaarheid."
+    },
+    {
+      "name": "workbench-shared-tools",
+      "category": "release",
+      "rationale": "Release: Transform en Color delen selectie maar moeten ÃƒÂ©ÃƒÂ©n gebaar opslaan, annuleren, Undo en herstel aan het oorspronkelijke Image/Shape/Text-doel binden."
+    },
+    {
+      "name": "workbench-sidebar",
+      "category": "release",
+      "rationale": "Release: vervangende navigatie, Library-boom, Preview/inspection en bereikbaarheid bij lage/smalle schermen ontbreken in de standaardselectie."
+    },
+    {
+      "name": "workbench-snap-guides",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `snap guides and release behavior at ${width}px`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/workbench-snap-guides-fixture.jsx"
+      ]
+    },
+    {
+      "name": "workbench-space",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: modules move beyond the screen, remain editable after panning, and restore their saved positions.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "workbench-surface-behavior",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: (visitor ? 'Visitor' : 'Owner') + ' physical surfaces preserve Text alpha, rotation, wrapping and input at DPR ' + density.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs, browser-tests/fixtures/workbench-zoom.mjs"
+      ]
+    },
+    {
+      "name": "workbench-tool-docking",
+      "category": "release",
+      "rationale": "Release: slepen, stapelen, losmaken, hergroeperen, toetsenbord, kleine vensters en reload moeten de module-inhoud en Text-selectie behouden."
+    },
+    {
+      "name": "workbench-view-scale",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: fractional adjoining windows leave no painted seam while zooming and scrolling.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "workbench-zoom-recovery",
+      "category": "targeted",
+      "rationale": "Gerichte Workbench-regressie naast de brede releaseflows; aanvullende camera-, window-, selectie- of herstelvarianten niet verwijderen. Concreet: `zoom recovers from a missed ${lost} release without switching windows (${visitor ? 'Visitor' : 'owner'})`.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEXT_ROOT={origin}",
+        "Lokale fixture-/assetbestanden: browser-tests/fixtures/grid-landscape.jpg, browser-tests/fixtures/grid-motion-fixture.mjs"
+      ]
+    },
+    {
+      "name": "workbench-preferences",
+      "category": "release",
+      "rationale": "Workbench-voorkeuren behouden de laatste instellingen bij opslagfalen, tonen onafhankelijke herstelacties en vervangen onleesbare records alleen expliciet."
+    },
+    {
+      "name": "scene-boundaries",
+      "category": "release",
+      "rationale": "Composition, public artwork and Gallery preserve navigation and scroll."
+    },
+    {
+      "name": "composition-gutter-pixels",
+      "category": "release",
+      "rationale": "Bento gutter coverage at fractional zoom and pixel phases; positive gaps remain visible without inventing spacing, and zero gutters remain seamless."
+    },
+    {
+      "name": "composition-bento-placement",
+      "category": "release",
+      "rationale": "Bento equal-edge snapping and cancellation, left/upper insertion and full-width strip relocation with Undo and reload at desktop sizes."
+    },
+    {
+      "name": "composition-frame-opacity",
+      "category": "release",
+      "rationale": "Frame line opacity uses shared controls and survives undo, reload and Preview without changing geometry."
+    },
+    {
+      "name": "composition-inspect",
+      "category": "release",
+      "rationale": "Introductory text excerpts, fixed ellipsis, compact scrollbar-free reading, keyboard return and unchanged saved content."
+    },
+    {
+      "name": "composition-text-resize",
+      "category": "release",
+      "rationale": "Bento text keeps resize axes independent and clips complete lines in native Editor at different zooms, including live preview, Undo and reload."
+    },
+    {
+      "name": "composition-native-editor",
+      "category": "release",
+      "rationale": "Composition in the existing Editor: native rectangles, cell membership, Library and Text, movement, history, isolated persistence and responsive preview."
+    },
+    {
+      "name": "composition-image-inspect",
+      "category": "release",
+      "rationale": "Passive introductory artwork preserves crops and live media; stacked text reading and document replacement preserve the draft."
+    },
+    {
+      "name": "composition-svg-breakpoints",
+      "category": "release",
+      "rationale": "Live SVG documents survive repeated narrow/wide Composition reflow and artwork clicks without disappearing, restarting animation or changing the draft."
+    },
+    {
+      "name": "composition-cell-interaction",
+      "category": "release",
+      "rationale": "Native Composition cell entry from actual double-clicks, image-covered cells, scoped Bento settings, shared split/merge actions and selected-cell styling."
+    },
+    {
+      "name": "composition-layer-order",
+      "category": "release",
+      "rationale": "Native Composition, preview and public rendering preserve interleaved global artwork order, rounded cell clipping, Text appearance and linked source actions."
+    },
+    {
+      "name": "editor-menu-bar",
+      "category": "release",
+      "rationale": "Fixed Editor menus, keyboard and focus, full sidebar visibility, canvas save failures and history, tool preferences and destinations at desktop and phone widths."
+    },
+    {
+      "name": "workbench-side-dock",
+      "category": "release",
+      "rationale": "Screen-edge reach, persistent right docking, shared width and stack resizing, undocking and cancellation with Navigator and Keeper, without artwork changes.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}"
+      ]
+    },
+    {
+      "name": "owner-workspace",
+      "category": "release",
+      "rationale": "Shared owner frame, contextual menus, bidirectional canvas presentation, retained camera and save guards, reduced motion and narrow viewport behavior."
+    },
+    {
+      "name": "composition-tiling",
+      "category": "release",
+      "rationale": "Native Bento centre swap, local/outer insertion, exact preview, cancellation and atomic save/Undo/reload."
+    },
+    {
+      "name": "library-divider",
+      "category": "release",
+      "rationale": "Library navigation and hidden scrolling retain stable width across panel resizing."
+    },
+    {
+      "name": "library-organization",
+      "category": "release",
+      "rationale": "Library folder and section authoring persist atomically and retain naming focus."
+    },
+    {
+      "name": "library-panels",
+      "category": "release",
+      "rationale": "One retained Library instance through toolbar opening, detaching, joining Inspector, sidebar reveal, closure and layout reload in wide/narrow editor views."
+    }
+  ]
+}

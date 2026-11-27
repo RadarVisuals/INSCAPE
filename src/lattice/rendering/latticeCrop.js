@@ -1,4 +1,5 @@
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+export const MIN_CROP_PROJECTION_ZOOM = 0.1;
 
 function assertRectangle(rectangle) {
   if (!rectangle
@@ -23,7 +24,7 @@ function assertCrop(crop) {
   if (!crop
     || !Number.isFinite(crop.x) || crop.x < 0 || crop.x > 1
     || !Number.isFinite(crop.y) || crop.y < 0 || crop.y > 1
-    || !Number.isFinite(crop.zoom) || crop.zoom < 1 || crop.zoom > 4) {
+    || !Number.isFinite(crop.zoom) || crop.zoom < MIN_CROP_PROJECTION_ZOOM || crop.zoom > 4) {
     throw new TypeError('Crop projection requires canonical focus and zoom');
   }
   return crop;
@@ -32,14 +33,15 @@ function assertCrop(crop) {
 export function cropFocusBounds(maskRectangle, media, zoom) {
   const mask = assertRectangle(maskRectangle);
   const source = assertMedia(media);
-  if (!Number.isFinite(zoom) || zoom < 1 || zoom > 4) {
-    throw new TypeError('Crop projection requires zoom from one through four');
+  if (!Number.isFinite(zoom) || zoom < MIN_CROP_PROJECTION_ZOOM || zoom > 4) {
+    throw new TypeError('Crop projection requires zoom from 0.1 through 4');
   }
   const scale = Math.max(mask.width / source.width, mask.height / source.height) * zoom;
   const width = source.width * scale;
   const height = source.height * scale;
-  const insetX = mask.width / (2 * width);
-  const insetY = mask.height / (2 * height);
+  // Center an axis that fits inside the mask; only overflowing axes can pan.
+  const insetX = Math.min(0.5, mask.width / (2 * width));
+  const insetY = Math.min(0.5, mask.height / (2 * height));
   return {
     x: { minimum: insetX, maximum: 1 - insetX },
     y: { minimum: insetY, maximum: 1 - insetY },

@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-26",
+  "base": "fba033a2e61859aae2088a0e895448c08025e543",
+  "problem": "Reception kept Enter Inscape explicitly disabled after the wireframe implementation.",
+  "change": "Connect the existing application openCanvas action through the published-profile components to the button. Label the destination View published canvas.",
+  "ownership": "Application navigation owns the URL/history. Public rendering still reads only the verified publication; no new route state, draft store, wallet request or publication action.",
+  "scope": "Current published canvas for visitors and owners viewing Reception. The local multi-Workbench gallery remains local.",
+  "tests": {
+    "allPassed": true,
+    "unit": 1458,
+    "realAppRoutingBrowser": 5,
+    "receptionBrowser": 6
+  },
+  "verified": [
+    "Touch at 390 CSS pixels",
+    "Keyboard at 640/1440 CSS pixels",
+    "Carbon and Mist",
+    "Profile return and browser Back/Forward",
+    "Signed-out visitors and verified owners viewing Reception",
+    "No owner draft access or publication mutation on entry",
+    "Lint and strict contracts",
+    "Design-system inventory",
+    "Production build and budgets with 40-character release identity"
+  ],
+  "budget": "Measured final core JS 2572160 raw / 830347 gzip. Raw allowance increases by 171 bytes to cover this connected action; compressed and loading-boundary budgets are unchanged.",
+  "remoteBaseline": "Previous preview succeeds; previous GitHub PR verification was cancelled."
+}

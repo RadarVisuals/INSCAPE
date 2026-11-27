@@ -1,0 +1,42 @@
+✖ Image corner resizing preserves frame, artwork and undo at 1440px / DPR 1 (1598.8054ms)
+✖ Image corner resizing preserves frame, artwork and undo at 390px / DPR 1.25 (1521.5922ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3471.4532
+
+✖ failing tests:
+
+test at browser-tests\image-corner-resize.browser.mjs:12:58
+✖ Image corner resizing preserves frame, artwork and undo at 1440px / DPR 1 (1598.8054ms)
+  AssertionError [ERR_ASSERTION]: nw horizontal height: 99 vs 79.20000000000002
+      at near (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/image-corner-resize.browser.mjs:10:50)
+      at TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/image-corner-resize.browser.mjs:67:9)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at browser-tests\image-corner-resize.browser.mjs:12:58
+✖ Image corner resizing preserves frame, artwork and undo at 390px / DPR 1.25 (1521.5922ms)
+  AssertionError [ERR_ASSERTION]: nw horizontal height: 99.19999694824219 vs 79.20000000000002
+      at near (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/image-corner-resize.browser.mjs:10:50)
+      at TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/image-corner-resize.browser.mjs:67:9)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

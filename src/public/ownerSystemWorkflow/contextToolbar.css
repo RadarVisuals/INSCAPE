@@ -1,0 +1,4 @@
+.system-workflow__instrument-window.context-toolbar { z-index: 80; max-width: calc(100dvw - 16px); }
+.context-toolbar footer { display: flex; gap: 5px; }
+.context-toolbar footer button { flex: 1; }
+.context-toolbar [data-workbench-inspection-target] { display: grid; gap: 8px; min-width: 0; }

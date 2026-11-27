@@ -1,0 +1,53 @@
+TAP version 13
+# Subtest: Keeper chat retains selection and sends fresh selected Image/Display context only when enabled
+not ok 1 - Keeper chat retains selection and sends fresh selected Image/Display context only when enabled
+  ---
+  duration_ms: 13950.269144
+  type: 'test'
+  location: '/home/runner/work/INSCAPE/INSCAPE/browser-tests/keeper-selection.browser.mjs:8:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: 'Hex', exact: true }).getByRole('button', { name: 'AI chat', exact: true })
+        - locator resolved to <button type="button" aria-pressed="false">AI chat</button>
+      - attempting click action
+        - waiting for element to be visible, enabled and stable
+        - element is not stable
+      - retrying click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <section aria-label="Motion companion / Side 1 tools" data-workbench-inspection-target="image:motion-1">…</section> from <div data-context-tools="true">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <section aria-label="Motion companion / Side 1 tools" data-workbench-inspection-target="image:motion-1">…</section> from <div data-context-tools="true">…</div> subtree intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        19 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <section aria-label="Motion companion / Side 1 tools" data-workbench-inspection-target="image:motion-1">…</section> from <div data-context-tools="true">…</div> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/home/runner/work/INSCAPE/INSCAPE/browser-tests/keeper-selection.browser.mjs:49:74)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14256.820359

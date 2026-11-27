@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-26",
+  "initialCommit": "1c8f494fb607be65ea7ba3d119271d0d83e2b07f",
+  "netlifyInitialStatus": "failure",
+  "reproduction": "Build with COMMIT_REF set to the pushed SHA fails at coreJavaScript.raw: 2572016 > 2572000 (+16 bytes).",
+  "cause": "The hosted 40-character commit ID adds 29 raw bytes compared with the 11-character development label used by the initial local build.",
+  "correction": "Reserve exactly 29 raw bytes for release metadata. Compressed limit and all other budgets are unchanged; no runtime changes.",
+  "unitWithHostedIdentity": {
+    "fail": 0,
+    "skipped": 0,
+    "pass": 1458
+  },
+  "actualShaBuild": "Verified separately after creating the follow-up commit, before push."
+}

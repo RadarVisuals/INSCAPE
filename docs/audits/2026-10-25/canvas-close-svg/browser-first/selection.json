@@ -1,0 +1,9 @@
+{
+  "mode": "explicit",
+  "suites": [
+    "workbench-overview",
+    "artwork-document",
+    "svg-raster-quality",
+    "svg-artwork-lift"
+  ]
+}

@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: Reception replacement and exploration preserve public content and keyboard focus at 1440 / carbon
+ok 1 - Reception replacement and exploration preserve public content and keyboard focus at 1440 / carbon
+  ---
+  duration_ms: 6852.9626
+  type: 'test'
+  ...
+# Subtest: Reception replacement and exploration preserve public content and keyboard focus at 640 / carbon
+ok 2 - Reception replacement and exploration preserve public content and keyboard focus at 640 / carbon
+  ---
+  duration_ms: 1524.4137
+  type: 'test'
+  ...
+# Subtest: Reception replacement and exploration preserve public content and keyboard focus at 390 / carbon
+ok 3 - Reception replacement and exploration preserve public content and keyboard focus at 390 / carbon
+  ---
+  duration_ms: 1557.9481
+  type: 'test'
+  ...
+# Subtest: Reception replacement and exploration preserve public content and keyboard focus at 1440 / mist
+ok 4 - Reception replacement and exploration preserve public content and keyboard focus at 1440 / mist
+  ---
+  duration_ms: 1498.2225
+  type: 'test'
+  ...
+# Subtest: Reception replacement and exploration preserve public content and keyboard focus at 390 / mist
+ok 5 - Reception replacement and exploration preserve public content and keyboard focus at 390 / mist
+  ---
+  duration_ms: 1476.8429
+  type: 'test'
+  ...
+# Subtest: existing work links use the canonical visitor canvas; missing destinations return to Reception
+ok 6 - existing work links use the canonical visitor canvas; missing destinations return to Reception
+  ---
+  duration_ms: 1522.6655
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14707.8703

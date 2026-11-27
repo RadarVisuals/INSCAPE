@@ -1,0 +1,13 @@
+[
+  {
+    "name": "workbench-sidebar",
+    "code": 0,
+    "seconds": 33.325,
+    "tests": 9,
+    "pass": 9,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

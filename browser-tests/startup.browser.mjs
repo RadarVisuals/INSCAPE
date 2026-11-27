@@ -1,0 +1,321 @@
+import assert from 'node:assert/strict';
+import { mkdir, access, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import test from 'node:test';
+import { availableBrowserTestPort, createBrowserTestServer } from '../scripts/runBrowserTests.mjs';
+import { createBrowserTestCleanup } from './browser-test-lifecycle.mjs';
+import { createPlaywrightRouteController, launchPlaywrightEdge } from './playwright-browser-adapter.mjs';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const other = '0x1111111111111111111111111111111111111111';
+const ownerStudio = `?owner=${other}&view=${other}&editor=studio`;
+const screenshotDir = process.env.INSCAPE_BROWSER_OUTPUT || process.env.INSCAPE_STARTUP_SCREENSHOT_DIR;
+
+test('automatic startup and isolated sign-in through the real App', { timeout: 120_000 }, async (t) => {
+  const resources = {};
+  const runtimePath = resolve(root, `.browser-test-runtime-owner-routing-${process.pid}-${Date.now()}-${randomUUID()}`);
+  let cleanup = createBrowserTestCleanup({ runtimePath, workspaceRoot: root });
+  const problems = [];
+  let testError;
+  try {
+    resources.vite = await createBrowserTestServer(root, await availableBrowserTestPort(), { logLevel: 'error', cacheDir: resolve(runtimePath, 'vite-cache') });
+    await resources.vite.listen();
+    const origin = `http://127.0.0.1:${resources.vite.httpServer.address().port}`;
+    let edgePath;
+    for (const path of [process.env.BROWSER_PATH,
+      'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+      'C:/Program Files/Microsoft/Edge/Application/msedge.exe'].filter(Boolean)) {
+      try { await access(path); edgePath = path; break; } catch { /* Try the next installed browser. */ }
+    }
+    assert.ok(edgePath, 'Set BROWSER_PATH to an installed Chromium browser');
+    // The real owner's cold Vite graph exceeds the small-fixture default of
+    // 64 in-flight routes. Keep a finite bound without aborting valid imports.
+    const routeController = createPlaywrightRouteController({ loopbackOrigin: origin, maxOutstanding: 256,
+      knownOrigins: [], decideKnown: async () => ({ action: 'abort' }) });
+    let peakRoutes = 0;
+    const handleRoute = routeController.handle;
+    routeController.handle = route => {
+      const pending = handleRoute(route);
+      peakRoutes = Math.max(peakRoutes, routeController.outstandingCount());
+      return pending;
+    };
+    await launchPlaywrightEdge({ edgePath, runtimePath, workspaceRoot: root, loopbackOrigin: origin,
+      routeController, resources, onBrowserProblem: (problem) => problems.push(problem),
+      onOwnedProcess: ({ rootPid, processTree }) => {
+        cleanup = createBrowserTestCleanup({ rootPid, processTree, runtimePath, workspaceRoot: root });
+      } });
+    // Keep navigation real while replacing the wallet connection boundary. No
+    // external provider, prompt, signature or transaction participates in this test.
+    await resources.context.route('**/src/wallet/standaloneWalletSession.js', (route) => route.fulfill({
+      contentType: 'text/javascript', body: `export function acquireStandaloneWalletSession() {
+        return { release() {}, session: { showSignIn() { window.__startup.signIns += 1; }, disconnect() {} } };
+      }`,
+    }));
+    const page = resources.page;
+    // Preserve the local module URL/status before the browser adapter redacts
+    // generic page errors. This distinguishes a broken fixture from entry logic.
+    page.on('requestfailed', request => {
+      if (request.url().startsWith(origin)) console.error('Startup local request failed:', request.url(), request.failure());
+    });
+    page.on('response', response => {
+      if (response.url().startsWith(origin) && response.status() >= 400)
+        console.error('Startup local response failed:', response.status(), response.url());
+    });
+    page.setDefaultTimeout(12_000);
+    const open = async (query = '', motion = 'reduce') => {
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.goto(`${origin}/browser-tests/startup-fixture.html${query}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await page.waitForFunction(() => Boolean(window.__startup), undefined, { timeout: 30_000 });
+    };
+    const entered = async () => {
+      await page.locator('.startveil').waitFor({ state: 'detached' });
+      await page.locator('.application-interface[data-visible]:not([inert])').waitFor();
+      assert.equal(await page.getByRole('button', { name: 'ENTER INSCAPE', exact: true }).count(), 0);
+      assert.equal(await page.evaluate(() => window.__startup.signIns), 0);
+      await page.waitForFunction(() => document.querySelector('.application-interface')?.contains(document.activeElement));
+    };
+    const capture = async (name) => {
+      if (!screenshotDir) return;
+      await mkdir(resolve(screenshotDir), { recursive: true });
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        await Promise.allSettled(document.getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished));
+      });
+      await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
+    };
+    const startupState = () => page.evaluate(() => ({
+      opening: document.querySelector('.destination-opening [role=status]')?.textContent ?? null,
+      veil: Boolean(document.querySelector('.startveil')),
+      inert: document.querySelector('.application-interface')?.getAttribute('inert'),
+      editorAccess: document.querySelector('[aria-label="Profile editing access"]')?.textContent ?? null,
+      ownerMounted: Boolean(document.querySelector('main.system-workflow')),
+      leaseRequests: window.__startup.leaseRequests.length,
+    }));
+
+    await t.test('a slow direct link waits, ignores entry keys, then reveals without a click', async () => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await open(`?view=${other}&delay=1`, 'no-preference');
+      await page.waitForFunction((address) => window.__startup.requests.includes(address), other);
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Space');
+      await page.locator('.destination-opening').getByText('Opening Profile…').waitFor();
+      assert.equal(await page.locator('.startveil').count(), 0);
+      assert.equal(await page.locator('.application-interface').getAttribute('inert'), '');
+      await capture('direct-loading-wide');
+      await page.evaluate((address) => window.__startup.resolve(address), other);
+      await entered();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
+      await capture('direct-world-wide');
+    });
+
+    await t.test('returning visits and reduced motion enter directly at smaller desktop widths', async () => {
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await open(`?view=${other}`);
+      await entered();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
+      await capture('direct-world-small-desktop');
+    });
+
+    await t.test('a failed direct link reveals recovery and retry without replaying entry', async () => {
+      await open(`?view=${other}&delay=1`);
+      await page.waitForFunction((address) => window.__startup.requests.includes(address), other);
+      await page.evaluate((address) => window.__startup.resolve(address, 'ERROR'), other);
+      await entered();
+      await page.getByRole('button', { name: 'RETRY', exact: true }).click();
+      await page.waitForFunction(() => window.__startup.requests.length === 2);
+      await page.evaluate((address) => window.__startup.resolve(address), other);
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
+      assert.equal(await page.locator('.startveil').count(), 0);
+    });
+
+    await t.test('signed-out entry offers only sign-in without requesting a directory or cover', async t => {
+      const externalRequests = [];
+      const observeRequest = request => {
+        if (/^https?:/u.test(request.url()) && new URL(request.url()).origin !== origin) externalRequests.push(request.url());
+      };
+      page.on('request', observeRequest);
+      t.after(() => page.off('request', observeRequest));
+      await open();
+      const login = page.getByRole('main', { name: 'Sign in to Inscape' });
+      await login.getByRole('button', { name: 'Connect profile', exact: true }).waitFor();
+      assert.equal(await login.getByRole('button').count(), 1);
+      assert.equal(await page.locator('.public-entry-portal__world-card, .visitor-header').count(), 0);
+      assert.deepEqual(await page.evaluate(() => window.__startup.requests), []);
+      assert.deepEqual(externalRequests, []);
+      await capture('landing-small-desktop');
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await capture('landing-wide');
+      await login.getByRole('button', { name: 'Connect profile', exact: true }).click();
+      await page.waitForFunction(() => window.__startup.signIns === 1);
+    });
+
+    await t.test('a connected owner lands on their profile and can enter Studio', async () => {
+      await open(`?owner=${other}&delayLease=1`);
+      await entered();
+      await page.getByRole('main', { name: 'Other artist', exact: true }).waitFor();
+      assert.equal(await page.locator('main.system-workflow').count(), 0);
+      await page.getByRole('button', { name: 'Studio', exact: true }).click();
+      try {
+        // rAF may be suspended while the browser retains the outgoing Profile.
+        await page.waitForFunction(() => window.__startup.leaseRequests.length > 0, undefined, { polling: 20 });
+        const pending = await startupState();
+        assert.match(pending.editorAccess, /Checking editing access/);
+        assert.equal(pending.opening, 'Opening Studio…');
+        assert.equal(pending.inert, '');
+        assert.equal(pending.ownerMounted, false);
+        assert.equal(await page.getByRole('region', { name: 'Profile editing access' }).count(), 0);
+      } finally { await page.evaluate(() => window.__startup.releaseEditorLease()); }
+      await page.locator('main.system-workflow').waitFor();
+    });
+
+    await t.test('only the owner of a rejected document can open replacement review from the error', async () => {
+      const action = page.getByRole('button', { name: 'Review replacement in Studio', exact: true });
+      const forbidden = [];
+      const observe = request => {
+        if (/\/api\/profile-publications|\.pinata\.cloud/i.test(request.url()) || /eth_sendTransaction|eth_signTypedData|personal_sign/.test(request.postData() || '')) forbidden.push(request.url());
+      };
+      page.on('request', observe);
+      try {
+        for (const [account, failure] of [
+          ['', 'INVALID_DOCUMENT'],
+          ['0x' + '2'.repeat(40), 'INVALID_DOCUMENT'],
+          [other, 'HASH_MISMATCH'],
+        ]) {
+          await open(`?view=${other}&owner=${account}&publicationFailure=${failure}`);
+          await page.getByRole('heading', { name: /^invalid published profile$/i }).waitFor();
+          assert.equal(await action.count(), 0);
+        }
+        await open(`?owner=${other}&publicationFailure=INVALID_DOCUMENT`);
+        await action.click();
+        const panel = page.getByRole('complementary', { name: 'Publish profile' });
+        await panel.getByRole('heading', { name: 'Replace invalid publication' }).waitFor();
+        assert.equal(new URL(page.url()).searchParams.get('editor'), 'studio');
+        assert.equal(await panel.getByRole('checkbox', { name: /Replace the invalid publication/ }).isChecked(), false);
+        assert.equal(await panel.getByRole('button', { name: 'Prepare publication' }).isEnabled(), false);
+        await page.goBack();
+        await action.waitFor();
+        await page.goForward();
+        await page.locator('main.system-workflow').waitFor();
+        assert.equal(await panel.count(), 0, 'history does not repeat the review action');
+        assert.deepEqual(forbidden, []);
+      } finally {
+        page.off('request', observe);
+      }
+    });
+
+    for (const mode of ['visitor', 'owner']) {
+      await t.test(`${mode} keeps the requested destination's loading surface until its code mounts`, async () => {
+        const pattern = mode === 'visitor' ? '**/src/profileDocument/components/ProfileOverview.jsx'
+          : '**/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
+        let release;
+        let requested;
+        const gate = new Promise((resolveGate) => { release = resolveGate; });
+        const request = new Promise((resolveRequest) => { requested = resolveRequest; });
+        await resources.context.route(pattern, async (route) => { requested(); await gate; await route.continue(); });
+        try {
+          await page.setViewportSize({ width: mode === 'visitor' ? 1440 : 1024, height: 900 });
+          await open(mode === 'visitor' ? `?view=${other}` : `${ownerStudio}&delayLease=1`, 'no-preference');
+          let waitingForLease;
+          if (mode === 'owner') {
+            await page.waitForFunction(() => window.__startup.leaseRequests.length > 0);
+            // Keep acquisition pending across frames and the entire reveal.
+            // Observe both gates before asserting, so a red run records the
+            // false-ready signal continuing after acquisition has completed.
+            await page.waitForTimeout(4200);
+            waitingForLease = await startupState();
+            await capture('owner-waiting-for-lease');
+            await page.evaluate(() => window.__startup.releaseEditorLease());
+          }
+          await request;
+          // Exceed the previous complete first-visit reveal, not just its intro.
+          await page.waitForTimeout(4200);
+          const waitingForCode = await startupState();
+          await capture(`${mode}-waiting-for-code`);
+          if (mode === 'owner') {
+            const evidence = { waitingForLease, waitingForCode };
+            console.log(`Owner startup gates: ${JSON.stringify(evidence)}`);
+            if (screenshotDir) await writeFile(resolve(screenshotDir, 'owner-startup-gates.json'), JSON.stringify(evidence, null, 2));
+            assert.match(waitingForLease.editorAccess, /Checking editing access/);
+            assert.equal(waitingForLease.ownerMounted, false);
+            assert.deepEqual([waitingForLease.opening, waitingForCode.opening], ['Opening Studio…', 'Opening Studio…'],
+              'Transient editor acquisition must not authorize reveal before the owner runtime mounts');
+            assert.equal(waitingForLease.inert, '');
+          }
+          assert.equal(waitingForCode.veil, false);
+          assert.equal(waitingForCode.opening, mode === 'owner' ? 'Opening Studio…' : 'Opening Profile…');
+          assert.equal(waitingForCode.inert, '');
+          assert.equal(waitingForCode.ownerMounted, false);
+          release();
+          await entered();
+          await page.locator(mode === 'visitor' ? '.visitor-profile-card' : 'main.system-workflow').waitFor();
+          await capture(`${mode}-handoff-complete`);
+        } finally {
+          await page.evaluate(() => window.__startup?.releaseEditorLease());
+          release(); await resources.context.unroute(pattern);
+        }
+      });
+    }
+
+    for (const access of ['busy', 'unavailable', 'unsupported', 'released']) {
+      await t.test(`owner ${access} access reveals recovery and can retry into the Workbench`, async () => {
+        await open(`${ownerStudio}&${access === 'released' ? 'delayLease=1' : `editorAccess=${access}`}`);
+        if (access === 'released') {
+          await page.waitForFunction(() => window.__startup.leaseRequests.length > 0);
+          await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+        }
+        await entered();
+        const recovery = page.getByRole('region', { name: 'Profile editing access', exact: true });
+        const expected = { busy: 'being edited in another tab', unavailable: 'could not reserve editing access',
+          unsupported: 'requires browser support', released: 'released when you left this page' };
+        assert.match(await recovery.innerText(), new RegExp(expected[access]));
+        assert.equal(await page.locator('main.system-workflow').count(), 0);
+        await capture(`owner-access-${access}`);
+        await page.evaluate(() => {
+          window.__startup.allowEditing();
+          const request = navigator.locks.request.bind(navigator.locks);
+          const gate = new Promise(resolve => { window.releaseRetry = resolve; });
+          navigator.locks.request = async (...args) => { await gate; return request(...args); };
+        });
+        await recovery.getByRole('button', { name: 'Try editing here', exact: true }).click();
+        try {
+          await page.locator('.destination-opening').getByText('Opening Studio…').waitFor();
+          assert.equal(await page.locator('.application-interface').getAttribute('inert'), '');
+          assert.equal(await page.locator('main.system-workflow').count(), 0);
+        } finally { await page.evaluate(() => window.releaseRetry()); }
+        await page.locator('main.system-workflow').waitFor();
+        await entered();
+      });
+    }
+
+    for (const mode of ['visitor', 'owner']) await t.test(`a failed ${mode} renderer reveals a reload action instead of trapping startup`, async () => {
+      const pattern = mode === 'visitor' ? '**/src/profileDocument/components/ProfileOverview.jsx'
+        : '**/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
+      await resources.context.route(pattern, (route) => route.fulfill({ contentType: 'text/javascript',
+        body: "throw new Error('Fixture renderer unavailable');" }));
+      try {
+        await open(mode === 'visitor' ? `?view=${other}` : ownerStudio);
+        await entered();
+        await page.getByRole('button', { name: 'RELOAD', exact: true }).waitFor();
+        await page.getByRole('alert').filter({ has: page.getByRole('button', { name: 'RELOAD', exact: true }) }).waitFor();
+        await capture(`${mode}-renderer-error`);
+      } finally { await resources.context.unroute(pattern); }
+    });
+    console.log(`Startup peak in-flight routes: ${peakRoutes}/256`);
+    assert.deepEqual(problems.filter(problem => problem.startsWith('Route handler:')), [],
+      'The test router must not abort valid module requests or leak unfinished routes');
+    assert.deepEqual(problems.filter((problem) => problem.startsWith('Page error:')
+      && !problem.includes('Fixture renderer unavailable')), []);
+  } catch (error) {
+    testError = error;
+    throw error;
+  } finally {
+    try { await cleanup(resources); } catch (error) {
+      if (testError) throw new AggregateError([testError, error], 'Startup test and cleanup failed');
+      throw error;
+    }
+  }
+});

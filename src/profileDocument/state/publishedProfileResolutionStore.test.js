@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
+import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
+import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { PublishedProfileResolutionStore } from './publishedProfileResolutionStore.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
@@ -17,7 +19,7 @@ test('initial transient failure is ERROR while a same-session refresh failure re
   assert.equal(stale.status, PUBLISHED_PROFILE_STATUS.STALE); assert.strictEqual(stale.document, documentA);
 });
 
-test('switching addresses aborts the former request and ignores a late stale generation', async () => {
+test('concurrent profile requests retain independent results for each address', async () => {
   let finishA; let signalA;
   const repository = { resolve(address, { signal }) {
     if (address === PROFILE_A) { signalA = signal; return new Promise((resolve) => { finishA = resolve; }); }
@@ -25,10 +27,10 @@ test('switching addresses aborts the former request and ignores a late stale gen
   } };
   const store = new PublishedProfileResolutionStore({ repository });
   const first = store.resolve(PROFILE_A); const second = await store.resolve(PROFILE_B);
-  assert.equal(signalA.aborted, true); assert.equal(second.status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE);
+  assert.equal(signalA.aborted, false); assert.equal(second.status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE);
   finishA({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, address: PROFILE_A, document: documentA });
   await first;
-  assert.equal(store.get(PROFILE_A).status, PUBLISHED_PROFILE_STATUS.LOADING);
+  assert.equal(store.get(PROFILE_A).status, PUBLISHED_PROFILE_STATUS.RESOLVED);
   assert.equal(store.get(PROFILE_B).status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE);
 });
 
@@ -68,4 +70,23 @@ test('an address change during retry cannot restore the prior address document',
   assert.equal(current.status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE); assert.equal(store.get(PROFILE_B).document, null);
   finishOldRetry({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, address: PROFILE_A, document: documentA }); await oldRetry;
   assert.equal(store.get(PROFILE_B).status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE); assert.equal(store.get(PROFILE_B).document, null);
+});
+
+
+test('verified publication readback replaces the visible profile and an older pending read cannot revert it', async () => {
+  let releaseOld;
+  const store = new PublishedProfileResolutionStore({ repository: { resolve: () => new Promise(resolve => { releaseOld = resolve; }) } });
+  const pending = store.resolve(PROFILE_A);
+  const document = buildProfileDocumentV9({ profileAddress: PROFILE_A, systemWorkflowDraft: createEmptySystemWorkflowDraft(PROFILE_A) });
+  const result = { address: PROFILE_A, status: PUBLISHED_PROFILE_STATUS.RESOLVED, document, transactionHash: '0x' + 'ab'.repeat(32) };
+  assert.equal(store.acceptConfirmed(PROFILE_B, result), false);
+  assert.equal(store.acceptConfirmed(PROFILE_A, { ...result, document: documentA }), false);
+  assert.equal(store.acceptConfirmed(PROFILE_A, { ...result, transactionHash: null }), false);
+  assert.equal(store.get(PROFILE_A).busy, true);
+  assert.equal(store.acceptConfirmed(PROFILE_A, result), true);
+  assert.deepEqual(store.get(PROFILE_A).document, document);
+  assert.equal(store.get(PROFILE_A).busy, false);
+  releaseOld({ address: PROFILE_A, status: PUBLISHED_PROFILE_STATUS.UNAVAILABLE, document: null });
+  assert.deepEqual((await pending).document, document);
+  assert.equal(store.get(PROFILE_A).status, PUBLISHED_PROFILE_STATUS.RESOLVED);
 });

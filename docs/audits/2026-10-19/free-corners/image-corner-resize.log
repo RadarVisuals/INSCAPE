@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: Image corners resize width and height freely without stretching artwork at 1440px / DPR 1
+ok 1 - Image corners resize width and height freely without stretching artwork at 1440px / DPR 1
+  ---
+  duration_ms: 15593.1288
+  type: 'test'
+  ...
+# Subtest: Image corners resize width and height freely without stretching artwork at 390px / DPR 1.25
+ok 2 - Image corners resize width and height freely without stretching artwork at 390px / DPR 1.25
+  ---
+  duration_ms: 17679.9649
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 33622.8605

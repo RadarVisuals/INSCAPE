@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: captured native-fit seams can be filled without moving frames; Image resizing reaches the visible grid
+ok 1 - captured native-fit seams can be filled without moving frames; Image resizing reaches the visible grid
+  ---
+  duration_ms: 3413.7185
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3927.4734

@@ -1,0 +1,61 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import OwnerSystemWorkflowShell from '../src/public/OwnerSystemWorkflowShell.jsx';
+import { createOwnerSystemWorkflowReviewStorage, OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE as profile,
+  OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets, OWNER_SYSTEM_WORKFLOW_REVIEW_CATEGORIES as categories,
+} from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
+import { systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
+import { buildOwnerSystemWorkflowPreviewDocument } from '../src/public/ownerSystemWorkflowPreviewDocument.js';
+import '../src/index.css';
+import { metadataImages, metadataFiles } from '../src/library/data/metadataImages.js';
+import { selectImageGroups, selectImageUrls } from '../src/library/data/resolveContentUrl.js';
+
+let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...asset,
+  imageGroups: Array.from({ length: index === 1 ? 6 : 41 }, (_, imageIndex) => ({ index: imageIndex,
+    originalImageUrl: `https://images.inscape.test/${index === 1 ? 'pose' : 'layer'}-${imageIndex}.webp`,
+  })),
+} : index ? asset : { ...asset,
+  imageGroups: ['main', 'transparent', 'unavailable'].map((name, index) => ({ index,
+    originalImageUrl: `https://images.inscape.test/${name}.webp`, imageUrl: `https://images.inscape.test/${name}.webp`,
+    variants: name === 'transparent' ? [{ url: 'https://images.inscape.test/transparent-fallback.webp' }] : [],
+  })),
+});
+const folders = new URLSearchParams(location.search).has('long-navigation')
+  ? [...categories, ...Array.from({ length: 12 }, (_, i) => ({ id: 'study-' + i, name: 'Study ' + (i + 1), public: false, assetIds: [] }))]
+  : categories;
+const seed = createOwnerSystemWorkflowReviewStorage();
+if (new URLSearchParams(location.search).has('empty')) {
+  const key = systemWorkflowDraftKey(profile), draft = JSON.parse(seed.getItem(key));
+  draft.imageModules = [];
+  draft.workbench.imageModules = [];
+  seed.setItem(key, JSON.stringify(draft));
+}
+const storage = {
+  getItem: (key) => localStorage.getItem(`image-test:${key}`) || seed.getItem(key),
+  setItem: (key, value) => localStorage.setItem(`image-test:${key}`, value),
+  removeItem: (key) => localStorage.removeItem(`image-test:${key}`),
+};
+window.__imageTest = {
+  draft: () => JSON.parse(storage.getItem(systemWorkflowDraftKey(profile))),
+  preview: () => buildOwnerSystemWorkflowPreviewDocument({ assetRecords: fixtures, profileAddress: profile,
+    systemWorkflowDraft: window.__imageTest.draft() }),
+};
+const root = createRoot(document.getElementById('root'));
+const render = () => root.render(<OwnerSystemWorkflowShell ownerAuthoringEnabled
+  workspaceProfileAddress={profile} viewedProfileAddress={profile} reviewStorage={storage}
+  reviewAssets={fixtures} reviewCategories={folders} reviewProfile={{ name: 'Image selection fixture' }} />);
+window.__imageTest.replaceCover = (url) => {
+  fixtures = fixtures.map((asset, index) => index ? asset : { ...asset,
+    imageUrl: url, thumbnailUrl: url, originalImageUrl: url, src: url, previewSrc: url, previewCandidates: [url],
+    imageGroups: [{ index: 0, imageUrl: url, originalImageUrl: url, variants: [] }, ...asset.imageGroups.slice(1)],
+  });
+  render();
+};
+window.__imageTest.replaceMetadata = metadata => {
+  const images = metadataImages(metadata), urls = selectImageUrls(images);
+  fixtures = fixtures.map((asset, index) => index ? asset : { ...asset, ...urls,
+    src: urls.imageUrl, imageWidth: urls.width, imageHeight: urls.height, mediaFileType: urls.fileType,
+    previewSrc: urls.imageUrl, previewCandidates: [urls.imageUrl], imageGroups: selectImageGroups(images), fileAttachments: metadataFiles(metadata) });
+  render();
+};
+render();

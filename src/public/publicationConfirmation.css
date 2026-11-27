@@ -1,0 +1,10 @@
+.publication-confirmation.workbench-destination-panel {
+  z-index: 145; left: auto; right: 12px; bottom: 12px;
+  width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+}
+.publication-confirmation .workbench-destination-body { padding: 12px; }
+.publication-confirmation p { margin: 0; color: var(--tactile-muted); line-height: 1.7; }
+.publication-confirmation nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.publication-confirmation .workbench-destination-action { box-sizing: border-box; display: inline-flex; align-items: center; text-decoration: underline; text-underline-offset: 3px; }
+.publication-confirmation a:hover { background: var(--tactile-hover); }
+.publication-confirmation a:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }

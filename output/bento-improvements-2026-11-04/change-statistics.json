@@ -1,0 +1,212 @@
+{
+  "groups": {
+    "production": {
+      "added": 350,
+      "deleted": 208
+    },
+    "tests": {
+      "added": 270,
+      "deleted": 57
+    },
+    "docs": {
+      "added": 27,
+      "deleted": 1
+    },
+    "generated": {
+      "added": 22,
+      "deleted": 20
+    },
+    "tooling": {
+      "added": 7,
+      "deleted": 3
+    }
+  },
+  "changes": [
+    {
+      "path": "design-system/tokens.generated.json",
+      "added": 22,
+      "deleted": 20,
+      "group": "generated"
+    },
+    {
+      "path": "scripts/productionBuild.test.js",
+      "added": 1,
+      "deleted": 1,
+      "group": "tests"
+    },
+    {
+      "path": "scripts/productionBuild.js",
+      "added": 5,
+      "deleted": 1,
+      "group": "tooling"
+    },
+    {
+      "path": "scripts/browserSuites.json",
+      "added": 1,
+      "deleted": 1,
+      "group": "tooling"
+    },
+    {
+      "path": "src/contracts/workbench.d.ts",
+      "added": 6,
+      "deleted": 6,
+      "group": "production"
+    },
+    {
+      "path": "src/imageModule/imageModule.js",
+      "added": 2,
+      "deleted": 1,
+      "group": "production"
+    },
+    {
+      "path": "src/text/textSession.js",
+      "added": 10,
+      "deleted": 3,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/editorCellGeometry.js",
+      "added": 7,
+      "deleted": 6,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionBento.css",
+      "added": 8,
+      "deleted": 8,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionBento.test.js",
+      "added": 62,
+      "deleted": 0,
+      "group": "tests"
+    },
+    {
+      "path": "src/reception/receptionBento.js",
+      "added": 46,
+      "deleted": 15,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/ReceptionBentoPanel.jsx",
+      "added": 113,
+      "deleted": 67,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/ReceptionBentoEditor.jsx",
+      "added": 75,
+      "deleted": 67,
+      "group": "production"
+    },
+    {
+      "path": "src/shapes/ShapeWorkbench.jsx",
+      "added": 1,
+      "deleted": 1,
+      "group": "production"
+    },
+    {
+      "path": "src/profileDocument/domain/workbenchPresentation.js",
+      "added": 6,
+      "deleted": 2,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionEditorScope.js",
+      "added": 7,
+      "deleted": 8,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionEditorDocument.js",
+      "added": 44,
+      "deleted": 5,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/ReceptionDocumentCanvas.jsx",
+      "added": 1,
+      "deleted": 1,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionLayoutGenerator.js",
+      "added": 5,
+      "deleted": 3,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionCellStructure.js",
+      "added": 8,
+      "deleted": 5,
+      "group": "production"
+    },
+    {
+      "path": "src/reception/receptionCellDeletion.js",
+      "added": 2,
+      "deleted": 2,
+      "group": "production"
+    },
+    {
+      "path": "browser-tests/reception-layer-order.browser.mjs",
+      "added": 12,
+      "deleted": 6,
+      "group": "tests"
+    },
+    {
+      "path": "browser-tests/reception-cell-interaction.browser.mjs",
+      "added": 26,
+      "deleted": 32,
+      "group": "tests"
+    },
+    {
+      "path": "browser-tests/reception-native-editor.browser.mjs",
+      "added": 144,
+      "deleted": 12,
+      "group": "tests"
+    },
+    {
+      "path": "browser-tests/shape-corner-resize.browser.mjs",
+      "added": 6,
+      "deleted": 4,
+      "group": "tests"
+    },
+    {
+      "path": "browser-tests/workbench-input-recovery.browser.mjs",
+      "added": 3,
+      "deleted": 2,
+      "group": "tests"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/OwnerEditorMenuBar.jsx",
+      "added": 1,
+      "deleted": 1,
+      "group": "production"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchGestures.test.js",
+      "added": 16,
+      "deleted": 0,
+      "group": "tests"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchGestures.js",
+      "added": 8,
+      "deleted": 7,
+      "group": "production"
+    },
+    {
+      "path": "package.json",
+      "added": 1,
+      "deleted": 1,
+      "group": "tooling"
+    },
+    {
+      "path": "docs/INSCAPE_ACTIVE_CONTRACT.md",
+      "added": 27,
+      "deleted": 1,
+      "group": "docs"
+    }
+  ]
+}

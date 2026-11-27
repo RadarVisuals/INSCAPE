@@ -1,0 +1,24 @@
+[
+  {
+    "name": "reception-card",
+    "code": 0,
+    "seconds": 14.758,
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "owner-profile-routing",
+    "code": 0,
+    "seconds": 20.465,
+    "tests": 5,
+    "pass": 5,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

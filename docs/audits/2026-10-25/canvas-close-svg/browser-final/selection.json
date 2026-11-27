@@ -1,0 +1,8 @@
+{
+  "mode": "explicit",
+  "suites": [
+    "artwork-document",
+    "svg-raster-quality",
+    "svg-artwork-lift"
+  ]
+}

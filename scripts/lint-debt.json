@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "note": "Existing hook observations assigned to concrete plan steps, not certified safe. Exact source bytes and locations are checked. No automatic baseline refresh.",
+  "entries": [
+    {
+      "file": "src/keeper/KeeperConversation.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 83,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'asset'. Either include it or remove the dependency array.",
+      "sourceSha256": "d56993687f38923ca912f9b31fe4834668e665e5e6a3185e24ff634d53fc803e",
+      "planStep": "19",
+      "reason": "Dialogue request identity is stableAssetId plus explicit retry. Canonical ID encodes chain/contract/token; loadKeeperDialogue resolves current attachments from those identifiers, not stale attachment metadata. Abort and timeout belong to this attempt. Evidence: keeper-dialogue closing-cancels-pending and Retry scenarios exist; same-ID tokenStandard mutation is outside canonical validated asset assumptions. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal. 2026-11-07 review: viewport Return controls replace the old Display controls host; Keeper bounds use measured navigationTop. The existing memo/effect bodies and their identity/primitive dependencies retain the reviewed ownership described above. Only warning locations and whole-file fingerprints are refreshed; no new exception or expanded ceiling."
+    },
+    {
+      "file": "src/keeper/KeeperRigArtwork.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 27,
+      "column": 7,
+      "message": "React Hook useImperativeHandle has a missing dependency: 'snake'. Either include it or remove the dependency array.",
+      "sourceSha256": "c3e986b3e8ee2f27e6f59191e185043e815b510d86a391de8969748c28dfc079",
+      "planStep": "19",
+      "reason": "snake is derived only from immutable rig.kind; replacing rig recreates the imperative handle. Paint/reset own refs and the pose is reset by motion lifecycle. Evidence: step-19 Keeper layered7/7; rig motion unit coverage. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/profileDocument/components/VisitorEntryFocus.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 23,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'target'. Either include it or remove the dependency array.",
+      "sourceSha256": "a7b488dd7a19de7fb158a169acbd5662381a23cf73d95de6eb59ed58504dddc6",
+      "planStep": "14",
+      "reason": "The effect reads target.moduleId only. That scalar, focusModules and all three registry/subscription objects are dependencies. A module change cancels its scheduled frame and subscription before scheduling the new module; successful focus marks complete and unsubscribes. ProfileDocumentV9Visitor mounts this inside its document/profile/revision-keyed provider. Changes to other target fields do not change this module-focus operation. Independent source/caller review: ProfileDocumentV9Visitor.jsx -> VisitorEntryFocus; WorkbenchView actions/entry/frame registry. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/profileDocument/state/usePublicationRecovery.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 13,
+      "column": 6,
+      "message": "React Hook useMemo has unnecessary dependencies: 'attempt', 'busy', and 'publicationStatus'. Either exclude them or remove the dependency array.",
+      "sourceSha256": "2e1989640f9c114bbb1b5489f97690f7c3e4950955f7bbd821df31d0aa37fa77",
+      "planStep": "18",
+      "reason": "Behouden: attempt, busy en publicationStatus zijn expliciete invalidaties van een externe journal-read; hun waarde hoeft niet in het read-body gebruikt te worden. De nieuwe echte usePublicationRecovery-browserproef wijzigt status en busy afzonderlijk, voert check uit, wijzigt profiel en laat oude resultaten laat arriveren. Alleen het actuele snapshot kan worden getoond of acknowledged."
+    },
+    {
+      "file": "src/public/identity/IdentityModule.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 67,
+      "column": 105,
+      "message": "React Hook useEffect has a missing dependency: 'minimized'. Either include it or remove the dependency array.",
+      "sourceSha256": "caa2cf7dde921731530044cff722f4f4fd9deea3ce36854ed5beabea01a0c151",
+      "planStep": "15",
+      "reason": "Focus uitsluitend bij openen: minimized kiest het initiële zichtbare focusdoel; restore en close bezitten latere focusterugkeer. Een minimized-dependency zou bij latere bediening focus stelen. Owner Identity is op profileAddress gekeyed; Visitor monteert een eigen read-only instantie. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged."
+    },
+    {
+      "file": "src/public/identity/IdentityTitle.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 84,
+      "column": 28,
+      "message": "The ref value 'request.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'request.current' to a variable inside the effect, and use that variable in the cleanup function.",
+      "sourceSha256": "eb6adc09e1c92e10c490a663545c3a634cc1e71a0d9f63bab43ba6b9aa4abec8",
+      "planStep": "19",
+      "reason": "request is a cancellation generation, not an element. Address cleanup increments latest generation so an older clipboard result cannot report success for a newer identity. Evidence: Identity source request-ticket checks; Identity browser7/7 in styling tranche, specific late clipboard race not independently rerun. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/public/identity/useIdentityShortcut.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 40,
+      "column": 50,
+      "message": "React Hook useEffect has a missing dependency: 'persist'. Either include it or remove the dependency array.",
+      "sourceSha256": "ef643a17f28f00ab24cbafb65a35a24a57ce8435602124c9319218ff697592a1",
+      "planStep": "15",
+      "reason": "Bewuste eerste owner-prefwrite bij mount; persist wordt daarnaast rechtstreeks vanuit iedere bevestigde useractie aangeroepen. Profielwissel remount Identity via key=profileAddress; Visitor owner=false schrijft niet. Geen subscription/timer houdt deze callback vast. De oudere optionele shortcut-opslag blijft een aparte presentatievoorkeur, geen authored venstergeometrie."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowActivity.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 80,
+      "column": 5,
+      "message": "React Hook useMemo has an unnecessary dependency: 'identityRevision'. Either exclude it or remove the dependency array.",
+      "sourceSha256": "bee8e6e3cdd276f4166cf1ca1792c888e764307c23dad6c084b618b0a2974079",
+      "planStep": "19",
+      "reason": "identityRevision invalidates the memoized projection when the external identity cache changes without changing the history reference. The subscription still owns cache notifications and cleanup; removing this dependency would leave resolved names stale. On 2026-10-24 only the development fixture path was separated; the live cache invalidation contract is retained. Focused Activity browser and formatting tests recorded under runtime-boundaries-2026-10-24."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchAreaContext.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 17,
+      "column": 59,
+      "message": "React Hook useMemo has a missing dependency: 'area'. Either include it or remove the dependency array.",
+      "sourceSha256": "0130bdd78a6889112e139d764ae583fdca6a098ceaf5d9edacce6d39b52f818c",
+      "planStep": "10",
+      "reason": "Behouden: `workbenchAreaBounds` gebruikt uitsluitend left/top/width/height; alle vier worden gevolgd. Een preview is bovendien aan dezelfde draftidentiteit gebonden en vervalt bij een nieuwe accepted draft. S: area-helper en previewguard; U geometrie."
+    },
+    {
+      "file": "src/text/useTextEditSession.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 6,
+      "column": 5,
+      "message": "React Hook useMemo has missing dependencies: 'record' and 'scope'. Either include them or remove the dependency array.",
+      "sourceSha256": "5a75a47604d1396718999517b13b4ccbac3a986a9afc944091b7e1396d3e7af2",
+      "planStep": "19",
+      "reason": "Session identity is store plus primitive recovery scope and value/save functions. Record changes must use session.receive in adjacent layout effect so edits/recovery buffers survive, rather than recreate the session. Evidence: textEditSession units and step19 Text module1/1; scope fields match recovery identity contract. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    }
+  ]
+}

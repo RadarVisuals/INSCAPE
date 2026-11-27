@@ -2,32 +2,37 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const panelSource = readFileSync(new URL('./ProfileDocumentPanel.jsx', import.meta.url), 'utf8');
-const ownerSource = readFileSync(new URL('../../public/ModuleGridShell.jsx', import.meta.url), 'utf8');
-const ownerPublicationSource = readFileSync(new URL('../../public/useOwnerPublicationSync.js', import.meta.url), 'utf8');
+const runtimeSource = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
+const reconciliationSource = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx', import.meta.url), 'utf8');
+const controllerSource = readFileSync(new URL('../../public/ownerSystemWorkflow/useWorkbenchController.js', import.meta.url), 'utf8');
+const publicationSource = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx', import.meta.url), 'utf8');
+const appSource = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
 
-test('Share previews the current draft without preparing a publication snapshot', () => {
-  assert.match(panelSource, /onPreview\('draft'\)\}>Preview current draft/);
-  assert.match(panelSource, /Prepare publication snapshot/);
-  assert.doesNotMatch(panelSource, /disabled=\{!snapshot\} onClick=\{\(\) => onPreview\('snapshot'\)\}/);
-  assert.match(ownerSource, /enterPreview\(source, source === 'draft' \? draftDocument : undefined\)/);
-  assert.match(ownerSource, /draft=\{draftDocument\}/);
-  assert.match(ownerSource, /<ProfileDocumentPreview[^>]*onMoveKeeper=\{residentHandoff\?\.moveToScreenPosition\}/);
-  assert.match(ownerSource, /<ProfileDocumentPreview[^>]*onMoveKeeperHorizontally=\{residentHandoff\?\.moveHorizontallyToScreenPosition\}/);
+test('Studio opens the selected composition in its read-only viewer', () => {
+  assert.match(runtimeSource, /<CompositionPreview\b/u);
+  assert.doesNotMatch(runtimeSource, /<ProfileDocumentV9Preview\b|<CompositionEditorPreview\b/u);
 });
 
-test('owner autosave reports source failures and flushes again when the page exits', () => {
-  assert.match(ownerPublicationSource, /const librarySaved = flushLibraryWorkspace\(\)/);
-  assert.match(ownerPublicationSource, /const signalsSaved = flushSignalDocument\(\)/);
-  assert.match(ownerPublicationSource, /saveRestoredPresentation\(window\.localStorage, workspace\.profileAddress/);
-  assert.match(ownerPublicationSource, /setDraftSaveState\(\{ profileAddress: workspace\.profileAddress, status: saved \? 'saved' : 'error' \}\)/);
-  assert.match(ownerPublicationSource, /window\.addEventListener\('pagehide', flush\)/);
-  assert.match(ownerPublicationSource, /window\.addEventListener\('beforeunload', flush\)/);
-  assert.match(panelSource, /'SAVE FAILED'/);
+test('System Workflow persistence uses the profile-isolated draft v4 store', () => {
+  assert.match(controllerSource, /createSystemWorkflowDraftStore/u);
+  assert.match(controllerSource, /createWorkbenchSession/u);
+  assert.doesNotMatch(controllerSource, /lattice-production-draft|profileDocumentStorage|useProfileDocumentStore/u);
 });
 
-test('rack architecture and publication shortcuts are absent from the recovered workflow', () => {
-  assert.doesNotMatch(ownerSource, /OwnerRackBoard|profileRackPresentation|saveProfileRackPresentation/);
-  assert.match(panelSource, /disabled=\{!snapshot \|\| stale/);
-  assert.match(panelSource, /publication\.verifyCid\(snapshot, cid, \{ stale \}\)/);
+test('owner entry reconciles its origin-scoped draft before mounting the Keeper-free runtime', () => {
+  assert.match(reconciliationSource, /reconcileOwnerDraftWithPublishedProfile/u);
+  assert.match(reconciliationSource, /ProfileEditingBoundary/u);
+  assert.match(reconciliationSource, /getRecordState/u);
+  assert.match(reconciliationSource, /<OwnerSystemWorkflowRuntime/u);
+  assert.match(appSource, /Resolving owner workspace/u);
+  assert.doesNotMatch(appSource, /GridWalkerCanvas|KeeperDock|residentHandoff|keeperReactions|selectResidentActorVisible/u);
+});
+
+test('publication preparation remains explicit and CID verification is snapshot-bound', () => {
+  assert.match(publicationSource, /Prepare publication/u);
+  assert.match(publicationSource, /cidRef\.current = uploaded\.cid;[\s\S]*publication\.verifyCid\(snapshot, cidRef\.current/u);
+  assert.match(publicationSource, /publication\.publish\(\)/u);
+  assert.match(publicationSource, /Your public images, text and shapes, composition layout, Keeper content and custom identity card/u);
+  assert.doesNotMatch(publicationSource, /CID \/ MANUAL FALLBACK|PUBLISH VERSION 9/u);
+  assert.doesNotMatch(publicationSource, /OwnerRackBoard|profileRackPresentation|buildProfileDocumentV8/u);
 });

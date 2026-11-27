@@ -1,0 +1,54 @@
+/* Placement uses the host's existing measured navigation clearance. */
+.workbench-destination-panel.workbench-tool-panel {
+  --destination-inset: 12px;
+  --destination-top: max(12px, calc(var(--workspace-navigation-top, 8px) + 4px));
+  --destination-target: var(--control-height-sm);
+  --workflow-panel: var(--tactile-face);
+  --workflow-ink: var(--tactile-ink);
+  --workflow-muted: var(--tactile-muted);
+  --workflow-border: var(--tactile-edge);
+  --workflow-border-strong: var(--tactile-edge);
+  --workflow-hover: var(--tactile-hover);
+  --workflow-selection: var(--tactile-hover);
+  z-index: 92; left: var(--destination-inset); right: auto; bottom: 12px;
+  width: min(var(--destination-width, 460px), calc(100vw - var(--destination-inset) - 12px));
+  max-height: calc(100dvh - var(--destination-top) - 12px);
+  min-width: 0; padding: 0; box-shadow: none; pointer-events: auto;
+  font: 11px/1.5 var(--font-interface);
+}
+.workbench-destination-panel > .workbench-tool-panel-header h2 { flex: 1; margin: 0; padding: 8px 10px; font: inherit; }
+.workbench-destination-body {
+  min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-gutter: stable;
+}
+.workbench-destination-panel .workbench-destination-action {
+  min-width: 0; min-height: var(--destination-target); padding: 6px 10px;
+  border: 1px solid var(--tactile-edge); border-radius: var(--control-radius);
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.workbench-destination-panel button:disabled { color: var(--tactile-disabled); cursor: default; }
+.workbench-destination-panel button:hover:not(:disabled) { background: var(--tactile-hover); }
+.workbench-destination-panel :is(button, input, summary):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.workbench-destination-panel :focus:not(:focus-visible) { outline: none; }
+.workbench-destination-panel > footer { flex: none; padding: 10px 12px; border-top: 1px solid var(--tactile-edge); }
+.workbench-destination-empty { padding: 12px; color: var(--tactile-muted); }
+
+.system-workflow__profile { --destination-width: 300px; }
+.system-workflow__profile-card { width: 100%; padding: 12px; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.system-workflow__profile[data-viewing] { visibility: hidden; }
+.system-workflow__profile-card[data-viewing] { opacity: 0; pointer-events: none; }
+.system-workflow__profile-card > span:last-child { min-width: 0; display: grid; gap: 5px; }
+.system-workflow__profile-card b { font: 500 12px/1.5 var(--font-interface); overflow-wrap: anywhere; }
+.system-workflow__profile-card small { color: var(--tactile-muted); font: 12px/1.5 var(--font-technical); overflow-wrap: anywhere; }
+.system-workflow__profile-avatar { position: relative; width: 44px; height: 44px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; }
+.system-workflow__profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.system-workflow__profile-avatar > svg:not(.inscape-profile-avatar-ring) { width: 21px; height: 21px; }
+.system-workflow__profile-avatar > .inscape-profile-avatar-ring { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--tactile-edge); pointer-events: none; }
+.system-workflow__profile .system-workflow__profile-action { width: 100%; min-height: 36px; padding: 10px 12px; border: 0; border-top: 1px solid var(--tactile-edge); color: inherit; background: transparent; text-align: left; font: inherit; cursor: pointer; }
+
+@media (max-width: 520px), (pointer: coarse) {
+  .workbench-destination-panel.workbench-tool-panel { --destination-target: 44px; }
+  .workbench-destination-panel > .workbench-tool-panel-header { min-height: 52px; }
+  .workbench-destination-panel .workbench-tool-panel-close { width: 44px; height: 44px; }
+  .system-workflow__profile .system-workflow__profile-action { min-height: 44px; }
+}

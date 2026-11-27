@@ -1,0 +1,182 @@
+/* Gallery uses the same frame for browsing drafts and published compositions. */
+.workbench-overview-browse { display: contents; }
+:is(.workbench-overview, .canvas-gallery-section) { --overview-ease: cubic-bezier(.16,1,.3,1); --overview-menu-duration: 600ms; --overview-panel-duration: 700ms; --overview-radius: calc(var(--control-shell-radius) + var(--space-1)); --overview-glass: var(--interface-panel); --overview-glass-ink: var(--interface-ink); --overview-glass-edge: transparent; --overview-glass-filter: blur(10px); --overview-glass-shadow: 0 10px 30px rgb(0 0 0 / 10%); }
+.workbench-overview { position: fixed; inset: 0; z-index: 1; pointer-events: auto; overflow: auto; padding: var(--space-3) var(--space-3) 80px; background: var(--interface-environment); color: var(--tactile-ink); font: 14px/1.6 var(--font-interface); }
+.owner-works { z-index: 80; transition: opacity 200ms ease; }
+.workbench-overview[data-visitor-header] { top: var(--spread-height); background: transparent; }
+.owner-works[data-workspace-exiting] { z-index: 77; opacity: 0; pointer-events: none; }
+.owner-works[data-workspace-entering] { z-index: 77; opacity: 0; pointer-events: none; }
+.owner-overview-loading { position: fixed; inset: var(--workspace-navigation-top, var(--workspace-header-height, 48px)) 0 0; z-index: 80; margin: 0; padding: 24px; background: var(--interface-environment); }
+.owner-canvas-journey { position: fixed; z-index: 78; overflow: hidden; pointer-events: none; background: var(--interface-environment); }
+[data-studio-return-tile],
+[data-canvas-journey-target]:not(.composition-explorer-viewport),
+.workbench-overview[data-published-gallery] .composition-explorer-viewport[data-canvas-journey-target],
+.composition-explorer-viewport[data-canvas-journey-target] > .workbench-overview-preview { opacity: 0; }
+/* Tools arrive with the editor at the start, above the moving canvas. The
+   artwork boundary and selection wait until they align with the actual artwork. */
+.system-workflow[data-workspace-journey="editor"] :is([data-workbench-toolbar], .workbench-tool-panel, .workbench-side-dock, .workbench-view-controls, .keeper-dock-window) { animation: workspace-tools-arrive 160ms ease-out both; }
+.system-workflow[data-workspace-journey="overview"] :is([data-workbench-toolbar], .workbench-tool-panel, .workbench-tool-window, .workbench-side-dock, .workbench-view-controls, .keeper-dock-window) { animation: workspace-tools-leave 220ms ease-in both; pointer-events: none; }
+.system-workflow[data-workspace-journey]:not([data-gallery-entry]) :is([data-workbench-area], .lattice-pixel-grid),
+.system-workflow[data-workspace-journey] :is(.workbench-selection, .workbench-canvas-edge) { visibility: hidden; }
+/* Artwork stays live while the two routes exchange their controls. */
+:root:active-view-transition-type(gallery-studio) { view-transition-name: root; }
+:root:active-view-transition-type(gallery-studio) :is(.visitor-header, .editor-menu-bar) { view-transition-name: workspace-header; }
+:root:active-view-transition-type(gallery-studio) :is(.composition-index-sidebar, .visitor-work-details,
+  .composition-explorer-controls, .gallery-rail-toggle, .gallery-selection-tools, .workbench-overview-menu-trigger,
+  [data-workbench-toolbar], .workbench-side-dock, .workbench-tool-panel, .workbench-view-controls) { view-transition-name: match-element; }
+/* The Studio controls crossfade while the artwork travels. Its draft pixels
+   still dissolve during the stationary opening part of that flight. */
+:root:active-view-transition-type(studio-to-gallery) { --studio-chrome-exchange: 460ms; }
+:root:active-view-transition-type(gallery-studio)::view-transition-group(*) { animation-duration: var(--studio-chrome-exchange, 220ms); }
+:root:active-view-transition-type(gallery-studio)::view-transition-old(*) { animation-duration: var(--studio-chrome-exchange, 200ms); }
+:root:active-view-transition-type(gallery-studio)::view-transition-new(*) { animation-duration: var(--studio-chrome-exchange, 160ms); }
+/* Dissolve the previous backdrop over the fully painted destination in either direction. */
+:root:active-view-transition-type(gallery-studio)::view-transition-old(root) {
+  z-index: 1; mix-blend-mode: normal; animation: studio-draft-dissolve 145ms linear both;
+}
+:root:active-view-transition-type(gallery-studio)::view-transition-new(root) { mix-blend-mode: normal; animation: none; }
+@keyframes studio-draft-dissolve { from { opacity: 1; } to { opacity: 0; } }
+@keyframes workspace-tools-arrive { from { opacity: 0; } to { opacity: 1; } }
+@keyframes workspace-tools-leave { from { opacity: 1; } to { opacity: 0; } }
+:is(.workbench-overview, .canvas-gallery-section) *, :is(.workbench-overview, .canvas-gallery-section) *::before, :is(.workbench-overview, .canvas-gallery-section) *::after { box-sizing: border-box; }
+:is(.workbench-overview, .canvas-gallery-section) :is(button, input, textarea, select) { font: inherit; color: inherit; }
+:is(.workbench-overview, .canvas-gallery-section) button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--overview-button-min-height, var(--control-target-touch)); padding: var(--overview-button-padding, 10px 16px); border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+:is(.workbench-overview, .canvas-gallery-section) button:where(:not(.workbench-overview-card-open)):hover:not(:disabled) { background: var(--tactile-hover); }
+:is(.workbench-overview, .canvas-gallery-section) button:disabled { opacity: .5; cursor: default; }
+:is(.workbench-overview, .canvas-gallery-section) :is(button, input, textarea, select):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
+.workbench-overview-navigation { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 4; color: var(--overview-glass-ink); width: 156px; overflow: hidden; transition: width var(--overview-menu-duration) var(--overview-ease); }
+.workbench-overview-navigation { --overview-glass: color-mix(in srgb, var(--interface-panel) 50%, transparent); border-radius: 6px; background: var(--overview-glass); box-shadow: var(--overview-glass-shadow); -webkit-backdrop-filter: var(--overview-glass-filter); backdrop-filter: var(--overview-glass-filter); }
+.workbench-overview .workbench-overview-menu-trigger { width: 100%; height: 40px; justify-content: center; border-radius: 6px; padding: 6px 17px; }
+.workbench-overview-navigation[data-open] { width: min(280px, calc(100vw - 24px)); }
+.workbench-overview-menu-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--overview-menu-duration) var(--overview-ease), opacity 200ms ease; }
+.workbench-overview-navigation[data-open] .workbench-overview-menu-fold { grid-template-rows: 1fr; opacity: 1; }
+.workbench-overview-menu { min-height: 0; width: min(280px, calc(100vw - 24px)); max-height: calc(100dvh - 100px); overflow: hidden auto; scrollbar-width: none; overscroll-behavior: contain; }
+.workbench-overview-menu::-webkit-scrollbar { display: none; }
+.workbench-overview-menu > * { margin-inline: 8px; transform: translateY(10px); filter: blur(4px); transition: transform var(--overview-menu-duration) var(--overview-ease), filter var(--overview-menu-duration) var(--overview-ease); }
+.workbench-overview-navigation[data-open] .workbench-overview-menu > * { transform: none; filter: none; }
+.workbench-overview-arrangement label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 4px 10px 12px; font-size: 12px; }
+.workbench-overview-arrangement input { grid-row: 2; grid-column: 1 / -1; width: 100%; min-height: 28px; accent-color: var(--overview-glass-ink); }
+.workbench-overview-arrangement label > span { font-size: 11px; opacity: .7; }
+.workbench-overview-arrangement > button { width: 100%; font-size: 12px; justify-content: start; }
+.workbench-overview-menu small { display: block; padding: 8px 10px; font-size: 11px; opacity: .7; }
+.workbench-overview .workbench-overview-menu-create { width: calc(100% - 16px); justify-content: start; font-size: 12px; }
+.workbench-overview .workbench-overview-menu button:is(:hover:not(:disabled), [aria-current], [aria-pressed="true"]) { background: var(--interface-hover); }
+.workbench-overview .workbench-overview-menu-trigger:hover:not(:disabled) { background: color-mix(in srgb, var(--overview-glass-ink) 5%, transparent); }
+.workbench-overview .workbench-overview-navigation button:focus-visible { outline-color: var(--overview-glass-ink); }
+.workbench-overview-preview { position: relative; width: 100%; height: 100%; overflow: hidden; }
+/* Composite adjacent, device-aligned artwork together during fractional camera transforms. */
+.workbench-overview-canvas { will-change: transform; position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; pointer-events: none; }
+.workbench-native-preview { position: relative; transform-origin: 0 0; }
+.workbench-native-preview > .composition-canvas { width: 100%; height: 100%; }
+.workbench-overview-canvas[data-native-interactive] { pointer-events: auto; }
+.workbench-overview-canvas > .navigator-object { transform-origin: 0 0; }
+.workbench-overview-canvas .text-module-body { position: absolute; inset: 0; }
+.workbench-overview-view-controls { display: flex; gap: 4px; padding: 12px 0; margin-top: 8px; border-top: 1px solid var(--interface-hover); }
+.workbench-overview-view-controls button { width: 36px; height: 36px; min-height: 36px; padding: 8px; }
+.workbench-overview-heading h1 { font: 400 clamp(32px, 2.5vw, 48px)/1.2 var(--font-interface); margin: 0; letter-spacing: -.04em; }
+.workbench-overview-detail { min-width: 0; }
+.workbench-overview-form h2 { font: 400 clamp(22px, 1.6vw, 30px)/1.4 var(--font-interface); margin: 0; overflow-wrap: anywhere; letter-spacing: -.025em; }
+.workbench-overview-introduction { max-width: 60ch; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; color: var(--tactile-muted); }
+.workbench-overview .workbench-overview-primary { margin-top: auto; border-color: var(--tactile-edge); }
+.workbench-overview-form { grid-column: 1 / -1; display: grid; gap: 18px; padding: 28px; border-radius: var(--overview-radius); background: var(--tactile-well); }
+.workbench-overview-form label { display: grid; gap: 6px; }
+.workbench-overview-form label > span, .workbench-overview-form small { font: 12px/1.4 var(--font-technical); color: var(--tactile-muted); }
+.workbench-overview-form :is(input, textarea, select) { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: var(--tactile-face); }
+.workbench-overview-form textarea { resize: vertical; min-height: 100px; }
+.workbench-overview-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.workbench-overview [role="alert"] { grid-column: 1 / -1; padding: 12px; border: 1px solid var(--tactile-ink); border-radius: var(--control-radius); }
+.workbench-overview-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100% - 32px); display: flex; flex-direction: column; align-items: center; text-align: center; margin: 0; padding: 16px; border-radius: var(--control-shell-radius); background: var(--tactile-well); }
+.workbench-overview-empty span { color: var(--tactile-muted); font: 12px/1.6 var(--font-technical); }
+@media (max-width: 800px) {
+  .workbench-overview { padding: var(--space-2) var(--space-2) 80px; }
+  .workbench-overview-form :is(input, textarea, select) { font-size: 16px; }
+}
+@media (forced-colors: active) {
+  .workbench-overview-navigation button[aria-current] { border-color: Highlight; }
+  .workbench-overview-view-controls button[aria-pressed="true"] { border-color: Highlight; }
+}
+@media (pointer: coarse) { .workbench-overview-view-controls button { width: 44px; height: 44px; } }
+@media (prefers-reduced-transparency: reduce) { .workbench-overview, .workbench-overview-navigation { --overview-glass: var(--interface-panel); --overview-glass-filter: none; --overview-glass-shadow: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-works { transition: none; }
+  .workbench-overview-navigation, .workbench-overview-menu-fold, .workbench-overview-menu > * { transition: none; }
+}
+
+.workbench-overview[data-visitor-header] { scrollbar-width: none; }
+.workbench-overview[data-visitor-header][data-selecting] { --gallery-tools-height: 48px; }
+.workbench-overview[data-visitor-header][data-layout="grid"] {
+  padding: 0; display: flex; flex-direction: column;
+}
+.gallery-layout-toolbar {
+  position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 4px;
+  box-sizing: border-box; flex: none; width: 100%; max-width: 1920px; margin-inline: auto;
+  padding: var(--gallery-toolbar-inset) calc(var(--gallery-gutter) + var(--gallery-detail-space)) 4px var(--gallery-gutter);
+  color: var(--spread-muted);
+}
+.workbench-overview .gallery-layout-switch { padding: 0; min-height: 32px; }
+.gallery-layout-toolbar .gallery-layout-switch { margin-inline-start: auto; }
+.gallery-layout-toolbar .workbench-overview-navigation {
+  position: relative; inset: auto; transform: none; width: auto; overflow: visible;
+  background: transparent; box-shadow: none; backdrop-filter: none; transition: none;
+}
+.gallery-layout-toolbar .workbench-overview-menu-trigger { width: 30px; height: 30px; min-height: 30px; padding: 0; color: var(--spread-muted); }
+.gallery-layout-toolbar .workbench-overview-menu-fold {
+  position: absolute; top: 100%; left: 0; color: var(--spread-heading);
+  background: var(--spread-panel); border-radius: 6px; box-shadow: var(--overview-glass-shadow);
+}
+@media (max-width: 400px) {
+  .gallery-layout-toolbar .workbench-overview-navigation { position: static; }
+  .gallery-layout-toolbar .workbench-overview-menu-fold { left: var(--gallery-gutter); }
+}
+.workbench-overview[data-visitor-header][data-layout="grid"] .workbench-overview-grid-host {
+  position: relative; inset: auto; flex: 1; min-height: 0; margin: 12px;
+}
+.gallery-selection-tools {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: end; gap: 4px;
+  min-height: var(--gallery-tools-height); padding-inline: max(12px, 2.5%);
+  color: var(--spread-body); pointer-events: none;
+}
+.workbench-overview .gallery-selection-tools button {
+  min-height: 36px; padding: 4px 10px; font-size: 14px; background: var(--spread-panel); pointer-events: auto;
+}
+.workbench-overview .gallery-selection-remove { border-color: var(--spread-line); }
+.gallery-index-selection {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 6px; cursor: pointer; overflow-wrap: anywhere;
+}
+.gallery-index-selection input, .gallery-card-selection input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--workspace-sage); }
+.gallery-card-selection { position: absolute; inset: 0; z-index: 1; padding: 10px; cursor: pointer; }
+.gallery-card-selection[data-checked], .gallery-card-selection:focus-within { box-shadow: inset 0 0 0 3px var(--workspace-sage); }
+.gallery-card-selection > span { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 7px 10px; overflow-wrap: anywhere;
+  color: var(--spread-heading); background: var(--spread-panel); border-radius: 5px; font-size: 14px; }
+@media (pointer: coarse) {
+  .workbench-overview .gallery-selection-tools button { min-height: 44px; }
+}
+@media (max-width: 700px) {
+  .gallery-index-selection { flex: none; }
+}
+
+[data-layout-flight-target] { opacity: 0; }
+
+/* Keep the landing frame measurable while the moving surface owns its paint. */
+.workbench-overview[data-layout-journey="list"] .composition-explorer-viewport { opacity: 0; }
+
+/* The old controls can dissolve independently of the live canvas and its frame. */
+:root:active-view-transition-type(gallery-layout)::view-transition-old(root),
+:root:active-view-transition-type(gallery-layout)::view-transition-old(gallery-source-art) { display: none; }
+:root:active-view-transition-type(gallery-layout)::view-transition-new(root) { animation: none; }
+:root:active-view-transition-type(leave-grid) [data-layout="grid"] .workbench-overview-grid-host { view-transition-name: gallery-tiles; }
+:root:active-view-transition-type(leave-grid) [data-layout-flight-source] { view-transition-name: gallery-source-art; }
+:root:active-view-transition-type(leave-list) [data-layout="list"] :is(.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls, .gallery-rail-toggle) {
+  view-transition-name: match-element;
+}
+:root:active-view-transition-type(gallery-layout)::view-transition-old(*) { animation: workspace-tools-leave 260ms ease-in-out both; }
+@media (prefers-reduced-motion: no-preference) {
+  .workbench-overview[data-layout-journey="grid"] .workbench-overview-grid-host,
+  .workbench-overview[data-layout-journey="list"] :is(.composition-index-sidebar, .visitor-work-details, .composition-explorer-controls, .gallery-rail-toggle) { opacity: 0; }
+}
+
+/* Composite the moving frame with the live WebGL field. Otherwise Chromium
+   can skip painting the backdrop under the artwork's previous bounds. */
+.gallery-layout-flight .owner-canvas-journey { backdrop-filter: opacity(1); }
+.gallery-layout-flight { position: fixed; inset: 0; z-index: 3; pointer-events: none; }

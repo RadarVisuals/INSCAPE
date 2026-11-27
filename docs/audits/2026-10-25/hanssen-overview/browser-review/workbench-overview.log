@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: overview browses without activation, saves optional details, and opens only the chosen canvas
+not ok 1 - overview browses without activation, saves optional details, and opens only the chosen canvas
+  ---
+  duration_ms: 46341.9578
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:26:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.goto: Timeout 45000ms exceeded.
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:40726/browser-tests/workbench-storage-fixture.html?seed=1&shell=1", waiting until "domcontentloaded"[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    open (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:13:14)
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:31:5)
+  ...
+# Subtest: failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+ok 2 - failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+  ---
+  duration_ms: 3747.1882
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 50420.5808

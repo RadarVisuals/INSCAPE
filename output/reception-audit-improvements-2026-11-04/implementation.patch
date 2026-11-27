@@ -1,0 +1,1048 @@
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx.txt b/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx
+index f54f45f..f9e52bc 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx.txt
++++ b/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx
+@@ -680,7 +680,7 @@ export function WorkbenchSession({
+                     workspaceRef={workspaceRef}
+                     workbenchNavigationRef={workbenchNavigationRef}
+                     keeperDockPositions={keeperDockPositions}
+-                    suspended={Boolean(preview) || browsing}
++                    suspended={previewing || browsing}
+                     exiting={leavingEditor}
+                     panelOccupied={panelOccupied}
+                     instrumentsObscured={instrumentsObscured}
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/public/ownerSystemWorkflow/workbenchCommands.js.txt b/src/public/ownerSystemWorkflow/workbenchCommands.js
+index 2bc455c..cad8ee0 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/public/ownerSystemWorkflow/workbenchCommands.js.txt
++++ b/src/public/ownerSystemWorkflow/workbenchCommands.js
+@@ -2,6 +2,8 @@ import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.j
+ import { addMiniApp } from '../../miniApps/miniAppSession.js';
+ import { MAX_MINI_APPS } from '../../miniApps/domain/miniApps.js';
+ import { addTextModule } from '../../text/textSession.js';
++import { interfaceTheme } from '../../interfaceTheme.js';
++import { receptionTextDefaults } from '../../reception/receptionTextDefaults.js';
+ import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
+ import { addImageModule } from '../../imageModule/imageModuleSession.js';
+ import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
+@@ -89,7 +91,8 @@ export default function workbenchCommands({
+           addMiniApp(store, profileAddress);
+           break;
+         case 'text':
+-          activateArtwork(addTextModule(store, profileAddress, placement, { visibility: reception ? 'PUBLIC' : 'PRIVATE' }));
++          activateArtwork(addTextModule(store, profileAddress, placement, reception
++            ? receptionTextDefaults(store.getReception(), store.getEditingCell(), interfaceTheme.getSnapshot().mode) : undefined));
+           setTextToolsOpen(true);
+           break;
+         case 'keeper':
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/public/ownerSystemWorkflow/WorkbenchView.jsx.txt b/src/public/ownerSystemWorkflow/WorkbenchView.jsx
+index 633f081..d111c36 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/public/ownerSystemWorkflow/WorkbenchView.jsx.txt
++++ b/src/public/ownerSystemWorkflow/WorkbenchView.jsx
+@@ -343,7 +343,7 @@ function WorkbenchViewStateProvider({
+     <WorkbenchView.Provider value={artworkView}>
+       <WorkbenchActions.Provider value={actions}>
+         <WorkbenchSideDockProvider preferences={sideDockPreferences}>
+-          <EditorCellsProvider store={store} content={content} selection={selectionState}>
++          <EditorCellsProvider store={store} selection={selectionState}>
+             {children}
+           </EditorCellsProvider>
+         </WorkbenchSideDockProvider>
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/EditorCellsContext.jsx.txt b/src/reception/EditorCellsContext.jsx
+index 26ce7d0..110982a 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/EditorCellsContext.jsx.txt
++++ b/src/reception/EditorCellsContext.jsx
+@@ -1,4 +1,4 @@
+-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
++import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+ import { RECEPTION_CELL_LIMIT } from './receptionEditorDocument.js';
+ import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+ import { receptionCellStructureActions } from './receptionCellStructure.js';
+@@ -6,6 +6,8 @@ import './editorCells.css';
+ 
+ const EditorCellsContext = createContext(null);
+ const NO_CELLS = Object.freeze([]);
++const noSubscription = () => () => {};
++const noEditingCell = () => null;
+ export const useEditorCells = () => useContext(EditorCellsContext);
+ export function editorCellStructureActions(store, id, view) {
+   const previewing = Object.keys(view.transforms).length > 0;
+@@ -23,8 +25,9 @@ export function isEditorCellSurface(target, context) {
+   const id = target?.closest?.('[data-workbench-view-id]')?.dataset.workbenchViewId;
+   return Boolean(cell && (cell.id === id || cell.members.includes(id)));
+ }
+-export function EditorCellsProvider({ store, content, selection, children }) {
+-  const [editingId, setEditingId] = useState(null), [bentoOpen, setBentoOpen] = useState(false);
++export function EditorCellsProvider({ store, selection, children }) {
++  const [bentoOpen, setBentoOpen] = useState(false);
++  const editingCellId = useSyncExternalStore(store?.subscribe || noSubscription, store?.getEditingCell || noEditingCell, noEditingCell);
+   const nativeCells = store?.getCells?.() || NO_CELLS, transforms = useWorkbenchView()?.transforms;
+   const innerLines = store?.getReception?.()?.innerLines;
+   const [linePreview, setLinePreview] = useState(null), generation = store?.getGeneration();
+@@ -37,31 +40,27 @@ export function EditorCellsProvider({ store, content, selection, children }) {
+     ? { ...innerLines, ...linePreview.patch } : innerLines, [store, generation, linePreview, innerLines]);
+   const cells = useMemo(() => nativeCells.map(cell => transforms?.[cell.id]?.cellRadius === undefined ? cell
+     : { ...cell, radius: transforms[cell.id].cellRadius }), [nativeCells, transforms]);
+-  const editingCellId = cells.some(cell => cell.id === editingId) ? editingId : null;
+-  const live = useRef(null); live.current = { store, cells, selection };
+   const enterCell = useCallback(id => {
+-    if (!live.current.cells.some(cell => cell.id === id)) return;
+-    setEditingId(id); live.current.store.setEditingCell?.(id); live.current.selection.setSelection([]);
+-  }, []);
++    if (store?.setEditingCell?.(id)) selection.setSelection([]);
++  }, [store, selection]);
+   const leaveCell = useCallback((select = true) => {
+-    setEditingId(null); live.current.store?.setEditingCell?.(null);
+-    if (select && editingCellId) live.current.selection.selectArtwork(editingCellId);
+-  }, [editingCellId]);
++    store?.setEditingCell?.(null);
++    if (select && editingCellId) selection.selectArtwork(editingCellId);
++  }, [store, selection, editingCellId]);
+   const openSettings = useCallback(id => {
+-    if (id && live.current.cells.some(cell => cell.id === id)) live.current.selection.selectArtwork(id);
++    if (cells.some(cell => cell.id === id)) selection.selectArtwork(id);
+     setBentoOpen(true);
+-  }, []);
+-  useEffect(() => { if (editingId && !editingCellId) store?.setEditingCell?.(null); }, [editingId, editingCellId, store]);
++  }, [cells, selection]);
+   useEffect(() => () => store?.setEditingCell?.(null), [store]);
+   const value = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell, openSettings,
+-    bentoOpen, setBentoOpen, store, content, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines } : null,
+-  [store, cells, content, editingCellId, enterCell, leaveCell, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines]);
++    bentoOpen, setBentoOpen, store, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines } : null,
++  [store, cells, editingCellId, enterCell, leaveCell, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines]);
+   return <EditorCellsContext.Provider value={value}>{children}</EditorCellsContext.Provider>;
+ }
+ export function EditorCellEditingNotice() {
+   const context = useEditorCells();
+   if (!context?.editingCellId) return null;
+-  const name = context.content.shapes?.find(item => item.id === context.editingCellId)?.name || 'Cell';
++  const name = context.store.getReception().shapes.find(item => item.id === context.editingCellId)?.name || 'Cell';
+   return <div className="editor-cell-editing" data-workbench-selection-tools role="status">
+     <span>Editing contents · {name}</span>
+     <button className="workflow-tactile-control" type="button" onClick={() => context.leaveCell()}>Back to cells</button>
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/ReceptionBentoEditor.jsx.txt b/src/reception/ReceptionBentoEditor.jsx
+index d149a57..56dab5a 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/ReceptionBentoEditor.jsx.txt
++++ b/src/reception/ReceptionBentoEditor.jsx
+@@ -4,6 +4,8 @@ import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamer
+ import { addImageModule } from '../imageModule/imageModuleSession.js';
+ import { resolveImageLibrarySide } from '../imageModule/imageLibrarySide.js';
+ import { addTextModule } from '../text/textSession.js';
++import { interfaceTheme } from '../interfaceTheme.js';
++import { receptionTextDefaults } from './receptionTextDefaults.js';
+ import { createWorkbenchGestures } from '../public/ownerSystemWorkflow/workbenchGestures.js';
+ import { useEditorCells, editorCellStructureActions } from './EditorCellsContext.jsx';
+ import { receptionModuleWindow, receptionModuleSizeReason } from './receptionEditorDocument.js';
+@@ -118,7 +120,8 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
+   const cellStore = cellId => ({ ...store, commitCompletedOperation: (candidate, options) => store.commitInCell(cellId, candidate, options) });
+   const addText = cellId => perform(() => {
+     flush(); const r = receptionModuleWindow(store.getReception(), cellId);
+-    const id = addTextModule(cellStore(cellId), view.profileAddress, { window: r }, { visibility: 'PUBLIC', appearance: { background: null } });
++    const id = addTextModule(cellStore(cellId), view.profileAddress, { window: r },
++      receptionTextDefaults(store.getReception(), cellId, interfaceTheme.getSnapshot().mode));
+     context.enterCell(cellId); view.selectArtwork(id);
+   });
+   const closeImage = () => { imageRequest.current = null; setImageCell(null); };
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorDocument.js.txt b/src/reception/receptionEditorDocument.js
+index 7ef99db..ad3c40d 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorDocument.js.txt
++++ b/src/reception/receptionEditorDocument.js
+@@ -136,15 +136,16 @@ export function assertReceptionEditorDocument(value) {
+   return value;
+ }
+ const filterLayout = (workbench, allowed) => ({ ...workbench, ...Object.fromEntries(keys.map(key => [key, (workbench[key] || []).filter(item => allowed.has(item.id))])) });
++const privateCells = value => value.cells.filter(cell => value.shapes.find(item => item.id === cell.id)?.visibility === 'PRIVATE');
++const pruneCellMembers = (cell, allowed) => ({ ...cell, members: cell.members.filter(id => allowed.has(id)),
++  ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => allowed.has(id)) } : {}),
++  mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => allowed.has(item.id)) } : {}) } });
+ export function projectReceptionEditorDocument(value) {
+-  const hidden = new Set(value.cells.filter(cell => value.shapes.find(item => item.id === cell.id)?.visibility === 'PRIVATE')
+-    .flatMap(cell => [cell.id, ...cell.members]));
++  const hidden = new Set(privateCells(value).flatMap(cell => [cell.id, ...cell.members]));
+   const project = (items, fn) => fn(items.filter(item => !hidden.has(item.id)).map(item => ({ ...item, visibility: item.visibility || 'PUBLIC' })));
+   const records = { shapes: project(value.shapes, projectShapes), imageModules: project(value.imageModules, projectImageModules), texts: project(value.texts, projectTextModules) };
+   const allowed = new Set(idsOf(records));
+-  const cells = value.cells.filter(cell => allowed.has(cell.id)).map(cell => ({ ...cell, members: cell.members.filter(id => allowed.has(id)),
+-    ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => allowed.has(id)) } : {}),
+-    mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => allowed.has(item.id)) } : {}) } }));
++  const cells = value.cells.filter(cell => allowed.has(cell.id)).map(cell => pruneCellMembers(cell, allowed));
+   return structuredClone({ ...value, ...records, cells, workbench: filterLayout(value.workbench, allowed),
+     artworkLayers: layerIds(artworkLayers(value)).filter(id => allowed.has(id)),
+     ...(value.arrangement ? { arrangement: pruneReceptionArrangement(value.arrangement, cells.map(cell => cell.id)) } : {}),
+@@ -215,9 +216,15 @@ export function createReceptionEditorDocument(value, { width = 1440 } = {}) {
+ export function reconcileReceptionCells(previous, candidate, { resizeContents = true } = {}) {
+   let next = reconcileArtworkLayers(previous, candidate);
+   const available = new Set(idsOf(next));
+-  next = { ...next, cells: next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => ({ ...cell,
+-    members: cell.members.filter(id => available.has(id)), ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => available.has(id)) } : {}),
+-    mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => available.has(item.id)) } : {}) } })) };
++  next = { ...next, cells: next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => pruneCellMembers(cell, available)) };
++  // Removing a private background keeps its native content and effective privacy.
++  // Explicit membership changes and merges into surviving cells retain their flags.
++  const contained = new Set(next.cells.flatMap(cell => cell.members));
++  const newlyIndependentPrivate = new Set(privateCells(previous).filter(cell => !available.has(cell.id))
++    .flatMap(cell => cell.members).filter(id => !contained.has(id)));
++  if (newlyIndependentPrivate.size) for (const key of keys) {
++    next[key] = next[key].map(item => newlyIndependentPrivate.has(item.id) ? { ...item, visibility: 'PRIVATE' } : item);
++  }
+   if (next.arrangement) next.arrangement = pruneReceptionArrangement(next.arrangement, next.cells.map(cell => cell.id));
+   for (const cell of next.cells) {
+     const before = receptionModuleWindow(previous, cell.id), after = receptionModuleWindow(next, cell.id);
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorDocument.test.js.txt b/src/reception/receptionEditorDocument.test.js
+index 604aaaa..5d7f192 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorDocument.test.js.txt
++++ b/src/reception/receptionEditorDocument.test.js
+@@ -59,6 +59,15 @@ test('cell validation rejects cycles, double membership, stale references and un
+   invalid(v => v.cells[0].mobile.placements.push({ id: 'shape:missing', window: { left: 0, top: 0, width: 32, height: 32 } }));
+ });
+ 
++test('explicitly removing membership from an existing private cell retains authored member visibility', () => {
++  const before = createReceptionEditorDocument(sample());
++  before.shapes.find(item => item.id === before.cells[0].id).visibility = 'PRIVATE';
++  const candidate = structuredClone(before); candidate.cells[0].members = []; candidate.cells[0].mobile.placements = [];
++  const after = reconcileReceptionCells(before, candidate);
++  assert.deepEqual(after.imageModules, before.imageModules); assert.deepEqual(after.shapes, before.shapes);
++  assert.equal(projectReception(after).imageModules.length, before.imageModules.length);
++});
++
+ test('moving and resizing a cell carries untouched native layers once and preserves explicit child transforms', () => {
+   const value = createReceptionEditorDocument(sample()), id = value.cells[0].id, original = receptionModuleWindow(value, id);
+   const oldChild = receptionModuleWindow(value, 'shape:overlay');
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/ReceptionEditorPreview.jsx.txt b/src/reception/ReceptionEditorPreview.jsx
+index ff377d9..0fe15b3 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/ReceptionEditorPreview.jsx.txt
++++ b/src/reception/ReceptionEditorPreview.jsx
+@@ -19,12 +19,15 @@ function NumberSetting({ label, value, min = 0, max = 16384, onCommit }) {
+ }
+ 
+ export default function ReceptionEditorPreview({ reception, model, snapshot, assets, onClose, store }) {
+-  const [width, setWidth] = useState(1440), [selection, setSelection] = useState(null), [layout, setLayout] = useState(null), [error, setError] = useState('');
++  const [width, setWidth] = useState(null), [selection, setSelection] = useState(null), [layout, setLayout] = useState(null), [error, setError] = useState('');
++  const [settingsOpen, setSettingsOpen] = useState(false);
+   const shown = useMemo(() => projectReception(reception), [reception]);
+   const cell = reception.cells.find(item => item.id === selection?.cell);
+   const cellRect = layout?.windows[cell?.id], childRect = layout?.windows[selection?.id];
+-  const record = id => [...reception.shapes, ...reception.imageModules, ...reception.texts].find(item => item.id === id);
+-  const name = id => record(id)?.name || record(id)?.article?.title || 'Layer';
++  const name = id => {
++    const record = [...reception.shapes, ...reception.imageModules, ...reception.texts].find(item => item.id === id);
++    return record?.name || record?.article?.title || 'Layer';
++  };
+   const run = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
+   const select = (cellId, id) => setSelection({ cell: cellId, id });
+   const position = childRect && cellRect && { ...childRect, left: childRect.left - cellRect.left, top: childRect.top - cellRect.top };
+@@ -44,13 +47,14 @@ export default function ReceptionEditorPreview({ reception, model, snapshot, ass
+   return <ReceptionPresentation snapshot={snapshot?.entries ? snapshot : undefined} assets={assets}>
+     <section className="reception-document-preview system-workflow__token-scope" aria-label="Reception responsive preview"
+       data-workflow-material="tactile" data-workflow-finish="flat">
+-      <header><Button icon={ArrowLeft} onClick={onClose}>Back to editing</Button><span>Reception preview</span></header>
+-      <ReceptionViewportControls width={width} onChange={setWidth} />
++      <header><Button icon={ArrowLeft} onClick={onClose}>Back to editing</Button><span>Reception preview</span>
++        {store && <Button aria-expanded={settingsOpen} onClick={() => setSettingsOpen(open => !open)}>Phone layout settings</Button>}</header>
++      <ReceptionViewportControls width={width} measuredWidth={layout?.viewportWidth} onChange={setWidth} />
+       {error && <p role="alert">{error}</p>}
+       <div className="reception-document-preview-body">
+         <div className="reception-document-preview-scroll"><ReceptionDocumentCanvas reception={shown} width={width}
+-          model={model} address={store?.getProfileAddress()} selected={selection?.id} onSelect={store ? select : undefined} onLayout={setLayout} /></div>
+-        {store && <aside className="reception-document-preview-tools" aria-label="Responsive cell settings">
++          model={model} address={store?.getProfileAddress()} selected={settingsOpen ? selection?.id : undefined} onSelect={store && settingsOpen ? select : undefined} onLayout={setLayout} /></div>
++        {store && settingsOpen && <aside className="reception-document-preview-tools" aria-label="Responsive cell settings">
+           <p>Choose a cell to adjust its phone layout. Desktop artwork stays in place.</p>
+           <label>Cell<select aria-label="Preview cell" value={cell?.id || ''} onChange={event => select(event.target.value, event.target.value)}>
+             <option value="">Choose a cell</option>{shown.cells.map(item => <option key={item.id} value={item.id}>{name(item.id)}</option>)}
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorScope.js.txt b/src/reception/receptionEditorScope.js
+index 98fc290..3cb794a 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorScope.js.txt
++++ b/src/reception/receptionEditorScope.js
+@@ -44,7 +44,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
+   base.grids = []; base.displays = [];
+   freeze(base);
+   let snapshot, source, projectedReception, released = false, editingCell = null;
+-  const guards = new Set();
++  const guards = new Set(), listeners = new Set();
+   const current = () => !released && underlying.isCurrent();
+   const writable = () => current() && underlying.hasWriteAccess();
+   const read = () => {
+@@ -124,7 +124,10 @@ export function createReceptionEditorScope(rootStore, options = {}) {
+     getSnapshot: read, getDraft: () => structuredClone(read()), getGeneration: underlying.getGeneration,
+     getHistory: underlying.getHistory, getRecordState: underlying.getRecordState, getLastCommitFailure: underlying.getLastCommitFailure,
+     getBackupSnapshot: underlying.getBackupSnapshot,
+-    subscribe: listener => underlying.subscribe(() => { if (current()) listener(); }),
++    subscribe: listener => {
++      listeners.add(listener);
++      return () => listeners.delete(listener);
++    },
+     commitCompletedOperation: commit,
+     // A drop targets its cell explicitly. Creating its native module and
+     // membership is one operation; the user's editing focus never changes.
+@@ -143,10 +146,11 @@ export function createReceptionEditorScope(rootStore, options = {}) {
+     guardWorkbenchTransition: check => { guards.add(check); return () => guards.delete(check); },
+     getCells: () => { read(); return current() ? projectedReception.cells : []; },
+     getReception: () => { read(); return current() ? projectedReception : null; },
+-    getEditingCell: () => editingCell,
++    getEditingCell: () => { read(); return current() ? editingCell : null; },
+     setEditingCell(id) {
+       if (!current() || id !== null && !api.getCells().some(cell => cell.id === id)) return false;
+-      editingCell = id; return true;
++      if (editingCell !== id) { editingCell = id; listeners.forEach(listener => listener()); }
++      return true;
+     },
+     generateCellLayout(settings, seed, expectedGeneration) {
+       if (!current()) throw new Error('This Reception is no longer active.');
+@@ -196,13 +200,20 @@ export function createReceptionEditorScope(rootStore, options = {}) {
+       }, 'Order Reception on mobile');
+     },
+     release({ force = false } = {}) {
+-      if (!current()) return;
+-      if (!force && textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+-      if (!force) for (const guard of guards) { const reason = guard(); if (reason) throw new Error(reason); }
+-      read(); released = true; editingCell = null; guards.clear(); underlying.release();
++      if (released) return;
++      if (current() && !force && textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
++      if (current() && !force) for (const guard of guards) { const reason = guard(); if (reason) throw new Error(reason); }
++      read(); released = true; editingCell = null; guards.clear(); listeners.clear(); unsubscribeUnderlying(); underlying.release();
+     },
+   });
+-  read(); bindWorkbenchTextRecovery(api);
++  read();
++  // Invalidate ephemeral editing focus on every canonical transition, even when
++  // no React consumer reads between deleting a cell and undoing that deletion.
++  const unsubscribeUnderlying = underlying.subscribe(() => {
++    if (!current()) { editingCell = null; return; }
++    read(); listeners.forEach(listener => listener());
++  });
++  bindWorkbenchTextRecovery(api);
+   return api;
+ }
+ 
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorScope.test.js.txt b/src/reception/receptionEditorScope.test.js
+index c3eae2c..23bfeb5 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/receptionEditorScope.test.js.txt
++++ b/src/reception/receptionEditorScope.test.js
+@@ -5,7 +5,7 @@ import { createReceptionEditorScope } from './receptionEditorScope.js';
+ import { addShape, editShape } from '../shapes/shapeSession.js';
+ import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
+ import { receptionModuleWindow } from './receptionEditorDocument.js';
+-import { validReception } from '../profileDocument/domain/receptionPresentation.js';
++import { validReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
+ import { addTextModule, saveTextModuleResult, changeTextFrames } from '../text/textSession.js';
+ import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
+ import { addImageModule } from '../imageModule/imageModuleSession.js';
+@@ -30,6 +30,55 @@ function fixture() {
+ const canvasPart = ({ reception: _reception, ...rest }) => rest;
+ const rectangle = (scope, left = 100) => addShape(scope, profile, { position: { left, top: 120 }, size: { width: 320, height: 240 } });
+ 
++test('cell editing has one observable owner and deletion does not reactivate it on Undo', () => {
++  const { scope } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell);
++  const observed = [], unsubscribe = scope.subscribe(() => observed.push(scope.getEditingCell()));
++  scope.setEditingCell(cell); assert.equal(observed.at(-1), cell);
++  removeWorkbenchModule(scope, profile, 'shape', scope.getSnapshot().shapes.find(item => item.id === cell));
++  assert.equal(observed.at(-1), null);
++  scope.undo(); assert.equal(scope.getEditingCell(), null);
++  const independent = rectangle(scope); assert.equal(scope.getCells()[0].members.includes(independent), false);
++  scope.setEditingCell(cell); const member = rectangle(scope);
++  assert.equal(scope.getCells()[0].members.includes(member), true);
++  scope.setEditingCell(null); assert.equal(observed.at(-1), null);
++  const count = observed.length; unsubscribe(); scope.setEditingCell(cell);
++  assert.equal(observed.length, count); scope.release();
++});
++
++test('deletion invalidates editing before immediate Undo without any subscriber or intermediate read', () => {
++  const { scope } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
++  const expected = scope.getSnapshot().shapes.find(item => item.id === cell);
++  assert.equal(removeWorkbenchModule(scope, profile, 'shape', expected), true);
++  assert.equal(scope.undo(), true); assert.equal(scope.getEditingCell(), null); scope.release();
++});
++
++test('deleting a private cell keeps Image, Text and Shape private atomically through failure, Undo, Redo and reload', () => {
++  const { scope, storage, fail } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
++  const image = addImageModule(scope, profile, { position: { left: 120, top: 140 }, size: { width: 220, height: 180 }, side: createReceptionExample().imageModules[0].sides[0] });
++  const text = addTextModule(scope, profile, null, { visibility: 'PUBLIC' });
++  const shape = rectangle(scope), privateText = addTextModule(scope, profile);
++  const candidate = scope.getDraft();
++  for (const key of ['imageModules', 'shapes']) candidate[key] = candidate[key].map(item => ({ ...item, visibility: item.id === cell ? 'PRIVATE' : 'PUBLIC' }));
++  assert.equal(scope.commitCompletedOperation(candidate, { expectedGeneration: scope.getGeneration() }), true);
++  const before = structuredClone(scope.getReception()), expected = before.shapes.find(item => item.id === cell);
++  const publicIds = value => ['imageModules', 'texts', 'shapes'].flatMap(key => projectReception(value)[key].map(item => item.id));
++  assert.deepEqual(publicIds(before), []);
++  fail(true); assert.equal(removeWorkbenchModule(scope, profile, 'shape', expected), false);
++  assert.deepEqual(scope.getReception(), before); fail(false);
++  assert.equal(removeWorkbenchModule(scope, profile, 'shape', expected), true);
++  const after = structuredClone(scope.getReception());
++  for (const id of [image, text, shape, privateText]) {
++    const key = ['imageModules', 'texts', 'shapes'].find(key => before[key].some(item => item.id === id));
++    assert.deepEqual(after[key].find(item => item.id === id), { ...before[key].find(item => item.id === id), visibility: 'PRIVATE' });
++    assert.deepEqual(receptionModuleWindow(after, id), receptionModuleWindow(before, id));
++  }
++  assert.deepEqual(publicIds(after), []);
++  assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
++  assert.equal(scope.redo(), true); assert.deepEqual(scope.getReception(), after);
++  scope.release();
++  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft().reception, after);
++});
++
+ test('shared Editor Display defaults never become Reception edits or undo history', () => {
+   const { scope } = fixture(), id = rectangle(scope), before = structuredClone(scope.getReception());
+   const candidate = scope.getDraft(), presentation = structuredClone(candidate.workbench);
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/reception/ReceptionViewportControls.jsx.txt b/src/reception/ReceptionViewportControls.jsx
+index 409238b..4e104b5 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/reception/ReceptionViewportControls.jsx.txt
++++ b/src/reception/ReceptionViewportControls.jsx
+@@ -2,13 +2,14 @@ import { ReceptionButton as Button } from './ReceptionControls.jsx';
+ import './receptionArrangement.css';
+ 
+ // Viewport width belongs to this editor session, never to the authored Reception.
+-export default function ReceptionViewportControls({ width, onChange }) {
++export default function ReceptionViewportControls({ width, measuredWidth, onChange }) {
++  const effectiveWidth = width ?? measuredWidth;
+   return <div className="reception-viewport-controls" role="group" aria-label="Responsive preview width">
+     <Button aria-pressed={width === null} onClick={() => onChange(null)}>Fit</Button>
+     {[[1440, 'Desktop'], [768, 'Tablet'], [390, 'Phone']].map(([size, label]) =>
+       <Button key={size} aria-pressed={width === size} onClick={() => onChange(size)}>{label}</Button>)}
+-    <label><span>Preview width{width !== null && ` · ${width} px`}</span>
+-      <input type="range" aria-label="Preview width" min={320} max={1920} step={1} value={width ?? 1440}
++    <label><span>Preview width{effectiveWidth != null && ` · ${Math.round(effectiveWidth)} px`}</span>
++      <input type="range" aria-label="Preview width" min={Math.min(320, effectiveWidth ?? 320)} max={Math.max(1920, effectiveWidth ?? 1920)} step={1} value={effectiveWidth ?? 1440}
+         onChange={event => onChange(Number(event.target.value))} /></label>
+   </div>;
+ }
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/text/ArticleFocusWriting.jsx.txt b/src/text/ArticleFocusWriting.jsx
+index a5f3a83..7193cd2 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/text/ArticleFocusWriting.jsx.txt
++++ b/src/text/ArticleFocusWriting.jsx
+@@ -1,13 +1,8 @@
+ import { useLayoutEffect, useRef, useState } from 'react';
+ import { createPortal } from 'react-dom';
++import { relativeLuminance, contrast } from '../ui/colorContrast.js';
+ import './textFocus.css';
+ 
+-const relativeLuminance = channels => channels.reduce((sum, channel, index) => {
+-  const value = channel / 255;
+-  return sum + (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][index];
+-}, 0);
+-const contrast = (first, second) => (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+-
+ // A stable portal target keeps the article, EditorContent and node views mounted.
+ // Only its DOM location changes; no second editor or document copy is created.
+ export default function ArticleFocusWriting({ children, active, onClose, editor, returnFocus, title, background, saveError, saveStatus = 'Saved in this browser', className = '' }) {
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/text/text.css.txt b/src/text/text.css
+index 0650b3a..af7866f 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/text/text.css.txt
++++ b/src/text/text.css
+@@ -91,7 +91,7 @@
+ .text-artwork-editor { border: 0; padding: 0; margin: 0; }
+ .text-artwork-editor.ProseMirror-selectednode { outline: 2px solid var(--workflow-ink); }
+ .text-artwork-editor label { font: 12px/1.4 'Inscape IBM Plex Sans Condensed'; margin-top: 6px; }
+-.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 40; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 80; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .text-workbench .text-window--read { grid-template-rows: minmax(0, 1fr); }
+ .text-window--read > .system-workflow__instrument-content { height: 100%; flex: 1; }
+ .text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar {
+diff --git a/output/reception-audit-improvements-2026-11-04/before/src/text/TextWorkbench.jsx.txt b/src/text/TextWorkbench.jsx
+index 85e3309..5a54e50 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/src/text/TextWorkbench.jsx.txt
++++ b/src/text/TextWorkbench.jsx
+@@ -4,6 +4,7 @@ import { useSceneNavigation } from './SceneNavigation.jsx';
+ import { editPassage, textDisplays } from './scenePassages.js';
+ import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextContent.jsx';
+ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
++import { createPortal } from 'react-dom';
+ import { X, Settings2 as Settings, Eye, Pencil, Plus } from 'lucide-react';
+ import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
+ import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+@@ -32,7 +33,7 @@ const saveText = (store, scope, expected, next, options) => saveTextModuleResult
+ 
+ const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId }) {
+   const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
+-  const { bounds: areaBounds } = useWorkbenchArea();
++  const { bounds: areaBounds, canvasHost } = useWorkbenchArea();
+   const workbenchView = useWorkbenchView();
+   const reception = store?.getWorkbenchId?.() === 'reception';
+   const view = workbenchModuleTransform(workbenchView, record.id);
+@@ -160,11 +161,11 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
+     if (!result.saved) { setError(result.message, result.reason); return; }
+     edit.accept(result.record); setLinkTarget(''); setMode('write');
+   };
+-  return <div className="text-workbench" data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
++  const module = <div className="text-workbench" hidden={suspended} data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
+     style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={event => { onActivate(); if (event.target.matches('.text-document-title')) setColourTarget('title'); }}>
+     {shortcutMenu.content}
+     {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
+-    {!presentation.open && <button data-workbench-pan ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
++    {!presentation.open && <button ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
+       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
+     {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip">Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
+       surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
+@@ -245,6 +246,9 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
+         }}>Move into Display</button></details>}
+     </TextTools>}
+   </div>;
++  // A closed module is viewport navigation, outside the authored canvas clip
++  // and camera transform. Its state, focus and context menu stay with Text.
++  return !presentation.open && canvasHost?.parentElement ? createPortal(module, canvasHost.parentElement) : module;
+ });
+ export default function TextWorkbench(props) {
+   const tools = useSharedTextTools();
+diff --git a/output/reception-audit-improvements-2026-11-04/before/browser-tests/owner-profile-routing.browser.mjs.txt b/browser-tests/owner-profile-routing.browser.mjs
+index b1fa6eb..8a9a945 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/browser-tests/owner-profile-routing.browser.mjs.txt
++++ b/browser-tests/owner-profile-routing.browser.mjs
+@@ -1,11 +1,12 @@
++import { editorDestination, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+ import assert from 'node:assert/strict';
+ import { after, before, describe, test } from 'node:test';
+-import { access } from 'node:fs/promises';
+ import { dirname, resolve } from 'node:path';
+ import { createServer } from 'node:net';
+ import { randomUUID } from 'node:crypto';
+ import { fileURLToPath } from 'node:url';
+-import { createServer as createViteServer } from 'vite';
++import { createBrowserTestServer } from '../scripts/runBrowserTests.mjs';
++import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+ import {
+   BROWSER_LIFECYCLE_TIMEOUTS,
+   createBrowserTestCleanup,
+@@ -20,10 +21,6 @@ const runtimeDir = resolve(root, `.browser-test-runtime-owner-routing-${process.
+ const PROFILE_A = '0x1111111111111111111111111111111111111111';
+ const PROFILE_B = '0x2222222222222222222222222222222222222222';
+ const ROUTING_NAVIGATION_TIMEOUT_MS = 30_000;
+-const browserCandidates = [process.env.BROWSER_PATH,
+-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+-  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].filter(Boolean);
+ const resources = {}; const browserProblems = []; const diagnostic = createLifecycleDiagnostics();
+ const pendingLocalRequests = new Map();
+ let cleanupBrowserTest; let setupAbortController; let baseUrl; let page;
+@@ -36,13 +33,6 @@ async function availablePort() {
+   }), BROWSER_LIFECYCLE_TIMEOUTS.commandMs, 'Timed out acquiring a routing browser-test port', () => socket.close());
+ }
+ 
+-async function findBrowser() {
+-  for (const candidate of browserCandidates) {
+-    try { await access(candidate); return candidate; } catch { /* try next */ }
+-  }
+-  throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
+-}
+-
+ async function waitForVite(url, signal) {
+   const started = Date.now();
+   while (Date.now() - started < 8_000) {
+@@ -79,6 +69,13 @@ async function setUrl(search) {
+   }, search);
+ }
+ 
++async function savedOwnerDraft() {
++  return page.evaluate(async address => {
++    const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
++    return createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage }).getDraft();
++  }, PROFILE_A);
++}
++
+ async function waitForInitialWalletSettlement() {
+   await page.evaluate(async () => {
+     const { useWalletStore } = await import('/src/store/useWalletStore.js');
+@@ -124,17 +121,20 @@ async function waitForOwnerShell(label) {
+ 
+ describe('owner/viewed-profile routing through the real App', { concurrency: false }, () => {
+   before(async () => runBrowserSetupWithCleanup(async () => {
+-    setupAbortController = new AbortController(); const browserPath = await findBrowser(); const port = await availablePort();
+-    baseUrl = `http://127.0.0.1:${port}`;
++    setupAbortController = new AbortController();
+     cleanupBrowserTest = createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
+-    resources.vite = await createViteServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true } });
+-    await withinDeadline(resources.vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Routing Vite listen deadline exceeded');
++    baseUrl = process.env.INSCAPE_TEST_ROOT;
++    if (!baseUrl) {
++      const port = await availablePort(); baseUrl = `http://127.0.0.1:${port}`;
++      resources.vite = await createBrowserTestServer(root, port);
++      await withinDeadline(resources.vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Routing Vite listen deadline exceeded');
++    }
+     await waitForVite(baseUrl, setupAbortController.signal);
+     // Vite serves the owner graph as many separate source modules. This bound
+     // accommodates its import burst; handler failures still fail the suite.
+     const routeController = createPlaywrightRouteController({ loopbackOrigin: baseUrl, knownOrigins: [], maxOutstanding: 512,
+       decideKnown: async () => ({ action: 'abort' }), onUnexpected: () => {} });
+-    await launchPlaywrightEdge({ edgePath: browserPath, runtimePath: runtimeDir, workspaceRoot: root,
++    await launchPlaywrightEdge({ edgePath: browserExecutable, runtimePath: runtimeDir, workspaceRoot: root,
+       loopbackOrigin: baseUrl, routeController, resources, diagnostic,
+       onBrowserProblem: (problem) => browserProblems.push(problem),
+       onOwnedProcess: ({ rootPid, processTree }) => {
+@@ -248,7 +248,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+     await waitForOwnerShell('Owner before reception');
+     const back = () => page.getByRole('button', { name: 'Back to Editor', exact: true });
+     const openReception = async () => {
+-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
++      await editorDestination(page, 'Profile');
+       const entry = page.getByRole('button', { name: 'View my reception', exact: true });
+       await entry.focus();
+       await page.keyboard.press('Enter');
+@@ -299,13 +299,14 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+         article.title = 'Saved local Reception';
+         reception.texts = [{ id: 'text:reception-local', article, visibility: 'PUBLIC' }];
+         reception.regions[0].content = reception.texts[0].id;
+-        if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
++        const { createReceptionEditorDocument } = await import('/src/reception/receptionEditorDocument.js');
++        if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception: createReceptionEditorDocument(reception) }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
+       } finally { scope.release(); }
+     }, PROFILE_A);
+     await waitForOwnerShell('Owner after publication fixture');
+     for (const width of [1440, 640, 390]) {
+       await page.setViewportSize({ width, height: 900 });
+-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
++      await editorDestination(page, 'Profile');
+       await page.getByRole('button', { name: 'View my reception', exact: true }).focus();
+       if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, `owner-menu-${width}.png`) });
+       const savedDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
+@@ -315,17 +316,17 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+       await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+       await page.locator('[data-reception-editor]').waitFor();
+-      await page.getByRole('button', { name: 'Done', exact: true }).click();
++      await editorDestination(page, 'Reception');
+       await page.locator('[data-reception-editor]').waitFor({ state: 'detached' });
+       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+       assert.equal(await page.locator('.reception-cell-actions, .reception-divider, .reception-tool-panel').count(), 0);
+       await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+       await page.locator('[data-reception-editor]').waitFor();
+-      await page.getByRole('button', { name: 'Done', exact: true }).click();
++      await editorDestination(page, 'Reception');
+       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+       const navigationBounds = await back().boundingBox();
+-      assert.equal(await back().evaluate(node => !!node.closest('.reception-window-header')), true,
+-        'The owner return remains in the shared Reception header alongside its navigation');
++      assert.equal(await back().evaluate(node => !!node.closest('.reception-page-actions')), true,
++        'The owner return remains in the native Reception action bar alongside its navigation');
+       assert.ok(await back().evaluate(node => { const b = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), 'Owner return is exposed and clickable');
+       assert.equal(await back().count(), 1);
+       await back().focus();
+@@ -337,22 +338,24 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+       await page.locator('.workbench-overview').waitFor();
+       assert.match(page.url(), /[?&]canvas=1/);
+       assert.doesNotMatch(page.url(), /[?&]reception=1/);
+-      assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
++      await page.locator('main.system-workflow[data-overview]').waitFor();
++      assert.equal(await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).isVisible(), false);
++      await page.getByRole('button', { name: /^Edit / }).first().waitFor();
+       assert.ok(await page.getByRole('button', { name: /^Edit / }).count() > 0, 'The owner opens their local collection from Reception');
+       assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), savedDraft,
+         'Opening the owner collection does not change its saved compositions');
+       await page.goBack(); await page.locator('.reception-page').waitFor();
+       await page.goForward(); await page.locator('.workbench-overview').waitFor();
+       assert.doesNotMatch(page.url(), /[?&]reception=1/);
+-      await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+-      await page.getByRole('button', { name: 'About', exact: true }).click();
++      await editorDestination(page, 'Reception');
+       await page.locator('.reception-page').waitFor();
+       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
++      const beforeRoom = await savedOwnerDraft();
+       await page.getByRole('button', { name: /^Explore/ }).click();
+       await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
+       await page.locator('.keeper-dock').waitFor();
+       const roomDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
+-      const beforeRoom = JSON.parse(savedDraft), afterRoom = JSON.parse(roomDraft);
++      const afterRoom = await savedOwnerDraft();
+       assert.equal(afterRoom.keeperDocks.length, Math.max(1, beforeRoom.keeperDocks?.length || 0));
+       assert.deepEqual(afterRoom.imageModules, beforeRoom.imageModules);
+       assert.match(page.url(), /[?&]reception=1/);
+@@ -477,18 +480,18 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+       await page.getByRole('button', { name: 'Connect', exact: true }).click();
+       await waitForOwnerShell('Connect from Discover opens owner');
+       await page.evaluate(() => { window.__ownerBeforeDiscover = document.querySelector('.system-workflow'); });
+-      await page.getByRole('button', { name: 'Discover', exact: true }).click();
++      await editorDestination(page, 'Discover');
+       assert.match(page.url(), /[?&]discover/);
+       assert.equal(await page.locator('.public-entry-portal').count(), 1);
+       await page.goBack();
+-      await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
++      await setEditorSidebarOpen(page, true); await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
+       await page.goForward();
+       await page.getByRole('searchbox', { name: 'Search published worlds' }).waitFor();
+       await page.keyboard.press('Escape');
+-      await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
++      await setEditorSidebarOpen(page, true); await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
+       assert.equal(await page.evaluate(() => window.__ownerBeforeDiscover === document.querySelector('.system-workflow')), true,
+         'Discover and history navigation must preserve the mounted owner workspace');
+-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
++      await editorDestination(page, 'Profile');
+       const disconnect = page.getByRole('button', { name: 'Disconnect', exact: true });
+       await disconnect.waitFor();
+       const bounds = await disconnect.boundingBox();
+@@ -503,7 +506,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+       await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
+       await page.getByRole('button', { name: 'Connect', exact: true }).click();
+       await waitForOwnerShell('Reconnect returns to owner');
+-      await page.getByRole('button', { name: 'Discover', exact: true }).click();
++      await editorDestination(page, 'Discover');
+       await page.locator('.public-entry-portal__account-trigger').click();
+       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+       await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
+@@ -524,7 +527,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
+       await page.getByRole('button', { name: 'Connect', exact: true }).click();
+       await waitForOwnerShell('Owner before delayed disconnect');
+       await page.evaluate(() => { window.__delayDisconnect = true; window.__disconnectCalls = 0; });
+-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
++      await editorDestination(page, 'Profile');
+       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+       await page.waitForFunction(() => typeof window.__finishDisconnect === 'function');
+       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+diff --git a/output/reception-audit-improvements-2026-11-04/before/browser-tests/playwright-browser-adapter.mjs.txt b/browser-tests/playwright-browser-adapter.mjs
+index bce5467..2967146 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/browser-tests/playwright-browser-adapter.mjs.txt
++++ b/browser-tests/playwright-browser-adapter.mjs
+@@ -149,6 +149,7 @@ export async function launchPlaywrightEdge({
+     if (previousTmp === undefined) delete process.env.TMP; else process.env.TMP = previousTmp;
+   }
+   const child = resources.browserServer.process(); const rootPid = child?.pid;
++  diagnostic('setup:browser-server-ready', { rootPid });
+   if (!Number.isSafeInteger(rootPid) || rootPid <= 0) throw Object.assign(new Error('Playwright BrowserServer did not expose a valid owned Edge PID'), { code: 'EDGE_PID_MISSING' });
+   const processTree = createOwnedProcessTree({ rootPid, listProcesses: inventory, terminateTree });
+   const observed = await processTree.observe(); const root = observed.find((entry) => entry.pid === rootPid);
+diff --git a/output/reception-audit-improvements-2026-11-04/before/browser-tests/reception-boundaries-fixture.jsx.txt b/browser-tests/reception-boundaries-fixture.jsx
+index cc3760a..0bea520 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/browser-tests/reception-boundaries-fixture.jsx.txt
++++ b/browser-tests/reception-boundaries-fixture.jsx
+@@ -10,6 +10,7 @@ import { splitReception } from '/src/reception/receptionLayout.js';
+ import { createArticle } from '/src/text/domain/article.js';
+ import { buildProfileDocumentV9 } from '/src/profileDocument/domain/profileDocumentV9Builder.js';
+ import { serializeWorkbenchBackup } from '/src/systemWorkflow/workbenchBackup.js';
++import { createDefaultWorkbenchPresentation } from '/src/profileDocument/domain/workbenchPresentation.js';
+ import '/src/index.css';
+ 
+ const address = '0x3333333333333333333333333333333333333333';
+@@ -31,7 +32,9 @@ reception.texts = [{ id: 'text:audit', article, visibility: 'PUBLIC' }];
+ reception.regions[0].content = 'profile';
+ reception.regions[1].content = 'text:audit';
+ reception.branding.name = 'LOCAL A';
+-const draft = { ...base, reception };
++const draft = { ...base, workbench: createDefaultWorkbenchPresentation(), reception };
++// The native Display frame excludes the retired 32px titlebar height.
++draft.workbench.display.window.height = 540;
+ if (!localStorage.getItem(key)) {
+   const root = store();
+   if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Audit seed failed');
+@@ -46,6 +49,13 @@ const restored = structuredClone(draft); restored.reception.branding.name = 'RES
+ window.receptionBoundaryFixture = { address, key, document,
+   backup: serializeWorkbenchBackup(restored),
+   saved: () => store().getDraft(),
++  canvases: () => {
++    const current = store();
++    return current.listWorkbenches().map(meta => {
++      const { reception: _reception, ...draft } = current.readWorkbench(meta.id).draft;
++      return { ...meta, draft };
++    });
++  },
+   corrupt: () => localStorage.setItem(key, '{broken'),
+ };
+ function Fixture() {
+diff --git a/output/reception-audit-improvements-2026-11-04/before/browser-tests/reception-boundaries.browser.mjs.txt b/browser-tests/reception-boundaries.browser.mjs
+index 1403410..f480316 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/browser-tests/reception-boundaries.browser.mjs.txt
++++ b/browser-tests/reception-boundaries.browser.mjs
+@@ -1,4 +1,4 @@
+-import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, editorOverview } from './fixtures/editor-menu.mjs';
++import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { mkdir } from 'node:fs/promises';
+@@ -22,7 +22,7 @@ async function setup(options = {}) {
+   return { browser, context, errors, open };
+ }
+ async function viewReception(page) {
+-  await page.getByRole('complementary', { name: 'Workspace sidebar' }).getByRole('button', { name: 'Reception', exact: true }).click();
++  await editorDestination(page, 'Reception');
+   await page.locator('.reception-page').waitFor();
+ }
+ test('local Reception survives every public failure; visitors never see owner drafts', { timeout: 60000 }, async () => {
+@@ -50,14 +50,14 @@ test('another tab refreshes its reader after legal editing; editor lease and aut
+     const reader = await open(), editor = await open();
+     await editor.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+     await editor.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+-    const canvasBefore = await editor.evaluate(() => window.receptionBoundaryFixture.saved().workbenches);
++    const canvasBefore = await editor.evaluate(() => window.receptionBoundaryFixture.canvases());
+     await editor.locator('main[data-reception-editor]').focus(); await editor.keyboard.press('r');
+     await editor.mouse.move(200, 200); await editor.mouse.down(); await editor.mouse.move(400, 400, { steps: 6 }); await editor.mouse.up();
+     await editor.waitForFunction(() => window.receptionBoundaryFixture.saved().reception.version === 3);
+     await viewReception(editor);
+     await editor.locator('.reception-document-canvas').waitFor();
+     await reader.locator('.reception-document-canvas').waitFor();
+-    assert.deepEqual(await editor.evaluate(() => window.receptionBoundaryFixture.saved().workbenches), canvasBefore);
++    assert.deepEqual(await editor.evaluate(() => window.receptionBoundaryFixture.canvases()), canvasBefore);
+     await editor.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+     await reader.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+     await reader.getByRole('heading', { name: 'This tab is view-only', exact: true }).waitFor();
+@@ -90,7 +90,7 @@ test('backup recovery from an open editor retains the document target and refres
+   try {
+     const page = await open(), backup = await page.evaluate(() => window.receptionBoundaryFixture.backup);
+     await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+-    await editorCommand(page, 'Edit', 'Settings');
++    await editorMenu(page, 'Backup').click();
+     await page.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'synthetic-backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
+     await page.getByRole('button', { name: 'Replace Workbench with backup', exact: true }).click();
+     await editorMenu(page, 'Canvas').waitFor();
+@@ -126,7 +126,7 @@ test('public Edit Reception and My Inscape use one Editor document selector thro
+   const { browser, open, errors } = await setup();
+   try {
+     const page = await open();
+-    const canvases = await page.evaluate(() => window.receptionBoundaryFixture.saved().workbenches);
++    const canvases = await page.evaluate(() => window.receptionBoundaryFixture.canvases());
+     await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+     const selector = editorMenu(page, 'Canvas');
+     await selector.waitFor();
+@@ -146,10 +146,11 @@ test('public Edit Reception and My Inscape use one Editor document selector thro
+     await page.waitForFunction(id => document.querySelector('[role="menubar"]')?.dataset.document === id, canvasId);
+     assert.equal(new URL(page.url()).searchParams.has('editor'), false);
+     await editorOverview(page);
++    await editorDestination(page, 'Reception');
+     await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+     await selector.waitFor();
+     assert.equal(await activeEditorDocument(page), 'reception');
+-    assert.deepEqual(await page.evaluate(() => window.receptionBoundaryFixture.saved().workbenches), canvases);
++    assert.deepEqual(await page.evaluate(() => window.receptionBoundaryFixture.canvases()), canvases);
+     assert.deepEqual(errors, []);
+   } finally { await browser.close(); }
+ });
+diff --git a/output/reception-audit-improvements-2026-11-04/before/browser-tests/reception-native-editor.browser.mjs.txt b/browser-tests/reception-native-editor.browser.mjs
+index 4374517..a6af469 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/browser-tests/reception-native-editor.browser.mjs.txt
++++ b/browser-tests/reception-native-editor.browser.mjs
+@@ -14,6 +14,61 @@ const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-i
+ const withoutReception = ({ reception: _reception, ...draft }) => draft;
+ const cellFrame = (value, id) => value.workbench.shapes.find(item => item.id === id).window;
+ 
++test('deleting the edited cell then Undo leaves a consistent mode and explicit reentry authors members', { timeout: 90000 }, async () => {
++  const { browser, page, errors } = await setup();
++  try {
++    await generateBento(page, 1);
++    const initial = await reception(page), id = initial.cells[0].id;
++    await bentoCell(page, id).dblclick({ position: { x: 60, y: 120 } });
++    await page.getByRole('button', { name: 'Back to cells', exact: true }).waitFor();
++    const layers = await openSharedTool(page, 'Layers');
++    await layers.getByRole('button', { name: `Delete ${initial.shapes.find(item => item.id === id).name}`, exact: true }).click();
++    await page.getByRole('button', { name: 'Confirm layer deletion', exact: true }).click();
++    await editorCommand(page, 'Edit', 'Undo');
++    assert.equal(await page.getByRole('button', { name: 'Back to cells', exact: true }).count(), 0);
++    await page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u }).click();
++    await bentoCell(page, id).dblclick({ position: { x: 60, y: 120 } });
++    await page.getByRole('button', { name: 'Back to cells', exact: true }).waitFor();
++    await page.locator('main[data-reception-editor]').focus(); await page.keyboard.press('r');
++    await page.mouse.move(320, 320); await page.mouse.down(); await page.mouse.move(600, 500, { steps: 8 }); await page.mouse.up();
++    await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.shapes.length === 2);
++    const after = await reception(page);
++    assert.deepEqual(after.cells[0].members, [after.shapes.find(item => item.id !== id).id]);
++    assert.deepEqual(errors, []);
++  } finally { await browser.close(); }
++});
++
++test('Fit uses the available desktop width and new Light Text keeps authored contrast after theme changes', { timeout: 90000 }, async () => {
++  const { browser, page, errors } = await setup({ width: 900, height: 900 });
++  try {
++    await generateBento(page, 1);
++    await editorCommand(page, 'Edit', 'Settings');
++    await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
++    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
++    const id = (await reception(page)).cells[0].id;
++    await bentoCell(page, id).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
++    await page.getByRole('textbox', { name: 'Article text', exact: true }).fill('Readable new text on the light cell.');
++    await page.locator('main[data-reception-editor]').focus();
++    await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.texts[0]?.article.content.content.length > 0);
++    const appearance = (await reception(page)).texts[0].article.appearance;
++    assert.equal(appearance.color, '#000000'); assert.equal(appearance.background, null);
++    await editorCommand(page, 'Canvas', 'Preview');
++    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
++    const viewport = preview.locator('.reception-document-viewport');
++    await preview.locator('.reception-document-canvas:not([data-mobile])').waitFor();
++    assert.equal(await preview.getByRole('button', { name: 'Fit', exact: true }).getAttribute('aria-pressed'), 'true');
++    assert.equal(await preview.getByRole('complementary', { name: 'Responsive cell settings' }).count(), 0);
++    const effective = Math.round((await viewport.boundingBox()).width);
++    assert.ok(effective > 800); await preview.getByText(`Preview width · ${effective} px`, { exact: true }).waitFor();
++    assert.equal(Number(await preview.getByRole('slider', { name: 'Preview width' }).inputValue()), effective);
++    await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
++    await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'DARK', exact: true }).click();
++    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
++    assert.deepEqual((await reception(page)).texts[0].article.appearance, appearance);
++    assert.deepEqual(errors, []);
++  } finally { await browser.close(); }
++});
++
+ test('Inner lines form an open six-cell grid, follow resizing and agree in Editor and projected preview', { timeout: 90000 }, async () => {
+   const { browser, page, errors } = await setup();
+   try {
+@@ -121,6 +176,7 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
+       await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
+       await editorCommand(page, 'Canvas', 'Preview');
+       const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
++      await preview.getByRole('button', { name: 'Desktop', exact: true }).click();
+       const paint = preview.locator('.reception-inner-lines path');
+       assert.equal(await paint.getAttribute('d'), expected);
+       assert.equal(await paint.getAttribute('stroke-width'), '2');
+@@ -1020,6 +1076,7 @@ test('Cell settings save rounded corners with undo, clipping and reload at wide
+       await page.screenshot({ path: `${output}/cell-radius-settings-${width}.png`, fullPage: true });
+       await editorCommand(page, 'Canvas', 'Preview');
+       const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
++      await preview.getByRole('button', { name: 'Desktop', exact: true }).click();
+       assert.equal(await preview.locator(`[data-cell-id="${id}"]`).evaluate(node => getComputedStyle(node).borderRadius), '48px');
+       assert.match(await preview.locator(`[data-layer-id="${child}"]`).evaluate(node => node.style.clipPath), /^path\(/u);
+       await page.screenshot({ path: `${output}/cell-radius-preview-${width}.png`, fullPage: true });
+@@ -1216,6 +1273,7 @@ test('native Library Image and Text belong to the cell and render in Desktop and
+     assert.equal(await preview.locator(`[data-layer-id="${imageId}"]`).count(), 1);
+     await page.screenshot({ path: `${output}/native-preview-desktop-1440.png`, fullPage: true });
+     await preview.getByRole('button', { name: 'Phone', exact: true }).click();
++    await preview.getByRole('button', { name: 'Phone layout settings', exact: true }).click();
+     await preview.locator('.reception-document-canvas[data-mobile="true"]').waitFor();
+     await preview.getByRole('combobox', { name: 'Preview cell', exact: true }).selectOption(id);
+     await preview.getByRole('combobox', { name: 'Phone layer', exact: true }).selectOption(textId);
+diff --git a/output/reception-audit-improvements-2026-11-04/before/browser-tests/workbench-recovery.browser.mjs.txt b/browser-tests/workbench-recovery.browser.mjs
+index e5a9638..99c750d 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/browser-tests/workbench-recovery.browser.mjs.txt
++++ b/browser-tests/workbench-recovery.browser.mjs
+@@ -1,4 +1,4 @@
+-import { editorCommand } from './fixtures/editor-menu.mjs';
++import { editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { chromium } from 'playwright-core';
+@@ -7,6 +7,7 @@ import { join } from 'node:path';
+ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+ import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
+ import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
++import { openSharedTool } from './fixtures/shared-tools.mjs';
+ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
+ 
+ test('reload restores local arrangement; failed Text survives editor disposal and blocks stale publication', { timeout: 120000 }, async () => {
+@@ -40,12 +41,15 @@ test('reload restores local arrangement; failed Text survives editor disposal an
+         const draft = store.getDraft(); draft.texts[0].article.title = 'Arrival';
+         draft.texts[0].article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Remember this arrangement.' }] }];
+         draft.workbench = createDefaultWorkbenchPresentation();
++        draft.workbench.area = { left: 0, top: 0, width: 1440, height: 1000 };
+         draft.workbench.display.window = { left: 400, top: 100, width: 750, height: 421.875 };
+         draft.workbench.texts = [{ ...createTextPresentation(draft.texts[0].id), window: { left: 40, top: 100, width: 300, height: 430 } }];
+         store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
+       }
+       window.readDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
+       window.readLayout = () => JSON.parse(localStorage.getItem(`inscape:workbench:layout:v1:${profileAddress}`));
++      const { editorPreferencesKey } = await import('/src/public/ownerSystemWorkflow/editorPreferencesStore.js');
++      window.readPreferences = () => JSON.parse(localStorage.getItem(editorPreferencesKey(profileAddress)))?.value;
+       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
+       window.root = createRoot(document.getElementById('root'));
+       window.root.render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Reload review' } }));
+@@ -54,6 +58,8 @@ test('reload restores local arrangement; failed Text survives editor disposal an
+     const board = page.getByRole('article', { name: 'Display Module', exact: true });
+     const text = page.locator('.text-window');
+     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
++    await openSharedTool(page, 'Layers');
++    await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
+     await hideWorkspaceSidebar(page);
+     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
+     const drag = async (handle, dx, dy) => {
+@@ -65,15 +71,16 @@ test('reload restores local arrangement; failed Text survives editor disposal an
+     await drag(page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }), 43, 29);
+     await page.getByRole('button', { name: 'Resize Display Module from se', exact: true }).focus(); await page.keyboard.press('Alt+ArrowLeft');
+     const before = { text: await text.boundingBox(), board: await board.boundingBox(), draft: await page.evaluate(() => window.readDraft()) };
+-    await page.waitForFunction(() => window.readLayout()?.views?.['workbench:tools']?.layers === false);
++    await page.waitForFunction(() => window.readPreferences()?.textOpen === false && window.readPreferences().docks.hidden.includes('Layers'));
+     await page.screenshot({ path: join(shots, 'before-reload.png') });
+     await page.reload(); await mount(); await text.waitFor();
+-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.offsetWidth > 300);
++    await board.waitFor();
+     const near = (actual, expected) => { for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(actual[key] - expected[key]) < 1, `${key}: ${actual[key]} != ${expected[key]}`); };
+     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
+     assert.equal(await page.getByRole('button', { name: 'Close Text tools', exact: true }).count(), 0);
+     assert.equal(await page.getByRole('button', { name: 'Write', exact: true }).count(), 1);
+-    assert.equal(await page.locator('[data-shared-tool="layers"]').count(), 0);
++    assert.equal(await page.getByRole('tab', { name: 'Layers', exact: true }).count(), 0);
++    assert.equal(await page.evaluate(() => window.readPreferences().docks.hidden.includes('Layers')), true);
+     assert.deepEqual(await page.evaluate(() => window.readDraft()), before.draft, 'restoring layout does not edit the canonical draft');
+     await page.screenshot({ path: join(shots, 'after-reload.png') });
+     await page.getByRole('button', { name: 'Close Arrival', exact: true }).focus(); await page.keyboard.press('Enter');
+@@ -87,6 +94,8 @@ test('reload restores local arrangement; failed Text survives editor disposal an
+     assert.equal(await text.count(), 0); assert.equal(await board.count(), 0);
+     // Reopen the underlying shortcut before Text covers it again.
+     await page.getByRole('button', { name: /Open DISPLAY MODULE/ }).dblclick();
++    const shortcut = page.getByRole('button', { name: 'Arrival', exact: true });
++    assert.equal(await shortcut.evaluate(node => node.closest('main.system-workflow') === node.parentElement.parentElement), true, 'Closed Text belongs to the viewport, outside authored clipping');
+     await page.getByRole('button', { name: 'Arrival', exact: true }).click();
+     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
+     // Saving can fail independently from closing the Display's embedded editor.
+@@ -116,7 +125,9 @@ test('reload restores local arrangement; failed Text survives editor disposal an
+     await page.locator('main.system-workflow').first().focus();
+     await page.keyboard.press('Shift+F10');
+     await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
+-    await editorCommand(page, 'Canvas', 'Preview');
++    await editorMenu(page, 'Canvas').click();
++    assert.equal(await page.getByRole('menu', { name: 'Canvas menu' }).getByRole('menuitem', { name: 'Preview', exact: true }).isDisabled(), true);
++    await page.keyboard.press('Escape');
+     assert.equal(await page.locator('.visitor-grid-world').count(), 0);
+     await hideWorkspaceSidebar(page);
+     await page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
+diff --git a/output/reception-audit-improvements-2026-11-04/before/docs/INSCAPE_ACTIVE_CONTRACT.md.txt b/docs/INSCAPE_ACTIVE_CONTRACT.md
+index 1da9df7..20fff1e 100644
+--- a/output/reception-audit-improvements-2026-11-04/before/docs/INSCAPE_ACTIVE_CONTRACT.md.txt
++++ b/docs/INSCAPE_ACTIVE_CONTRACT.md
+@@ -326,6 +326,20 @@ Creation and cell membership save together, including Undo and failed-save recov
+ 
+ ## Reception in the Editor (2026-10-31)
+ 
++Clarification accepted 2026-11-04: deleting a private cell background retains
++its native Image, Text and Shape content as private independent layers. Undo
++and Redo restore the whole operation, including visibility. Explicit membership
++changes and merges into surviving cells retain their authored visibility flags.
++Deleting the actively edited cell exits cell editing; Undo restores the content
++without implicitly reopening that temporary mode.
++
++Responsive preview opens in Fit and shows its measured effective viewport width.
++Phone layout settings open explicitly, so their panel does not silently reduce
++the default desktop preview. New Reception Text is transparent and chooses its
++initial black or white ink from the cell fill composited over the current
++Dark/Light environment. Subsequent theme changes never rewrite authored ink.
++This beginning contrast is for the cell surface, not arbitrary artwork behind it.
++
+ The founder approved building Reception in the existing Editor itself, including
+ its Rectangle tool, free positioning, snapping, shared module tools and history.
+ The founder's five-rectangle screenshot demonstrates the intended workflow.
+diff --git a/output/reception-audit-improvements-2026-11-04/empty.txt b/src/reception/receptionTextDefaults.js
+index e69de29..3896798 100644
+--- a/output/reception-audit-improvements-2026-11-04/empty.txt
++++ b/src/reception/receptionTextDefaults.js
+@@ -0,0 +1,11 @@
++import { relativeLuminance, contrast } from '../ui/colorContrast.js';
++
++// Creation defaults only: authored ink is never recomputed when the theme changes.
++export function receptionTextDefaults(reception, cellId, mode) {
++  const cell = reception?.shapes.find(item => item.id === cellId);
++  const rgb = hex => [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
++  const environment = rgb(mode === 'light' ? '#DEDBD3' : '#171717');
++  const fill = cell ? rgb(cell.color) : environment, alpha = cell?.opacity ?? 0;
++  const luminance = relativeLuminance(fill.map((channel, index) => channel * alpha + environment[index] * (1 - alpha)));
++  return { visibility: 'PUBLIC', appearance: { background: null, color: contrast(luminance, 0) > contrast(luminance, 1) ? '#000000' : '#ffffff' } };
++}
+diff --git a/output/reception-audit-improvements-2026-11-04/empty.txt b/src/reception/receptionTextDefaults.test.js
+index e69de29..4bbba3d 100644
+--- a/output/reception-audit-improvements-2026-11-04/empty.txt
++++ b/src/reception/receptionTextDefaults.test.js
+@@ -0,0 +1,16 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { receptionTextDefaults } from './receptionTextDefaults.js';
++
++test('new transparent Reception Text chooses readable ink on the effective cell surface', () => {
++  const reception = (color, opacity) => ({ shapes: [{ id: 'cell', color, opacity }] });
++  for (const mode of ['dark', 'light']) {
++    assert.equal(receptionTextDefaults(reception('#000000', 1), 'cell', mode).appearance.color, '#ffffff');
++    assert.equal(receptionTextDefaults(reception('#ffffff', 1), 'cell', mode).appearance.color, '#000000');
++  }
++  assert.deepEqual(receptionTextDefaults(reception('#808080', .25), 'cell', 'light'),
++    { visibility: 'PUBLIC', appearance: { background: null, color: '#000000' } });
++  assert.equal(receptionTextDefaults(reception('#808080', .25), 'cell', 'dark').appearance.color, '#ffffff');
++  assert.equal(receptionTextDefaults(reception('#000000', 0), 'cell', 'light').appearance.color, '#000000');
++  assert.equal(receptionTextDefaults({ shapes: [] }, null, 'light').appearance.color, '#000000');
++});
+diff --git a/output/reception-audit-improvements-2026-11-04/empty.txt b/src/ui/colorContrast.js
+index e69de29..b155a9c 100644
+--- a/output/reception-audit-improvements-2026-11-04/empty.txt
++++ b/src/ui/colorContrast.js
+@@ -0,0 +1,5 @@
++export const relativeLuminance = channels => channels.reduce((sum, channel, index) => {
++  const value = channel / 255;
++  return sum + (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][index];
++}, 0);
++export const contrast = (first, second) => (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);

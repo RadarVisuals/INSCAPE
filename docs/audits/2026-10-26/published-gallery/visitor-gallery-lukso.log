@@ -1,0 +1,17 @@
+
+> underneath-os@0.0.0 test:lukso-standards
+> node --test scripts/luksoStandards.audit.test.js
+
+✔ project instructions permanently route LUKSO work through the reviewed baseline (2.518ms)
+✔ legacy ownership fallback discovers through LSP5 and then verifies each asset standard (0.6253ms)
+✔ issued, creator-attributed and currently held relationships remain separate (1.1085ms)
+✔ metadata dossiers require provenance and do not convert creator evidence into owner authority (0.8954ms)
+✔ mainnet identity remains explicit and HTTPS-only at the central Library boundary (0.3528ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 86.1858

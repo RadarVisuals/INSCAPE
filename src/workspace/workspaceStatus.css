@@ -1,0 +1,11 @@
+.workspace-save-warning {
+  position: fixed;
+  z-index: 10000;
+  inset: auto 1rem 1rem;
+  padding: .75rem 1rem;
+  background: var(--interface-surface, #232323);
+  color: var(--interface-ink, white);
+  border: 1px solid currentColor;
+  pointer-events: auto;
+}
+.workspace-save-warning button { margin-inline-start: .75rem; }

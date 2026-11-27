@@ -4,4 +4,8 @@ dist/
 .DS_Store
 .edge-codex/
 .edge-*/
-.browser-test-profile/
+.browser-test-profile*/
+.browser-test-runtime*/
+
+dist-design-system/
+.verification/

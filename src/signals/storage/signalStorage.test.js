@@ -14,3 +14,9 @@ test('notification preferences persist independently of history', () => {
   const storage = memory(); const document = createEmptySignalDocument(A); document.settings.notifications = false; saveSignalDocument(storage, document);
   assert.equal(loadSignalDocument(storage, A).settings.notifications, false);
 });
+test('unavailable or blocked storage is never reported as a successful save', () => {
+  const document = createEmptySignalDocument(A);
+  assert.equal(saveSignalDocument(null, document), false);
+  assert.equal(saveSignalDocument({}, document), false);
+  assert.equal(saveSignalDocument({ setItem() { throw new Error('quota'); } }, document), false);
+});

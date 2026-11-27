@@ -1,9 +1,13 @@
 export const LUKSO_CHAIN_ID = 42;
+// LSP-0-ERC725Account interface, shared by wallet admission and hosted uploads.
+export const LSP0_ERC165_INTERFACE_ID = '0x24871b3d';
+export const ERC165_ABI = [{ type: 'function', name: 'supportsInterface', stateMutability: 'view',
+  inputs: [{ name: 'interfaceId', type: 'bytes4' }], outputs: [{ name: '', type: 'bool' }] }];
 export const LUKSO_INDEXER_URL = import.meta.env?.VITE_LUKSO_INDEXER_URL
   || 'https://envio.lukso-mainnet.universal.tech/v1/graphql';
-export const CHILLWHALES_INDEXER_URL = import.meta.env?.VITE_CHILLWHALES_INDEXER_URL
-  || 'https://indexer.chillwhales.dev/v1/graphql';
+export const UP_IMAGE_SERVICE_URL = 'https://api.universalprofile.cloud/image/';
 const DEFAULT_IPFS_GATEWAY_URL = 'https://api.universalprofile.cloud/ipfs/';
+const DEFAULT_IPFS_GATEWAY_FALLBACK_URLS = 'https://ipfs.io/ipfs/,https://dweb.link/ipfs/';
 
 export function normalizePublicHttpsEndpoint(value) {
   const candidate = String(value || '').trim();
@@ -29,6 +33,9 @@ export function normalizePublicHttpsEndpointList(value) {
 
 export const IPFS_GATEWAY_URL = normalizePublicHttpsEndpoint(import.meta.env?.VITE_IPFS_GATEWAY_URL)
   || DEFAULT_IPFS_GATEWAY_URL;
+export const IPFS_GATEWAY_FALLBACK_URLS = normalizePublicHttpsEndpointList(
+  import.meta.env?.VITE_IPFS_GATEWAY_FALLBACK_URLS || DEFAULT_IPFS_GATEWAY_FALLBACK_URLS
+);
 export const PROFILE_DOCUMENT_IPFS_GATEWAY_URL = normalizePublicHttpsEndpoint(
   import.meta.env?.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL
 ) || IPFS_GATEWAY_URL;
@@ -42,16 +49,4 @@ export const LIBRARY_PAGE_SIZE = 24;
 export function normalizeProfileAddress(value) {
   const candidate = String(value || '').trim();
   return /^0x[a-fA-F0-9]{40}$/.test(candidate) ? candidate.toLowerCase() : null;
-}
-
-export function resolveLibraryProfile(locationLike = globalThis.location) {
-  try {
-    return normalizeProfileAddress(new URLSearchParams(locationLike?.search || '').get('profile'));
-  } catch {
-    return null;
-  }
-}
-
-export function resolveWorkspaceProfile(hostProfileAddress, locationLike = globalThis.location) {
-  return normalizeProfileAddress(hostProfileAddress) || resolveLibraryProfile(locationLike);
 }

@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: embedded WebP thumbnails stay filtered while Inspect prepares original pixels for Lift
+ok 1 - embedded WebP thumbnails stay filtered while Inspect prepares original pixels for Lift
+  ---
+  duration_ms: 10595.6252
+  type: 'test'
+  ...
+# Subtest: grey layers and purple WebP head use bounded filtered sources, resize, and release their paint resources
+ok 2 - grey layers and purple WebP head use bounded filtered sources, resize, and release their paint resources
+  ---
+  duration_ms: 1568.6675
+  type: 'test'
+  ...
+# Subtest: Focus, Return and subsequent zoom update Image and Display pixels without another click
+ok 3 - Focus, Return and subsequent zoom update Image and Display pixels without another click
+  ---
+  duration_ms: 35458.6707
+  type: 'test'
+  ...
+# Subtest: live group spreading, item focus and pointer pan retain SVG pixel density without remounting artwork
+not ok 4 - live group spreading, item focus and pointer pan retain SVG pixel density without remounting artwork
+  ---
+  duration_ms: 14547.6045
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\svg-raster-quality.browser.mjs:238:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('.image-module__canvas').first().locator('iframe') to be detached[22m
+    [2m    24 × locator resolved to hidden <iframe tabindex="-1" sandbox="allow-scripts" title="Interactive artwork" referrerpolicy="no-referrer" class="artwork-svg-document " src="/.netlify/functions/artwork-document" allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'"></iframe>[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\svg-raster-quality.browser.mjs:289:38)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 62654.3769

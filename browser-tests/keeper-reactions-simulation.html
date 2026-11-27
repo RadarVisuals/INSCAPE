@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Keeper gesture UI test · simulated replies</title></head>
+<body style="margin:0"><div id="root"></div>
+<script type="module">
+// Browser-only test transport. This page never connects to an account or model.
+// The production panel, scene capture and animation still run unchanged.
+if (new URLSearchParams(location.search).has('narrow')) {
+  document.body.style.background = '#222';
+  const frame = document.createElement('iframe');
+  frame.title = 'Keeper gesture simulation at 390 pixels';
+  frame.src = './keeper-reactions-simulation.html?artwork=1&svg=1';
+  frame.style = 'display:block;width:390px;height:844px;border:0';
+  document.body.append(frame);
+} else {
+  const originalFetch = window.fetch.bind(window);
+  let history = [], pendingMetadata;
+  window.fetch = async (url, options = {}) => {
+    const address = new URL(String(url), location.href);
+    if (address.origin !== location.origin || !address.pathname.startsWith('/__keeper-chatgpt/')) return originalFetch(url, options);
+    const action = address.pathname.split('/').pop();
+    if (action === 'metadata-result') {
+      const body = JSON.parse(options.body), finish = pendingMetadata;
+      pendingMetadata = null; finish?.(body.results);
+      return Response.json({ accepted: true });
+    }
+    if (action === 'clear') history = [];
+    if (action !== 'message') return Response.json({ status: 'connected', models: [{ id: 'simulation', name: 'SIMULATED REPLIES · UI test only' }],
+      account: { name: 'UI test · no account connected' }, history, busy: false, error: '' });
+    const body = JSON.parse(options.body), gesture = body.scene?.gestures ? body.message.trim() : 'none';
+    const metadataArt = body.scene.artworks.find(item => item.metadata);
+    if (body.message === 'metadata' && metadataArt) {
+      return new Response(new ReadableStream({ start(controller) {
+        const send = value => controller.enqueue(new TextEncoder().encode(JSON.stringify(value) + '\n'));
+        pendingMetadata = results => {
+          const result = results[0];
+          const text = `SIMULATED REPLY · real public metadata read: ${result.status}. ${result.name || ''}. ${result.description || ''} ${result.attributes?.map(item => `${item.key}: ${item.value}`).join('; ') || ''}`;
+          history = [{ role: 'user', content: body.message }, { role: 'assistant', content: text }];
+          send({ delta: text }); send({ done: true, action: { gesture: 'none', target: 'none' } }); controller.close();
+        };
+        send({ metadata: { requestId: 'm'.repeat(32), targets: [metadataArt.id] } });
+      }, cancel() { pendingMetadata = null; } }), { headers: { 'Content-Type': 'application/x-ndjson' } });
+    }
+    const allowed = ['curious', 'startled', 'approach', 'retreat'];
+    const target = ['approach', 'retreat'].includes(gesture) ? body.scene.artworks[0]?.id || (body.scene.pointer ? 'pointer' : 'none') : 'none';
+    const reaction = { gesture: allowed.includes(gesture) && !body.scene.reducedMotion ? gesture : 'none', target };
+    const reply = `Simulated UI test: ${reaction.gesture}. Artwork context: ${body.scene.artworks.map(item => item.title).join(', ') || 'not shared'}. Image previews received: ${body.images?.length || 0}.`;
+    history = [...history, { role: 'user', content: body.message }, { role: 'assistant', content: reply }].slice(-24);
+    return new Response(`${JSON.stringify({ delta: reply })}\n${JSON.stringify({ done: true, action: reaction })}\n`, { headers: { 'Content-Type': 'application/x-ndjson' } });
+  };
+  await import('./keeper-ai-preview.jsx');
+}
+</script></body></html>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { encodeErrorResult } from 'viem';
-import { OS_UNDERNEATH_PROFILE_DOCUMENT_KEY } from './luksoPublishedProfileRepository.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../domain/inscapeProfileDocumentKey.js';
 import { describePublicationError, PUBLICATION_ERROR_ABI } from './publicationError.js';
 
 const ADDRESS = '0x1111111111111111111111111111111111111111';
@@ -19,7 +19,7 @@ test('supported selectors match the official LSP6 and LSP20 signatures', () => {
     ['NoPermissionsSet', [ADDRESS], '0xf292052a'],
     ['NotAuthorised', [ADDRESS, 'SETDATA'], '0x3bdad6e6'],
     ['NoERC725YDataKeysAllowed', [ADDRESS], '0xed7fa509'],
-    ['NotAllowedERC725YDataKey', [ADDRESS, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY], '0x557ae079'],
+    ['NotAllowedERC725YDataKey', [ADDRESS, INSCAPE_PROFILE_DOCUMENT_KEY], '0x557ae079'],
     ['InvalidEncodedAllowedERC725YDataKeys', ['0x1234', 'context'], '0xae6cbd37'],
     ['LSP20CallVerificationFailed', [false, '0xdeadbeef'], '0x9d6741e3'],
     ['LSP20CallingVerifierFailed', [false], '0x8c6a8ae3'],
@@ -33,7 +33,7 @@ test('official LSP6 publication errors decode directly and through Viem-style ne
     ['NoPermissionsSet', [ADDRESS], `NoPermissionsSet: ${ADDRESS} has no LSP6 permissions`],
     ['NotAuthorised', [ADDRESS, 'SETDATA'], `NotAuthorised: ${ADDRESS} lacks the SETDATA LSP6 permission`],
     ['NoERC725YDataKeysAllowed', [ADDRESS], `NoERC725YDataKeysAllowed: ${ADDRESS} has no allowed ERC725Y data keys`],
-    ['NotAllowedERC725YDataKey', [ADDRESS, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY], `NotAllowedERC725YDataKey: ${ADDRESS} cannot set ${OS_UNDERNEATH_PROFILE_DOCUMENT_KEY}`],
+    ['NotAllowedERC725YDataKey', [ADDRESS, INSCAPE_PROFILE_DOCUMENT_KEY], `NotAllowedERC725YDataKey: ${ADDRESS} cannot set ${INSCAPE_PROFILE_DOCUMENT_KEY}`],
     ['InvalidEncodedAllowedERC725YDataKeys', ['0x1234', 'while verifying SETDATA'], 'InvalidEncodedAllowedERC725YDataKeys: the LSP6 allowed-data-key configuration is malformed (while verifying SETDATA)']
   ];
   for (const [name, args, expected] of cases) {

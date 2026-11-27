@@ -1,0 +1,36 @@
+[
+  {
+    "name": "artwork-document",
+    "code": 0,
+    "seconds": 7.845,
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "svg-raster-quality",
+    "code": 1,
+    "seconds": 62.712,
+    "tests": 4,
+    "pass": 3,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "error": "Incomplete test run: {\"tests\":4,\"pass\":3,\"fail\":1,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+  },
+  {
+    "name": "svg-artwork-lift",
+    "code": 0,
+    "seconds": 25.445,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

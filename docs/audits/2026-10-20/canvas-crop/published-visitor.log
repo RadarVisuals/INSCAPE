@@ -1,0 +1,154 @@
+TAP version 13
+# Browser lifecycle +6ms setup:start deadlineMs=60000
+# Browser lifecycle +14ms setup:vite-create:start
+# Browser lifecycle +384ms setup:vite-create:complete
+# Browser lifecycle +407ms setup:vite-listen:complete port=53244
+# Browser lifecycle +407ms setup:vite-readiness:start
+# Browser lifecycle +1683ms setup:vite-readiness:complete
+# Browser setup: test-owned Vite listening
+# Browser lifecycle +4369ms setup:edge-owned rootPid=214224 descendants=4
+# Browser lifecycle +4417ms setup:routing-installed beforeNavigation=true
+# Browser lifecycle +4637ms setup:playwright-ready routingBeforeNavigation=true
+# Browser lifecycle +9203ms bootstrap:document-loaded
+# Browser lifecycle +9559ms bootstrap:fixture-mounted
+# Browser lifecycle +10094ms bootstrap:published-ready
+# Browser lifecycle +10113ms setup:fixture-ready
+# Browser setup complete
+# Browser lifecycle +10113ms setup:complete
+# Browser lifecycle +10294ms bootstrap:document-loaded
+# Browser lifecycle +10311ms bootstrap:fixture-mounted
+# Browser lifecycle +10594ms bootstrap:published-ready
+# Subtest: published visitor world
+    # Subtest: exact v9 mounts one semantic ordered-Grid surface without owner, Library, or legacy topology
+    ok 1 - exact v9 mounts one semantic ordered-Grid surface without owner, Library, or legacy topology
+      ---
+      duration_ms: 509.7914
+      type: 'test'
+      ...
+# Browser lifecycle +10833ms bootstrap:document-loaded
+# Browser lifecycle +10847ms bootstrap:fixture-mounted
+# Browser lifecycle +11176ms bootstrap:published-ready
+    # Subtest: Directory visits a published workspace, Close remains Close, and Return restores the connected workspace
+    ok 2 - Directory visits a published workspace, Close remains Close, and Return restores the connected workspace
+      ---
+      duration_ms: 846.4414
+      type: 'test'
+      ...
+# Browser lifecycle +11660ms bootstrap:document-loaded
+# Browser lifecycle +11674ms bootstrap:fixture-mounted
+# Browser lifecycle +12043ms bootstrap:published-ready
+    # Subtest: canonical Grid placement opens the shared inspector, hides its decoded lift source, and restores exact focus
+    ok 3 - canonical Grid placement opens the shared inspector, hides its decoded lift source, and restores exact focus
+      ---
+      duration_ms: 1449.7962
+      type: 'test'
+      ...
+# Browser lifecycle +13125ms bootstrap:document-loaded
+# Browser lifecycle +13137ms bootstrap:fixture-mounted
+# Browser lifecycle +13459ms bootstrap:published-ready
+    # Subtest: public Identity remains interactive alongside Grids and returns focus on close
+    ok 4 - public Identity remains interactive alongside Grids and returns focus on close
+      ---
+      duration_ms: 895.2631
+      type: 'test'
+      ...
+# Browser lifecycle +14094ms bootstrap:document-loaded
+# Browser lifecycle +14111ms bootstrap:fixture-mounted
+# Browser lifecycle +14386ms bootstrap:published-ready
+    # Subtest: React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe
+    ok 5 - React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe
+      ---
+      duration_ms: 586.174
+      type: 'test'
+      ...
+# Browser lifecycle +14606ms bootstrap:document-loaded
+# Browser lifecycle +14619ms bootstrap:fixture-mounted
+# Browser lifecycle +14893ms bootstrap:published-ready
+    # Subtest: semantic controls, keyboard and reduced-motion Display drags navigate ordered Grids
+    ok 6 - semantic controls, keyboard and reduced-motion Display drags navigate ordered Grids
+      ---
+      duration_ms: 884.0902
+      type: 'test'
+      ...
+# Browser lifecycle +15482ms bootstrap:document-loaded
+# Browser lifecycle +15497ms bootstrap:fixture-mounted
+# Browser lifecycle +15813ms bootstrap:published-ready
+    # Subtest: canonical published HTTPS and IPFS media render with no referrer
+    ok 7 - canonical published HTTPS and IPFS media render with no referrer
+      ---
+      duration_ms: 556.6783
+      type: 'test'
+      ...
+# Browser lifecycle +16029ms bootstrap:document-loaded
+# Browser lifecycle +16040ms bootstrap:fixture-mounted
+# Browser lifecycle +16308ms bootstrap:published-ready
+    # Subtest: canonical broken media reaches fallback after retries and recovers on a new source
+    ok 8 - canonical broken media reaches fallback after retries and recovers on a new source
+      ---
+      duration_ms: 600.5332
+      type: 'test'
+      ...
+    # Subtest: an actual CSP response header blocks disallowed canonical media and exposes fallback
+    ok 9 - an actual CSP response header blocks disallowed canonical media and exposes fallback
+      ---
+      duration_ms: 754.2108
+      type: 'test'
+      ...
+# Browser lifecycle +17458ms bootstrap:document-loaded
+# Browser lifecycle +17471ms bootstrap:fixture-mounted
+# Browser lifecycle +17799ms bootstrap:published-ready
+    # Subtest: narrow touch entry opens the ordinary visitor with Directory and Return reachable
+    ok 10 - narrow touch entry opens the ordinary visitor with Directory and Return reachable
+      ---
+      duration_ms: 860.5946
+      type: 'test'
+      ...
+# Browser lifecycle +18238ms bootstrap:document-loaded
+# Browser lifecycle +18251ms bootstrap:fixture-mounted
+# Browser lifecycle +18577ms bootstrap:published-ready
+    # Subtest: 390px visitor exposes no misleading resize control
+    ok 11 - 390px visitor exposes no misleading resize control
+      ---
+      duration_ms: 538.7393
+      type: 'test'
+      ...
+# Browser lifecycle +18599ms cleanup:start rootPid=214224 deadlineMs=35000
+# Browser lifecycle +18599ms cleanup:routes:start
+# Browser lifecycle +18599ms cleanup:routes:complete
+# Browser lifecycle +18599ms cleanup:page-cdp:start
+    # Subtest: visitor load performs no owner storage reads or writes
+    ok 12 - visitor load performs no owner storage reads or writes
+      ---
+      duration_ms: 1.4942
+      type: 'test'
+      ...
+# Browser lifecycle +18601ms cleanup:page-cdp:complete
+# Browser lifecycle +18601ms cleanup:context:start
+# Browser lifecycle +18621ms cleanup:context:complete
+# Browser lifecycle +18621ms cleanup:browser:start
+# Browser lifecycle +18623ms cleanup:browser:complete
+# Browser lifecycle +18623ms cleanup:browser-server:start
+# Browser lifecycle +20417ms cleanup:browser-server:complete
+# Browser lifecycle +20417ms cleanup:edge-exit:start
+# Browser lifecycle +20972ms cleanup:edge-exit:complete
+# Browser lifecycle +20972ms cleanup:vite:start
+# Browser lifecycle +20987ms cleanup:vite:complete
+# Browser lifecycle +20988ms cleanup:runtime:start
+# Browser lifecycle +21156ms cleanup:runtime:complete
+# Browser lifecycle +21156ms cleanup:complete shutdownMode=graceful elapsedMs=2557 forced=0
+# Browser cleanup complete: root PID 214224; shutdown graceful; forced PIDs none; remaining PIDs none; runtime removed; 2557ms
+    1..12
+ok 1 - published visitor world
+  ---
+  duration_ms: 21151.064
+  type: 'suite'
+  ...
+1..1
+# tests 12
+# suites 1
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 21646.3785

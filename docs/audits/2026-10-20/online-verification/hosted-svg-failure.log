@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: real SVG host loads plain, projected and StrictMode documents and remounts cleanly
+ok 1 - real SVG host loads plain, projected and StrictMode documents and remounts cleanly
+  ---
+  duration_ms: 1171.610622
+  type: 'test'
+  ...
+# Subtest: a host navigation that never finishes offers bounded failure and a working retry
+ok 2 - a host navigation that never finishes offers bounded failure and a working retry
+  ---
+  duration_ms: 16050.61028
+  type: 'test'
+  ...
+# Subtest: a late ready message cannot clear a timed-out attempt; retry mounts a fresh host
+ok 3 - a late ready message cannot clear a timed-out attempt; retry mounts a fresh host
+  ---
+  duration_ms: 17946.774996
+  type: 'test'
+  ...
+# Subtest: an unavailable SVG source fails visibly and a new attempt recovers
+not ok 4 - an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 10556.150234
+  type: 'test'
+  location: '/home/runner/work/INSCAPE/INSCAPE/browser-tests/svg-lifecycle.browser.mjs:85:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Plain host ready', { exact: true }).filter({ hasText: 'Ready' }) to be visible
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/home/runner/work/INSCAPE/INSCAPE/browser-tests/svg-lifecycle.browser.mjs:96:91)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 46302.181745

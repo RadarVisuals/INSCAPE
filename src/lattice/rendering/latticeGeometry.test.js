@@ -10,6 +10,7 @@ import {
   assertRenderGeometry,
   normalizeLatticeSurface,
   fitNativeMediaRectangle,
+  alignContainedMediaRectangle,
   clampLatticeArtboardOffset,
   latticeArtboardFramingBounds,
   projectCanonicalLatticeArtboard,
@@ -82,6 +83,25 @@ test('placement projection uses normalized artboard bounds and native media rema
     left: 390, top: 180, width: 180, height: 360,
   });
   assert.throws(() => fitNativeMediaRectangle(footprint, { width: 0, height: 200 }), /positive placement and media/);
+});
+
+test('whole-image fitting follows all cell alignments without cropping or changing size', () => {
+  const frame = { left: 20, top: 30, width: 400, height: 300 };
+  for (const [alignX, x] of [['left', 0], ['center', .5], ['right', 1]])
+    for (const [alignY, y] of [['top', 0], ['center', .5], ['bottom', 1]]) {
+      const portrait = fitNativeMediaRectangle(frame, { width: 100, height: 200 }, { alignX, alignY });
+      assert.deepEqual(portrait, { left: 20 + 250 * x, top: 30, width: 150, height: 300 });
+      const banner = fitNativeMediaRectangle(frame, { width: 800, height: 200 }, { alignX, alignY });
+      assert.deepEqual(banner, { left: 20, top: 30 + 200 * y, width: 400, height: 100 });
+    }
+});
+
+test('crop letterboxing shares Fit alignment while overflowing axes retain their crop position', () => {
+  const frame = { left: 20, top: 30, width: 400, height: 300 };
+  const cropped = { left: -80, top: 100, width: 600, height: 150 }, before = { ...cropped };
+  assert.deepEqual(alignContainedMediaRectangle(frame, cropped, { alignX: 'right', alignY: 'bottom' }),
+    { left: -80, top: 180, width: 600, height: 150 });
+  assert.deepEqual(cropped, before);
 });
 
 test('label anchors project onto semantic cells with global bounded offsets', () => {

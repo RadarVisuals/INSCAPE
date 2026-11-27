@@ -1,0 +1,4 @@
+{"case":"split cell containing text","advertisedPlan":{"first":{"left":24,"top":24,"width":124,"height":272},"second":{"left":172,"top":24,"width":124,"height":272}},"result":{"ok":false,"error":"The Reception cells or artwork are invalid. Your saved work is unchanged."},"savedUnchanged":true}
+{"case":"add text to valid small cell","frame":{"left":24,"top":24,"width":124,"height":272},"result":{"ok":false,"error":"Text module could not be saved."}}
+{"case":"resize valid cell with small native image","result":{"ok":false,"error":"The Reception cells or artwork are invalid. Your saved work is unchanged."},"savedUnchanged":true}
+{"case":"width-only change with individual cell radii","before":[12,64],"after":[12,12]}
